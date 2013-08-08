@@ -1,0 +1,30 @@
+# concatenation of algorithms
+type: node_chain
+# path relative to storage
+input_path: "example_summary"
+runs : 3 # number of repetitions to catch randomness
+parameter_ranges :
+    __C__ : [0.05, 1.25]
+    __Normalization__ : [GaussianFeatureNormalization,
+                        EuclideanFeatureNormalization]
+node_chain: # the algorithms
+    -   # load the data
+        node: FeatureVectorSourceNode
+    -   # random splitting: 40% training, 60% testing
+        node: TrainTestSplitter
+        parameters :
+            train_ratio: 0.4
+            random: True
+    -   # normalize each feature
+        node: __Normalization__
+    -   # standard svm classifier (affine version)
+        node : SorSvmNode
+        parameters :
+            complexity : __C__
+            kernel_type : "LINEAR"
+            class_labels : ["Standard","Target"]
+            max_iterations : 10
+    -   # gather results and calculate performance
+        node: PerformanceSinkNode
+        parameters:
+            ir_class: "Target"

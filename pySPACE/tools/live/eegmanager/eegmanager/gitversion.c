@@ -1,0 +1,1 @@
+const char* gitversion = "pySPACE release 1.0";

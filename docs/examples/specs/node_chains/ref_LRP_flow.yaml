@@ -1,0 +1,90 @@
+-
+    node : Time_Series_Source
+-
+    node : Standardization
+-
+    node : Decimation 
+    parameters :
+        target_frequency : 20
+        comp_type : 'normal' 
+        time_shift : "middle"
+-
+    node : FFT_Band_Pass_Filter
+    parameters :
+        pass_band : [0.1, 4.0]
+-
+    node : Windowing
+    parameters :
+        window_function_str : "t800"
+        reduce_window : True
+-
+    node : Grid_Search
+    parameters :
+        parallelization: # change this according to your needs
+            processing_modality : "serial"
+            pool_size : 1
+        optimization:
+            ranges : {~~log_complexity~~: [0,-1,-2,-3,-4,-5,-6]} # this is a compromise of performance and computation time; if performance is more important use pattern search or larger grid (incl. weight optimization)
+        validation_set :
+            split_node :
+                node : Noop
+        evaluation:
+            metric : "Balanced_accuracy"
+            std_weight: 0
+            performance_sink_node :
+                node : Sliding_Window_Performance_Sink
+                parameters :
+                    ir_class : 'LRP'
+                    decision_boundary : 0.5
+                    measure_times : False
+                    calc_AUC : False
+                    classes_names : ['NoLRP','LRP']
+                    determine_labels : 3
+                    epoch_eval : False
+                    uncertain_area : 'eval([(-1250,-300),(-200,0)])' # 0 here means MARS movement marker; adjust if other scenario!
+            
+        variables: [~~log_complexity~~]
+        
+        nodes :
+            -
+                node : TransferSplitter
+                parameters :
+                    wdefs_train : ["bis-300","bis-150","no_move"] # rule of thumb: 100 ms before actual movement onset, 50 ms after actual movement onset
+                    wdefs_test : 'eval(["bis-000","bis-050"]+["bis-%d" % elem for elem in range(100,4050,50)])' # optimize on sliding windows (have to be in the training data!)
+                    split_method : "count"
+                    splits : 5
+                    random : False
+                    wdefs_split : ["bis-4000"]
+            -
+                node : xDAWN
+                parameters :
+                    erp_class_label : "LRP"
+                    retained_channels : 4
+            -
+                node : Time_Domain_Features
+            -
+                node : Gaussian_Feature_Normalization
+            -  
+                node: LibSVM_Classifier
+                parameters :
+                    complexity : "eval(10**~~log_complexity~~)"
+                    class_labels : ['NoLRP', 'LRP']
+                    weight : [1.0, 2.0]
+                    kernel_type : 'LINEAR'
+            -
+               node : PSF
+               parameters :
+                   class_labels : ['NoLRP','LRP']
+                   store : False
+-
+    node : Sliding_Window_Performance_Sink
+    parameters :
+       classes_names : ['NoLRP','LRP']
+       decision_boundary : 0.5
+       ir_class : "LRP"
+       determine_labels : 3
+       #epoch_signal : "'MarsMarker'"
+       epoch_eval : False
+       uncertain_area : 'eval([(-1250,-300),(-200,0)])'
+       calc_soft_metrics : True
+       

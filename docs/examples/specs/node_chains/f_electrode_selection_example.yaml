@@ -1,0 +1,96 @@
+- 
+    node : Time_Series_Source
+-
+    node : ChannelNameSelector
+    parameters:
+        selected_channels : ["CP1", "CP2", "CP6", "TP10", "P7", "P3", "Pz",  "P4",  "P8",  "PO9"]
+-
+    node : CV_Splitter
+    parameters : 
+        splits : 2
+-
+    node : FFT_Band_Pass_Filter
+    parameters : 
+        pass_band : [0.0, 4.0]
+        keep_in_history : True
+-
+    node : Electrode_Selection_Ranking
+    parameters :
+        ranking : Remove_One_Performance_Ranking
+        num_selected_electrodes : 4
+        recast_method : remove_2
+        store : True
+        ranking_spec :
+            std_weight : 1
+            pool_size : 2
+            flow :
+                -
+                    node : CV_Splitter
+                    parameters : 
+                        splits : 2
+                -
+                    node : Time_Domain_Features
+                -
+                    node : FN
+                    parameters :
+                        outlier_percentage : 8
+                -
+                    node : 2SVM
+                    parameters :
+                        complexity : 100
+                        class_labels : ['Standard', 'Target']
+                        debug : False
+                        max_iterations : 100
+                -
+                    node : Classification_Performance_Sink
+                    parameters :
+                        ir_class : "Target"
+-
+    node : Electrode_Selection_Ranking
+    parameters :
+        ranking : Add_One_Performance_Ranking
+        num_selected_electrodes : 6
+        recast_method : add_1
+        store : True
+        ranking_spec :
+            std_weight : 1
+            pool_size : 2
+            flow :
+                -
+                    node : CV_Splitter
+                    parameters : 
+                        splits : 2
+                -
+                    node : Time_Domain_Features
+                -
+                    node : FN
+                    parameters :
+                        outlier_percentage : 8
+                -
+                    node : 2SVM
+                    parameters :
+                        complexity : 100
+                        class_labels : ['Standard', 'Target']
+                        debug : False
+                        max_iterations : 100
+                -
+                    node : Classification_Performance_Sink
+                    parameters :
+                        ir_class : "Target"
+-
+    node : Time_Domain_Features
+-
+    node : FN
+    parameters :
+       outlier_percentage : 8
+-
+    node : 2SVM
+    parameters :
+        complexity : 100
+        class_labels : ['Standard', 'Target']
+        debug : False
+        max_iterations : 100
+-
+    node : Classification_Performance_Sink
+    parameters :
+        ir_class : "Target"

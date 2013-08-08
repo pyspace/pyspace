@@ -1,0 +1,92 @@
+# This operation allows to conduct empirical evaluation in Reinforcement Learning
+# scenarios. It is based on the MMLF software. MMLF is written in python and can be 
+# obtained at http://mmlf.sourceforge.net/. Under this URL, documentation for the MMLF
+# is also available that might be useful for understanding this operation.
+#
+# Further information about MMLF operations can be found in the corresponding tutorial
+# "Empiricial Evaluations in Reinforcment Learning with pySPACE and MMLF"
+# :ref:`docs.tutorials.tutorial_interface_to_mmlf`
+type: mmlf
+
+# The path under which the MMLF package can be found
+mmlf_path : "/home/user/python-packages/mmlf"
+
+# Determines how many independent runs will be conducted for each parameter setting
+runs : 1
+
+# Determines how many episodes the agent can learn
+learning_episodes : 500
+
+# Determines how many episodes the policy learned by an agent is evaluated
+# This can be set to 1 for deterministic environments, but should b e set to
+# larger values for stochastic environments
+test_episodes : 100
+
+# The name of the MMLF world that will be used
+# Available worlds are among others "mountain_car", "single_pole_balancing",
+# "double_pole_balancing", and "maze2d.
+world_name : "mountain_car"
+
+# The template for the MMLF environment XML configuration.
+# For more details, please take a look at the MMLf documentation
+# The __XX__ entries are placeholders of the template which are
+# instantiated by all values given in generalized_domain
+# to yield concrete environments.
+environment_template : 
+   <environment environmentmodulename="mcar_env">
+     <configDict maxStepsPerEpisode = "500"
+                 accelerationFactor = "__acceleration_factor__"
+                 maxGoalVelocity = "__max_goal_velocity__"
+                 positionNoise = "0.0"
+                 velocityNoise = "0.0"
+     />
+   </environment>
+
+# In order to avoid method overfit (please take a look at the paper by
+# Whiteson et al. "Generalized Domains for Empirical Evaluations in 
+# Reinforcement Learning" for more details), an agent should be tested
+# not only in one specific instantiation of an environment, but in several
+# slightly different versions of an environment. These differences
+# can be obtained by varying certain parameters of the environment. 
+# This example will test each agent in four slightly different versions of
+# the mountain car domain.
+generalized_domain:
+   - {"__acceleration_factor__": 0.001, "__max_goal_velocity__": 0.07}
+   - {"__acceleration_factor__": 0.0075, "__max_goal_velocity__": 0.07}
+   - {"__acceleration_factor__": 0.001, "__max_goal_velocity__": 0.02}
+   - {"__acceleration_factor__": 0.0075, "__max_goal_velocity__": 0.02}
+
+# The template for the MMLF agent XML configuration. 
+# For more details, please take a look at the MMLf documentation
+# The __XX__ entries are placeholders of the template which are
+# instantiated by all values given in parameter_ranges, 
+# parameter_settings etc. (see below) to yield concrete agents
+agent_template : 
+   <agent agentmodulename="td_lambda_agent">
+    <configDict gamma = "__gamma__"
+                 epsilon = "__epsilon__"
+                 lambda = "__lambda__"
+                 minTraceValue = "0.5"
+                 defaultStateDimDiscretizations = "7"
+                 defaultActionDimDiscretizations = "5"
+                 update_rule = "'SARSA'"
+                 function_approximator =  "dict(name = 'CMAC', learning_rate = 0.5, update_rule = 'exaggerator', number_of_tilings = 10, defaultQ = 0.0)"
+                 policyLogFrequency = "250"
+     />
+   </agent>
+
+# "parameter_ranges" is used to determine the values of each parameter 
+# that are tested. If there is more than one parameter, then each
+# possible combination (i.e. the crossproduct) is tested. 
+# Please be aware of the potential combinatorial explosion.
+# The given example would test 3*2*3=18 different agent
+# configurations!
+# Alternatively, one could also specify concrete parameter combinations
+# that should be tested by using "parameter_settings" instead of
+# "parameter_ranges". Please look at the weka_classification_operation.yaml
+# example for more details on that.
+parameter_ranges: 
+    __gamma__: [0.9, 0.99, 1.0]
+    __epsilon__ : [0.0, 0.1]
+    __lambda__: [0.0, 0.5, 0.9]
+

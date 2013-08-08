@@ -1,0 +1,39 @@
+type: mmlf
+
+mmlf_path : "/home/jmetzen/Repositories/mmlf_development"
+
+runs : 10
+learning_episodes : 250
+test_episodes : 1
+
+world_name : "mountain_car"
+
+environment_template : |
+     moduleName : 'mcar_env'
+     configDict: 
+        maxStepsPerEpisode : 500    
+        accelerationFactor : 0.001
+        maxGoalVelocity : 0.07
+        positionNoise : 0.0
+        velocityNoise : 0.0
+
+agent_template : |
+    moduleName : 'td_lambda_agent'
+    configDict:
+        update_rule: SARSA
+        gamma : __GAMMA__
+        epsilon : __EPSILON__
+        lambda : 0.95
+        minTraceValue : 0.5
+        stateDimensionResolution : 9
+        actionDimensionResolution : 7
+        function_approximator : 
+            name : 'CMAC'
+            number_of_tilings : 10
+            learning_rate : 0.5
+            update_rule : 'exaggerator'
+            default : 0.0
+
+parameter_ranges:
+   __GAMMA__ : [0.9, 0.99, 1.0]
+   __EPSILON__ : [0.0, 0.01, 0.1]

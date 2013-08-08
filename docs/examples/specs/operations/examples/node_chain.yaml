@@ -1,0 +1,34 @@
+# An example of a *node_chain* specification file.
+# The specified input is the value of the entry
+# with the key "input_path", the templates the value of "templates".
+# This template is parametrized with two parameters called
+# "__LOWER_CUTOFF__", and "__UPPER_CUTOFF__". Optionally, some "constraints"
+# on the allowed parameter combinations can be defined. For instance,
+# the constraint "__LOWER_CUTOFF__ < __UPPER_CUTOFF__" prevents that
+# the combination where both __LOWER_CUTOFF__ and __UPPER_CUTOFF__ are 2.0
+# is tested. For each combination of the given values for these two parameters
+# that fulfills all constraints and the datasets of the
+# input summary, one result dataset is created. This result dataset
+# consists of the results of 10 independent runs with the
+# instantiated template performed to the respective input dataset.
+# Each such run is an independent process.
+
+# The optional parameter "backend" allows to overwrite the backend specification provided
+# via the command-line. This is useful if the operation is part of a chain
+# and different operations of the chain should
+# not be executed on the same modality.
+
+type: node_chain
+
+input_path: "example_data"
+templates : ["example_flow.yaml"]
+backend: "local"
+parameter_ranges :
+    __LOWER_CUTOFF__ : [0.1, 1.0, 2.0]
+    __UPPER_CUTOFF__ : [2.0, 4.0]
+constraints:
+    - "__LOWER_CUTOFF__ < __UPPER_CUTOFF__"
+
+
+runs : 10
+

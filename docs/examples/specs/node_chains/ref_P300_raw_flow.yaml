@@ -1,0 +1,80 @@
+-
+    node : Offline_EEG_Source
+    parameters : 
+         windower_spec_file : "p300_window_spec.yaml"
+-
+    node : Standardization
+-
+    node : Decimation 
+    parameters :
+        target_frequency : 25 
+        comp_type : 'normal' 
+-
+    node : FFT_Band_Pass_Filter
+    parameters :
+        pass_band : [0.0, 4.0]
+-
+    node : CV_Splitter
+    parameters :
+          splits : 5
+          stratified : True
+-
+    node : xDAWN
+    parameters :
+        erp_class_label : "Target"
+        store : False
+        visualize_pattern : False
+        retained_channels : 8
+-
+    node : Local_Straightline_Features
+    parameters :
+        segment_width : 400
+        stepsize : 120
+        coefficients_used : [1]
+-
+    node : Gaussian_Feature_Normalization
+-
+    node : Grid_Search
+    parameters :
+        parallelization:
+            processing_modality : 'serial'
+            pool_size : 1
+        optimization:
+            ranges : {~~log_complexity~~: [0, -1, -2,-3,-4,-5,-6]}
+        validation_set :
+            split_node :
+                node : CV_Splitter
+                parameters :
+                    splits : 5
+                    stratified : True
+        evaluation:
+            metric : "Balanced_accuracy"
+            std_weight: 0
+            performance_sink_node :
+                node : Classification_Performance_Sink
+                parameters :
+                    ir_class : 'Target'
+                    measure_times : False
+                    calc_AUC : False
+            
+        variables: [~~log_complexity~~]
+        
+        nodes :
+            -  
+                node: LibSVM_Classifier
+                parameters :
+                    complexity : "eval(10**~~log_complexity~~)"
+                    class_labels : ['Standard', 'Target']
+                    weight : [1.0, 5.0]
+                    kernel_type : 'LINEAR'
+                    max_iterations : 50
+            -
+                node: Threshold_Optimization 
+                parameters :
+                    metric : 'Balanced_accuracy'
+                    class_labels : ['Standard', 'Target']
+-
+    node : Classification_Performance_Sink
+    parameters :
+        ir_class : 'Target'
+
