@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.sink.ssnr_sink &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.sink.ssnr_sink</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Sink-Node for the Signal-to-Signal-Plus-Noise Ratio. &quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.spatial_filtering.xdawn</span> <span class="kn">import</span> <span class="n">SSNR</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="kn">import</span> <span class="n">BinaryClassificationDataset</span>
+
+
+<div class="viewcode-block" id="SSNRSinkNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode">[docs]</a><span class="k">class</span> <span class="nc">SSNRSinkNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Sink node that collects SSNR metrics in actual and virtual sensor space.</span>
+
+<span class="sd">    This sink node computes metrics based on the signal to signal-plus-noise</span>
+<span class="sd">    ratio (SSNR). It computes the SSNR both in actual sensor space (ssnr_as)</span>
+<span class="sd">    and virtual sensor space (ssnr_vs). For virtual sensor space, it computes</span>
+<span class="sd">    additionally the SSNR on unseen test data (if available), meaning that the</span>
+<span class="sd">    mapping to virtual sensor space is computed on training data and the</span>
+<span class="sd">    SSNRis computed on test data that was not used for learning this mapping.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">          :erp_class_label: Label of the class for which an ERP should be evoked.</span>
+<span class="sd">               For instance &quot;Target&quot; for a P300 oddball paradigm.</span>
+
+<span class="sd">          :retained_channels: The number of channels that are retained after</span>
+<span class="sd">               xDAWN-based spatial filtering. The SSNR is computed in the</span>
+<span class="sd">               virtual sensor space consisting of these retained channels.</span>
+<span class="sd">               This quantity is only relevant for the SSNR metrics that are</span>
+<span class="sd">               computed in the virtual sensor space. If this quantity is not</span>
+<span class="sd">               defined, all channels are retained</span>
+
+<span class="sd">              (*optional, default: None*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : SSNR_Sink</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                  erp_class_label : &quot;Target&quot;</span>
+<span class="sd">                  retained_channels : 8</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2011/11/14</span>
+
+<span class="sd">    .. todo:: It would be desirable to compute the SSNR within a node chain and write</span>
+<span class="sd">              it along with other metrics in a result file in a later sink node.</span>
+<span class="sd">              This could work the following way: Write the SSNR metrics in</span>
+<span class="sd">              BaseData type, and read these in the</span>
+<span class="sd">              :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode`.</span>
+<span class="sd">              A further sink node should be added that stores only metrics</span>
+<span class="sd">              contained in BaseData type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SSNRSinkNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">erp_class_label</span><span class="p">,</span> <span class="n">retained_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SSNRSinkNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+        <span class="c"># We reuse the ClassificationCollection (maybe this should be renamed to</span>
+        <span class="c"># MetricsDataset?)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="c"># Object for handling SSNR related calculations</span>
+                                      <span class="n">ssnr</span><span class="o">=</span><span class="n">SSNR</span><span class="p">(</span><span class="n">erp_class_label</span><span class="p">,</span> <span class="n">retained_channels</span><span class="p">),</span>
+                                      <span class="c"># Result collection</span>
+                                      <span class="n">ssnr_collection</span><span class="o">=</span><span class="n">BinaryClassificationDataset</span><span class="p">(),</span>
+                                      <span class="n">erp_class_label</span><span class="o">=</span><span class="n">erp_class_label</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset the node to the clean state it had after its initialization. &quot;&quot;&quot;</span>
+        <span class="c"># We have to create a temporary reference since we remove</span>
+        <span class="c"># the self.permanent_state reference in the next step by overwriting</span>
+        <span class="c"># self.__dict__</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span>
+        <span class="c"># reset should not delete classification collection</span>
+        <span class="c"># if you want to delete the collection just do it explicitly.</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s">&quot;ssnr_collection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr_collection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span> <span class="o">=</span> <span class="n">tmp</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return whether this node is trainable.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return whether this node requires supervised training. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c"># Add training example *data* along with its label to SSNR class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">add_example</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">stop_training</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">data</span>  <span class="c"># Return data unchanged</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode.process_current_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.process_current_split">[docs]</a>    <span class="k">def</span> <span class="nf">process_current_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Training of node on training data</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="bp">False</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+
+        <span class="c"># Compute performance metrics SSNR_AS and SSNR_vs on the training</span>
+        <span class="c"># data</span>
+        <span class="n">performance</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;ssnr_as&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_as</span><span class="p">(),</span>
+                       <span class="s">&quot;ssnr_vs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_vs</span><span class="p">()}</span>
+
+        <span class="c"># Collect test data (if any)</span>
+        <span class="n">X_test</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">D_test</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">erp_class_label</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">D</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+
+            <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">X_test</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c"># TODO: Why deep copy? data is not used anymore afterwards!</span>
+                <span class="n">D_test</span> <span class="o">=</span> <span class="n">D</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">X_test</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">X_test</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+                <span class="n">D_test</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">D_test</span><span class="p">,</span> <span class="n">D</span><span class="p">))</span>
+
+        <span class="c"># If there was separate test data: compute metrics that require test data</span>
+        <span class="k">if</span> <span class="n">X_test</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">performance</span><span class="p">[</span><span class="s">&quot;ssnr_vs_test&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_vs_test</span><span class="p">(</span><span class="n">X_test</span><span class="p">,</span> <span class="n">D_test</span><span class="p">)</span>
+
+        <span class="c"># Add SSNR-based metrics computed in this split to result collection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssnr_collection</span><span class="o">.</span><span class="n">add_split</span><span class="p">(</span><span class="n">performance</span><span class="p">,</span> <span class="n">train</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                       <span class="n">split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span>
+                                       <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SSNRSinkNode.get_result_dataset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.ssnr_sink.html#pySPACE.missions.nodes.sink.ssnr_sink.SSNRSinkNode.get_result_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">get_result_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the result collection with the results of this node. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr_collection</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;SSNR_Sink&quot;</span><span class="p">:</span> <span class="n">SSNRSinkNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

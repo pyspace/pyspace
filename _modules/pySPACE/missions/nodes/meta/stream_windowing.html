@@ -1,0 +1,291 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.meta.stream_windowing &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.meta.stream_windowing</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Perform windowing on stream of windows</span>
+
+<span class="sd">.. todo:: documentation: Delete upper summaries!</span>
+<span class="sd">          Check if *meta* is the correct module.</span>
+<span class="sd">          If yes the documentation should make clear, why.</span>
+<span class="sd">          The documentation should show in detail the use case of this node.</span>
+
+<span class="sd">.. todo:: this module should work without EEG acquisition</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.time_series</span> <span class="kn">import</span> <span class="n">TimeSeriesClient</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.support.windower</span> <span class="kn">import</span> <span class="n">Windower</span><span class="p">,</span> <span class="n">MarkerWindower</span>
+
+
+<div class="viewcode-block" id="StreamWindowingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode">[docs]</a><span class="k">class</span> <span class="nc">StreamWindowingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get a stream of time series objects and window them inside a flow. </span>
+
+<span class="sd">    Node that interprets a stream of incoming time series objects as</span>
+<span class="sd">    a raw data stream.</span>
+<span class="sd">    The markers stored in marker_name attribute are used as the markers</span>
+<span class="sd">    for a MarkerWindower.</span>
+<span class="sd">    This should done *before* any splitter, since all incoming windows</span>
+<span class="sd">    are regarded as parts of a consecutive data stream.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">     :windower_spec_file:</span>
+<span class="sd">         The window specification file for the MakerWindower.</span>
+<span class="sd">         Used for testing and training, if windower_spec_file_train</span>
+<span class="sd">         is not specified. </span>
+
+<span class="sd">     :windower_spec_file_train:</span>
+<span class="sd">         A seperate window file for training only.</span>
+<span class="sd">         If not specified, windower_spec_file is used for training</span>
+<span class="sd">         and testing.</span>
+
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Stream_Windowing</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                windower_spec_file : &quot;example_lrp_window_spec.yaml&quot;</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2012/07/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="StreamWindowingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">windower_spec_file</span><span class="p">,</span>
+                 <span class="n">windower_spec_file_train</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="n">local_window_conf</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">StreamWindowingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">windower_spec_file_train</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">windower_spec_file_train</span> <span class="o">=</span> <span class="n">windower_spec_file</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">client</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">marker_windower</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">window_definition</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">local_window_conf</span> <span class="o">=</span> <span class="n">local_window_conf</span><span class="p">,</span>
+                                      <span class="n">windower_spec_file</span> <span class="o">=</span> <span class="n">windower_spec_file</span><span class="p">,</span>
+                                      <span class="n">windower_spec_file_train</span> <span class="o">=</span> <span class="n">windower_spec_file_train</span><span class="p">,</span>
+                                      <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="StreamWindowingNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data that can be used for training of subsequent nodes</span>
+
+<span class="sd">        .. todo:: to document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="c"># set window definition for train phase windower file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span> <span class="o">=</span> \
+            <span class="n">Windower</span><span class="o">.</span><span class="n">_load_window_spec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">windower_spec_file_train</span><span class="p">,</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">local_window_conf</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Requesting train data...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">use_test_data</span><span class="p">:</span>
+                <span class="c"># Get training and test data (with labels)</span>
+                <span class="n">train_data</span> <span class="o">=</span> \
+                    <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="o">=</span><span class="n">use_test_data</span><span class="p">))</span>
+                
+                <span class="c"># create stream of </span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span>
+
+                <span class="c"># Create a generator that emits the windows</span>
+                <span class="n">train_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> \
+                                       <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span><span class="p">)</span>
+        
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">train_data_generator</span><span class="p">,</span> 
+                                                         <span class="n">caching</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
+                
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+        
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># Return the test data as there is no additional data that</span>
+                <span class="c"># was dedicated for training</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">()</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="StreamWindowingNode.request_data_for_testing"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode.request_data_for_testing">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_testing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data for testing of subsequent nodes</span>
+
+<span class="sd">        .. todo:: to document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># set window definition for test phase windower file</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span> <span class="o">=</span> \
+                <span class="n">Windower</span><span class="o">.</span><span class="n">_load_window_spec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">windower_spec_file</span><span class="p">,</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">local_window_conf</span><span class="p">)</span>
+            <span class="n">test_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
+                    
+    
+            <span class="c"># create stream of windows</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span>
+    
+            <span class="c"># Create a generator that emits the windows</span>
+            <span class="n">test_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> \
+                                   <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span><span class="p">)</span>
+    
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">)</span>
+    
+            <span class="c"># Return a fresh copy of the generator</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span> 
+            <span class="k">return</span>  <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+    
+    </div>
+<div class="viewcode-block" id="StreamWindowingNode.process"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode.process">[docs]</a>    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Processes all data that is provided by the input node</span>
+
+<span class="sd">        Returns a generator that yields the data after being processed by this</span>
+<span class="sd">        node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">),</span> <span class="s">&quot;No input node specified!&quot;</span>
+        <span class="c"># Assert  that this node has already been trained</span>
+        <span class="k">assert</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="ow">or</span>
+               <span class="bp">self</span><span class="o">.</span><span class="n">get_remaining_train_phase</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">),</span> <span class="s">&quot;Node not trained!&quot;</span>
+               
+        <span class="n">data_generator</span> <span class="o">=</span> \
+                <span class="n">itertools</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="k">lambda</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+                               <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">),</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">process</span><span class="p">())</span>
+                
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">TimeSeriesClient</span><span class="p">(</span><span class="n">ts_stream</span> <span class="o">=</span> <span class="n">data_generator</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">=</span> <span class="n">MarkerWindower</span><span class="p">(</span><span class="n">data_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+                                              <span class="n">windowdefs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span><span class="p">,</span>
+                                              <span class="n">stridems</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">()</span>
+
+        <span class="c"># Create a generator that emits the windows</span>
+        <span class="n">test_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> \
+                               <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">)</span>
+
+        <span class="c"># Return a fresh copy of the generator</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="StreamWindowingNode.window_stream"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.stream_windowing.html#pySPACE.missions.nodes.meta.stream_windowing.StreamWindowingNode.window_stream">[docs]</a>    <span class="k">def</span> <span class="nf">window_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># Creates a windower that splits the given data data into windows</span>
+        <span class="c"># based in the window definitions provided</span>
+        <span class="c"># and assigns correct labels to these windows</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">TimeSeriesClient</span><span class="p">(</span><span class="n">ts_stream</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">=</span> <span class="n">MarkerWindower</span><span class="p">(</span><span class="n">data_client</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+                                              <span class="n">windowdefs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span><span class="p">,</span>
+                                              <span class="n">stridems</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Stream_Windowing&quot;</span><span class="p">:</span> <span class="n">StreamWindowingNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

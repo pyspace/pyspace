@@ -1,0 +1,838 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tools.live.eeg_stream &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tools.live.eeg_stream</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: UTF-8 -*</span>
+
+<span class="sd">&quot;&quot;&quot;eeg_stream.py</span>
+<span class="sd">EEG client module.</span>
+
+<span class="sd">Created by Timo Duchrow on 2008-08-26.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;$Revision: 456 $&quot;</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;EEGClient&#39;</span><span class="p">]</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">cProfile</span>
+<span class="kn">import</span> <span class="nn">pstats</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">xmlrpclib</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">pySPACE.missions.support.CPP.shared_memory_access.build</span> <span class="kn">import</span> <span class="n">shmaccess</span>
+    <span class="n">import_error</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+    <span class="n">import_error</span> <span class="o">=</span> <span class="n">e</span>
+
+<span class="n">verbose</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="n">READYMSG</span> <span class="o">=</span> <span class="s">&#39;1&#39;</span>
+
+<span class="n">fmt__GUID</span> <span class="o">=</span> <span class="s">&#39;IHH8s&#39;</span>
+<span class="n">fmt_RDA_MessageHeader</span> <span class="o">=</span> <span class="s">&#39;II&#39;</span>
+
+<span class="n">n__GUID</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt__GUID</span><span class="p">)</span>
+<span class="n">n_RDA_MessageHeader</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">)</span>
+
+<span class="n">T_RDA_MessageStart</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">T_RDA_MessageData</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">T_RDA_MessageStop</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">T_RDA_MessageMuxData</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">T_RDA_MessageData32</span> <span class="o">=</span> <span class="mi">9</span>
+<span class="n">T_ReadyMessage</span> <span class="o">=</span> <span class="mi">10</span>
+
+
+<div class="viewcode-block" id="EEGClient"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient">[docs]</a><span class="k">class</span> <span class="nc">EEGClient</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;EEG stream client for EEG stream protocol&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EEGClient.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">,</span> <span class="n">prio</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EEGClient</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        <span class="c"># variable names with capitalization correspond to structures members</span>
+        <span class="c"># defined in RecorderRDA.h</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="bp">None</span>           <span class="c"># number of channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span> <span class="o">=</span> <span class="bp">None</span>   <span class="c"># sampling interval</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolutions</span> <span class="o">=</span> <span class="bp">None</span>         <span class="c"># list of resolutions / channel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># list of channel names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">priority</span> <span class="o">=</span> <span class="n">prio</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># standard number of paints in one data block</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>        
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="bp">None</span>           <span class="c"># last sample block read</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span> <span class="o">=</span> <span class="bp">None</span>         <span class="c"># last marker block read</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>       <span class="c"># dictionary with marker names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c"># number of different marker types</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">lostmarker</span> <span class="o">=</span> <span class="bp">False</span>         <span class="c"># for two markers corresponding to one sample in last sample of a block</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lostmarkertypedesc</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        </div>
+<div class="viewcode-block" id="EEGClient.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Connect to EEG stream server and collect metadata&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">message</span><span class="p">):</span> 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="p">:</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;(</span><span class="si">%d</span><span class="s">): could not open socket(</span><span class="si">%d</span><span class="s">): </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span> 
+            
+         <span class="c"># Configure and connect the Socket</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">message</span><span class="p">):</span> 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="p">:</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;(</span><span class="si">%d</span><span class="s">): SO_REUSEADDR and/or connect failed! (</span><span class="si">%d</span><span class="s">): </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+
+<span class="c">#        print &quot;connected to %s @ %s&quot; %(self.host, self.port)</span>
+             
+        <span class="k">if</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">name</span><span class="o">==</span><span class="s">&#39;posix&#39;</span><span class="p">):</span>
+            <span class="c"># install signal handlers</span>
+            <span class="n">sigs</span> <span class="o">=</span> <span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGQUIT</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sigs</span><span class="p">:</span>
+                <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grace</span><span class="p">)</span>
+            
+        <span class="c"># read start message</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readmsg</span><span class="p">(</span><span class="n">msg_type</span><span class="o">=</span><span class="n">T_RDA_MessageStart</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;could not read start message&quot;</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;connected to server&quot;</span>
+            
+    </div>
+<div class="viewcode-block" id="EEGClient.syncread"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.syncread">[docs]</a>    <span class="k">def</span> <span class="nf">syncread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform synchronous read of one data block&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+    </div>
+<div class="viewcode-block" id="EEGClient.regcallback"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.regcallback">[docs]</a>    <span class="k">def</span> <span class="nf">regcallback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register callback function&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EEGClient.read"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nblocks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Invoke registered callbacks for each incoming data block</span>
+<span class="sd">        </span>
+<span class="sd">        returns number of read _data_ blocks&quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c"># return no data when not running</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">nread</span>
+        
+        <span class="k">while</span> <span class="n">ret</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> \
+            <span class="n">ret</span> <span class="o">!=</span> <span class="n">T_RDA_MessageStop</span> <span class="ow">and</span> \
+            <span class="p">(</span><span class="n">nblocks</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">nread</span> <span class="o">&lt;</span> <span class="n">nblocks</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_readmsg</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>       
+            <span class="k">if</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">T_RDA_MessageData</span> <span class="ow">or</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">T_RDA_MessageData32</span> <span class="ow">or</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">T_RDA_MessageMuxData</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+                    <span class="k">print</span> <span class="s">&quot;received EEG stream data message&quot;</span>
+                <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">:</span>
+                    <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">)</span>    
+                <span class="n">nread</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">T_RDA_MessageStop</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+                    <span class="k">print</span> <span class="s">&quot;received EEG stream stop message&quot;</span>
+            <span class="k">elif</span> <span class="n">ret</span> <span class="o">==</span> <span class="n">T_RDA_MessageStart</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="s">&quot;Received updated EEG stream start Message&quot;</span>
+                <span class="c">#raise IOError, &quot;received unexpected EEG stream start message&quot;</span>
+            <span class="k">elif</span> <span class="n">ret</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;could not read EEG stream message&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;unknown EEG stream message type </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">ret</span>
+    
+        <span class="k">return</span> <span class="n">nread</span>
+    </div>
+<div class="viewcode-block" id="EEGClient._sendmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._sendmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_sendmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="n">T_ReadyMessage</span><span class="p">,</span> <span class="n">content</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Sends Messages to EEGServer</span>
+<span class="sd">        </span>
+<span class="sd">        T_ReadyMessage := tell Server to send another EEG{Data, Start, Stop}Message&quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">msg_type</span> <span class="o">==</span> <span class="n">T_ReadyMessage</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">READYMSG</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;Type of Message to send to EEGserver not known!&quot;</span>
+    </div>
+<div class="viewcode-block" id="EEGClient._readmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._readmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_readmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reads EEG stream message and invokes appropiate handler.</span>
+<span class="sd">        </span>
+<span class="sd">        Reads EEG stream header and checks optional type constraint.</span>
+<span class="sd">        Returns which message type was read.&quot;&quot;&quot;</span>
+        <span class="c"># tell server to send a packet</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sendmsg</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>    
+            <span class="k">return</span> <span class="n">T_RDA_MessageStop</span>
+            
+        <span class="c"># read  GUID    </span>
+        <span class="c">#guid = self.socket.recv(n__GUID)</span>
+        <span class="c"># read header</span>
+        <span class="n">recvsize</span> <span class="o">=</span> <span class="n">n_RDA_MessageHeader</span>
+        <span class="n">buff</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">buff</span><span class="p">)</span><span class="o">&lt;</span><span class="n">recvsize</span><span class="p">:</span>
+            <span class="n">hdr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">recvsize</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">buff</span><span class="p">))</span>
+            <span class="n">buff</span> <span class="o">+=</span> <span class="n">hdr</span>
+
+        <span class="n">hdr</span> <span class="o">=</span> <span class="n">buff</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c"># print &quot;&gt;&gt;&gt; no header&quot;</span>
+            <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">hdr</span><span class="p">)</span> <span class="o">!=</span> <span class="n">n_RDA_MessageHeader</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;data stream corrupt&quot;</span>
+        <span class="p">(</span><span class="n">nSize</span><span class="p">,</span> <span class="n">nType</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">,</span> <span class="n">hdr</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;header:</span><span class="se">\n</span><span class="s"> nSize: </span><span class="si">%08x</span><span class="se">\n</span><span class="s"> nType: </span><span class="si">%08x</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nSize</span><span class="p">,</span> <span class="n">nType</span><span class="p">)</span>
+        <span class="c"># check optional type constraint</span>
+        <span class="k">if</span> <span class="n">msg_type</span> <span class="o">!=</span> <span class="s">&#39;all&#39;</span> <span class="ow">and</span> <span class="n">msg_type</span> <span class="o">!=</span> <span class="n">nType</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;RDA message of type </span><span class="si">%d</span><span class="s"> expected &quot;</span>\
+            <span class="s">&quot;(received type </span><span class="si">%d</span><span class="s"> from server)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">msg_type</span><span class="p">,</span> <span class="n">nType</span><span class="p">)</span>
+            
+        <span class="c"># read message from socket</span>
+        <span class="c"># The while loop is neccessary to ensure that the total amount of data is read</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">recvsize</span> <span class="o">=</span> <span class="n">nSize</span> <span class="o">-</span> <span class="n">n_RDA_MessageHeader</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;receiving message type </span><span class="si">%d</span><span class="s"> of size </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nType</span><span class="p">,</span> <span class="n">nSize</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buff1</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buff1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">recvsize</span><span class="p">:</span>
+            <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">recvsize</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buff1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buff1</span> <span class="o">+=</span> <span class="n">payload</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">buff1</span>
+        
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;done! total size (except header): </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
+        
+        <span class="c"># invoke appropiate handler for decoding</span>
+        <span class="k">if</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStart</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getstartmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageMuxData</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getmuxdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="n">verbose</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStop</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getstopmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData32</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getdata32msg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">nType</span>
+    </div>
+<div class="viewcode-block" id="EEGClient._getstopmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._getstopmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_getstopmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                </div>
+<div class="viewcode-block" id="EEGClient._getstartmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._getstartmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_getstartmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Decode metadata from start type message&quot;&quot;&quot;</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c"># read number of channels and sampling interval</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;IIIII&#39;</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span><span class="p">)</span> <span class="o">=</span> \
+            <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+        <span class="c"># offset += 4 </span>
+        <span class="c"># TODO: find out why! (fix for compatability with eegmanager 18ee0306a783fe1518742b1ea13b811e837662fb)</span>
+        <span class="c"># TODO: solved?</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">-</span> <span class="mi">1</span>
+            
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;II&#39;</span>
+            <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+            <span class="n">part1</span><span class="p">,</span> <span class="n">part2</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="s">&#39;II&#39;</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">=</span> <span class="n">part1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">&lt;&lt;</span> <span class="mi">32</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">+=</span> <span class="n">part2</span>
+            
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;abs_start_time: </span><span class="si">%d</span><span class="s"> </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span><span class="p">)</span>
+                <span class="k">print</span> <span class="n">nread</span>        
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n\n\n</span><span class="s">message start:</span><span class="se">\n</span><span class="s">  nChannels: </span><span class="si">%d</span><span class="se">\n</span><span class="s">  dSamplingInterval: </span><span class="si">%d</span><span class="se">\n</span><span class="s"> Blocksize: </span><span class="si">%d</span><span class="se">\n</span><span class="s">SampleSize: </span><span class="si">%d</span><span class="se">\n</span><span class="s">Protocol-Version: </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> \
+                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span><span class="p">)</span>
+        
+
+        <span class="c"># read resolutions</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">B&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="mi">256</span><span class="p">)</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolutions</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;  resolutions: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolutions</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+
+        
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;I&#39;</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenChannelNames</span><span class="p">)</span> <span class="o">=</span> \
+            <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="s">&quot;  lenChannelNames: </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> \
+                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenChannelNames</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>        
+
+        
+        
+        <span class="c"># read channel names</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">s&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenChannelNames</span><span class="p">)</span>
+        <span class="n">namesbuf</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="c"># build list of channel names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">namesbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nstr</span><span class="p">)</span>
+                <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">nstr</span> <span class="o">+=</span> <span class="n">c</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="s">&#39;marker&#39;</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span>
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;removed </span><span class="se">\&#39;</span><span class="s">marker</span><span class="se">\&#39;</span><span class="s"> pseudo channel from channel-names.</span><span class="se">\n</span><span class="s">&quot;</span>
+                  
+        <span class="k">for</span> <span class="p">(</span><span class="n">cid</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channelids</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cid</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;  channel names: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;I&#39;</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenMarkerNames</span><span class="p">)</span> <span class="o">=</span> \
+            <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="s">&quot;  lenMarkerNames: </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> \
+                <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenMarkerNames</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+        
+        
+        <span class="c"># read marker names</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%d</span><span class="s">s&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lenMarkerNames</span><span class="p">)</span>
+        <span class="n">namesbuf</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+
+        <span class="c"># build list of marker names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">namesbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">)]</span> <span class="o">=</span> <span class="n">nstr</span>
+                <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">nstr</span> <span class="o">+=</span> <span class="n">c</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">)]</span> <span class="o">=</span> <span class="s">&#39;null&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="p">(</span><span class="n">cid</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">cid</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> 
+            <span class="k">print</span> <span class="s">&quot;  marker names: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;  marker ids: &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+        </div>
+<div class="viewcode-block" id="EEGClient._getdata32msg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._getdata32msg">[docs]</a>    <span class="k">def</span> <span class="nf">_getdata32msg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convenience method for getting data from 32-bit type data message (float)&quot;&quot;&quot;</span>
+        <span class="c"># TODO test with RDA server</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_getdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;float32&#39;</span><span class="p">,</span> <span class="n">msgtype</span><span class="o">=</span><span class="s">&#39;f&#39;</span><span class="p">)</span>
+            </div>
+<div class="viewcode-block" id="EEGClient._getdatamsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._getdatamsg">[docs]</a>    <span class="k">def</span> <span class="nf">_getdatamsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;short&#39;</span><span class="p">,</span> <span class="n">msgtype</span><span class="o">=</span><span class="s">&#39;h&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get data from 16-bit type data message (short)&quot;&quot;&quot;</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;II&#39;</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="p">(</span><span class="n">time_code</span><span class="p">,</span> <span class="n">nMarkers</span><span class="p">)</span> <span class="o">=</span> \
+            <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s">&#39;time_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s">&#39;n_markers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nMarkers</span>
+
+        <span class="c"># read markers</span>
+        <span class="c">#self.ndmarkers = None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">],</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lostmarker</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lostmarker</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lostmarkertypedesc</span>
+        <span class="c">#print &quot;lenmarkers: &quot;+str(nMarkers)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nMarkers</span><span class="p">):</span>
+            <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;II&#39;</span>
+            <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>     
+            <span class="p">(</span><span class="n">nPosition</span><span class="p">,</span> <span class="n">ntypedesc</span><span class="p">)</span> <span class="o">=</span> \
+                <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+                       
+            <span class="k">if</span> <span class="n">ntypedesc</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">ntypedesc</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;received unexpexted marker type (</span><span class="si">%d</span><span class="s">) not &quot;</span> \
+                    <span class="s">&quot;defined in header max(</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ntypedesc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;  relPosition: nPosition: </span><span class="si">%d</span><span class="se">\n</span><span class="s">  sTypeDesc: </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">nPosition</span><span class="p">,</span> <span class="n">ntypedesc</span><span class="p">)</span>
+                <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">ntypedesc</span><span class="p">]</span>
+
+            <span class="c">#self.ndmarkers[len(self.ndmarkers)] = ntypedesc #(ntypedesc, nPosition)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">[</span><span class="n">nPosition</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">[</span><span class="n">nPosition</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">ntypedesc</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">nPosition</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">[</span><span class="n">nPosition</span><span class="p">]</span> <span class="o">=</span> <span class="n">ntypedesc</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lostmarker</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lostmarkertypedesc</span> <span class="o">=</span> <span class="n">ntypedesc</span>
+                
+<span class="c">#            print self.ndmarkers            </span>
+            <span class="c"># build dictionary of marker names on the fly</span>
+            <span class="c"># this information should really come from the header in the next</span>
+            <span class="c"># version of RDA server</span>
+            <span class="c"># ntypedesc = None</span>
+            <span class="c"># if not self.markerids.has_key(sTypeDesc):</span>
+            <span class="c">#     self.nmarkertypes += 1</span>
+            <span class="c">#     self.markerids[sTypeDesc] = self.nmarkertypes</span>
+            <span class="c">#     ntypedesc = self.nmarkertypes</span>
+            <span class="c"># else:</span>
+            <span class="c">#     ntypedesc = self.markerids[sTypeDesc]</span>
+            <span class="c">#     </span>
+            <span class="c"># self.markernames[ntypedesc] = sTypeDesc</span>
+            
+            <span class="c"># check if this is ok</span>
+            <span class="c">#self.ndmarkers[nPosition-1] = ntypedesc</span>
+            <span class="c"># print &quot;nPosition &quot;, nPosition</span>
+        <span class="c">#                                                * struct.calcsize(msgtype)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">readSize</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">*</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">msgtype</span><span class="p">))</span>
+        
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">payload</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">readSize</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="p">)</span>
+        
+        </div>
+<div class="viewcode-block" id="EEGClient._getmuxdatamsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._getmuxdatamsg">[docs]</a>    <span class="k">def</span> <span class="nf">_getmuxdatamsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get data from 16/32-bit type data message (short)&quot;&quot;&quot;</span>
+
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;II&#39;</span>
+        <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
+        <span class="n">time_code</span><span class="p">,</span> <span class="n">sample_size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s">&#39;time_code&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_code</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span><span class="p">[</span><span class="s">&#39;sample_size&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sample_size</span>
+        
+        <span class="n">sample_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sample_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sample_size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int16</span>
+            <span class="n">msgtype</span> <span class="o">=</span> <span class="s">&#39;h&#39;</span>
+        <span class="k">elif</span> <span class="n">sample_size</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">dtype</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int32</span>
+            <span class="n">msgtype</span> <span class="o">=</span> <span class="s">&#39;i&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;recovered sample_size (</span><span class="si">%d</span><span class="s">) is unknown or an error!&quot;</span> <span class="o">%</span> <span class="n">sample_size</span>
+            <span class="k">raise</span> <span class="ne">IOError</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span> <span class="k">print</span> <span class="s">&quot;unpacking message (dtype:=</span><span class="si">%s</span><span class="s">, msgtype=</span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dtype</span><span class="p">,</span> <span class="n">msgtype</span><span class="p">)</span>
+
+        <span class="c"># read markers</span>
+        <span class="c"># TODO: extract markers</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">readSize</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">*</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">msgtype</span><span class="p">))</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="n">dtype</span><span class="p">)</span>
+        
+        <span class="n">raw_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">frombuffer</span><span class="p">(</span><span class="n">payload</span><span class="p">[</span><span class="n">offset</span><span class="p">:</span><span class="n">offset</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">readSize</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dt</span><span class="p">)</span>
+        <span class="n">raw_data</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="c"># self.ndsamples = numpy.hsplit(raw_data, numpy.array([raw_data.shape[1]-1, raw_data.shape[1]]))[0]  </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[:,:</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="o">.</span><span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="p">)</span>
+        
+        <span class="n">comp_markers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        
+        <span class="c"># raw_markers = numpy.hsplit(raw_data, numpy.array([raw_data.shape[1]-1, raw_data.shape[1]], numpy.int16))[1]</span>
+        <span class="n">raw_markers</span> <span class="o">=</span> <span class="n">raw_data</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">raw_markers</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">smarker</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span>
+                <span class="n">rmarker</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span> <span class="o">&amp;</span> <span class="mh">0xff00</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span>
+                <span class="k">if</span> <span class="n">rmarker</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">comp_markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;S</span><span class="si">%3d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">smarker</span><span class="p">)])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">comp_markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;R</span><span class="si">%3d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">rmarker</span><span class="p">)])</span>
+                
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">comp_markers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">comp_markers</span><span class="p">)</span>
+        
+<span class="c">#        print &quot;samples shape: &quot;, self.ndsamples.shape</span>
+<span class="c">#        print &quot;markers shape: &quot;, self.ndmarkers.shape</span>
+                            </div>
+<div class="viewcode-block" id="EEGClient._grace"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient._grace">[docs]</a>    <span class="k">def</span> <span class="nf">_grace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">signum</span><span class="p">,</span> <span class="n">stackframe</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="EEGClientShm"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm">[docs]</a><span class="k">class</span> <span class="nc">EEGClientShm</span><span class="p">(</span><span class="n">EEGClient</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Acquire raw streamed eeg-data from shared memory.</span>
+
+<span class="sd">        This implementation uses a custom c-extension located</span>
+<span class="sd">        in pySPACE/missions/support/CPP/shared_memory_access.</span>
+<span class="sd">        Please follow instruction on how to build etc. in the</span>
+<span class="sd">        corresponding README file. (TODO:!)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EEGClientShm.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shm_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        :param shm_name:</span>
+<span class="sd">            the name of the shared memory segment - usually</span>
+<span class="sd">            a 32-bit integer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EEGClientShm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">import_error</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">import_error</span>
+        <span class="k">if</span> <span class="n">shm_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;please specify shared memory name!&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="EEGClientShm.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shmaccess</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="mi">22</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">e</span>
+</div>
+<div class="viewcode-block" id="EEGClientShm._readmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm._readmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_readmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">read</span> <span class="o">=</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+            <span class="k">except</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">StreamGap</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="c"># print e</span>
+                <span class="k">continue</span>
+            <span class="k">except</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">StopIteration</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;dataset completely streamed..&quot;</span>
+                <span class="k">break</span>
+
+            <span class="k">break</span>
+
+        <span class="p">(</span><span class="n">nSize</span><span class="p">,</span> <span class="n">nType</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">,</span> <span class="n">read</span><span class="p">[:</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">)])</span>
+
+        <span class="n">payload</span> <span class="o">=</span> <span class="n">read</span><span class="p">[</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">):]</span>
+
+        <span class="c"># invoke appropiate handler for decoding</span>
+        <span class="k">if</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStart</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getstartmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageMuxData</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getmuxdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStop</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getstopmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData32</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_getdata32msg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">nType</span>
+</div></div>
+<div class="viewcode-block" id="EEGServer"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer">[docs]</a><span class="k">class</span> <span class="nc">EEGServer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;EEG stream server for EEG stream protocol&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EEGServer.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">absolute_data_path</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">absolute_data_path</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="n">block_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">executable</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;eegmanager&quot;</span><span class="p">,</span> <span class="s">&quot;release&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">)</span> 
+        </div>
+<div class="viewcode-block" id="EEGServer.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;EEG-Server could not be started. Did you compile it correctly?&#39;</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="EEGServer.start"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Starts the EEG server&quot;&quot;&quot;</span>
+        
+                    
+        <span class="k">if</span> <span class="bp">None</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="p">:</span>
+            <span class="n">server_out_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;server_out_log&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+            <span class="n">server_err_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;server_err_log&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> 
+        
+            <span class="n">eeg_acq_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">__name__</span><span class="p">]</span><span class="o">.</span><span class="n">__file__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        
+            <span class="c"># Workaround for finding Free XML-Ports</span>
+            <span class="n">freeport</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">call</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="n">call</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">files</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">eeg_acq_root</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;There is no existing executable in </span><span class="si">%s</span><span class="s">. Please compile!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">eeg_acq_root</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable</span><span class="p">)))</span>
+
+            <span class="k">while</span> <span class="ow">not</span> <span class="n">freeport</span><span class="p">:</span>
+                <span class="c"># Add Port number, create test-ProxyServer, </span>
+                <span class="c"># XMLRPC-Port range: 16253..26253</span>
+                <span class="n">xmlport</span> <span class="o">=</span> <span class="mi">16253</span> <span class="o">+</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10000</span><span class="p">)</span>
+                <span class="n">call</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">xmlport</span><span class="p">))</span>
+                <span class="n">test_proxy</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">&quot;http://127.0.0.1:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">test_proxy</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">listMethods</span><span class="p">()</span>
+                <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+                    <span class="n">freeport</span> <span class="o">=</span> <span class="bp">True</span>
+                    
+                <span class="k">del</span> <span class="n">test_proxy</span>
+                    
+                <span class="c"># Remove Portnumber</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">freeport</span><span class="p">:</span>
+                    <span class="n">call</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+              
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">call</span><span class="p">,</span> 
+                                       <span class="n">cwd</span><span class="o">=</span><span class="n">eeg_acq_root</span><span class="p">,</span>
+                                       <span class="n">stdin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                       <span class="n">stderr</span><span class="o">=</span><span class="n">server_err_log</span><span class="p">,</span>
+                                       <span class="n">stdout</span><span class="o">=</span><span class="n">server_out_log</span><span class="p">)</span>
+                      
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">&quot;http://127.0.0.1:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+        
+        <span class="n">mysocket</span> <span class="o">=</span> <span class="bp">None</span>
+        
+        <span class="c"># wait for the server to startup...</span>
+        <span class="c"># TODO: check this! Time depends on number of started processes!</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span> 
+            <span class="c">#try to get a socket connection and start the server</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
+            
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+            
+            <span class="c"># check if the server process is still running? </span>
+            <span class="c"># returncode:   None -&gt; still running</span>
+            <span class="c">#               Numeric -&gt; terminated</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+            <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">returncode</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">,</span> <span class="s">&quot;Server Process should run but exited with status </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ret</span><span class="p">)</span>
+            
+            <span class="n">mysocket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+  
+            <span class="n">connected</span> <span class="o">=</span> <span class="n">mysocket</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
+       
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">message</span><span class="p">):</span>
+            <span class="c"># failure in connection</span>
+            <span class="k">if</span> <span class="n">mysocket</span><span class="p">:</span> 
+                <span class="n">mysocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
+                
+            <span class="c"># could not open connection -&gt; kill server    </span>
+            <span class="n">os</span><span class="o">.</span><span class="n">kill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGKILL</span><span class="p">)</span>
+            
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;error: </span><span class="si">%d</span><span class="s"> could not open socket(</span><span class="si">%d</span><span class="s">): </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+            
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    
+        <span class="c">#Create a method which handles the tear down of the server</span>
+        <span class="k">def</span> <span class="nf">kill</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot; Kills the running EEG server &quot;&quot;&quot;</span>    
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">3</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
+            
+        <span class="c">#Add signal handler</span>
+        <span class="n">signals</span> <span class="o">=</span> <span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGQUIT</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">signals</span><span class="p">:</span>
+            <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">kill</span><span class="p">)</span>
+            </div>
+<div class="viewcode-block" id="EEGServer.reset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset the EEG server so that he points again to the beginning&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+
+</div></div>
+<div class="viewcode-block" id="dummylisten1"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten1">[docs]</a><span class="k">def</span> <span class="nf">dummylisten1</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">):</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;*&quot;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="dummylisten2"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten2">[docs]</a><span class="k">def</span> <span class="nf">dummylisten2</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
+    <span class="c">#print &quot;samples:&quot;, samples</span>
+    <span class="k">print</span> <span class="s">&quot;markers:&quot;</span><span class="p">,</span> <span class="n">markers</span>
+    </div>
+<div class="viewcode-block" id="dummylisten3"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten3">[docs]</a><span class="k">def</span> <span class="nf">dummylisten3</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
+    <span class="k">pass</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>      
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">host</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">print</span> <span class="n">host</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">host</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">))</span> <span class="o">!=</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span>
+            <span class="n">port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">print</span> <span class="n">port</span>
+            
+            <span class="n">c</span> <span class="o">=</span> <span class="n">EEGClient</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;could not generate meaning from args </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">EEGClient</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">)</span>
+            
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c"># Setup for Localhost  </span>
+        <span class="c"># c = EEGClient(host=&#39;127.0.0.1&#39;, port=51244)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">EEGClientShm</span><span class="p">(</span><span class="n">shm_name</span> <span class="o">=</span> <span class="mi">22</span><span class="p">)</span>
+
+    <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">regcallback</span><span class="p">(</span><span class="n">dummylisten1</span><span class="p">)</span>
+    
+    <span class="n">n</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nblocks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nblocks</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+    <span class="c"># n += c.read(nblocks=1, verbose=True)</span>
+    <span class="c"># n += c.read(nblocks=-1)</span>
+    <span class="n">stop</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    
+    <span class="n">total_b</span>  <span class="o">=</span> <span class="n">n</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">stdblocksize</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">nChannels</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">sample_size</span>
+    <span class="n">total_kb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_b</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
+    <span class="n">total_mb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_kb</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
+    <span class="n">total_gb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_mb</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
+    
+    <span class="n">rate_mb_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_mb</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>
+    
+    <span class="k">print</span> <span class="s">&quot;received </span><span class="si">%06f</span><span class="s"> MB in </span><span class="si">%04f</span><span class="s"> Seconds := </span><span class="si">%f</span><span class="s"> MB/s&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">total_mb</span><span class="p">,</span> <span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">),</span> <span class="n">rate_mb_s</span><span class="p">)</span>
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

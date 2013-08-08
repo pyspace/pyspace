@@ -1,0 +1,847 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tools.csv_analysis &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tools.csv_analysis</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Deal with csv files in general, and in particular after classification</span>
+
+<span class="sd">The functions provided here focus on two issues:</span>
+
+<span class="sd">    1) Manipulation of csv files (load, save, change)</span>
+<span class="sd">    2) Repair csv files after unsuccessful classification,</span>
+<span class="sd">       e.g. to be able to perform an analysis operation</span>
+
+<span class="sd">**Examples**</span>
+
+<span class="sd">    1) Loading csv file, extracting relevant data, saving new csv file:</span>
+
+<span class="sd">        *Problem*:</span>
+
+<span class="sd">        A csv file is existing, but the file is huge and you need only certain</span>
+<span class="sd">        values, which are all entries with</span>
+
+<span class="sd">            - Parameter __Range__=500</span>
+<span class="sd">            - Parameter __Start__=100</span>
+<span class="sd">            - Parameter __SamplingFreq__=25</span>
+
+<span class="sd">        *Solution*:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import csv_analysis</span>
+<span class="sd">            data=csv_analysis.csv2dict(&#39;results.csv&#39;)</span>
+<span class="sd">            conditions=csv_analysis.empty_dict(data)</span>
+<span class="sd">            conditions[&#39;__Range__&#39;].append(&#39;500&#39;)</span>
+<span class="sd">            conditions[&#39;__Start__&#39;].append(&#39;200&#39;)</span>
+<span class="sd">            conditions[&#39;__SamplingFreq__&#39;].append(&#39;25&#39;)</span>
+<span class="sd">            new_dict=csv_analysis.strip_dict(data, conditions)</span>
+<span class="sd">            csv_analysis.dict2csv(&#39;new_results.csv&#39;, new_dict)</span>
+
+<span class="sd">    2) Build results.csv after classification failure and complement with reconstructed conditions:</span>
+
+<span class="sd">        *Problem*:</span>
+
+<span class="sd">        A classification procedure failed or has been aborted. What is needed is a</span>
+<span class="sd">        procedure that</span>
+
+<span class="sd">            (i)     builds a results.csv from conditions that were ready</span>
+<span class="sd">            (ii)    identifies the conditions which were not ready</span>
+<span class="sd">            (iii)   reconstructs missing conditions according to parameters inferable</span>
+<span class="sd">                    from path and user defined default values (e.g. AUC=0.5 and</span>
+<span class="sd">                    F_measure=0)</span>
+<span class="sd">            (iv)    merges into existing results and saves.</span>
+
+<span class="sd">        *Solution short*:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            from pySPACE.tools import csv_analysis</span>
+<span class="sd">            from pySPACE.resources.dataset_defs.performance_result import PerformanceResultSummary</span>
+<span class="sd">            mydefaults=dict()</span>
+<span class="sd">            mydefaults[&#39;AUC&#39;]=0.5</span>
+<span class="sd">            mydefaults[&#39;F_measure&#39;]=0</span>
+<span class="sd">            PerformanceResultSummary.repair_csv(datapath, default_dict=mydefaults)</span>
+
+<span class="sd">        *Solution long*:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            import csv_analysis</span>
+<span class="sd">            from pySPACE.resources.dataset_defs.performance_result import PerformanceResultSummary</span>
+<span class="sd">            num_splits=52</span>
+<span class="sd">            PerformanceResultSummary.merge_performance_results(datapath)</span>
+<span class="sd">            csv_dict = csv_analysis.csv2dict(datapath + &#39;/results.csv&#39;)</span>
+<span class="sd">            oplist=csv_analysis.check_op_libSVM(datapath)</span>
+<span class="sd">            failures = csv_analysis.report_failures(oplist, num_splits)</span>
+<span class="sd">            mydefaults=dict()</span>
+<span class="sd">            mydefaults[&#39;AUC&#39;]=0.5</span>
+<span class="sd">            mydefaults[&#39;F_measure&#39;]=0</span>
+<span class="sd">            final_dict=csv_analysis.reconstruct_failures(csv_dict, failures,</span>
+<span class="sd">                                                num_splits, default_dict=mydefaults)</span>
+<span class="sd">            csv_analysis.dict2csv(datapath + &#39;/repaired_results.csv&#39;, final_dict)</span>
+
+<span class="sd">:Author: Sirko Straube (sirko.straube@dfki.de), Mario Krell,</span>
+<span class="sd">         Anett Seeland, David Feess</span>
+<span class="sd">:Created: 2010/11/09</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="csv2dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.csv2dict">[docs]</a><span class="k">def</span> <span class="nf">csv2dict</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">filter_keys</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Load a csv file and return content in a dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    The dictionary has n list elements,</span>
+<span class="sd">    with n being equal to the number of columns in the csv file.</span>
+<span class="sd">    Additional keyword arguments are passed to the reader</span>
+<span class="sd">    instance, e.g. a different delimiter than &#39;,&#39; (see csv.Reader).</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :filename:</span>
+<span class="sd">            Contains the filename as a string.</span>
+<span class="sd">            </span>
+<span class="sd">        :filter_keys:</span>
+<span class="sd">            If a list of filter keys is specified, only the specified</span>
+<span class="sd">            keys are left and all other are discarded</span>
+<span class="sd">            </span>
+<span class="sd">        :delimiter:</span>
+<span class="sd">            The delimiter between columns in the csv. Defaults to &#39;,&#39;, as csv</span>
+<span class="sd">            actually stands for comma separated, but sometimes different symbols</span>
+<span class="sd">            are used.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube (sirko.straube@dfki.de)</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">import</span> <span class="nn">csv</span>
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+    <span class="n">csv_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">csvDictReader</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">DictReader</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    
+    <span class="n">data_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">line_dict</span> <span class="ow">in</span> <span class="n">csvDictReader</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">line_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">filter_keys</span><span class="p">:</span>
+                <span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">filter_keys</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;__&quot;</span><span class="p">):</span>
+                <span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            
+    <span class="n">csv_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">data_dict</span>
+</div>
+<div class="viewcode-block" id="dict2csv"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.dict2csv">[docs]</a><span class="k">def</span> <span class="nf">dict2csv</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">data_dict</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39;,&#39;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Write a dictionary to a csv file in a sorted way</span>
+<span class="sd">    </span>
+<span class="sd">    The function converts the dictionary into a list of dictionaries,</span>
+<span class="sd">    with each entry representing one row in the final csv file.</span>
+<span class="sd">    The dictionary can be of the form returned by csv2dict.</span>
+<span class="sd">    </span>
+<span class="sd">    The sorting is in alphabetic order, large characters first and</span>
+<span class="sd">    variables starting with &#39;__&#39; first.</span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :filename:</span>
+<span class="sd">            Contains the filename as a string.</span>
+<span class="sd">            </span>
+<span class="sd">        :data_dict:</span>
+<span class="sd">            Dictionary containing data as a dictionary of lists </span>
+<span class="sd">            (one list for each column identified by the key).</span>
+<span class="sd">            </span>
+<span class="sd">        :delimiter:</span>
+<span class="sd">            The delimiter between columns in the csv. Defaults to &#39;,&#39;, as csv</span>
+<span class="sd">            actually stands for comma separated, but sometimes different symbols</span>
+<span class="sd">            are used.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube, Mario Krell</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># init</span>
+    <span class="kn">import</span> <span class="nn">csv</span>
+    <span class="kn">import</span> <span class="nn">copy</span>
+    <span class="n">csv_file</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">final_list</span><span class="o">=</span><span class="p">[]</span>
+    <span class="c"># sorting of key</span>
+    <span class="n">temp_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span>  <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">temp_keys</span> <span class="k">if</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;__&quot;</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">temp_keys</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">temp_keys</span><span class="p">:</span>
+        <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">del</span><span class="p">(</span><span class="n">temp_keys</span><span class="p">)</span>
+    <span class="c"># check for consistency (delete columns with wrong length)</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="n">remove_keys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">])</span><span class="o">==</span><span class="n">l</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Different length of columns with names </span><span class="si">%s</span><span class="s"> (deleted) and </span><span class="si">%s</span><span class="s"> (reference).&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="n">keys</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">data_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">remove_keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">remove_keys</span><span class="p">:</span>
+        <span class="n">keys</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="c"># make a list of dictionaries for each row</span>
+    <span class="k">for</span> <span class="n">current_line</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">l</span><span class="p">):</span>
+        <span class="n">ldict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+            <span class="n">ldict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">current_line</span><span class="p">]</span>
+        <span class="n">final_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ldict</span><span class="p">)</span>
+    <span class="c"># save it</span>
+    <span class="n">csvDictWriter</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> 
+                    <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_ALL</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">)</span>
+    <span class="n">csvDictWriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span><span class="n">keys</span><span class="p">)))</span>
+    <span class="n">csvDictWriter</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">final_list</span><span class="p">)</span>
+    <span class="n">csv_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="empty_dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.empty_dict">[docs]</a><span class="k">def</span> <span class="nf">empty_dict</span><span class="p">(</span><span class="n">old_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a dictionary of empty lists with exactly the same keys as old_dict</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :old_dict:</span>
+<span class="sd">            Dictionary of lists (identified by the key).</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+    <span class="n">new_dict</span><span class="o">=</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="p">[</span><span class="n">new_dict</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">old_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+    
+    <span class="k">return</span> <span class="n">new_dict</span>
+</div>
+<div class="viewcode-block" id="strip_dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.strip_dict">[docs]</a><span class="k">def</span> <span class="nf">strip_dict</span><span class="p">(</span><span class="n">data_dict</span><span class="p">,</span> <span class="n">cond_dict</span><span class="p">,</span> <span class="n">invert_mask</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">limit2keys</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return a stripped dictionary according to the conditions specified with cond_dict and invert_mask</span>
+<span class="sd">        </span>
+<span class="sd">    This function is useful, if only some parameter combinations are</span>
+<span class="sd">    interesting. Then the values of interest can be stored in cond_dict and</span>
+<span class="sd">    after execution of mynewdict=strip_dict(data_dict, cond_dict) all</span>
+<span class="sd">    unnecessary information is eliminated in mynewdict.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :data_dict:</span>
+<span class="sd">            Dictionary of lists (identified by the key). E.g. as returned by</span>
+<span class="sd">            csv2dict.</span>
+<span class="sd">        :cond_dict:</span>
+<span class="sd">            Dictionary containing all keys and values that should be used to</span>
+<span class="sd">            strip data_dict. E.g. constructed by empty_dict(data_dict) and</span>
+<span class="sd">            subsequent modifications.</span>
+<span class="sd">        :invert_mask:</span>
+<span class="sd">            optional: If set to False, the cond_dict will be interpreted as</span>
+<span class="sd">            positive list, i.e. only values are kept that are specified in</span>
+<span class="sd">            cond_dict. If set to True, the cond_dict will be interpreted as</span>
+<span class="sd">            negative list, i.e. only values are kept that are NOT specified in</span>
+<span class="sd">            cond_dict. default=False</span>
+<span class="sd">        :limit2keys:</span>
+<span class="sd">            optional: Contains a list of key names (strings) that should be</span>
+<span class="sd">            included in the returned dictionary. All other keys (i.e. columns)</span>
+<span class="sd">            are skipped. default=None</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+    <span class="n">constr_not_valid</span><span class="o">=</span><span class="bp">False</span>
+    
+    <span class="c">#in the beginning all indices are valid...</span>
+    <span class="c">#take first key to determine length of csv-table</span>
+    <span class="n">first_key</span><span class="o">=</span><span class="n">data_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> 
+    <span class="n">valid_indices</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">first_key</span><span class="p">]))</span> 
+    
+    <span class="c">#check if condition actually appears in the data_dict</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">cond_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">constr_not_valid</span><span class="o">=</span><span class="bp">True</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;The condition key (column heading) </span><span class="si">%s</span><span class="s"> is not &quot;</span> \
+                          <span class="s">&quot;present in the dictionary you want to strip!&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">current_param</span> <span class="ow">in</span> <span class="n">data_dict</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">current_param</span> <span class="ow">in</span> <span class="n">cond_dict</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cond_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]:</span> <span class="c">#if != []</span>
+                <span class="n">old_indices</span><span class="o">=</span><span class="n">valid_indices</span>
+                <span class="n">valid_indices</span><span class="o">=</span><span class="p">[]</span> <span class="c">#reset indices to add new constraint</span>
+                <span class="n">constraint</span><span class="o">=</span><span class="n">cond_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">invert_mask</span><span class="p">:</span>
+                        <span class="c">#keep index only if new AND old constraints are valid</span>
+                        <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">constraint</span> <span class="ow">and</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">old_indices</span><span class="p">:</span>
+                            <span class="n">valid_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>            
+                    <span class="k">else</span><span class="p">:</span> <span class="c"># i.e., invert_mask == True</span>
+                        <span class="c">#keep index only if new AND old constraints are valid</span>
+                        <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">constraint</span> <span class="ow">and</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">old_indices</span><span class="p">:</span>
+                            <span class="n">valid_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">valid_indices</span> <span class="o">==</span> <span class="p">[]:</span>
+                    <span class="n">constr_not_valid</span><span class="o">=</span><span class="bp">True</span>
+                    <span class="kn">import</span> <span class="nn">warnings</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Constraint values </span><span class="si">%s</span><span class="s"> of key </span><span class="si">%s</span><span class="s"> were not&quot;</span>\
+                                  <span class="s">&quot; found in the dictionary you want to strip!&quot;</span>\
+                                  <span class="s">&quot; Returning empty dict!&quot;</span>\
+                                  <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">cond_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]),</span> 
+                                     <span class="n">current_param</span><span class="p">))</span>
+                        
+    <span class="n">result_dict</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">constr_not_valid</span><span class="p">:</span>
+        <span class="c">#wrapping up</span>
+        <span class="k">for</span> <span class="n">current_param</span> <span class="ow">in</span> <span class="n">data_dict</span><span class="p">:</span>
+            <span class="n">current_list</span><span class="o">=</span><span class="n">data_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]</span>
+            <span class="n">new_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">current_list</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">valid_indices</span><span class="p">]</span>
+            <span class="n">result_dict</span><span class="p">[</span><span class="n">current_param</span><span class="p">]</span><span class="o">=</span><span class="n">new_list</span>
+        
+        <span class="c">#limit2keys restriction</span>
+        <span class="k">if</span> <span class="n">limit2keys</span><span class="p">:</span>
+            <span class="n">all_results</span><span class="o">=</span><span class="n">result_dict</span>
+            <span class="n">result_dict</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">limit2keys</span><span class="p">:</span>
+                <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">=</span><span class="n">all_results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        
+    <span class="k">return</span> <span class="n">result_dict</span>
+</div>
+<div class="viewcode-block" id="merge_dicts"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.merge_dicts">[docs]</a><span class="k">def</span> <span class="nf">merge_dicts</span><span class="p">(</span><span class="n">dict1</span><span class="p">,</span><span class="n">dict2</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Merge two dictionaries into a new one, where both have ideally the same keys and lengths.</span>
+<span class="sd">    </span>
+<span class="sd">    The merge procedure is performed even if the keys are not identical, but a warning is elicited.</span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :dict1:</span>
+<span class="sd">            the one dictionary</span>
+<span class="sd">        :dict2:</span>
+<span class="sd">            the other dictionary</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="kn">import</span> <span class="nn">copy</span><span class="o">,</span> <span class="nn">warnings</span>
+
+    <span class="n">result_dict</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">dict1</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">dict2</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="ow">or</span> \
+        <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">key1</span> <span class="ow">in</span> <span class="n">dict2</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">for</span> <span class="n">key1</span> <span class="ow">in</span> <span class="n">dict1</span><span class="o">.</span><span class="n">keys</span><span class="p">()]):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Inconsistency while merging: &#39;</span> <span class="o">+</span>
+                      <span class="s">&#39;The two directories have different keys!&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dict1</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">dict2</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dict1</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">dict2</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Inconsistency while merging: Key &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> 
+                                        <span class="s">&#39; is only existing in one dictionary!&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">result_dict</span>
+    </div>
+<div class="viewcode-block" id="merge_multiple_dicts"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.merge_multiple_dicts">[docs]</a><span class="k">def</span> <span class="nf">merge_multiple_dicts</span><span class="p">(</span><span class="n">dictlist</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Merge multiple dictionaries into a single one</span>
+<span class="sd">    </span>
+<span class="sd">    This function merges every dictionary into a single one.</span>
+<span class="sd">    The merge procedure is performed even if the keys are not identical (or of</span>
+<span class="sd">    identical length), but a warning is elicited once.</span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :dictlist:</span>
+<span class="sd">            a list of dictionaries to merge</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube</span>
+<span class="sd">    :Created: 2011/04/20</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">n</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dictlist</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">n</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;List of dictionaries is empty!&#39;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">n</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dictlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">n</span><span class="o">==</span><span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">merge_dicts</span><span class="p">(</span><span class="n">dictlist</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">dictlist</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">dictlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">pos</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">merge_dicts</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dictlist</span><span class="p">[</span><span class="n">pos</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">data</span>
+    </div>
+<div class="viewcode-block" id="add_key"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.add_key">[docs]</a><span class="k">def</span> <span class="nf">add_key</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">,</span> <span class="n">key_str</span><span class="p">,</span> <span class="n">key_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Add a key to the dictionary with as many elements (rows) as other entries</span>
+<span class="sd">    </span>
+<span class="sd">    When called, this function adds one key in the dictionary (which is equal to adding one column</span>
+<span class="sd">    in the csv table. The name of the key is specified in key_str, and the elements are specified in</span>
+<span class="sd">    key_list. Note that the latter has to be a list.</span>
+<span class="sd">    If key_list has only one element, it is expanded according to the number of rows in the table.</span>
+<span class="sd">    If the key is already existing, the original dictionary is returned without any modification.)</span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :orig_dict:</span>
+<span class="sd">            the dictionary to modify</span>
+<span class="sd">        :key_str:</span>
+<span class="sd">            string containing name of the dict key</span>
+<span class="sd">        :key_list:</span>
+<span class="sd">            either list containing all elements or</span>
+<span class="sd">            list with one element which is appended n times</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube</span>
+<span class="sd">    :Created: 2011/04/20</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="kn">import</span> <span class="nn">copy</span><span class="o">,</span> <span class="nn">warnings</span>
+
+    <span class="k">if</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key_str</span><span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Key to be added is already existing: Key &#39;</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&#39;. Adding canceled!&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">orig_dict</span>
+    
+    <span class="n">n</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">[</span><span class="n">orig_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]])</span> <span class="c">#determine number of entries per column</span>
+    <span class="n">n_newlist</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">key_list</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">n_newlist</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span> <span class="c">#create a list of n entries with the same content</span>
+        <span class="n">key_list</span><span class="o">=</span><span class="n">key_list</span><span class="o">*</span><span class="n">n</span>
+    <span class="k">elif</span> <span class="n">n_newlist</span> <span class="o">!=</span> <span class="n">n</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Length of new entry (n=&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n_newlist</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;) does not match length of other entries (n=&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">n</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;)!&#39;</span><span class="p">)</span>
+    
+    <span class="n">orig_dict</span><span class="p">[</span><span class="n">key_str</span><span class="p">]</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">key_list</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">orig_dict</span>
+    </div>
+<div class="viewcode-block" id="extend_dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.extend_dict">[docs]</a><span class="k">def</span> <span class="nf">extend_dict</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">,</span> <span class="n">extension_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Extend one dictionary with another</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: This function returns a modified dictionary, even if the extension</span>
+<span class="sd">        dictionary is completely different (i.e. there is no check if the</span>
+<span class="sd">        extension makes sense to guarantee maximal functionality).</span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :orig_dict:</span>
+<span class="sd">            the dictionary to be extended and returned</span>
+<span class="sd">        :extension_dict:</span>
+<span class="sd">            the dictionary defining the extension</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube, Mario Krell</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">copy</span><span class="o">,</span> <span class="nn">warnings</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">orig_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">extension_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="ow">or</span> \
+        <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">key1</span> <span class="ow">in</span> <span class="n">extension_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">for</span> <span class="n">key1</span> <span class="ow">in</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()]):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Inconsistency while merging: &#39;</span> <span class="o">+</span>
+                  <span class="s">&#39;The two directories have different keys!&#39;</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">extension_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">orig_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">extension_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Key &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&#39; dismissed during dictionary extension:&#39;</span><span class="o">+</span>
+                          <span class="s">&#39; Does not exist in all files!&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">orig_dict</span>
+
+
+</div>
+<div class="viewcode-block" id="check_for_failures"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.check_for_failures">[docs]</a><span class="k">def</span> <span class="nf">check_for_failures</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">num_splits</span><span class="p">,</span> <span class="n">conditions</span><span class="p">,</span> <span class="n">remove_count</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute a list of conditions for which the classification failed</span>
+<span class="sd">    </span>
+<span class="sd">    Given a possibly incomplete results.csv and a set of parameters as defined</span>
+<span class="sd">    in an operation.yaml, this function compares all the expected combinations</span>
+<span class="sd">    of parameters with what has actually been evaluated according to</span>
+<span class="sd">    results.csv. It returns a list of failures, i.e., a list of dictionaries,</span>
+<span class="sd">    each representing one combination of parameters for which results are</span>
+<span class="sd">    missing.</span>
+<span class="sd">    </span>
+<span class="sd">    Besides the actual parameters, the dictionaries in failures have one</span>
+<span class="sd">    additional key &#39;count&#39;. The value of &#39;count&#39; is the number of times this</span>
+<span class="sd">    particular parameter setting occurred in the results file. The expected</span>
+<span class="sd">    number of occurrences is the number of splits, &#39;num_splits&#39;. If the</span>
+<span class="sd">    failures list is to be further used, it might be necessary to remove the</span>
+<span class="sd">    count key again - if remove_count=True, this will be done automatically.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: Even though __Dataset__ is not explicitly stated in the</span>
+<span class="sd">        operation.yaml, this function needs you to specify the collections as</span>
+<span class="sd">        parameter all the time. See the following example.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: This implementation is highly inefficient as it just loops through</span>
+<span class="sd">        the results list and the list of expected parameter settings instead of</span>
+<span class="sd">        making use of any sophisticated search algorithms. Large problem might</span>
+<span class="sd">        thus take some time.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :data:</span>
+<span class="sd">            Dictionary as returned by csv2dict. Usually this dictionary should</span>
+<span class="sd">            contain the (incomplete) analysis results, hence it will in most</span>
+<span class="sd">            cases be the product of something like csv2dict(&#39;results.csv&#39;).</span>
+<span class="sd">        :num_splits:</span>
+<span class="sd">            Number of splits. The decision if the condition is interpreted as</span>
+<span class="sd">            failure depends on this parameter.</span>
+<span class="sd">        :conditions:</span>
+<span class="sd">            A dictionary containing the parameter ranges as specified in the</span>
+<span class="sd">            operation.yaml. Additionally, __Dataset__ has to be specified. See</span>
+<span class="sd">            the following example.</span>
+<span class="sd">        :remove_count:</span>
+<span class="sd">            optional: controls if the count variable will be removed from the</span>
+<span class="sd">            entries in the failures list.</span>
+<span class="sd">            default=False</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    ** Examplary Workflow **</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import csv_analysis</span>
+<span class="sd">        data=csv_analysis.csv2dict(&#39;results.csv&#39;)</span>
+<span class="sd">        conditions={}</span>
+<span class="sd">        conditions[&#39;__CLASSIFIER__&#39;]=[&#39;1RMM&#39;, &#39;2RMM&#39;]</span>
+<span class="sd">        conditions[&#39;__C__&#39;]=[0.01, 0.1, 1.0, 10.0]</span>
+<span class="sd">        conditions[&#39;__Dataset__&#39;]=[&#39;Set1&#39;,&#39;Set2&#39;,&#39;Set3&#39;]</span>
+<span class="sd">        nsplits = 10</span>
+<span class="sd">        failures=csv_analysis.check_for_failures(data,nsplits,conditions,True)</span>
+
+<span class="sd">    :Author: David Feess</span>
+<span class="sd">    :Created: 2011/04/05</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># This is used to generate crossproducts of arbitrary many parameters and</span>
+    <span class="c"># stolen as is from missions/operations.base._get_parameter_space()</span>
+    <span class="n">crossproduct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">ss</span><span class="p">,</span><span class="n">row</span><span class="o">=</span><span class="p">[],</span><span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">ss</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span> \
+        <span class="ow">and</span> <span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span><span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="p">,[</span><span class="n">crossproduct</span><span class="p">(</span><span class="n">ss</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span><span class="n">row</span><span class="o">+</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">level</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ss</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> \
+        <span class="ow">or</span> <span class="p">[</span><span class="n">row</span><span class="o">+</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ss</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="n">parameter_ranges</span> <span class="o">=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="n">range_expression</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">range_expression</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span>
+                            <span class="k">else</span> <span class="n">range_expression</span>
+                                <span class="k">for</span> <span class="n">range_expression</span> <span class="ow">in</span> <span class="n">conditions</span><span class="o">.</span><span class="n">values</span><span class="p">()]</span>
+    <span class="c"># parameter_settings will contain a list with dict entries, each dict</span>
+    <span class="c"># representing one particular combination of parameters</span>
+    <span class="n">parameter_settings</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">conditions</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">x</span><span class="p">)),</span>
+                                    <span class="n">crossproduct</span><span class="p">(</span><span class="n">parameter_ranges</span><span class="p">))</span>
+
+    <span class="c"># Add a counter variable to each of the expected conditions. This will</span>
+    <span class="c"># later be compared to num_splits</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
+        <span class="n">x</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    
+    <span class="c"># Iterate through entire data object</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">&#39;__Dataset__&#39;</span><span class="p">])):</span>
+        <span class="c"># Iterate through expected parameter settings:</span>
+        <span class="k">for</span> <span class="n">expected</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="bp">False</span> <span class="c"># skip this setting if any parameter mismatches</span>
+            <span class="c"># iterate through all parameters in this parameter setting</span>
+            <span class="k">for</span> <span class="n">expected_key</span><span class="p">,</span> <span class="n">expected_val</span> <span class="ow">in</span> <span class="n">expected</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">expected_key</span> <span class="o">==</span> <span class="s">&#39;count&#39;</span><span class="p">:</span> <span class="c"># forget about the count parameter</span>
+                    <span class="k">continue</span>
+                <span class="k">try</span><span class="p">:</span> <span class="c"># convert strings to numbers if possible</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">expected_key</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">expected_key</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">expected_val</span> <span class="o">==</span> <span class="n">x</span><span class="p">:</span> <span class="c"># if we have a match continue</span>
+                    <span class="k">continue</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c"># else skip this parameter</span>
+                    <span class="n">skip</span> <span class="o">=</span> <span class="bp">True</span> <span class="c"># ...  and the whole param. setting</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">skip</span><span class="p">:</span> <span class="c"># go for next parameter setting</span>
+                <span class="k">continue</span>
+            <span class="c"># if not skip: found a match: ...</span>
+            <span class="n">expected</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c"># ... increase count</span>
+            <span class="k">break</span>                  <span class="c"># and go for next entry in data</span>
+
+    <span class="n">failures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c"># Failures are all entries in the expected parameter_settings where count</span>
+    <span class="c"># does not equal the number of splits</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">num_splits</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">remove_count</span><span class="p">:</span>
+                <span class="n">x</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+            <span class="n">failures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">failures</span>
+</div>
+<div class="viewcode-block" id="check_op_libSVM"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.check_op_libSVM">[docs]</a><span class="k">def</span> <span class="nf">check_op_libSVM</span><span class="p">(</span><span class="n">input_dir</span><span class="o">=</span><span class="s">&#39;.&#39;</span><span class="p">,</span> <span class="n">delete_file</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform terminal operation to identify possible classification failures</span>
+<span class="sd">       on the basis of number of files.</span>
+<span class="sd">    </span>
+<span class="sd">    This works only for libSVM classification with stored results, as it</span>
+<span class="sd">    relies on files stored in the persistency directories.</span>
+<span class="sd">    </span>
+<span class="sd">    This function navigates to input_dir (which is the result directory of the</span>
+<span class="sd">    classification) and checks the number of files starting with &#39;features&#39; in</span>
+<span class="sd">    &#39;persistency_run0/LibSVMClassifierNode/&#39; in each subdirectory. In case the</span>
+<span class="sd">    classification was successfully performed, the number of files here should</span>
+<span class="sd">    equal the number of splits used. If not, this is a hint that something</span>
+<span class="sd">    went wrong!</span>
+<span class="sd">    The list returned by this function contains alternating</span>
+<span class="sd">    (i) name of &#39;root directory&#39; for the respective condition</span>
+<span class="sd">    (ii) number of files</span>
+<span class="sd">    ...</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: This function only works if the feature*.pickle files are</span>
+<span class="sd">              explicitly saved in your NodeChain!</span>
+
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :input_dir:</span>
+<span class="sd">            optional: string with the path where csv files are stored.</span>
+<span class="sd">            default=&#39;.&#39;</span>
+<span class="sd">        :delete_file:</span>
+<span class="sd">            optional: controls if the file &#39;temp_check_op.txt&#39; will be removed</span>
+<span class="sd">            default=True</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube, Anett Seeland</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="kn">import</span> <span class="nn">os</span>
+    
+    <span class="c">#navigating to operation dir</span>
+    <span class="n">current_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">input_dir</span><span class="p">)</span>
+    <span class="c">#rcode=os.system(&#39;cd &#39; + input_dir)</span>
+    <span class="c">#analyzing directories and writing results in temp_check_op.txt</span>
+    <span class="n">rcode</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&#39;for f in *; do if [ -d $f ]; then echo $f; &#39;</span> <span class="o">+</span> 
+      <span class="s">&#39;echo find $f/persistency_run0/LibSVMClassifierNode/feature*.pickle &#39;</span> <span class="o">+</span> 
+      <span class="s">&#39;| wc -w; fi; done &gt; temp_check_op.txt&#39;</span><span class="p">)</span>
+    
+    <span class="c">#transferring data to python list</span>
+    <span class="n">f</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;temp_check_op.txt&#39;</span><span class="p">)</span>
+    <span class="n">oplist</span><span class="o">=</span><span class="p">[]</span>
+    
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">oplist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>        
+    
+    <span class="c">#probably deleting and navigating back</span>
+    <span class="k">if</span> <span class="n">delete_file</span><span class="p">:</span>
+        <span class="n">rcode</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&#39;rm temp_check_op.txt&#39;</span><span class="p">)</span>
+    <span class="n">rcode</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&#39;cd &#39;</span> <span class="o">+</span> <span class="n">current_path</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">oplist</span>
+
+
+</div>
+<div class="viewcode-block" id="report_failures"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.report_failures">[docs]</a><span class="k">def</span> <span class="nf">report_failures</span><span class="p">(</span><span class="n">oplist</span><span class="p">,</span> <span class="n">num_splits</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sort output of terminal operation (e.g. performed by check_op_libSVM).</span>
+
+<span class="sd">    This function returns a list where each element contains the parameters of</span>
+<span class="sd">    a condition where the classification probably failed. This judgment is</span>
+<span class="sd">    made according to the number of files which are expected according to the</span>
+<span class="sd">    used number of splits. See also: check_op_libSVM</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :oplist:</span>
+<span class="sd">            An iterable that has to contain</span>
+<span class="sd">            (i) name of &#39;root directory&#39; for the respective condition</span>
+<span class="sd">            (ii) number of files</span>
+<span class="sd">            ...</span>
+
+<span class="sd">        This parameter can either be the list returned by check_op_libSVM or a</span>
+<span class="sd">        file type object (pointing to a manually constructed file).</span>
+
+<span class="sd">        :num_splits:</span>
+<span class="sd">            Number of splits. The decision if the condition is interpreted as</span>
+<span class="sd">            failure depends on this parameter.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell, Sirko Straube</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="kn">import</span> <span class="nn">warnings</span>
+    
+    <span class="n">dirstats</span><span class="o">=</span><span class="bp">False</span>
+    <span class="n">dirline</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">failures</span><span class="o">=</span><span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">oplist</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dirstats</span><span class="p">:</span> <span class="c">#the actual line should contains the number of files</span>
+                <span class="c">#remove possible whitespaces and endl</span>
+                <span class="n">line</span><span class="o">=</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span> 
+                <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+                    <span class="c">#-1 because of batch command (see check_op_libSVM)</span>
+                    <span class="n">num_files</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">line</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> 
+                    <span class="k">if</span> <span class="n">num_files</span><span class="o">&lt;</span><span class="n">num_splits</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                        <span class="n">current_params</span><span class="o">=</span> \
+                            <span class="n">dirline</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;{&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;}&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)</span>
+                        <span class="n">result</span><span class="p">[</span><span class="s">&#39;__Dataset__&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">current_params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">result</span><span class="p">[</span><span class="s">&#39;count&#39;</span><span class="p">]</span><span class="o">=</span><span class="n">num_files</span> <span class="c">#include number of splits</span>
+                        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">current_params</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+                            <span class="c"># TODO if anything else then template has no # this will fail;</span>
+                            <span class="c"># delete as soon as no more data with templates in folder names</span>
+                            <span class="c"># circulate</span>
+                            <span class="k">if</span> <span class="s">&#39;#&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">param</span><span class="p">:</span>
+                                <span class="n">result</span><span class="p">[</span><span class="s">&quot;__Template__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">param</span>
+                                <span class="k">continue</span>
+                            <span class="n">entry</span> <span class="o">=</span><span class="n">param</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;#&#39;</span><span class="p">)</span>
+                            <span class="n">result</span><span class="p">[</span><span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">failures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Inconsistency while analyzing &quot;</span> <span class="o">+</span> 
+                      <span class="s">&quot;check_op_libSVM data: Line &quot;</span> <span class="o">+</span> <span class="n">line</span> <span class="o">+</span> 
+                      <span class="s">&quot; is not a digit reporting number of feature pickles.&quot;</span> <span class="p">)</span>
+                <span class="n">dirstats</span><span class="o">=</span><span class="bp">False</span>
+            <span class="k">else</span><span class="p">:</span>   
+                <span class="n">dirstats</span><span class="o">=</span><span class="bp">True</span>
+                <span class="n">dirline</span><span class="o">=</span><span class="n">line</span>
+    <span class="k">return</span> <span class="n">failures</span>
+</div>
+<div class="viewcode-block" id="reconstruct_failures"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.reconstruct_failures">[docs]</a><span class="k">def</span> <span class="nf">reconstruct_failures</span><span class="p">(</span><span class="n">csv_dict</span><span class="p">,</span> <span class="n">missing_conds</span><span class="p">,</span> <span class="n">num_splits</span><span class="p">,</span> <span class="n">default_dict</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reconstruct classification failures in csv dictionary according to</span>
+<span class="sd">    known parameters and default values.</span>
+
+<span class="sd">    This function takes the csv-dictionary (probably constructed using</span>
+<span class="sd">    merge_performance_results from PerformanceResultSummary) and reconstructs the classification failures defined in</span>
+<span class="sd">    missing_conds (probably constructed using report_failures) according to</span>
+<span class="sd">    known parameters (given in missing_conds) and some default values that may</span>
+<span class="sd">    be specified in default_dict (probably constructed with the help of</span>
+<span class="sd">    empty_dict and a subsequent modification). All other keys are specified</span>
+<span class="sd">    with the &#39;unknown&#39; value. Finally the reconstructed dictionary is merged</span>
+<span class="sd">    with the original csv-dictionary and returned.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :csv_dict:</span>
+<span class="sd">            The data dictionary. Has the form returned by csv2dict.</span>
+
+<span class="sd">        :missing_conds:</span>
+<span class="sd">            A list of dictionaries specifying the missing conditions.</span>
+<span class="sd">            Has the form returned by report_failures.</span>
+<span class="sd">        </span>
+<span class="sd">        :num_splits:</span>
+<span class="sd">            Number of splits used for classification.</span>
+<span class="sd">        </span>
+<span class="sd">        :default_dict:</span>
+<span class="sd">            optional: A dictionary specifying default values for missing</span>
+<span class="sd">            conditions. This dictionary can e.g. be constructed using</span>
+<span class="sd">            empty_dict(csv_dict) and subsequent modification, e.g.</span>
+<span class="sd">            default_dict[&#39;Metric&#39;].append(0).</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">            </span>
+<span class="sd">    :Author: Mario Krell, Sirko Straube</span>
+<span class="sd">    :Created: 2010/11/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="n">reconstruct_dict</span> <span class="o">=</span> <span class="bp">None</span>
+    
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">missing_conds</span><span class="p">:</span>
+        <span class="n">missing_dict</span> <span class="o">=</span> <span class="n">empty_dict</span><span class="p">(</span><span class="n">csv_dict</span><span class="p">)</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&#39;count&#39;</span><span class="p">)</span>
+    
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c">#transfer known variables to missing_dict</span>
+            <span class="n">missing_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            
+        <span class="k">if</span> <span class="n">default_dict</span><span class="p">:</span>
+            <span class="c">#transfer user specified default values to missing_dict </span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">default_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="c">#...only if there is an entry in default_dict</span>
+                <span class="c"># AND the key is existing in missing_dict</span>
+                <span class="k">if</span> <span class="n">default_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">and</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">missing_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> 
+                    <span class="n">missing_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">default_dict</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">missing_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c">#set all other keys to &#39;unknown&#39;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">missing_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span> <span class="c">#entry key is empty list</span>
+                <span class="n">missing_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;unknown&#39;</span><span class="p">)</span>
+        <span class="c">#reconstruct a line for every missing split</span>
+        <span class="k">for</span> <span class="n">each_missing_split</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_splits</span><span class="o">-</span><span class="n">count</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">reconstruct_dict</span><span class="p">:</span> <span class="c">#only true once</span>
+                <span class="n">reconstruct_dict</span> <span class="o">=</span> <span class="n">missing_dict</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">reconstruct_dict</span> <span class="o">=</span> <span class="n">extend_dict</span><span class="p">(</span><span class="n">reconstruct_dict</span><span class="p">,</span><span class="n">missing_dict</span><span class="p">)</span>
+    <span class="c">#finally, merge the original and the reconstruction</span>
+    <span class="k">return</span> <span class="n">merge_dicts</span><span class="p">(</span><span class="n">csv_dict</span><span class="p">,</span><span class="n">reconstruct_dict</span><span class="p">)</span> </div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

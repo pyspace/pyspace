@@ -1,0 +1,485 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.postprocessing.feature_normalization &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.postprocessing.feature_normalization</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Normalize :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+
+<div class="viewcode-block" id="InconsistentFeatureVectorsException"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.InconsistentFeatureVectorsException">[docs]</a><span class="k">class</span> <span class="nc">InconsistentFeatureVectorsException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">FeatureNormalizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; General node for Feature Normalization </span>
+
+<span class="sd">    The node should simply shift the data with the *translation* variable and</span>
+<span class="sd">    afterwards scale it with the *mult* variable.</span>
+<span class="sd">    </span>
+<span class="sd">    This transformation can be loaded and stored</span>
+<span class="sd">    and given to visualization tools.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameter**</span>
+<span class="sd">        :load_path:</span>
+<span class="sd">            An absolute path from which the normalization vectors are loaded.</span>
+<span class="sd">            If not specified, these vectors are learned from the training data.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : FeatureNormalizationNode</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                load_path: &quot;/Users/mustermann/proj/examples/FN.pickle&quot;</span>
+
+<span class="sd">    .. warning:: This base node only works alone, when load_path is specified.</span>
+
+<span class="sd">    :input:  FeatureVector</span>
+<span class="sd">    :output: FeatureVector</span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/03/28</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FeatureNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_path</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="o">=</span> <span class="n">load_path</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">samples</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">load_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="p">,</span>
+                                      <span class="n">feature_indices</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">tolerance</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">9</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="o">==</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Stores transformation and feature names in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="c"># self.__class__.__name__)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;FN&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;wb&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">translation</span><span class="p">,</span> 
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">,</span> 
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">),</span> <span class="n">protocol</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureNormalizationNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collects the values each feature takes on in the training set. &quot;&quot;&quot;</span>
+        <span class="c"># Check that feature vectors are compatible</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extract_feature_names</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collect_data</span><span class="p">(</span><span class="n">data_array</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="FeatureNormalizationNode.extract_feature_names"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode.extract_feature_names">[docs]</a>    <span class="k">def</span> <span class="nf">extract_feature_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">!=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InconsistentFeatureVectorsException</span><span class="p">(</span><span class="s">&quot;Two feature vectors used during training do not contain the same features!&quot;</span><span class="p">)</span>
+        
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Normalizes the feature vector data.</span>
+<span class="sd">        </span>
+<span class="sd">        Normalizes the feature vector data by subtracting</span>
+<span class="sd">        the *translation* variable and scaling it with *mult*.</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo:: check if problems in data transformation still occur</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="o">==</span><span class="s">&quot;already_loaded&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replace_keywords_in_load_path</span><span class="p">()</span>
+            <span class="n">load_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">translation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">load_file</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="o">=</span> <span class="s">&quot;already_loaded&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extract_feature_names</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="c"># mapping of feature names if current features are a subset</span>
+        <span class="c"># of loaded feature normalization in the training</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_indices</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">feature_indices</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feature_name</span><span class="p">)</span> 
+                                        <span class="k">for</span> <span class="n">feature_name</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">InconsistentFeatureVectorsException</span><span class="p">(</span><span class="s">&quot;Cannot normalize a feature vector &quot;</span>
+                                                          <span class="s">&quot;with an unknown feature dimension!&quot;</span><span class="p">)</span>
+        <span class="c"># The data reference is not changed or deleted but here it is</span>
+        <span class="c"># temporarily replaced. </span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>  
+            <span class="n">data</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">translation</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_indices</span><span class="p">])</span> \
+                    <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_indices</span><span class="p">]</span>
+        <span class="k">else</span> <span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="o">*</span> <span class="mi">0</span>
+        <span class="c"># Handle cases where lower and upper bound are identical</span>
+        <span class="c"># This is for example the case, when </span>
+        <span class="c"># one feature generating measurement device is off or out of order</span>
+        <span class="c"># TODO check if still needed</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="c"># for i, v in enumerate(data[0,:]):</span>
+        <span class="c">#     if v &gt; 1:</span>
+        <span class="c">#         data[0,i] = 1 + self.scaling*(1 - math.exp(1-v))</span>
+        <span class="c">#     elif v &lt; 0:</span>
+        <span class="c">#         data[0,i] = self.scaling*(math.exp(v)-1)</span>
+        <span class="k">return</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                             <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FeatureNormalizationNode.collect_data"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.FeatureNormalizationNode.collect_data">[docs]</a>    <span class="k">def</span> <span class="nf">collect_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]))</span>
+
+</div></div>
+<div class="viewcode-block" id="OutlierFeatureNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">OutlierFeatureNormalizationNode</span><span class="p">(</span><span class="n">FeatureNormalizationNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Map the feature vectors of the training set to the range [0,1]^n</span>
+<span class="sd">    </span>
+<span class="sd">    A class that normalizes each dimension of the feature </span>
+<span class="sd">    vector so that an upper boundary value (learned from in the training set)</span>
+<span class="sd">    is mapped to 1, and a lower boundary value to 0.</span>
+<span class="sd">    All other values are linearly interpolated. Optionally, one can specify</span>
+<span class="sd">    an *outlier_percentage* that determines which ratio of the training data</span>
+<span class="sd">    is considered to be a potential outlier. *outlier_percentage*/2 samples</span>
+<span class="sd">    are allowed to be larger than the determined upper boundary, and</span>
+<span class="sd">    *outlier_percentage*/2 samples are allowed to be smaller than the </span>
+<span class="sd">    determined lower boundary. </span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :outlier_percentage:</span>
+<span class="sd">            The percentage of training instances that are potential outliers.</span>
+
+<span class="sd">            (*optional, default: 0*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : OutlierFeatureNormalization</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                outlier_percentage : 10</span>
+<span class="sd">                load_path: &quot;/Users/mustermann/proj/examples/FN.pickle&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: ??</span>
+<span class="sd">    :Revised (1): 2009/07/16</span>
+<span class="sd">    :Revised (2): 2009/09/03</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="OutlierFeatureNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outlier_percentage</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OutlierFeatureNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">outlier_percentage</span> <span class="o">=</span> <span class="n">outlier_percentage</span><span class="p">,</span>
+                                      <span class="n">samples</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="OutlierFeatureNormalizationNode.collect_data"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode.collect_data">[docs]</a>    <span class="k">def</span> <span class="nf">collect_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">feature_index</span><span class="p">,</span> <span class="n">feature_value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OutlierFeatureNormalizationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Computes the upper and lower boundary for normalization.</span>
+<span class="sd">        </span>
+<span class="sd">        For this computation, the largest and smallest *outlier_percentage*/2</span>
+<span class="sd">        examples for each feature dimension are ignored. </span>
+<span class="sd">        The smallest and largest remaining example are used as lower and upper </span>
+<span class="sd">        boundary.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">feature_index</span><span class="p">,</span> <span class="n">feature_values</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">scoreatpercentile</span><span class="p">(</span><span class="n">feature_values</span><span class="p">,</span> 
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">outlier_percentage</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">scoreatpercentile</span><span class="p">(</span><span class="n">feature_values</span><span class="p">,</span> 
+                                              <span class="mi">100</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">outlier_percentage</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+        <span class="c"># Cleaning up...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="c"># name unification</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mult</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">,:])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">isinf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">)]</span> <span class="o">=</span> <span class="mf">0.0</span>
+</div></div>
+<div class="viewcode-block" id="GaussianFeatureNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.GaussianFeatureNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">GaussianFeatureNormalizationNode</span><span class="p">(</span><span class="n">FeatureNormalizationNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Transform the features, such that they have zero mean and variance one</span>
+<span class="sd">    </span>
+<span class="sd">    A class that normalizes each dimension of the feature </span>
+<span class="sd">    vector so that it has zero mean and variance one.</span>
+<span class="sd">    The relevant values are learned from the training set.</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Gaussian_Feature_Normalization</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                load_path: &quot;/Users/mustermann/proj/examples/GFN.pickle&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2011/04/15</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="GaussianFeatureNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.GaussianFeatureNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mult</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianFeatureNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="GaussianFeatureNormalizationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.GaussianFeatureNormalizationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Computes mean and std deviation of each feature&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mult</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">),</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
+                </div>
+<div class="viewcode-block" id="GaussianFeatureNormalizationNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.GaussianFeatureNormalizationNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">():</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">GaussianFeatureNormalizationNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_train</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">extract_feature_names</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="n">data_array</span> <span class="o">=</span> <span class="n">data_array</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mult</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data_array</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">data_array</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">translation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">+=</span> <span class="n">delta</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="p">(</span><span class="n">data_array</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">translation</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_diff</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            
+</div>
+<div class="viewcode-block" id="GaussianFeatureNormalizationNode._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.GaussianFeatureNormalizationNode._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="HistogramFeatureNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.HistogramFeatureNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">HistogramFeatureNormalizationNode</span><span class="p">(</span><span class="n">FeatureNormalizationNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Transform the features, such that they have zero mean in the main bit in the histogram and variance one on that bit.</span>
+
+<span class="sd">    The relevant values are learned from the training set.</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Histogram_Feature_Normalization</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                load_path: &quot;/Users/mustermann/proj/examples/FN.pickle&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2011/04/15</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="HistogramFeatureNormalizationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.HistogramFeatureNormalizationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Computes mean and std deviation of each feature&quot;&quot;&quot;</span>
+        <span class="n">mean</span><span class="o">=</span><span class="p">[]</span>
+        <span class="n">std</span><span class="o">=</span><span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_values</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_values</span><span class="p">:</span>
+            <span class="n">hvalues</span><span class="p">,</span><span class="n">bins</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">histogram</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="n">bins</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span>
+            <span class="n">maxindex</span> <span class="o">=</span> <span class="n">hvalues</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+            <span class="n">min_bound</span> <span class="o">=</span> <span class="n">bins</span><span class="p">[</span><span class="n">maxindex</span><span class="p">]</span>
+            <span class="n">max_bound</span> <span class="o">=</span> <span class="n">bins</span><span class="p">[</span><span class="n">maxindex</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">i</span><span class="o">=</span><span class="mi">0</span>
+            <span class="n">max_sum</span><span class="o">=</span><span class="mi">0</span>
+            <span class="n">relevant_values</span><span class="o">=</span><span class="p">[]</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">min_bound</span> <span class="o">&lt;=</span> <span class="n">value</span> <span class="o">&lt;=</span> <span class="n">max_bound</span><span class="p">:</span>
+                        <span class="n">relevant_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+<span class="c">#                        max_sum += value</span>
+<span class="c">#            mean.append(1.0*max_sum/i)</span>
+            <span class="n">mean</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">relevant_values</span><span class="p">))</span>
+            <span class="n">std</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">relevant_values</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">translation</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mult</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+        <span class="c">#self.mult = numpy.std(numpy.array(self.samples),axis=0)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mult</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c"># Cleaning up...</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">feature_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="p">[]</span>
+</div></div>
+<div class="viewcode-block" id="EuclideanFeatureNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.EuclideanFeatureNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">EuclideanFeatureNormalizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Normalize feature vectors to Euclidean norm with respect to dimensions</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :dimension_scale:</span>
+<span class="sd">            Scale the output to ||x|| * dim(x)</span>
+<span class="sd">            (to get bigger values) </span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Euclidian_Feature_Normalization</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                dimension_scale : True</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2011/04/15</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EuclideanFeatureNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.EuclideanFeatureNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension_scale</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EuclideanFeatureNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">dim</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                                      <span class="n">dimension_scale</span><span class="o">=</span><span class="n">dimension_scale</span><span class="p">,</span>
+                                      <span class="n">feature_names</span><span class="o">=</span><span class="p">[])</span>
+</div>
+<div class="viewcode-block" id="EuclideanFeatureNormalizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.EuclideanFeatureNormalizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Normalizes the samples vector to norm one &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">!=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InconsistentFeatureVectorsException</span><span class="p">(</span><span class="s">&quot;Two feature vectors used during training do not contain the same features!&quot;</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">float128</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dimension_scale</span><span class="p">:</span>
+            <span class="n">a</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="o">*</span><span class="n">a</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">a</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FeatureVector</span><span class="p">([</span><span class="n">a</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="EuclideanFeatureNormalizationNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.EuclideanFeatureNormalizationNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Feature_Normalization&quot;</span><span class="p">:</span> <span class="n">OutlierFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;Outlier_Feature_Normalization&quot;</span><span class="p">:</span> <span class="n">OutlierFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;FN&quot;</span><span class="p">:</span> <span class="n">OutlierFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;O_FN&quot;</span><span class="p">:</span> <span class="n">OutlierFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;Euclidean_Feature_Normalization&quot;</span><span class="p">:</span> <span class="n">EuclideanFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;E_FN&quot;</span><span class="p">:</span> <span class="n">EuclideanFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;Gaussian_Feature_Normalization&quot;</span><span class="p">:</span> <span class="n">GaussianFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;G_FN&quot;</span><span class="p">:</span> <span class="n">GaussianFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;Histogram_Feature_Normalization&quot;</span><span class="p">:</span> <span class="n">HistogramFeatureNormalizationNode</span><span class="p">,</span>
+                <span class="s">&quot;H_FN&quot;</span><span class="p">:</span> <span class="n">HistogramFeatureNormalizationNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

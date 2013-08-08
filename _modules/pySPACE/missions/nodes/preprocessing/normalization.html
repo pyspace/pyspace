@@ -1,0 +1,655 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.preprocessing.normalization &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.preprocessing.normalization</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Normalize :class:`~pySPACE.resources.data_types.time_series.TimeSeries` channel-wise</span>
+
+<span class="sd">Normalize can mean to translate the values of each channel so that its mean</span>
+<span class="sd">becomes zero and/or to scale each channels values so that the standard deviation</span>
+<span class="sd">becomes 1.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">scipy.signal</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+
+<div class="viewcode-block" id="DetrendingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DetrendingNode">[docs]</a><span class="k">class</span> <span class="nc">DetrendingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Eliminate trend on the selected channels with the given function (default: mean)</span>
+
+<span class="sd">    This method takes one function that is used for detrending</span>
+<span class="sd">    of the selected channels of each time series instance that is</span>
+<span class="sd">    passed through this node (e.g. the matplotlib.mlab.detrend_mean function).</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :detrend_method:</span>
+<span class="sd">            Method being applied to each selected channel, to detrend.</span>
+
+<span class="sd">            (*optional, default: &quot;eval(__import__(&#39;pylab&#39;).detrend_mean)&quot;*)</span>
+
+<span class="sd">        :selected_channels:</span>
+<span class="sd">            List of channel names, were the method is applied to</span>
+
+<span class="sd">            (*optional, default: None = all channels*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Detrending</span>
+
+<span class="sd">    :Authors: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/01/06</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DetrendingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DetrendingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">detrend_method</span><span class="o">=</span><span class="nb">__import__</span><span class="p">(</span><span class="s">&#39;pylab&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">detrend_mean</span><span class="p">,</span>
+                 <span class="n">selected_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DetrendingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">selected_channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">DeprecationWarning</span><span class="p">(</span><span class="s">&quot;The parameter &#39;selected_channels&#39; of &quot;</span>
+                                     <span class="s">&quot;DetrendingNode is deprecated and will be&quot;</span>
+                                     <span class="s">&quot; removed. Use a separate &quot;</span>
+                                     <span class="s">&quot;ChannelNameSelectorNode instead.&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">detrend_method</span><span class="o">=</span><span class="n">detrend_method</span><span class="p">,</span>
+                                      <span class="n">selected_channels</span><span class="o">=</span><span class="n">selected_channels</span><span class="p">,</span>
+                                      <span class="n">selected_channel_indices</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DetrendingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DetrendingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Apply the detrending method to the given data x and return a new time series &quot;&quot;&quot;</span>
+        <span class="c">#Determine the indices of the channels which will be filtered</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> \
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span> <span class="o">=</span> \
+                    <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">]</span>
+
+        <span class="c">#Do the actual detrending</span>
+        <span class="n">detrended_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span><span class="p">:</span>
+            <span class="n">detrended_data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">detrend_method</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">])</span>
+
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">detrended_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="LocalStandardizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.LocalStandardizationNode">[docs]</a><span class="k">class</span> <span class="nc">LocalStandardizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Z-Score transformation (zero mean, variance of one)</span>
+
+<span class="sd">    Each channel of the resulted multidimensional time series has a mean of 0</span>
+<span class="sd">    and a standard deviation of 1.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Standardization</span>
+
+<span class="sd">    :Author: Anett Seeland (Anett.Seeland@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LocalStandardizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.LocalStandardizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LocalStandardizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LocalStandardizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.LocalStandardizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply z-score transformation to the given data and return a modified</span>
+<span class="sd">        time series.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c">#Do the z-score transformation</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">data</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">check_zero_division</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span>  <span class="n">tolerance</span><span class="o">=</span><span class="mi">10</span><span class="o">**-</span><span class="mi">15</span><span class="p">,</span> <span class="n">data_ts</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="MaximumStandardizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MaximumStandardizationNode">[docs]</a><span class="k">class</span> <span class="nc">MaximumStandardizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Standardize by subtracting the mean and dividing by maximum value</span>
+
+<span class="sd">    Each channel of the resulted multidimensional time series has a mean of 0</span>
+<span class="sd">    and the maximum value will be 1.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : MaximumStandardization</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de),</span>
+<span class="sd">              Yohannes Kassahun (kassahun@informatik.uni-bremen.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MaximumStandardizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MaximumStandardizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MaximumStandardizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MaximumStandardizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MaximumStandardizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">-=</span> <span class="n">mean</span>
+
+        <span class="n">max_values</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+        <span class="n">max_values</span> <span class="o">=</span> <span class="n">check_zero_division</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_values</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mi">10</span><span class="o">**-</span><span class="mi">15</span><span class="p">,</span>
+                                         <span class="n">data_ts</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">data</span><span class="o">/</span><span class="n">max_values</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="MemoryStandardizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MemoryStandardizationNode">[docs]</a><span class="k">class</span> <span class="nc">MemoryStandardizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Z-Score transformation with respect to the last `order` windows</span>
+
+<span class="sd">    mean = 1/(order+1) sum_{i=0}^{order} mean[time_{-i}]</span>
+<span class="sd">    std = sqrt(1/(order+1) sum_{i=0}^{order} var[time_{-i}])</span>
+
+<span class="sd">    If the standard deviation is to high because of artifacts,</span>
+<span class="sd">    we only use the current standard deviation and it is not put into memory.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :order:</span>
+<span class="sd">            Number of previously occurred time windows being considered</span>
+<span class="sd">            for calculation of standard deviation and mean</span>
+
+<span class="sd">            (*optional, default: 0*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Memory_Standardization</span>
+<span class="sd">            parameters:</span>
+<span class="sd">                order : 3</span>
+
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MemoryStandardizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MemoryStandardizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">order</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MemoryStandardizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">order</span><span class="p">),</span> <span class="n">memory</span><span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MemoryStandardizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.MemoryStandardizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply memory z-score transformation to the given data</span>
+<span class="sd">        and return a new time series.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c"># calculate the important measures in an array format</span>
+        <span class="n">mean</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c"># initialize the memory when it is first used</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">memory</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="o">=</span><span class="nb">dict</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;mean&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;var&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;var&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+
+        <span class="c"># extend the memory by the new mean and variance if the</span>
+        <span class="c"># std&lt;200 and not zero to exclude big artifacts</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">var</span> <span class="o">&lt;</span> <span class="mi">40000</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span><span class="n">var</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="o">**-</span><span class="mi">9</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;var&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+
+        <span class="c"># calculate the mean of the current mean and variance</span>
+        <span class="c"># and the latest (order) means and variances in memory</span>
+        <span class="c"># and delete the last, because it is no longer needed</span>
+            <span class="n">var</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;var&#39;</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">mean</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;mean&#39;</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;var&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">memory</span><span class="p">[</span><span class="s">&#39;mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
+
+        <span class="c"># # code for easy viszualization</span>
+        <span class="c"># statistic = numpy.vstack((mean,std))</span>
+        <span class="c"># statistic = TimeSeries.replace_data(data, statistic)</span>
+        <span class="c"># statistic.sampling_frequency = 1</span>
+        <span class="c"># return statistic</span>
+
+        <span class="c">#Do the modified z-score transformation</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">check_zero_division</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span>  <span class="n">tolerance</span><span class="o">=</span><span class="mi">10</span><span class="o">**-</span><span class="mi">15</span><span class="p">,</span> <span class="n">data_ts</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span><span class="o">/</span><span class="n">std</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="DevariancingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode">[docs]</a><span class="k">class</span> <span class="nc">DevariancingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Apply devariancing method on training data and use the result for scaling</span>
+
+<span class="sd">    This method takes one function that is used for devariancing</span>
+<span class="sd">    of the selected channels of the whole data set</span>
+<span class="sd">    (e.g. a scaling the channels so that they have all standard deviation 1).</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The scaling factors are calculated on a training set</span>
+<span class="sd">        and remain equal over the whole execution time.</span>
+<span class="sd">        They do not change with each window.</span>
+
+<span class="sd">    .. todo:: Check the sense of this and documentation!</span>
+<span class="sd">    .. todo:: Find meaningful method!</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :devariance_method:</span>
+<span class="sd">            Method being applied to each selected channel of the signal, to</span>
+<span class="sd">            devariance.</span>
+
+<span class="sd">        :selected_channels:</span>
+<span class="sd">            List of channel names, were the method is applied to. If nothing</span>
+<span class="sd">            is specified, all channels are used.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Devariancing</span>
+
+<span class="sd">    :Authors: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/01/06</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DevariancingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">devariance_method</span><span class="p">,</span>
+                 <span class="n">selected_channels</span><span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DevariancingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">devariance_method</span> <span class="o">=</span> <span class="n">devariance_method</span><span class="p">,</span>
+                                      <span class="n">selected_channels</span> <span class="o">=</span> <span class="n">selected_channels</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DevariancingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="DevariancingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The node gathers all data point of the selected channels</span>
+<span class="sd">        during training</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Created lazily a data structure that gathers all values</span>
+        <span class="c"># of the selected channels</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c">#Determine the indices of the channels which will be filtered</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">=</span>  \
+                <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">!=</span> <span class="bp">None</span> \
+                                       <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_values</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">,</span>
+                               <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">))]))</span>
+
+        <span class="c"># Store all values of the selected channels in self.channel_values</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_values</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">])</span>
+
+</div>
+<div class="viewcode-block" id="DevariancingNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Uses the devariance method to determine scaling factors for each</span>
+<span class="sd">        selected channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scale_factors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">scale_factors</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> \
+                             <span class="bp">self</span><span class="o">.</span><span class="n">devariance_method</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_values</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="DevariancingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DevariancingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply devariancing to the given data and return the modified time series</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Determine the indices of the channels which will be filtered</span>
+        <span class="n">selected_channel_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                                      <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">]</span>
+
+        <span class="c">#Do the actual devariancing, i.e. multiply with the scale factor</span>
+        <span class="n">devarianced_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+            <span class="n">devarianced_data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">*</span> \
+                                                      <span class="bp">self</span><span class="o">.</span><span class="n">scale_factors</span><span class="p">[</span><span class="n">channel</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">devarianced_data</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="SubsetNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.SubsetNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">SubsetNormalizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Z-Score transformation by the mean and variance of a subset of the samples</span>
+
+<span class="sd">    Thus, in LRP scenarios, e.g., one could</span>
+<span class="sd">    perform a shift driven by the first x samples of the window. This would</span>
+<span class="sd">    arrange the &quot;baseline&quot;, such that &quot;pre LRP&quot; is zero. In EEG data</span>
+<span class="sd">    processing, this procedure is commonly referred to as</span>
+<span class="sd">    &quot;baseline correction&quot;</span>
+
+<span class="sd">    The resulting :class:`~pySPACE.resources.data_types.time_series.TimeSeries`</span>
+<span class="sd">    are **not** regularized in the sense that they</span>
+<span class="sd">    are not in (0,1).</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :subset:</span>
+<span class="sd">            List of samples being used to calculate the mean.</span>
+
+<span class="sd">        :devariance:</span>
+<span class="sd">            Also divide by the variance</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : SubsetNormalization</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                subset : eval(range(50)) # or any list</span>
+
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SubsetNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.SubsetNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subset</span><span class="p">,</span> <span class="n">devariance</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">SubsetNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">subset</span><span class="o">=</span><span class="n">subset</span><span class="p">,</span>
+                                      <span class="n">devariance</span><span class="o">=</span><span class="n">devariance</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SubsetNormalizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.SubsetNormalizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Perform a shift and normalization according</span>
+<span class="sd">        (whole_data - mean(specific_samples)) / std(specific_samples)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">devariance</span><span class="p">:</span>
+            <span class="c"># code copy from LocalStandardizationNode</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">subset</span><span class="p">],</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">std</span> <span class="o">=</span> <span class="n">check_zero_division</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">std</span><span class="p">,</span> <span class="n">tolerance</span><span class="o">=</span><span class="mi">10</span><span class="o">**-</span><span class="mi">15</span><span class="p">,</span> <span class="n">data_ts</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                        <span class="p">(</span><span class="n">data</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">subset</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">std</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> \
+                        <span class="n">data</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">subset</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="EuclideanNormalizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.EuclideanNormalizationNode">[docs]</a><span class="k">class</span> <span class="nc">EuclideanNormalizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Scale all channels to norm one</span>
+
+<span class="sd">    Together with detrending this is equivalent to standardization.</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Euclidian_Feature_Normalization</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2011/07/28</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EuclideanNormalizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.EuclideanNormalizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">selected_channels</span><span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EuclideanNormalizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">selected_channels</span> <span class="o">=</span> <span class="n">selected_channels</span><span class="p">,</span>
+                                      <span class="n">selected_channel_indices</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EuclideanNormalizationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.EuclideanNormalizationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply the detrending method to the given data x</span>
+<span class="sd">        and return a new time series.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Determine the indices of the channels which will be filtered</span>
+        <span class="k">if</span> <span class="bp">None</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> \
+                          <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">!=</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span> <span class="o">=</span> \
+                    <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span> <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> \
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">]</span>
+        <span class="c">#Do the actual detrending</span>
+        <span class="n">detrended_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span><span class="p">:</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span>
+            <span class="n">temp</span> <span class="o">=</span> <span class="n">temp</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+            <span class="n">detrended_data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp</span>
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">detrended_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="DcRemovalNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DcRemovalNode">[docs]</a><span class="k">class</span> <span class="nc">DcRemovalNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Perform a realtime DC removal on the selected channels</span>
+
+<span class="sd">    A node that uses the realtime DC removal method by IIR filtering with</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        H(z)=\\frac{1-z^{-1}}{1-\\alpha z^{-1}}</span>
+
+<span class="sd">    The filters internal state is preserved between blocks.</span>
+
+<span class="sd">    For details:</span>
+
+<span class="sd">    .. seealso:: R. Lyons, &quot;Understanding Digital Signal Processing&quot;, 2nd ed.,</span>
+<span class="sd">                 13.23.2 Real-Time DC Removal, p.553</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :alpha:</span>
+<span class="sd">            See parameter in formula</span>
+
+<span class="sd">        :selected_channels:</span>
+<span class="sd">            List of channel names, were the method is applied to</span>
+
+<span class="sd">            (*optional, default: None = all channels*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : DcRemoval</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                alpha : 0.95</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2011/08/18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DcRemovalNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DcRemovalNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">alpha</span><span class="o">=</span><span class="mf">0.95</span><span class="p">,</span>
+                 <span class="n">selected_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DcRemovalNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">a</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">]</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c"># storage for filter conditions</span>
+        <span class="n">internal_state</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span>
+                                      <span class="n">selected_channels</span><span class="o">=</span><span class="n">selected_channels</span><span class="p">,</span>
+                                      <span class="n">a</span><span class="o">=</span><span class="n">a</span><span class="p">,</span>
+                                      <span class="n">b</span><span class="o">=</span><span class="n">b</span><span class="p">,</span>
+                                      <span class="n">internal_state</span><span class="o">=</span><span class="n">internal_state</span><span class="p">,</span>
+                                      <span class="n">selected_channel_indices</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DcRemovalNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.DcRemovalNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Apply the :func:`scipy.signal.lfilter` function with the DC removal coefficients on the data &quot;&quot;&quot;</span>
+        <span class="c">#Determine the indices of the channels which will be filtered</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> \
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">]</span>
+
+        <span class="c"># create initial filter conditions for all channels</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_state</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_state</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">internal_state</span><span class="p">[</span><span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lfiltic</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+
+        <span class="c"># do the actual removal</span>
+        <span class="n">cleaned_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_indices</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">cleaned_data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">],</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">internal_state</span><span class="p">[</span><span class="n">channel_index</span><span class="p">])</span> <span class="o">=</span> \
+                <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">lfilter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">],</span>
+                                     <span class="n">zi</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">internal_state</span><span class="p">[</span><span class="n">channel_index</span><span class="p">])</span>
+
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">cleaned_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="check_zero_division"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.normalization.html#pySPACE.missions.nodes.preprocessing.normalization.check_zero_division">[docs]</a><span class="k">def</span> <span class="nf">check_zero_division</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>  <span class="n">tolerance</span><span class="o">=</span><span class="mi">10</span><span class="o">**-</span><span class="mi">15</span><span class="p">,</span> <span class="n">data_ts</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Increase to small values in *data* and give warning</span>
+
+<span class="sd">    This global function of this module checks whether numpy array</span>
+<span class="sd">    &#39;data&#39; contains values below the specified &#39;tolerance&#39;.</span>
+<span class="sd">    If so, the value of 1 is added to</span>
+<span class="sd">    this value and a warning is put into the log file.</span>
+<span class="sd">    Returned is the modified array.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :self:</span>
+<span class="sd">            Needs the node object for proper logging.</span>
+
+<span class="sd">        :data:</span>
+<span class="sd">            Numpy array which is checked for values below certain tolerance.</span>
+
+<span class="sd">        :tolerance:</span>
+<span class="sd">            Values in data below this value are corrected.</span>
+
+<span class="sd">            (*optional, default: 10^-9*)</span>
+
+<span class="sd">        :data_ts:</span>
+<span class="sd">            Actual TimeSeries object to improve information in logging.</span>
+<span class="sd">            If not specified, the logging message is simplified.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">data</span> <span class="o">&lt;</span> <span class="n">tolerance</span><span class="p">):</span>  <span class="c"># elements close to zero</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data_ts</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>  <span class="c"># better warning output</span>
+            <span class="c"># filter the channel names where std equals zero</span>
+            <span class="n">zero_channels</span> <span class="o">=</span> <span class="p">[</span><span class="n">data_ts</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span><span class="n">elem</span><span class="p">)</span> <span class="ow">in</span> \
+                             <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">if</span> <span class="n">elem</span> <span class="o">&lt;</span> <span class="n">tolerance</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Normalization:: Warning: Prevented division by zero during normalization &quot;</span>  \
+                      <span class="s">&quot;for channel(s) </span><span class="si">%s</span><span class="s"> in time interval [</span><span class="si">%.1f</span><span class="s">,</span><span class="si">%.1f</span><span class="s">]!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">zero_channels</span><span class="p">),</span>
+                                        <span class="n">data_ts</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span> <span class="n">data_ts</span><span class="o">.</span><span class="n">end_time</span><span class="p">),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Normalization:: Warning: Prevented division by zero during normalization!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[</span><span class="n">elem</span> <span class="o">+</span> <span class="p">(</span><span class="n">elem</span> <span class="o">&lt;</span> <span class="n">tolerance</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">elem</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">data</span>
+
+</div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Standardization&quot;</span><span class="p">:</span> <span class="n">LocalStandardizationNode</span><span class="p">,</span>
+                <span class="s">&quot;Dc_Removal&quot;</span><span class="p">:</span> <span class="n">DcRemovalNode</span><span class="p">,</span>
+                <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

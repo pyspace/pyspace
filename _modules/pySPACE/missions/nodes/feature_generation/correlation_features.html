@@ -1,0 +1,746 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_generation.correlation_features &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_generation.correlation_features</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Extract statistical properties like moments or correlation coefficients</span>
+
+<span class="sd">**Known issues**</span>
+<span class="sd">    No unit tests!</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">scipy.stats</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">mlab</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+
+<div class="viewcode-block" id="StatisticalFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.StatisticalFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">StatisticalFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute statistical features, e.g. central/raw moments, median, min etc.</span>
+<span class="sd">        </span>
+<span class="sd">    This node computes statistical features like raw and central moments</span>
+<span class="sd">    of k-th order:</span>
+<span class="sd">        </span>
+<span class="sd">    1. raw_moment_of_k_th_order</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \\frac{1}{n} \\cdot \\sum_{i=0}^n (x_i^k)</span>
+
+<span class="sd">        - k=1: mean;</span>
+<span class="sd">        - k=2: square root  of value is quadratic mean</span>
+
+<span class="sd">    2. central_moment_of_k_th_order</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            \\frac{1}{n} \\cdot  sum_{i=0}^n (x_i - mean)^k</span>
+
+<span class="sd">        - k=1: 0;</span>
+<span class="sd">        - k=2: empirical variance;</span>
+<span class="sd">        - k=3: empirical skewness;</span>
+<span class="sd">        - k=4: kurtosis</span>
+
+<span class="sd">    In addition there could be computed: median, quadratic mean, </span>
+<span class="sd">    standard deviation, minimum/maximum amplitude and </span>
+<span class="sd">    the number of amplitudes above a given threshold.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :raw_moment_order:</span>
+<span class="sd">            The highest order (as an integer number) of raw moments that will</span>
+<span class="sd">            be computed. For example:</span>
+
+<span class="sd">            :0: - no raw moment computation,</span>
+<span class="sd">            :1: - mean</span>
+<span class="sd">            :2: - mean *and* raw moment 2nd order</span>
+<span class="sd">            :3: - etc.</span>
+
+<span class="sd">            .. note::</span>
+<span class="sd">                Values greater then 2 might take long computation time and</span>
+<span class="sd">                are expected not to have any useful information.</span>
+<span class="sd">                   </span>
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">        </span>
+<span class="sd">        :central_moment_order: </span>
+<span class="sd">            The highest order (as an integer number) of central moments that</span>
+<span class="sd">            will be computed. For example:</span>
+
+<span class="sd">            :1: - no central moment computation</span>
+<span class="sd">            :2: - empirical variance</span>
+<span class="sd">            :3: - empirical variance *and* empirical skewness</span>
+<span class="sd">            :etc.:</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">             </span>
+<span class="sd">        :std:  </span>
+<span class="sd">            True or False. If True the standard deviation of each channel is</span>
+<span class="sd">            computed and retained as feature.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :std_function:</span>
+<span class="sd">            A string of a Python *eval*able function. Specifies a function,</span>
+<span class="sd">            e.g. numpy.std, if the algorithm should not use use the one in</span>
+<span class="sd">            *standard_deviation*. Specification of this parameter makes only</span>
+<span class="sd">            sense if *std* is &quot;True&quot;.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">            </span>
+<span class="sd">        :quadratic_mean:</span>
+<span class="sd">            True or False. If True the square root of the second raw moment</span>
+<span class="sd">            (quadratic mean) is computed and retained as feature.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :median:</span>
+<span class="sd">            True or False. If True the median of each channel is computed</span>
+<span class="sd">            and retained as feature.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :minimum: </span>
+<span class="sd">            True or False. If True the minimum value of each channel is stored</span>
+<span class="sd">            as a feature.</span>
+<span class="sd">           </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :maximum:</span>
+<span class="sd">            True or False. If True the maximum value of each channel is stored</span>
+<span class="sd">            as a feature.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :artifact_threshold:</span>
+<span class="sd">            A float value. The number of amplitudes within a window above the</span>
+<span class="sd">            given *artifact_threshold* is calculated and used as feature.</span>
+<span class="sd">            </span>
+<span class="sd">            .. note::</span>
+<span class="sd">                    The threshold depends on the actual resolution of the values.</span>
+<span class="sd">                    Check header file (for EEG data).</span>
+<span class="sd">            </span>
+<span class="sd">            .. todo::   Integrate resolution in TimeSeries data type and then scale.</span>
+<span class="sd">                        (The input here should be in micro-volt.)</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Known issues**</span>
+<span class="sd">    .. todo:: Try to use the methods on the whole data array</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Statistical_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                central_moment_order : 0</span>
+<span class="sd">                std : True</span>
+<span class="sd">                median : True</span>
+<span class="sd">                artifact_threshold : 500.0</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Anett Seeland (anett.seeland@dfki.de)</span>
+<span class="sd">    :Created: 2009/10/06</span>
+<span class="sd">    :Last change: 2010/08/09 by Anett Seeland</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="StatisticalFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.StatisticalFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_moment_order</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">central_moment_order</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+                 <span class="n">std</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">std_function</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">quadratic_mean</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> 
+                 <span class="n">median</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">minimum</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">maximum</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">artifact_threshold</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">StatisticalFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">raw_moment_order</span> <span class="o">=</span> <span class="n">raw_moment_order</span><span class="p">,</span>
+                                  <span class="n">central_moment_order</span> <span class="o">=</span> <span class="n">central_moment_order</span><span class="p">,</span>
+                                  <span class="n">std</span> <span class="o">=</span> <span class="n">std</span><span class="p">,</span> <span class="n">std_function</span> <span class="o">=</span> <span class="n">std_function</span><span class="p">,</span>
+                                  <span class="n">quadratic_mean</span> <span class="o">=</span> <span class="n">quadratic_mean</span><span class="p">,</span> 
+                                  <span class="n">median</span> <span class="o">=</span> <span class="n">median</span><span class="p">,</span> <span class="n">minimum</span> <span class="o">=</span> <span class="n">minimum</span><span class="p">,</span>
+                                  <span class="n">maximum</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">,</span>
+                                  <span class="n">artifact_threshold</span> <span class="o">=</span> <span class="n">artifact_threshold</span><span class="p">,</span>
+                                  <span class="n">feature_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="StatisticalFeatureNode.raw_moment"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.StatisticalFeatureNode.raw_moment">[docs]</a>    <span class="k">def</span> <span class="nf">raw_moment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">one_channel_time_series</span><span class="p">,</span>  <span class="n">k</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the k&#39;th-order raw moment of a given channel.</span>
+<span class="sd">        </span>
+<span class="sd">        **Arguments**</span>
+<span class="sd">        </span>
+<span class="sd">            :one_channel_time_series:</span>
+<span class="sd">                a one dimensional time series</span>
+<span class="sd">            </span>
+<span class="sd">            :k:</span>
+<span class="sd">                order of raw moment</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># raising int arrays to higher power can cause overflow!!!</span>
+        <span class="c"># Hence we do the power-raising manually and NOT by &quot;array ** k&quot; </span>
+        <span class="nb">sum</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span>  <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">one_channel_time_series</span><span class="p">):</span>
+            <span class="n">power</span> <span class="o">=</span> <span class="n">value</span> <span class="o">**</span> <span class="n">k</span>
+            <span class="nb">sum</span> <span class="o">+=</span> <span class="n">power</span>
+        <span class="n">raw_moment</span> <span class="o">=</span> <span class="nb">sum</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">one_channel_time_series</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">raw_moment</span>
+    </div>
+<div class="viewcode-block" id="StatisticalFeatureNode.amplitudes_above"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.StatisticalFeatureNode.amplitudes_above">[docs]</a>    <span class="k">def</span> <span class="nf">amplitudes_above</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">one_channel_time_series</span><span class="p">,</span> <span class="n">threshold</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the number of values about the given threshold in the given time series.</span>
+<span class="sd">        </span>
+<span class="sd">        **Arguments**</span>
+<span class="sd">        </span>
+<span class="sd">            :window:</span>
+<span class="sd">                a tow dimensional time series</span>
+<span class="sd">        </span>
+<span class="sd">            :threshold:</span>
+<span class="sd">                a number above the values are count.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">one_channel_time_series</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span> <span class="n">threshold</span> <span class="ow">or</span>  <span class="n">value</span> <span class="o">&lt;</span> <span class="o">-</span><span class="n">threshold</span><span class="p">:</span>
+                <span class="n">count</span><span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">count</span>
+    </div>
+<div class="viewcode-block" id="StatisticalFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.StatisticalFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Calculates statistical features. &quot;&quot;&quot;</span>
+        <span class="c"># determine what has to be computed and initialize data structures</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span> <span class="o">=</span> <span class="mi">1</span> <span class="c"># only for feature_size computation</span>
+        <span class="n">feature_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">quadratic_mean</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">median</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">minimum</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">maximum</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_threshold</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">feature_size</span><span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">statistical_features</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">feature_size</span><span class="p">,</span> <span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+        <span class="c"># initialize the actual feature_index</span>
+        <span class="n">feature_index</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c"># for every channel...</span>
+        <span class="c"># TODO: Try to use the methods on the whole data array</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>  
+            <span class="n">current_channel</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">index</span><span class="p">]</span>
+            
+            <span class="c"># in these cases it is auspicious to compute and store variables</span>
+            <span class="c"># cause we will need them again</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> \
+                    <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">quadratic_mean</span><span class="p">:</span>
+                <span class="n">average</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">quadratic_mean</span><span class="p">:</span>
+                <span class="c"># self.raw_moment(current_channel, 2) </span>
+                <span class="n">second_raw_moment</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">ss</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span> 
+                <span class="c"># print second_raw_moment</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span> <span class="c"># raw_moment_of_1_th_order needed?</span>
+                <span class="c"># it&#39;s the mean, so dont compute it again</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">average</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c"># update feature_index</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span> <span class="c"># raw_moment_2nd_order needed?</span>
+                    <span class="c"># we have already computed it</span>
+                    <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">second_raw_moment</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="c"># for the other orders of raw_moments</span>
+                    <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span> 
+                        <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment</span><span class="p">(</span><span class="n">current_channel</span><span class="p">,</span> <span class="n">order</span><span class="p">)</span>
+                        <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="c"># central_moment</span>
+            <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span> 
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">scipy</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">moment</span><span class="p">(</span><span class="n">current_channel</span><span class="p">,</span><span class="n">order</span><span class="p">)</span>
+                        <span class="c">#self.central_moment(current_channel, average, order)</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">:</span> <span class="c"># standard_deviation</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span> 
+                <span class="c"># self.standard_deviation(current_channel, average,</span>
+                <span class="c"># self.std_function)</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="c"># quadratic_mean    </span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">quadratic_mean</span><span class="p">:</span> 
+                <span class="c"># we stored relevant results before</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">second_raw_moment</span> <span class="o">**</span> <span class="mf">0.5</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">median</span><span class="p">:</span> <span class="c"># median</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                                 <span class="n">numpy</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimum</span><span class="p">:</span> <span class="c"># minimum</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                                   <span class="n">numpy</span><span class="o">.</span><span class="n">amin</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">maximum</span><span class="p">:</span> <span class="c"># maximum</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                                   <span class="n">numpy</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span>
+                <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_threshold</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">statistical_features</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">amplitudes_above</span><span class="p">(</span><span class="n">current_channel</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_threshold</span><span class="p">)</span>
+            
+        <span class="c"># if feature_names have to be determined</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># initialize data structure</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">feature_size</span><span class="p">,</span> <span class="p">),</span>  <span class="s">&#39;|S32&#39;</span> <span class="p">)</span>
+            <span class="c"># initialize the actual feature_index</span>
+            <span class="n">feature_index</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="c"># raw_moment</span>
+                <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>  <span class="bp">self</span><span class="o">.</span><span class="n">raw_moment_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                <span class="s">&quot;RAW_MOMENT_</span><span class="si">%d</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span> <span class="c"># update feature_index</span>
+                <span class="c"># central_moment</span>
+                <span class="k">for</span> <span class="n">order</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">central_moment_order</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> \
+                                <span class="s">&quot;CENTRAL_MOMENT_</span><span class="si">%d</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">order</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># standard_deviation</span>
+                <span class="k">if</span>  <span class="bp">self</span><span class="o">.</span><span class="n">std</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;STD_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># quadratic_mean</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">quadratic_mean</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;QUAD_MEAN_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># median</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">median</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;MEDIAN_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># minimum</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">minimum</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;MIN_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># maximum</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">maximum</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">feature_index</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;MAX_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                    <span class="n">feature_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">artifact_threshold</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> \
+                                <span class="s">&quot;AMP_ABOVE_</span><span class="si">%.2f</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">artifact_threshold</span><span class="p">)</span>
+                    
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+          <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">statistical_features</span><span class="p">),</span> 
+                                                        <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+                        
+        <span class="k">return</span> <span class="n">feature_vector</span>
+    </div></div>
+<div class="viewcode-block" id="PearsonCorrelationFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.PearsonCorrelationFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">PearsonCorrelationFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute pearson correlation of all pairs of channels</span>
+<span class="sd">    </span>
+<span class="sd">    This node computes for all pairs of channels the Pearson product-moment </span>
+<span class="sd">    correlation coefficient of certain time segments and </span>
+<span class="sd">    returns each of correlation coefficient as feature.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :segments:</span>
+<span class="sd">            The number of segments the time series window is split.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">            </span>
+<span class="sd">        :max_segment_shift:</span>
+<span class="sd">            If 0, only the same segments of the two channels are compared.</span>
+<span class="sd">            For n, each segment is also compared with the n,n-1,...,0 previous</span>
+<span class="sd">            and later segments of the other channel.</span>
+<span class="sd">                           </span>
+<span class="sd">            (*optional, default: 0*)</span>
+<span class="sd">     </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">     </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Pearson_Correlation_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                segments : 10</span>
+<span class="sd">                max_segment_shift : 2</span>
+<span class="sd">            </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/03/18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="PearsonCorrelationFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.PearsonCorrelationFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">segments</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="n">max_segment_shift</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PearsonCorrelationFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       
+        <span class="k">assert</span><span class="p">(</span><span class="n">max_segment_shift</span> <span class="o">&lt;</span> <span class="n">segments</span><span class="p">)</span>
+     
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">segments</span> <span class="o">=</span> <span class="n">segments</span><span class="p">,</span>
+                                      <span class="n">segment_border_indices</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">max_segment_shift</span> <span class="o">=</span> <span class="n">max_segment_shift</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PearsonCorrelationFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.PearsonCorrelationFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        
+        <span class="c"># Compute the indices of the segment borders lazily when the data is</span>
+        <span class="c"># known</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">datapoints</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">borders</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="o">*</span> <span class="n">datapoints</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> 
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">segments</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">borders</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">borders</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span>
+                                                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span><span class="p">)]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># Iterate over all segment combinations:</span>
+        <span class="k">for</span> <span class="n">segment_index_channel1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span><span class="p">):</span>
+            <span class="n">segment_borders1</span> <span class="o">=</span> \
+                           <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span><span class="p">[</span><span class="n">segment_index_channel1</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">segment_index_channel2</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span><span class="p">,</span> 
+                        <span class="n">segment_index_channel1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_segment_shift</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)):</span>
+                <span class="n">segment_borders2</span> <span class="o">=</span> \
+                           <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span><span class="p">[</span><span class="n">segment_index_channel2</span><span class="p">]</span>
+                <span class="c"># Iterate over all channel pairs</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel1_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+                    <span class="n">channel1_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel1_name</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">channel2_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:]:</span>
+                        <span class="n">channel2_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel2_name</span><span class="p">)</span>
+                        
+                        <span class="c"># Get segments whose correlation should be computed</span>
+                        <span class="n">segment1</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">segment_borders1</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">segment_borders1</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                     <span class="n">channel1_index</span><span class="p">]</span>
+                        <span class="n">segment2</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">segment_borders2</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">segment_borders2</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                     <span class="n">channel2_index</span><span class="p">]</span>
+                        
+                        <span class="c"># Bring segments to the same shape</span>
+                        <span class="k">if</span> <span class="n">segment1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">segment2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="n">min_shape</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">segment1</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                                            <span class="n">segment2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                            <span class="n">segment1</span> <span class="o">=</span> <span class="n">segment1</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">min_shape</span><span class="p">]</span>
+                            <span class="n">segment2</span> <span class="o">=</span> <span class="n">segment2</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">min_shape</span><span class="p">]</span>
+                        
+                        <span class="c"># Compute the pearson correlation of the two segments</span>
+                        <span class="n">correlation</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">segment1</span><span class="p">,</span> <span class="n">segment2</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+
+                        <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">correlation</span><span class="p">)</span>
+                        <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Correlation_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">sec_</span><span class="si">%s</span><span class="s">sec_</span><span class="si">%s</span><span class="s">&quot;</span>
+                                <span class="o">%</span> <span class="p">(</span><span class="n">channel1_name</span><span class="p">,</span> <span class="n">channel2_name</span><span class="p">,</span>
+                                   <span class="n">segment_borders1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                   <span class="n">segment_borders1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                   <span class="n">segment_index_channel2</span> <span class="p">))</span>
+     
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">feature_names</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">feature_vector</span>
+
+</div></div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">ClassAverageCorrelationFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute pearson correlation between channel segments and class averages</span>
+<span class="sd">    </span>
+<span class="sd">    This node computes for all channels the Pearson product-moment </span>
+<span class="sd">    correlation coefficient between certain time segments and the class</span>
+<span class="sd">    averages. Then each of the correlation coefficients is returned as</span>
+<span class="sd">    feature.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :segments:</span>
+<span class="sd">            The number of segments the time series window is split.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">     </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Class_Average_Correlation_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                segments : 10</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/03/18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">segments</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ClassAverageCorrelationFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                                                                     <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">segments</span> <span class="o">=</span> <span class="n">segments</span><span class="p">,</span>
+                                      <span class="n">segment_border_indices</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">class_averages</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
+                                      <span class="n">class_examples</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">())</span>
+    </div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        
+        <span class="c"># Compute the indices of the segment borders lazily when the data is</span>
+        <span class="c"># known</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">datapoints</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">borders</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="o">*</span> <span class="n">datapoints</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> 
+                            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">segments</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span> <span class="o">=</span> <span class="p">[(</span><span class="n">borders</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">borders</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">])</span>
+                                                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segments</span><span class="p">)]</span>
+        
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># Iterate over all segments:</span>
+        <span class="k">for</span> <span class="n">segment_borders</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_border_indices</span><span class="p">:</span>
+            <span class="c"># Iterate over all channels</span>
+            <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                
+                <span class="c"># Correlation of the channel to the class average</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">channel_seg_avg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> \
+                        <span class="p">[</span><span class="n">segment_borders</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">segment_borders</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">channel_index</span><span class="p">]</span>
+                    <span class="n">sample_seq</span> <span class="o">=</span> \
+                       <span class="n">x</span><span class="p">[</span><span class="n">segment_borders</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span><span class="n">segment_borders</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">channel_index</span><span class="p">]</span>
+                    <span class="n">correlation</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">channel_seg_avg</span><span class="p">,</span>
+                                 <span class="n">sample_seq</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="c"># 0,1 or 1.0 doesn&#39;t matter</span>
+                    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">correlation</span><span class="p">)</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Pearson_</span><span class="si">%s</span><span class="s">_Class</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">sec_</span><span class="si">%s</span><span class="s">sec&quot;</span>
+                          <span class="o">%</span> <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span>
+                             <span class="n">label</span><span class="p">,</span>
+                             <span class="n">segment_borders</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                             <span class="n">segment_borders</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">))</span>
+
+<span class="c">#                    if segment_borders[0] == 14 and row == 0:</span>
+<span class="c">#                        print correlation</span>
+<span class="c">#                        import pylab</span>
+<span class="c">#                        pylab.plot(avg, label = (&quot;Avg %s&quot; % label))</span>
+<span class="c">#                        pylab.plot(x[:,row], label = &quot;Sample&quot;)</span>
+<span class="c">#                        pylab.legend()</span>
+<span class="c">#                        pylab.show()</span>
+<span class="c">#                        raw_input()</span>
+<span class="c">#                        pylab.gca().clear()</span>
+            
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">feature_names</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">feature_vector</span>
+    </div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c"># Accumulate the examples for each class</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_examples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">x</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_examples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            </div>
+<div class="viewcode-block" id="ClassAverageCorrelationFeatureNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.ClassAverageCorrelationFeatureNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+<span class="c">#            print &quot;Examples for class %s: %s&quot; </span>
+<span class="c">#                            % (label, self.class_examples[label])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_examples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+    </div></div>
+<div class="viewcode-block" id="CoherenceFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.CoherenceFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">CoherenceFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Compute pairwise coherence of two channels with *matplotlib.mlab.cohere*</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :frequency_band:</span>
+<span class="sd">            The frequency band which is used to extract features from the</span>
+<span class="sd">            spectrogram. If None, the whole frequency band is used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*Optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Coherence_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                frequency_band : [0.4,3.5]</span>
+<span class="sd">                </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/03/18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="CoherenceFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.CoherenceFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency_band</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">frequency_resolution</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                  <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CoherenceFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">frequency_band</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">min_frequency</span><span class="p">,</span> <span class="n">max_frequency</span> <span class="o">=</span> <span class="n">frequency_band</span>
+        <span class="k">else</span><span class="p">:</span>
+            
+            <span class="n">min_frequency</span><span class="p">,</span> <span class="n">max_frequency</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span> 
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">min_frequency</span> <span class="o">=</span> <span class="n">min_frequency</span><span class="p">,</span>
+                                      <span class="n">max_frequency</span> <span class="o">=</span> <span class="n">max_frequency</span><span class="p">,</span>
+                               <span class="n">frequency_resolution</span> <span class="o">=</span> <span class="n">frequency_resolution</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CoherenceFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.correlation_features.html#pySPACE.missions.nodes.feature_generation.correlation_features.CoherenceFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="c"># Lazy computation of NFFT and noverlap</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;NFFT&quot;</span><span class="p">):</span>
+            <span class="c"># Compute NFFT to obtain the desired frequency resolution </span>
+            <span class="c"># (if possible)</span>
+            <span class="c"># self.NFFT has to be even</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">/</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">frequency_resolution</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c"># For each pair of channels, we compute the STFT</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel_name1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">channel_name2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]):</span>
+                <span class="p">(</span><span class="n">Cxy</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span> <span class="o">=</span> <span class="n">mlab</span><span class="o">.</span><span class="n">cohere</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">i</span><span class="p">],</span> <span class="n">x</span><span class="p">[:,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">j</span><span class="p">],</span>
+                                           <span class="n">Fs</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                           <span class="n">NFFT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span><span class="p">,</span>
+                                           <span class="n">noverlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span><span class="p">)</span>
+                
+                <span class="c"># TODO: This would be more efficient without the explicit loop</span>
+                <span class="k">for</span> <span class="n">index1</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">freqs</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span> <span class="o">&lt;=</span> <span class="n">freq</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_frequency</span><span class="p">):</span>
+                        <span class="k">continue</span>
+                    <span class="c"># Append as feature</span>
+                    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Cxy</span><span class="p">[</span><span class="n">index1</span><span class="p">])</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Coherence_</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.2f</span><span class="s">Hz&quot;</span> <span class="o">%</span> 
+                                                <span class="p">(</span><span class="n">channel_name1</span><span class="p">,</span> <span class="n">channel_name2</span><span class="p">,</span>
+                                                 <span class="n">freq</span><span class="p">))</span>
+        
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+            <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                          <span class="n">feature_names</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">feature_vector</span>
+    
+<span class="c">#    #UNCOMMENT FOR GRAPHICAL ANALYZATION</span>
+<span class="c">#    def _train(self, x, label):</span>
+<span class="c">#        #if label != &quot;Target&quot;: return</span>
+<span class="c">#        print label</span>
+<span class="c">#        </span>
+<span class="c">#        channel_name1 = &#39;CP2&#39;</span>
+<span class="c">#        channel_index1 = x.channel_names.index(channel_name1)</span>
+<span class="c">#        channel_name2 = &#39;Pz&#39;</span>
+<span class="c">#        channel_index2 = x.channel_names.index(channel_name2)</span>
+<span class="c">#</span>
+<span class="c">#        import pylab        </span>
+<span class="c">#        Cxy, Phase, freqs =  pylab.mlab.cohere_pairs(x, [(channel_index1, channel_index2)],</span>
+<span class="c">#                                                     Fs = x.sampling_frequency,</span>
+<span class="c">#                                                     NFFT = self.NFFT,</span>
+<span class="c">#                                                     noverlap = self.noverlap)</span>
+<span class="c">#</span>
+<span class="c">#        pylab.subplot(411)</span>
+<span class="c">#        pylab.plot(freqs, Cxy[(channel_index1, channel_index2)])</span>
+<span class="c">#        pylab.subplot(412)</span>
+<span class="c">#        pylab.plot(freqs, Phase[(channel_index1, channel_index2)])</span>
+<span class="c">#</span>
+<span class="c">#</span>
+<span class="c">#        pylab.subplot(421)</span>
+<span class="c">#        pylab.plot(x[:, channel_index1])</span>
+<span class="c">#        </span>
+<span class="c">#        pylab.subplot(422)</span>
+<span class="c">#        pylab.plot(x[:, channel_index2])</span>
+<span class="c">#        </span>
+<span class="c">#        pylab.show()</span>
+<span class="c">#        raw_input()</span>
+<span class="c">#        pylab.gca().clear()</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Pearson_Correlation_Features&quot;</span><span class="p">:</span> <span class="n">PearsonCorrelationFeatureNode</span><span class="p">,</span>
+                <span class="s">&quot;Class_Average_Correlation_Features&quot;</span><span class="p">:</span> <span class="n">ClassAverageCorrelationFeatureNode</span><span class="p">,</span>
+                <span class="s">&quot;Coherence_Features&quot;</span><span class="p">:</span> <span class="n">CoherenceFeatureNode</span><span class="p">,</span> 
+                <span class="s">&quot;Statistical_Features&quot;</span> <span class="p">:</span> <span class="n">StatisticalFeatureNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

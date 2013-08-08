@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.live.eeg_stream_manager &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.live.eeg_stream_manager</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Script for managing of eeg data streams</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">xmlrpclib</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.support.windower</span> <span class="kn">import</span> <span class="n">MarkerWindower</span><span class="p">,</span> <span class="n">WindowFactory</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.live</span> <span class="kn">import</span> <span class="n">eeg_stream</span>
+
+<div class="viewcode-block" id="LiveEegStreamManager"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager">[docs]</a><span class="k">class</span> <span class="nc">LiveEegStreamManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; This module controls the eegmanager related configuration</span>
+<span class="sd">    and provides a meaningful interface of the eegmanager for pyspace live.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LiveEegStreamManager.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">configuration</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logger</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="n">configuration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_client</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># create a new eeg server process</span>
+        <span class="c"># it is needed either for streaming of local data</span>
+        <span class="c"># or recording of incoming data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">,</span> <span class="s">&quot;pySPACE&quot;</span><span class="p">,</span> <span class="s">&quot;tools&quot;</span><span class="p">,</span> <span class="s">&quot;live&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;cannot find eegmanager executable!&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;it should be in </span><span class="si">%s</span><span class="s">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span><span class="p">)</span>
+            <span class="nb">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;starting process with executable </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span><span class="p">))</span>
+
+        <span class="n">xml_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">16253</span><span class="p">,</span> <span class="mi">17253</span><span class="p">)</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">xml_range</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">xmlport</span> <span class="ow">in</span> <span class="n">xml_range</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating eegserver process with server </span><span class="se">\&#39;</span><span class="s">eegmanager </span><span class="si">%d</span><span class="se">\&#39;</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">xmlport</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">xmlport</span><span class="p">)])</span>
+            <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;launching subprocess with excutable at </span><span class="si">%s</span><span class="s"> failed!&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable_path</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="n">err</span>
+
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">3</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c"># exit the loop of the process is still running..</span>
+                <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">&quot;http://</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">xmlport</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># self.remote.shut_down()</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.stream_local_file"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.stream_local_file">[docs]</a>    <span class="k">def</span> <span class="nf">stream_local_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+        <span class="c"># start streaming of file filename using</span>
+        <span class="c"># the local eegmanager process</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">get_state</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="s">&quot;IDLE&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+        <span class="n">tcp_range</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">41244</span><span class="p">,</span> <span class="mi">61244</span><span class="p">)</span>
+        <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">tcp_range</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">tcp_range</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span> <span class="c"># clear possible dangling setup</span>
+
+            <span class="c"># file acquisition</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s">&quot;FILEAcquisition&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;--blocksize 100 --filename </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;failed to adding fileacquisition for file </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stdout</span><span class="p">()))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;Check your paths!&quot;</span>
+
+            <span class="c"># to the network!</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s">&quot;NETOutput&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;--port </span><span class="si">%d</span><span class="s"> --blocking&quot;</span> <span class="o">%</span> <span class="n">port</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;failed to add netoutput with port </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">port</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stdout</span><span class="p">()))</span>
+                <span class="k">continue</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+            <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;started local streaming of file </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">filename</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.receive_remote_stream"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.receive_remote_stream">[docs]</a>    <span class="k">def</span> <span class="nf">receive_remote_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+        <span class="c"># set the ip/port which is used during the</span>
+        <span class="c"># request window stream function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="o">=</span> <span class="n">ip</span>
+
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.record_with_options"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.record_with_options">[docs]</a>    <span class="k">def</span> <span class="nf">record_with_options</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subject</span><span class="p">,</span> <span class="n">experiment</span><span class="p">,</span> <span class="n">online</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="c"># use local eegmanager process for</span>
+        <span class="c"># raw-data-recording of incoming data</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;Dont know how to record without remote info!&quot;</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">get_state</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="s">&quot;IDLE&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span> <span class="c"># clear possible dangling setup</span>
+
+        <span class="n">directory</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span>
+
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s">&quot;NETAcquisition&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;--host </span><span class="si">%s</span><span class="s"> --port </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;failed to add netacquisition with host(</span><span class="si">%s</span><span class="s">) and ip(</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> \
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stdout</span><span class="p">()))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;Connection failed!&quot;</span>
+
+        <span class="k">if</span> <span class="n">online</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s">&quot;FILEOutput&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;--subject </span><span class="si">%s</span><span class="s"> --trial </span><span class="si">%s</span><span class="s"> --dir </span><span class="si">%s</span><span class="s"> --online&quot;</span> <span class="o">%</span> \
+                    <span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">experiment</span><span class="p">,</span> <span class="n">directory</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">add_module</span><span class="p">(</span><span class="s">&quot;FILEOutput&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;--subject </span><span class="si">%s</span><span class="s"> --trial </span><span class="si">%s</span><span class="s"> --dir </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> \
+                    <span class="p">(</span><span class="n">subject</span><span class="p">,</span> <span class="n">experiment</span><span class="p">,</span> <span class="n">directory</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="n">ret</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;failed to add fileoutput with directory </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">directory</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stdout</span><span class="p">()))</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;Check if this directory exists!&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;started raw-data-recording&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.request_window_stream"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.request_window_stream">[docs]</a>    <span class="k">def</span> <span class="nf">request_window_stream</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_spec</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span> <span class="n">no_overlap</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="c"># function to connect a client to a running</span>
+        <span class="c"># remote streaming server or local process</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="o">=</span> <span class="s">&quot;127.0.0.1&quot;</span> <span class="c"># for the local mode</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># without a port we cannot do anything</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;Port for stream reception is not set!&quot;</span>
+
+        <span class="c"># connect and start client</span>
+        <span class="n">eeg_client</span> <span class="o">=</span> <span class="n">eeg_stream</span><span class="o">.</span><span class="n">EEGClient</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span>
+                                               <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+        <span class="n">eeg_client</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Started EEG-Client&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_client</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">eeg_client</span><span class="p">)</span>
+
+        <span class="c"># load windower spec file</span>
+        <span class="n">windower_spec_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">window_spec</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+        <span class="n">window_definitions</span> <span class="o">=</span> \
+            <span class="n">WindowFactory</span><span class="o">.</span><span class="n">window_definitions_from_yaml</span><span class="p">(</span><span class="n">windower_spec_file</span><span class="p">)</span>
+        <span class="n">windower_spec_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Finished loading windower spec file&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">window_definitions</span><span class="p">)</span>
+
+        <span class="c"># create windower</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">=</span> <span class="n">MarkerWindower</span><span class="p">(</span><span class="n">eeg_client</span><span class="p">,</span>
+                                              <span class="n">window_definitions</span><span class="p">,</span>
+                                              <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="n">nullmarker_stride_ms</span><span class="p">,</span>
+                                              <span class="n">no_overlap</span> <span class="o">=</span> <span class="n">no_overlap</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Created windower instance&quot;</span><span class="p">)</span>
+
+        <span class="c"># return an iterator over the yielded windows</span>
+        <span class="n">window_stream</span> <span class="o">=</span> <span class="p">((</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Created window-stream&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">window_stream</span>
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.initialize_eeg_server"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.initialize_eeg_server">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_eeg_server</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">eeg_server_ip</span><span class="p">,</span>
+                              <span class="n">eeg_server_port</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="o">=</span> <span class="n">eeg_server_ip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">eeg_server_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_client</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+
+</div>
+<div class="viewcode-block" id="LiveEegStreamManager.stop"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager.stop">[docs]</a>    <span class="k">def</span> <span class="nf">stop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

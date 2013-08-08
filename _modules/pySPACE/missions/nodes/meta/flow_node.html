@@ -1,0 +1,565 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.meta.flow_node &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.meta.flow_node</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Encapsulate complete :mod:`~pySPACE.environments.chains.node_chain` into a single node &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE.missions.nodes</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.source.external_generator_source</span>\
+<span class="kn">import</span> <span class="n">ExternalGeneratorSourceNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.splitter.all_train_splitter</span> <span class="kn">import</span> <span class="n">AllTrainSplitterNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChain</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
+
+
+<div class="viewcode-block" id="FlowNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode">[docs]</a><span class="k">class</span> <span class="nc">FlowNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Encapsulate a whole node chain from YAML specification or path into a single node</span>
+<span class="sd">    </span>
+<span class="sd">    The FlowNode encapsulates a whole node chain so that it can be used like a node.</span>
+<span class="sd">    The encapsulated chain can either be passed directly via the *nodes*</span>
+<span class="sd">    parameter. Alternatively, the path to a pickled node chain can be passed</span>
+<span class="sd">    via *load_path*. In the second case, the object is loaded lazily</span>
+<span class="sd">    (i.e. only when required). This is important in situations where the</span>
+<span class="sd">    FlowNode is pickled again (for instance when using</span>
+<span class="sd">    :class:`~pySPACE.environments.backends.multicore.MulticoreBackend`).</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: </span>
+<span class="sd">          When defining  this node in YAML syntax, one can pass</span>
+<span class="sd">          a &quot;nodes&quot; parameter instead of the &quot;subflow&quot; parameter (see </span>
+<span class="sd">          exemplary call below). The value of this parameter must be a </span>
+<span class="sd">          NodeChain definition in YAML syntax (properly indented). This</span>
+<span class="sd">          NodeChain definition is converted into the actual &quot;subflow&quot; parameter</span>
+<span class="sd">          passed to the constructor in the class&#39; static method </span>
+<span class="sd">          &quot;node_from_yaml&quot; (overwriting the default implementation of</span>
+<span class="sd">          BaseNode). Furthermore, it is determined whether trainable and</span>
+<span class="sd">          supervised must be True. Thus, these parameters need not be</span>
+<span class="sd">          specified explicitly.    </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :subflow:</span>
+<span class="sd">            The NodeChain object that is encapsulated in this node. Must</span>
+<span class="sd">            be provided when no load_path is given.   </span>
+
+<span class="sd">            (*semi-optional, default: None*)</span>
+
+<span class="sd">        :load_path:</span>
+<span class="sd">            The path to the pickled NodeChain object that is loaded and</span>
+<span class="sd">            encapsulated in this flow node. Must be given when no subflow is </span>
+<span class="sd">            provided. The path string can contain phrases like __SPLIT__ - they</span>
+<span class="sd">            are replaced in the super node. </span>
+
+<span class="sd">            (*semi-optional, default: None*)</span>
+
+<span class="sd">        :trainable: </span>
+<span class="sd">            If True, the nodes of the NodeChain require training,</span>
+<span class="sd">            thus this node itself must be trainable.</span>
+
+<span class="sd">            When reading the specification, it is tested, if the subnodes need</span>
+<span class="sd">            training.</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">        :supervised:</span>
+<span class="sd">            If True, the nodes require supervised training, thus this</span>
+<span class="sd">            node itself must be supervised.</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">        :input_dim:</span>
+<span class="sd">            This node may require in contrast to the other nodes that the</span>
+<span class="sd">            dimensionality of the input data is explicitly set. This is the case</span>
+<span class="sd">            when the input dimensionality cannot be inferred from the passed</span>
+<span class="sd">            subflow parameter.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+<span class="sd">        :output_dim:</span>
+<span class="sd">            This node may require in contrast to the other  nodes that the</span>
+<span class="sd">            dimensionality of the output data is explicitly set. This is the case</span>
+<span class="sd">            when the output dimensionality cannot be inferred from the passed</span>
+<span class="sd">            subflow parameter.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+<span class="sd">        :change_parameters:</span>
+<span class="sd">            List of tuple specifying, which parameters to change in the internal nodes</span>
+
+<span class="sd">            Each tuple is a dictionary with the keys:</span>
+
+<span class="sd">                :node: Name of the node,</span>
+<span class="sd">                :parameters: dictionary of new parameters,</span>
+<span class="sd">                :number: optional number of occurrence in the node (default: 1).</span>
+
+<span class="sd">            By default we assume, that node parameters and program variables are</span>
+<span class="sd">            identical. This default is implemented in the BaseNOde and</span>
+<span class="sd">            can be overwritten by the relevant node with the function</span>
+<span class="sd">            *_change_parameters*.</span>
+
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">         -</span>
+<span class="sd">             node : FlowNode</span>
+<span class="sd">             parameters :</span>
+<span class="sd">                  input_dim : 64</span>
+<span class="sd">                  output_dim : 1612</span>
+<span class="sd">                  nodes : </span>
+<span class="sd">                            -</span>
+<span class="sd">                                node : ChannelNameSelector</span>
+<span class="sd">                                parameters : </span>
+<span class="sd">                                    inverse : True</span>
+<span class="sd">                                    selected_channels: [&quot;EMG1&quot;,&quot;EMG2&quot;,&quot;TP7&quot;,&quot;TP8&quot;]</span>
+<span class="sd">                            - </span>
+<span class="sd">                                node : Decimation</span>
+<span class="sd">                                parameters : </span>
+<span class="sd">                                    target_frequency : 25.0</span>
+<span class="sd">                            -</span>
+<span class="sd">                                node : FFT_Band_Pass_Filter</span>
+<span class="sd">                                parameters : </span>
+<span class="sd">                                    pass_band : [0.0, 4.0]</span>
+<span class="sd">                            -</span>
+<span class="sd">                                node : Time_Domain_Features</span>
+<span class="sd">                                parameters :</span>
+<span class="sd">                                      moving_window_length : 1</span>
+<span class="sd">                  change_parameters :</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : ChannelNameSelector</span>
+<span class="sd">                            parameters : </span>
+<span class="sd">                                inverse : False</span>
+<span class="sd">                                selected_channels: [&quot;EMG1&quot;,&quot;EMG2&quot;]</span>
+<span class="sd">              </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="FlowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">load_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">supervised</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">change_parameters</span><span class="o">=</span><span class="p">[],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c"># We need either a nodes or the path to one</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">nodes</span> <span class="ow">or</span> <span class="n">load_path</span><span class="p">)</span>
+        
+        <span class="c"># set trainable permanently</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">trainable</span>
+        
+        <span class="k">if</span> <span class="n">load_path</span><span class="p">:</span>
+            <span class="c"># assume that all splits have same relevant parameters</span>
+            <span class="n">check_nodes_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;__SPLIT__&quot;</span><span class="p">,</span><span class="s">&quot;0&quot;</span><span class="p">)</span>
+            <span class="c"># We load the flow only temporarily, since we might need to</span>
+            <span class="c"># pickle this object (depending on the backend), and storing the flow</span>
+            <span class="c"># object too early causes overhead</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">check_nodes_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">))</span>
+        <span class="c"># Determine some properties of the flow (input_dim, output_dim)</span>
+        <span class="k">if</span> <span class="n">input_dim</span><span class="o">==</span><span class="bp">None</span> <span class="ow">and</span> <span class="n">load_path</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">input_dim</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">is_source_node</span><span class="p">():</span> 
+                    <span class="n">input_dim</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">input_dim</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">input_dim</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_dim</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">output_dim</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">is_sink_node</span><span class="p">():</span>
+                    <span class="n">output_dim</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">output_dim</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">output_dim</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">output_dim</span>
+        <span class="k">elif</span> <span class="n">input_dim</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span>
+            <span class="n">input_dim</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_dim</span>
+            
+<span class="c">#            assert input_dim is not None, &quot;You must specify the input dim of &quot; \</span>
+<span class="c">#                                          &quot;node %s explicitly!&quot; % self.__class__.__name__</span>
+            <span class="n">output_dim</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">output_dim</span>
+        
+        <span class="k">if</span> <span class="n">load_path</span><span class="p">:</span>
+            <span class="n">trainable</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
+                                    <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">flow</span><span class="p">])</span>
+            <span class="n">supervised</span> <span class="o">=</span> <span class="n">trainable</span>
+        <span class="c"># flow is not made permanent but later on loaded</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="c"># Now we can call the superclass constructor</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> 
+                                        <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span>
+                                       <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">trainable</span><span class="p">,</span>
+                                      <span class="n">supervised</span> <span class="o">=</span> <span class="n">supervised</span><span class="p">,</span>
+                                      <span class="n">train_instances</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">change_parameters</span> <span class="o">=</span> <span class="n">change_parameters</span><span class="p">,</span>
+                                      <span class="n">changed</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">nodes</span><span class="p">:</span> <span class="c"># if we got a flow object</span>
+            <span class="c"># Remove dtype of the  nodes</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">flow</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Do not load now, but only store path to pickled object</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">load_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="p">,</span>
+                                          <span class="n">flow</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="c"># We will load the nodes lazily</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="FlowNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">FlowNode</span><span class="p">(</span><span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">node_obj</span>
+            </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="FlowNode._prepare_node_chain"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._prepare_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="s">&quot;parameters&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span>
+        <span class="k">if</span> <span class="s">&quot;load_path&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]:</span>
+            <span class="c"># Let node load pickled object</span>
+            <span class="k">return</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span>  
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># The node chain has to be specified in YAML syntax</span>
+            <span class="k">assert</span> <span class="s">&quot;nodes&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">],</span> \
+                       <span class="s">&quot;FlowNode requires specification of a list of nodes &quot;</span> \
+                       <span class="s">&quot;or of a load_path to a pickled node chain.&quot;</span>
+    
+            <span class="n">node_sequence</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExternalGeneratorSourceNode</span><span class="p">(),</span>
+                             <span class="n">AllTrainSplitterNode</span><span class="p">()]</span>
+            <span class="c"># For all nodes in the specs</span>
+            <span class="k">for</span> <span class="n">node_spec</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">][</span><span class="s">&quot;nodes&quot;</span><span class="p">]:</span>
+                <span class="c"># Use factory method to create node</span>
+                <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">node_spec</span><span class="p">)</span>
+                    
+                <span class="c"># Append this node to the sequence of node</span>
+                <span class="n">node_sequence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_obj</span><span class="p">)</span> 
+                
+            <span class="c"># Check if the nodes have to cache their outputs</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">):</span>
+                <span class="c"># If a node is trainable, it uses the outputs of its input node</span>
+                <span class="c"># at least twice, so we have to cache.</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+                    <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="c"># Split node might also request the data from their input nodes</span>
+                <span class="c"># (once for each split), depending on their implementation. We </span>
+                <span class="c"># assume the worst case and activate caching</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_split_node</span><span class="p">():</span>
+                    <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            
+            <span class="c"># Determine if any of the nodes is trainable</span>
+            <span class="n">trainable</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
+                               <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_sequence</span><span class="p">])</span>
+            
+            <span class="c"># Determine if any of the nodes requires supervised training</span>
+            <span class="n">supervised</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
+                                <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_sequence</span><span class="p">])</span>
+            
+            <span class="c"># Create the nodes</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">)</span>
+            <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;nodes&quot;</span><span class="p">)</span>
+            
+            <span class="c"># Evaluate all remaining parameters if they are eval statements</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;eval(&quot;</span><span class="p">):</span>
+                    <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            
+            <span class="c"># Create the node object</span>
+            <span class="n">member_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;nodes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">flow</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;trainable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trainable</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;supervised&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">supervised</span>
+            
+            
+            <span class="k">return</span> <span class="n">member_dict</span>
+        
+</div>
+<div class="viewcode-block" id="FlowNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
+    </div>
+<div class="viewcode-block" id="FlowNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">supervised</span>
+</div>
+<div class="viewcode-block" id="FlowNode._get_flow"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._get_flow">[docs]</a>    <span class="k">def</span> <span class="nf">_get_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return flow (load flow lazily if not yet loaded).</span>
+<span class="sd">    </span>
+<span class="sd">        .. todo:: Check if first node is  source node and if yes remove</span>
+<span class="sd">        .. todo:: Add ExternalGeneratorSourceNode if self.trainable</span>
+<span class="sd">        .. todo:: Check if last node is sink node and remove </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span> <span class="c"># Load nodes lazily</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">nodes</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">change_flow</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="o">=</span><span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span>
+</div>
+<div class="viewcode-block" id="FlowNode.change_flow"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.change_flow">[docs]</a>    <span class="k">def</span> <span class="nf">change_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">changeset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_parameters</span><span class="p">:</span>
+            <span class="n">number</span><span class="o">=</span><span class="n">changeset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;parameters&quot;</span><span class="p">):</span>
+                <span class="kn">import</span> <span class="nn">warnings</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Could not change change set: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">changeset</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;!&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">i</span><span class="o">=</span><span class="mi">1</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">missions</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">NODE_MAPPING</span><span class="p">[</span><span class="n">changeset</span><span class="p">[</span><span class="s">&quot;node&quot;</span><span class="p">]]</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="n">number</span><span class="p">:</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">_change_parameters</span><span class="p">(</span><span class="n">changeset</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
+                        <span class="k">break</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">i</span><span class="o">+=</span><span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="FlowNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the flow on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="c"># Delegate to internal flow object</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FlowNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Trains the flow on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
+        </div>
+<div class="viewcode-block" id="FlowNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span> <span class="o">=</span> <span class="p">[]</span> <span class="c"># We do no longer need the training data</span>
+</div>
+<div class="viewcode-block" id="FlowNode._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Iterate through the nodes to train them &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;_inc_train&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="p">:</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="o">=</span><span class="bp">True</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">start_retraining</span><span class="p">()</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">class_label</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            </div>
+<div class="viewcode-block" id="FlowNode._batch_retrain"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._batch_retrain">[docs]</a>    <span class="k">def</span> <span class="nf">_batch_retrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data_list</span><span class="p">,</span> <span class="n">label_list</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Batch retraining for node chains</span>
+<span class="sd">        </span>
+<span class="sd">        The input data is taken, to change the first retrainable node.</span>
+<span class="sd">        After the change, the data is processed and given to the next node,</span>
+<span class="sd">        which is trained with the data coming from the retrained algorithm.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">label_list</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;_inc_train&quot;</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="p">:</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="o">=</span><span class="bp">True</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">start_retraining</span><span class="p">()</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">label_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">data_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_list</span><span class="p">]</span>
+        <span class="n">data_list</span>  <span class="o">=</span> <span class="bp">None</span>
+        <span class="n">label_list</span> <span class="o">=</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="FlowNode.is_retrainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_retrainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_retrainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Retraining needed if one node is retrainable &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">():</span>
+                    <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="FlowNode.present_label"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.present_label">[docs]</a>    <span class="k">def</span> <span class="nf">present_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Forward the label to the nodes</span>
+<span class="sd">        </span>
+<span class="sd">        *buffering* must be set to *True* only for the main node for</span>
+<span class="sd">        using incremental learning in the application (live environment).</span>
+<span class="sd">        The inner nodes must not have set this parameter.</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo::</span>
+<span class="sd">            Implement check on, if the inner nodes do not buffer.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">present_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="FlowNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset the state to the clean state it had after its initialization &quot;&quot;&quot;</span>
+        <span class="c"># Reset not only the node but also all nodes of the encapsulated node chain.</span>
+        <span class="c"># Irrelevant, since the node chain is made permanent or later on loaded.</span>
+<span class="c">#        if self._get_flow():</span>
+ <span class="c">#           for node in self._get_flow():</span>
+  <span class="c">#              node.reset()</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="FlowNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="BatchAdaptSubflowNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode">[docs]</a><span class="k">class</span> <span class="nc">BatchAdaptSubflowNode</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Load and retrain a pre-trained NodeChain for recalibration</span>
+<span class="sd">    </span>
+<span class="sd">    This node encapsulates a whole NodeChain so that it can be</span>
+<span class="sd">    used like a node. The path to a pickled NodeChain object has to be passed</span>
+<span class="sd">    via *load_path*. The NodeChain object is loaded lazily (i.e. only when</span>
+<span class="sd">    required). This is important in situations where this</span>
+<span class="sd">    node is pickled as part of a NodeChain again (for instance</span>
+<span class="sd">    when using :class:`~pySPACE.environments.backends.multicore`).</span>
+<span class="sd">    </span>
+<span class="sd">    In contrast to the FlowNode, this node allows also to retrain the loaded</span>
+<span class="sd">    NodeChain to novel training data. All nodes of the loaded NodeChain for which</span>
+<span class="sd">    *retrain* is set ``True`` are provided with the training data.</span>
+<span class="sd">    Before this, the method &quot;start_retraining&quot; is called on this node. The</span>
+<span class="sd">    training data is then provided to the &quot;_inc_train&quot; method.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">         </span>
+<span class="sd">     :load_path:</span>
+<span class="sd">         The path to the pickled NodeChain object that is loaded and</span>
+<span class="sd">         encapsulated in this node. This parameter is not optional!</span>
+<span class="sd">        </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : BatchAdaptSubflow</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                load_path : &quot;some_path&quot;</span>
+
+
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/06/20</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="BatchAdaptSubflowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_path</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BatchAdaptSubflowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">load_path</span><span class="o">=</span><span class="n">load_path</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">batch_labels</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="BatchAdaptSubflowNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BatchAdaptSubflowNode</span><span class="p">(</span><span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">node_obj</span>
+    </div>
+<div class="viewcode-block" id="BatchAdaptSubflowNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Expects the nodes to buffer the training samples,</span>
+<span class="sd">        when they are executed on the data. &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="o">=</span><span class="p">[]</span>
+        <span class="c"># save labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="c"># save examples via the buffering parameter in the node</span>
+        <span class="c"># Only the relevant nodes will save there data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="BatchAdaptSubflowNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Present_label is a BaseNode method.</span>
+        <span class="c"># It recursively goes through all nodes.</span>
+        <span class="c"># There _batch_retrain is called with our label list and</span>
+        <span class="c"># the nodes are retrained with this labels on the previously buffered samples.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">present_label</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span> <span class="o">=</span> <span class="bp">None</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Flow_Node&quot;</span><span class="p">:</span> <span class="n">FlowNode</span><span class="p">,</span>
+                <span class="s">&quot;Batch_Adapt_Subflow&quot;</span> <span class="p">:</span> <span class="n">BatchAdaptSubflowNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

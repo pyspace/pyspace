@@ -1,0 +1,571 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.run.gui.general_gui &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.run.gui.general_gui</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Rough basic interface to run pySPACE with node chains &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="c"># import for documentation generation</span>
+<span class="kn">from</span> <span class="nn">threading</span> <span class="kn">import</span> <span class="n">Thread</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE</span> <span class="kn">import</span> <span class="n">create_operation_from_file</span><span class="p">,</span> <span class="n">create_operation</span><span class="p">,</span> <span class="n">create_backend</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">PyQt4</span> <span class="kn">import</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtCore</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="c">#### Find pySPACE package and import it ####</span>
+    <span class="c"># Determine path of current file</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+    
+    <span class="c"># Move up to parent directory that contains the pySPACE tree</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+        <span class="n">path</span><span class="p">,</span> <span class="n">tail</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">suffix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tail</span><span class="p">)</span>
+    <span class="n">parent_dir</span> <span class="o">=</span> <span class="n">path</span>
+    
+    <span class="c"># Check proper directory structure</span>
+    <span class="k">if</span> <span class="n">suffix</span> <span class="o">!=</span> <span class="p">[</span><span class="s">&#39;general_gui.py&#39;</span><span class="p">,</span> <span class="s">&#39;gui&#39;</span><span class="p">,</span><span class="s">&#39;run&#39;</span><span class="p">,</span> <span class="s">&#39;pySPACE&#39;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">,</span> <span class="s">&quot;Encountered incorrect directory structure. &quot;</span> \
+            <span class="s">&quot;general_gui.py needs to reside in $PARENT_DIR/pySPACE/run/gui&quot;</span>
+    
+    <span class="c"># Append pySPACE root directory to PYTHONPATH</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">)</span>
+    <span class="c">#########################################</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">PyQt4</span> <span class="kn">import</span> <span class="n">QtGui</span><span class="p">,</span> <span class="n">QtCore</span><span class="p">,</span> <span class="n">QtWebKit</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">warnings</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;ERROR: This GUI requires the PyQt4 package. You may use &quot;</span>\
+              <span class="s">&quot;launch.py instead however.&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+
+<div class="viewcode-block" id="PySpaceGui"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui">[docs]</a><span class="k">class</span> <span class="nc">PySpaceGui</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QMainWindow</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The main window of the GUI&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="PySpaceGui.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PySpaceGui</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s">&#39;python parallel YAML Signal Processing And Classification Environment (pySPACE)&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">1024</span><span class="p">,</span> <span class="mi">768</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="PySpaceGui.set_up"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui.set_up">[docs]</a>    <span class="k">def</span> <span class="nf">set_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setting up of GUI components &quot;&quot;&quot;</span>
+        <span class="c"># Lazy import of widgets</span>
+
+        <span class="c"># Putting everything together</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTabWidget</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">setTabsClosable</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;tabCloseRequested (int)&#39;</span><span class="p">),</span> 
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_closeTab</span><span class="p">)</span>
+          
+        <span class="c"># The tab for configuring and controlling operations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ControlTab</span> <span class="o">=</span> <span class="n">ControlWidget</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ControlTab</span><span class="p">,</span> <span class="s">&quot;Control&quot;</span><span class="p">)</span>
+                
+        <span class="c"># The tabs that show the documentation</span>
+        <span class="c"># TODO: Currently, it is not possible to login via the viewer such that</span>
+        <span class="c">#       the desired page can not be displayed. Thus, we use the local</span>
+        <span class="c">#       documentation</span>
+        <span class="n">DocumentationTab</span> <span class="o">=</span> <span class="n">QtWebKit</span><span class="o">.</span><span class="n">QWebView</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">DocumentationTab</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">QtCore</span><span class="o">.</span><span class="n">QUrl</span><span class="p">(</span><span class="s">&quot;../../../docs/.build/html/index.html&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">DocumentationTab</span><span class="p">,</span> <span class="s">&quot;pySPACE Documentation&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DocumentationTab</span><span class="o">.</span><span class="n">page</span><span class="p">()</span><span class="o">.</span><span class="n">networkAccessManager</span><span class="p">(),</span> 
+                     <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&quot;sslErrors (QNetworkReply *, const QList&lt;QSslError&gt; &amp;)&quot;</span><span class="p">),</span> 
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_sslErrorHandler</span><span class="p">)</span>
+        
+        <span class="c"># Set initially selected tab</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">setCurrentWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ControlTab</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="p">)</span>
+        
+        <span class="c"># Connect handler for signal that signals that an operation has been finished</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ControlTab</span><span class="o">.</span><span class="n">operationFinishedSignal</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_operation_finished</span><span class="p">)</span>
+        
+        <span class="c"># Implement proper shutdown</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;quit()&#39;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_close_event</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="PySpaceGui._operation_finished"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui._operation_finished">[docs]</a>    <span class="k">def</span> <span class="nf">_operation_finished</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_file_name</span><span class="p">):</span>
+        <span class="c"># Called whenever an operation is finished</span>
+        <span class="kn">from</span> <span class="nn">pySPACE.run.gui.performance_results_analysis</span> <span class="kn">import</span> <span class="n">PerformanceResultsAnalysisWidget</span>
+        
+        <span class="c"># Convert special string &quot;None&quot; to object None</span>
+        <span class="k">if</span> <span class="n">result_file_name</span> <span class="o">==</span> <span class="s">&quot;None&quot;</span><span class="p">:</span> <span class="n">result_file_name</span> <span class="o">=</span> <span class="bp">None</span>
+        
+        <span class="c"># Open results analysis tab</span>
+        <span class="n">resultsAnalysisTab</span> <span class="o">=</span> \
+                <span class="n">PerformanceResultsAnalysisWidget</span><span class="p">(</span><span class="n">results_file</span><span class="o">=</span><span class="n">result_file_name</span><span class="p">,</span>
+                                         <span class="n">parent</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">addTab</span><span class="p">(</span><span class="n">resultsAnalysisTab</span><span class="p">,</span> <span class="s">&quot;Result Analysis&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">setCurrentWidget</span><span class="p">(</span><span class="n">resultsAnalysisTab</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PySpaceGui._close_event"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui._close_event">[docs]</a>    <span class="k">def</span> <span class="nf">_close_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PySpaceGui</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">closeEvent</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="PySpaceGui._sslErrorHandler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui._sslErrorHandler">[docs]</a>    <span class="k">def</span> <span class="nf">_sslErrorHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reply</span><span class="p">,</span> <span class="n">errorList</span><span class="p">):</span>
+        <span class="c"># Ignore all SSL errors....</span>
+        <span class="n">reply</span><span class="o">.</span><span class="n">ignoreSslErrors</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;SSL error ignored: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">errorList</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">errorString</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="PySpaceGui._closeTab"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.PySpaceGui._closeTab">[docs]</a>    <span class="k">def</span> <span class="nf">_closeTab</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tabIndex</span><span class="p">):</span>
+        <span class="c"># The control and documentation tabs must not be closed!</span>
+        <span class="k">if</span> <span class="n">tabIndex</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span> <span class="k">return</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">widget</span><span class="p">(</span><span class="n">tabIndex</span><span class="p">)</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tabWidget</span><span class="o">.</span><span class="n">removeTab</span><span class="p">(</span><span class="n">tabIndex</span><span class="p">)</span>
+            
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c">#Creating Qt application</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QApplication</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> 
+    <span class="n">gui</span> <span class="o">=</span> <span class="n">PySpaceGui</span><span class="p">()</span>
+
+    <span class="c"># Let user select a configuration file</span>
+    <span class="n">config_file</span> <span class="o">=</span> \
+        <span class="nb">str</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="n">gui</span><span class="p">,</span> <span class="s">&quot;Select a configuration file &quot;</span><span class="p">,</span>
+                                              <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s">&quot;docs&quot;</span><span class="p">,</span><span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="s">&quot;conf&quot;</span><span class="p">]),</span>
+                                              <span class="s">&quot;configuration files (*.yaml)&quot;</span><span class="p">))</span>
+    <span class="n">config_file</span> <span class="o">=</span> <span class="n">config_file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+     
+    <span class="c"># Load configuration file</span>
+    <span class="kn">import</span> <span class="nn">pySPACE</span>
+    <span class="n">pySPACE</span><span class="o">.</span><span class="n">load_configuration</span><span class="p">(</span><span class="n">config_file</span><span class="p">)</span>
+
+    <span class="n">gui</span><span class="o">.</span><span class="n">set_up</span><span class="p">()</span>
+    <span class="n">gui</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+ 
+    <span class="c">#Initing application</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">exec_</span><span class="p">())</span>
+
+<div class="viewcode-block" id="ControlWidget"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget">[docs]</a><span class="k">class</span> <span class="nc">ControlWidget</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Widget for configuring a node chain operation and monitor its progress. &quot;&quot;&quot;</span>
+
+    <span class="c"># Two signals that are used to provide the GUI with the status of the</span>
+    <span class="c"># running operation.</span>
+    <span class="n">operationStatusChangedSignal</span> <span class="o">=</span> \
+                <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;operationStatusChanged&#39;</span><span class="p">)</span>
+
+    <span class="n">operationFinishedSignal</span> <span class="o">=</span> \
+                <span class="n">QtCore</span><span class="o">.</span><span class="n">pyqtSignal</span><span class="p">(</span><span class="nb">basestring</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;operationFinished&#39;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ControlWidget.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ControlWidget</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c"># hlayoutBackend</span>
+        <span class="n">hlayoutBackend</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+
+        <span class="n">backendLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Backend&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backendComboBox</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backendComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">([</span><span class="s">&quot;serial&quot;</span><span class="p">,</span> <span class="s">&quot;mcore&quot;</span><span class="p">,</span> <span class="s">&quot;mpi&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backendComboBox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s">&quot;Select the backend&quot;</span><span class="p">)</span>
+
+        <span class="n">hlayoutBackend</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">backendLabel</span><span class="p">)</span>
+        <span class="n">hlayoutBackend</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backendComboBox</span><span class="p">)</span>
+
+        <span class="c"># hlayoutOperationType</span>
+        <span class="n">hlayoutOperationType</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+
+        <span class="n">operationTypeLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Operation&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationTypeComboBox</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationTypeComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">([</span><span class="s">&quot;Node Chain Operation&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationTypeComboBox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s">&quot;Select the type of operation&quot;</span><span class="p">)</span>
+        <span class="n">opConfigButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Create&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">opConfigButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_config_node_chain</span><span class="p">)</span>
+        <span class="n">opLoadButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Load&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">opLoadButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_load_node_chain</span><span class="p">)</span>
+
+        <span class="n">hlayoutOperationType</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">operationTypeLabel</span><span class="p">)</span>
+        <span class="n">hlayoutOperationType</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operationTypeComboBox</span><span class="p">)</span>
+        <span class="n">hlayoutOperationType</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">opConfigButton</span><span class="p">)</span>
+        <span class="n">hlayoutOperationType</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">opLoadButton</span><span class="p">)</span>
+
+        <span class="c"># start button</span>
+        <span class="n">startButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Start Operation&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">startButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">)</span>
+
+        <span class="c"># load operation button</span>
+        <span class="n">loadResultsButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Load Operation Results&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">loadResultsButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_loadResults</span><span class="p">)</span>
+
+        <span class="c"># control bar</span>
+        <span class="n">hlayoutControl</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">hlayoutControl</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">startButton</span><span class="p">)</span>
+        <span class="n">hlayoutControl</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">loadResultsButton</span><span class="p">)</span>
+
+
+        <span class="c"># the log viewer</span>
+        <span class="n">logViewer</span> <span class="o">=</span> <span class="n">LogViewer</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c"># operation progress</span>
+        <span class="n">hlayoutProgress</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">progressLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Operation progress&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QProgressBar</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">etaLabel</span> <span class="o">=</span> \
+            <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;ETA: --:--:--&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationStatusChangedSignal</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_update_progress_bar</span><span class="p">)</span>
+        <span class="n">hlayoutProgress</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">progressLabel</span><span class="p">)</span>
+        <span class="n">hlayoutProgress</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span><span class="p">)</span>
+        <span class="n">hlayoutProgress</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">etaLabel</span><span class="p">)</span>
+
+        <span class="c"># Create the main layout of widget</span>
+        <span class="n">vlayout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QVBoxLayout</span><span class="p">()</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutBackend</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutOperationType</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutControl</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">logViewer</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutProgress</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">vlayout</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ControlWidget._config_node_chain"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._config_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">_config_node_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Launch window that allows to load/configure a node chain operation</span>
+        <span class="n">node_chain_config_frame</span> <span class="o">=</span> <span class="n">OperationConfigurationPopup</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ControlWidget._load_node_chain"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._load_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">_load_node_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Let the user select an operation</span>
+        <span class="n">operation_file</span> <span class="o">=</span> \
+            <span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getOpenFileName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;Select an operation spec file&quot;</span><span class="p">,</span>
+                                              <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;operations&quot;</span><span class="p">,</span>
+                                              <span class="s">&quot;operation specification files (*.yaml)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">operation_file</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c"># Create operation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">=</span> <span class="n">create_operation_from_file</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">operation_file</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="ControlWidget._start"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._start">[docs]</a>    <span class="k">def</span> <span class="nf">_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Set number of processes in operation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span><span class="o">.</span><span class="n">setMinimum</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span><span class="o">.</span><span class="n">setMaximum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="o">.</span><span class="n">number_processes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="c"># Create backend</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">create_backend</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backendComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">()))</span>
+
+        <span class="c"># Run operation in a separate thread to keep GUI responsive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">run_operation</span><span class="p">,</span>
+                                      <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="c"># Update progress bar in a separate thread</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBarThread</span> <span class="o">=</span> <span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_monitor_progress</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBarThread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+</div>
+<div class="viewcode-block" id="ControlWidget._monitor_progress"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._monitor_progress">[docs]</a>    <span class="k">def</span> <span class="nf">_monitor_progress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">operationThread</span><span class="o">.</span><span class="n">isAlive</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">operationStatusChangedSignal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationStatusChangedSignal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationFinishedSignal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="o">.</span><span class="n">result_directory</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;results.csv&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ControlWidget._update_progress_bar"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._update_progress_bar">[docs]</a>    <span class="k">def</span> <span class="nf">_update_progress_bar</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processesFinished</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progressBar</span><span class="o">.</span><span class="n">setValue</span><span class="p">(</span><span class="n">processesFinished</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span> <span class="s">&quot;progress_bar&quot;</span><span class="p">):</span>
+            <span class="c"># Compute Estimated Time of Arrival</span>
+            <span class="n">pbar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="o">.</span><span class="n">progress_bar</span>
+            <span class="k">if</span> <span class="n">pbar</span><span class="o">.</span><span class="n">currval</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">etaLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&quot;ETA: --:--:--&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">pbar</span><span class="o">.</span><span class="n">finished</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">etaLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%H:%M:%S&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">(</span><span class="n">pbar</span><span class="o">.</span><span class="n">seconds_elapsed</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">elapsed</span> <span class="o">=</span> <span class="n">pbar</span><span class="o">.</span><span class="n">seconds_elapsed</span>
+                <span class="n">eta</span> <span class="o">=</span> <span class="n">elapsed</span> <span class="o">*</span> <span class="n">pbar</span><span class="o">.</span><span class="n">maxval</span> <span class="o">/</span> <span class="n">pbar</span><span class="o">.</span><span class="n">currval</span> <span class="o">-</span> <span class="n">elapsed</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">etaLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&quot;ETA: </span><span class="si">%s</span><span class="s">&quot;</span>
+                                        <span class="o">%</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&#39;%H:%M:%S&#39;</span><span class="p">,</span> <span class="n">time</span><span class="o">.</span><span class="n">gmtime</span><span class="p">(</span><span class="n">eta</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="ControlWidget._loadResults"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.ControlWidget._loadResults">[docs]</a>    <span class="k">def</span> <span class="nf">_loadResults</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Load results of an already executed operation</span>
+        <span class="c"># This is done by pretending that an operation was finished but without</span>
+        <span class="c"># a results file. This causes the results analysis window to ask for the</span>
+        <span class="c"># location of the csv file.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operationFinishedSignal</span><span class="o">.</span><span class="n">emit</span><span class="p">(</span><span class="s">&quot;None&quot;</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="OperationConfigurationPopup"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup">[docs]</a><span class="k">class</span> <span class="nc">OperationConfigurationPopup</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QMainWindow</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Window for configuring a NodeChainOperation.</span>
+
+<span class="sd">    Allows to select an input and a node chain. Additionally, the window</span>
+<span class="sd">    allows to invoke the configuration GUI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="OperationConfigurationPopup.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">main_window</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">OperationConfigurationPopup</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">main_window</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span> <span class="o">=</span> <span class="n">main_window</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_input</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span><span class="mi">480</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s">&#39;Operation Configuration&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">central_widget</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QWidget</span><span class="p">()</span>
+
+        <span class="c"># hlayoutData</span>
+        <span class="n">hlayoutData</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">DataLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Input: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_input</span><span class="p">)</span>
+        <span class="n">DataButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Select&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">DataButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_select_input</span><span class="p">)</span>
+
+        <span class="n">hlayoutData</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">DataLabel</span><span class="p">)</span>
+        <span class="n">hlayoutData</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">DataButton</span><span class="p">)</span>
+
+        <span class="c"># hlayoutNodeChain</span>
+        <span class="n">hlayoutNodeChain</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+
+        <span class="n">NodeChainLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Node Chain&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;node_chains&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="o">.</span><span class="n">setToolTip</span><span class="p">(</span><span class="s">&quot;Select the node chain to be used in the node chain operation&quot;</span><span class="p">)</span>
+        <span class="n">NodeChainCreateButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Create&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">NodeChainCreateButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_configure_NodeChain</span><span class="p">)</span>
+        <span class="n">NodeChainRefreshButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Refresh&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">NodeChainRefreshButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_refresh_node_chains</span><span class="p">)</span>
+
+        <span class="n">hlayoutNodeChain</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">NodeChainLabel</span><span class="p">)</span>
+        <span class="n">hlayoutNodeChain</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="p">)</span>
+        <span class="n">hlayoutNodeChain</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">NodeChainCreateButton</span><span class="p">)</span>
+        <span class="n">hlayoutNodeChain</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">NodeChainRefreshButton</span><span class="p">)</span>
+
+        <span class="c"># Create button</span>
+        <span class="n">operationCreateButton</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QPushButton</span><span class="p">(</span><span class="s">&quot;&amp;Create&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">operationCreateButton</span><span class="p">,</span> <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;clicked()&#39;</span><span class="p">),</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_create_operation</span><span class="p">)</span>
+
+        <span class="c"># Main layout</span>
+        <span class="n">vlayout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QVBoxLayout</span><span class="p">()</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutData</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayoutNodeChain</span><span class="p">)</span>
+        <span class="n">vlayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">operationCreateButton</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">central_widget</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">vlayout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">central_widget</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="OperationConfigurationPopup._select_input"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup._select_input">[docs]</a>    <span class="k">def</span> <span class="nf">_select_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_input_path</span> <span class="o">=</span> \
+            <span class="nb">str</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QFileDialog</span><span class="o">.</span><span class="n">getExistingDirectory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                                       <span class="s">&quot;Select your input&quot;</span><span class="p">,</span>
+                                                       <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">_input_path</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_input</span> <span class="o">=</span> <span class="n">_input_path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">DataLabel</span><span class="o">.</span><span class="n">setText</span><span class="p">(</span><span class="s">&quot;Input: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_input</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OperationConfigurationPopup._configure_node_chain"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup._configure_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">_configure_node_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">pySPACE.run.gui.node_chain_GUI</span> <span class="kn">import</span> <span class="n">NodeChainConfigurationWidget</span>
+
+        <span class="n">NodeChainConfigurationPopup</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QMainWindow</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">NodeChainConfigurationWindow</span> <span class="o">=</span> \
+                <span class="n">NodeChainConfigurationWidget</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;node_chains&quot;</span><span class="p">,</span>
+                                            <span class="n">NodeChainConfigurationPopup</span><span class="p">)</span>
+
+        <span class="n">NodeChainConfigurationPopup</span><span class="o">.</span><span class="n">setCentralWidget</span><span class="p">(</span><span class="n">NodeChainConfigurationWindow</span><span class="p">)</span>
+        <span class="n">NodeChainConfigurationPopup</span><span class="o">.</span><span class="n">setWindowTitle</span><span class="p">(</span><span class="s">&#39;NodeChain Configuration&#39;</span><span class="p">)</span>
+        <span class="n">NodeChainConfigurationPopup</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="OperationConfigurationPopup._refresh_node_chains"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup._refresh_node_chains">[docs]</a>    <span class="k">def</span> <span class="nf">_refresh_node_chains</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;node_chains&quot;</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="OperationConfigurationPopup._create_operation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.OperationConfigurationPopup._create_operation">[docs]</a>    <span class="k">def</span> <span class="nf">_create_operation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">operation_spec</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;type&quot;</span><span class="p">:</span> <span class="s">&quot;node_chain&quot;</span><span class="p">,</span>
+                          <span class="s">&quot;input&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_input</span><span class="p">,</span>
+                          <span class="s">&quot;templates&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">NodeChainComboBox</span><span class="o">.</span><span class="n">currentText</span><span class="p">())],</span>
+                          <span class="s">&quot;store_node_chain&quot;</span> <span class="p">:</span> <span class="bp">False</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main_window</span><span class="o">.</span><span class="n">operation</span><span class="o">=</span> <span class="n">create_operation</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="QtStreamHandler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.QtStreamHandler">[docs]</a><span class="k">class</span> <span class="nc">QtStreamHandler</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Handler</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Handle incoming text streaming input &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QtStreamHandler.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.QtStreamHandler.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="p">,</span>  <span class="n">main</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">Handler</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">main</span> <span class="o">=</span> <span class="n">main</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">textWidget</span> <span class="o">=</span> <span class="n">parent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%(asctime)s</span><span class="s"> </span><span class="si">%(name)-20s</span><span class="s"> </span><span class="si">%(levelname)-8s</span><span class="s"> </span><span class="si">%(message)s</span><span class="s">&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lastUpdateTime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="QtStreamHandler.emit"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.QtStreamHandler.emit">[docs]</a>    <span class="k">def</span> <span class="nf">emit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatter</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">record</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+
+        <span class="k">if</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lastUpdateTime</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">textWidget</span><span class="o">.</span><span class="n">insertPlainText</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">textWidget</span><span class="o">.</span><span class="n">moveCursor</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QTextCursor</span><span class="o">.</span><span class="n">End</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lastUpdateTime</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="LogViewer"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.LogViewer">[docs]</a><span class="k">class</span> <span class="nc">LogViewer</span><span class="p">(</span><span class="n">QtGui</span><span class="o">.</span><span class="n">QWidget</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Handle logging input &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="LogViewer.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.gui.general_gui.html#pySPACE.run.gui.general_gui.LogViewer.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LogViewer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+
+        <span class="c"># Log levels</span>
+        <span class="n">LEVELS</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;DEBUG&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                  <span class="s">&#39;INFO&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span>
+                  <span class="s">&#39;WARNING&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">,</span>
+                  <span class="s">&#39;ERROR&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
+                  <span class="s">&#39;CRITICAL&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">}</span>
+
+        <span class="c"># The actual logger object</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+
+        <span class="c"># Create log text field</span>
+        <span class="n">logTextField</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QTextEdit</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logHandler</span> <span class="o">=</span> <span class="n">QtStreamHandler</span><span class="p">(</span><span class="n">logTextField</span><span class="p">,</span>  <span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logHandler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logHandler</span><span class="p">)</span>
+
+        <span class="c"># Create combobox for selecting the log level</span>
+        <span class="n">logLevelLabel</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QLabel</span><span class="p">(</span><span class="s">&quot;Log level&quot;</span><span class="p">)</span>
+        <span class="n">logLevelComboBox</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QComboBox</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">logLevelComboBox</span><span class="o">.</span><span class="n">addItems</span><span class="p">([</span><span class="s">&quot;DEBUG&quot;</span><span class="p">,</span> <span class="s">&quot;INFO&quot;</span><span class="p">,</span> <span class="s">&quot;WARNING&quot;</span><span class="p">,</span> <span class="s">&#39;ERROR&#39;</span><span class="p">,</span> <span class="s">&#39;CRITICAL&#39;</span><span class="p">])</span>
+
+        <span class="k">def</span> <span class="nf">updateLogLevel</span><span class="p">(</span><span class="n">level</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logHandler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">LEVELS</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">level</span><span class="p">)])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">logLevelComboBox</span><span class="p">,</span>
+                     <span class="n">QtCore</span><span class="o">.</span><span class="n">SIGNAL</span><span class="p">(</span><span class="s">&#39;activated (const QString&amp;)&#39;</span><span class="p">),</span>
+                     <span class="n">updateLogLevel</span><span class="p">)</span>
+
+        <span class="c"># Create layout</span>
+        <span class="n">layout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QVBoxLayout</span><span class="p">()</span>
+        <span class="n">hlayout</span> <span class="o">=</span> <span class="n">QtGui</span><span class="o">.</span><span class="n">QHBoxLayout</span><span class="p">()</span>
+        <span class="n">hlayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">logLevelLabel</span><span class="p">)</span>
+        <span class="n">hlayout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">logLevelComboBox</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addLayout</span><span class="p">(</span><span class="n">hlayout</span><span class="p">)</span>
+        <span class="n">layout</span><span class="o">.</span><span class="n">addWidget</span><span class="p">(</span><span class="n">logTextField</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setLayout</span><span class="p">(</span><span class="n">layout</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

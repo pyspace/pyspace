@@ -1,0 +1,189 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.live.online_utilities &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.live.online_utilities</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39; Utility functions for pyspace live, like special logging functionality</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span> <span class="nn">logging.handlers</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+
+<span class="c"># create directory for logging</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s">&quot;./log&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="k">else</span><span class="p">:</span> <span class="k">raise</span>
+
+<span class="c"># import other modules for online prediction</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.logging_stream_colorer</span> <span class="kn">import</span> <span class="n">ColoredLevelFormatter</span>
+
+
+<span class="n">online_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;OnlineLogger&quot;</span><span class="p">)</span>
+<span class="n">online_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+<span class="n">loggingFileHandler</span> <span class="o">=</span> \
+    <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">TimedRotatingFileHandler</span><span class="p">(</span><span class="s">&quot;log&quot;</span> <span class="o">+</span> \
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> \
+    <span class="s">&quot;controller.log&quot;</span><span class="p">,</span><span class="n">backupCount</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="n">loggingStreamHandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+<span class="n">loggingStreamHandler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+<span class="n">format_string</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - </span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(filename)s</span><span class="s">:</span><span class="si">%(lineno)d</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span>
+<span class="n">stream_formatter</span> <span class="o">=</span> <span class="n">ColoredLevelFormatter</span><span class="p">(</span><span class="n">format_string</span><span class="p">)</span>
+<span class="n">file_formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="n">format_string</span><span class="p">)</span>
+<span class="n">loggingFileHandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">file_formatter</span><span class="p">)</span>
+<span class="n">loggingStreamHandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">stream_formatter</span><span class="p">)</span>
+
+<span class="n">online_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandler</span><span class="p">)</span>
+<span class="n">online_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandler</span><span class="p">)</span>
+<span class="n">online_logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="bp">False</span>
+
+
+<span class="c"># redirect the standard abri logger to the online logger</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.logging_stream_redirection</span> <span class="kn">import</span> <span class="n">RedirectionHandler</span>
+<span class="n">redirection_handler</span> <span class="o">=</span> <span class="n">RedirectionHandler</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
+
+<span class="c"># Prepare remote logging</span>
+<span class="n">root_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">-</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">(),</span>
+                                           <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">()))</span>
+
+<span class="n">root_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">redirection_handler</span><span class="p">)</span>
+
+<span class="n">root_logger</span><span class="o">.</span><span class="n">propagate</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="c"># TODO: hide tcpserver somewhere</span>
+<span class="n">tcpserver</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="start_logging_server"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.online_utilities.html#pySPACE.environments.live.online_utilities.start_logging_server">[docs]</a><span class="k">def</span> <span class="nf">start_logging_server</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot; Start the socket server &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">pySPACE.tools.socket_logger</span> <span class="kn">import</span> <span class="n">LogRecordSocketReceiver</span>
+    <span class="c"># Determining host ip</span>
+    <span class="n">host</span><span class="p">,</span> <span class="n">aliaslist</span><span class="p">,</span> <span class="n">lan_ip</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">gethostbyname_ex</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">gethostname</span><span class="p">())</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">lan_ip</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c"># Search for an available port</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">DEFAULT_TCP_LOGGING_PORT</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tcpserver</span> <span class="o">=</span> <span class="n">LogRecordSocketReceiver</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+                                                <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">)</span>
+            <span class="k">break</span>
+        <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">:</span>
+            <span class="n">port</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="n">tcpserver</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="n">online_logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">,</span><span class="s">&quot;Started the TCP logging server on port </span><span class="si">%s</span><span class="s">!&quot;</span> <span class="o">%</span> <span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="stop_logging_server"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.online_utilities.html#pySPACE.environments.live.online_utilities.stop_logging_server">[docs]</a><span class="k">def</span> <span class="nf">stop_logging_server</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Stop the logging of this operation &quot;&quot;&quot;</span>
+    <span class="n">online_logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="s">&quot;Stopping the TCP logging server...&quot;</span><span class="p">)</span>
+    <span class="n">tcpserver</span><span class="o">.</span><span class="n">abort</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="n">tcpserver</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+    <span class="n">tcpserver</span><span class="o">.</span><span class="n">shutdown</span><span class="p">()</span>
+    <span class="n">online_logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="s">&quot;Stopping the TCP logging server... Done!&quot;</span><span class="p">)</span>
+
+    <span class="n">online_logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">,</span> <span class="s">&quot;Logging stopped&quot;</span><span class="p">)</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

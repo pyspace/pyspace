@@ -1,0 +1,435 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.operations.mmlf &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.operations.mmlf</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Execute MMLF experiments</span>
+
+<span class="sd">This module contains an operation and a process for MMLF. One MMLF</span>
+<span class="sd">process consists of a executing one run of a predefined number of</span>
+<span class="sd">episodes of a MMLF world. An MMLF operation consists of one or several runs of</span>
+<span class="sd">one or several MMLF worlds.</span>
+
+<span class="sd">.. note:: The results of the runs are not stored in the standard operation</span>
+<span class="sd">    result directories but in the MMLF ReadWrite Area. Only the outputs of the</span>
+<span class="sd">    MMLF to stdout are stored in log files stored in the operation result</span>
+<span class="sd">    directories.</span>
+
+<span class="sd">.. todo:: documentation link to MMLF-framework</span>
+
+<span class="sd">:Author: Jan-Hendrik Metzen</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">csv</span>
+<span class="kn">import</span> <span class="nn">xml.etree.ElementTree</span> <span class="kn">as</span> <span class="nn">ElementTree</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">processing</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="kn">as</span> <span class="nn">processing</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.operations.base</span> <span class="kn">import</span> <span class="n">Operation</span><span class="p">,</span> <span class="n">Process</span>
+
+
+<div class="viewcode-block" id="MmlfOperation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation">[docs]</a><span class="k">class</span> <span class="nc">MmlfOperation</span><span class="p">(</span><span class="n">Operation</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Operation class for executing MMLF experiments.</span>
+
+<span class="sd">    An MMLF operation consists of one or several runs of</span>
+<span class="sd">    one or several MMLF worlds.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MmlfOperation.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
+                 <span class="n">world_name</span><span class="p">,</span> <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MmlfOperation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
+                                            <span class="n">result_directory</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">world_name</span> <span class="o">=</span> <span class="n">world_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">number_processes</span> <span class="o">=</span> <span class="n">number_processes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="n">create_process</span>
+</div>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="MmlfOperation.create"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_paths</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A factory method that creates an MMLF operation based on the</span>
+<span class="sd">        information given in the operation specification operation_spec</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;mmlf&quot;</span><span class="p">)</span>
+
+        <span class="c"># The generic world configuration YAML file</span>
+        <span class="n">world_conf</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">worldPackage : </span><span class="si">%s</span><span class="s"></span>
+<span class="s">environment:</span>
+<span class="si">%s</span><span class="s"></span>
+<span class="s">agent:</span>
+<span class="si">%s</span><span class="s"></span>
+<span class="s">monitor:</span>
+<span class="s">    policyLogFrequency : 100000</span>
+<span class="si">%s</span><span class="s"></span>
+<span class="s">&quot;&quot;&quot;</span>
+        <span class="c"># Create directory for the experiment</span>
+        <span class="n">world_name</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&#39;world_name&#39;</span><span class="p">]</span>
+        <span class="n">world_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/config/</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">result_directory</span><span class="p">,</span> <span class="n">world_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">world_path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">world_path</span><span class="p">)</span>
+
+        <span class="c"># Compute all possible parameter combinations</span>
+        <span class="c"># Determine all parameter combinations that should be tested</span>
+        <span class="n">parameter_settings</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_parameter_space</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">)</span>
+
+        <span class="c"># If the operation spec defines parameters for a generalized domain:</span>
+        <span class="k">if</span> <span class="s">&quot;generalized_domain&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+            <span class="c"># We have to test each parameter setting in each instantiation of</span>
+            <span class="c"># the generalized domain. This can be achieved by computing the</span>
+            <span class="c"># crossproduct of parameter settings and domain settings</span>
+            <span class="n">augmented_parameter_settings</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">parameter_setting</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">domain_parameter_setting</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;generalized_domain&quot;</span><span class="p">]:</span>
+                    <span class="n">instantiation</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">)</span>
+                    <span class="n">instantiation</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">domain_parameter_setting</span><span class="p">)</span>
+                    <span class="n">augmented_parameter_settings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instantiation</span><span class="p">)</span>
+            <span class="n">parameter_settings</span> <span class="o">=</span> <span class="n">augmented_parameter_settings</span>
+
+        <span class="c"># Create and remember all worlds for the given  parameter_settings</span>
+        <span class="n">world_pathes</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># for all parameter setting</span>
+        <span class="k">for</span> <span class="n">parameter_setting</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
+            <span class="c"># Add 4 blanks to all lines in templates</span>
+            <span class="n">environment_template</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&#39;environment_template&#39;</span><span class="p">]</span>
+            <span class="n">environment_template</span> <span class="o">=</span> \
+                    <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;    &quot;</span> <span class="o">+</span> <span class="n">line</span>
+                                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">environment_template</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">))</span>
+            <span class="n">agent_template</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&#39;agent_template&#39;</span><span class="p">]</span>
+            <span class="n">agent_template</span> <span class="o">=</span> \
+                    <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;    &quot;</span> <span class="o">+</span> <span class="n">line</span>
+                                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">agent_template</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">))</span>
+            <span class="n">monitor_conf</span> <span class="o">=</span> \
+                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&#39;monitor_conf&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="s">&#39;monitor_conf&#39;</span> <span class="ow">in</span> <span class="n">operation_spec</span> <span class="k">else</span> <span class="s">&quot;&quot;</span>
+            <span class="n">monitor_conf</span> <span class="o">=</span> \
+                    <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;    &quot;</span> <span class="o">+</span> <span class="n">line</span>
+                                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">monitor_conf</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">))</span>
+
+            <span class="c"># Instantiate the templates</span>
+            <span class="n">environment_conf</span> <span class="o">=</span> <span class="n">environment_template</span>
+            <span class="n">agent_conf</span> <span class="o">=</span> <span class="n">agent_template</span>
+            <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">environment_conf</span> <span class="o">=</span> <span class="n">environment_conf</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="n">agent_conf</span> <span class="o">=</span> <span class="n">agent_conf</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">parameter</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+            <span class="k">def</span> <span class="nf">get_parameter_str</span><span class="p">(</span><span class="n">parameter_name</span><span class="p">):</span>
+                <span class="k">return</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">subpart</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">subpart</span> <span class="ow">in</span>  <span class="n">parameter_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;_&quot;</span><span class="p">))</span>
+            <span class="n">configuration_str</span> <span class="o">=</span> <span class="s">&quot;{&quot;</span> <span class="o">+</span> <span class="s">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">get_parameter_str</span><span class="p">(</span><span class="n">parameter</span><span class="p">),</span>
+                                                            <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)[:</span><span class="mi">6</span><span class="p">])</span>
+                                        <span class="k">for</span> <span class="n">parameter</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()])</span> <span class="o">+</span> <span class="s">&quot;}&quot;</span>
+            <span class="n">configuration_str</span> <span class="o">=</span> <span class="n">configuration_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">,</span><span class="s">&#39;&#39;</span><span class="p">)</span>
+
+            <span class="n">world_file_name</span> <span class="o">=</span> <span class="s">&quot;world_</span><span class="si">%s</span><span class="s">.yaml&quot;</span> <span class="o">%</span>  <span class="n">configuration_str</span>
+
+            <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">world_path</span><span class="p">,</span> <span class="n">world_file_name</span><span class="p">),</span>
+                 <span class="s">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">world_conf</span> <span class="o">%</span> <span class="p">(</span><span class="n">world_name</span><span class="p">,</span> <span class="n">environment_conf</span><span class="p">,</span>
+                                          <span class="n">agent_conf</span><span class="p">,</span> <span class="n">monitor_conf</span><span class="p">))</span>
+            <span class="n">world_pathes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">world_path</span><span class="p">,</span> <span class="n">world_file_name</span><span class="p">))</span>
+
+        <span class="n">number_processes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">world_pathes</span><span class="p">)</span><span class="o">*</span><span class="nb">int</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">debug</span> <span class="ow">is</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="c"># To better debug creation of processes we don&#39;t limit the queue</span>
+            <span class="c"># and create all processes before executing them</span>
+            <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+            <span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">world_pathes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
+                                 <span class="n">result_directory</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">cls</span><span class="p">(</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
+                                            <span class="n">world_name</span><span class="p">,</span> <span class="n">number_processes</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Create all processes by calling a recursive helper method</span>
+            <span class="c"># in another thread so that already created processes can be</span>
+            <span class="c"># executed although creation of processes is not finished yet.</span>
+            <span class="c"># Therefor a queue is used which size is limited to guarantee that</span>
+            <span class="c"># not to much objects are created (since this costs memory).</span>
+            <span class="c"># However, the actual number of 100 is arbitrary and might be</span>
+            <span class="c"># changed according to the system at hand.</span>
+            <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+            <span class="n">create_process</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span> <span class="o">=</span>
+                <span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span> <span class="n">processes</span><span class="p">,</span> <span class="n">world_pathes</span><span class="p">,</span>
+                                <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">))</span>
+            <span class="n">create_process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="c"># create and return the operation object</span>
+            <span class="k">return</span> <span class="n">cls</span><span class="p">(</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> 
+                        <span class="n">world_name</span><span class="p">,</span> <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="p">)</span>
+</div>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="MmlfOperation._createProcesses"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation._createProcesses">[docs]</a>    <span class="k">def</span> <span class="nf">_createProcesses</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">world_pathes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
+                         <span class="n">result_directory</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Function that creates the mmlf process. &quot;&quot;&quot;</span>
+        <span class="c"># For each created world, perform operation_spec[&quot;runs&quot;] runs</span>
+        <span class="k">for</span> <span class="n">world_conf_path</span> <span class="ow">in</span> <span class="n">world_pathes</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">run_number</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]):</span>
+                <span class="n">process</span> <span class="o">=</span> <span class="n">MMLFProcess</span><span class="p">(</span><span class="n">mmlf_path</span><span class="o">=</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;mmlf_path&quot;</span><span class="p">],</span>
+                                      <span class="n">world_conf_path</span><span class="o">=</span><span class="n">world_conf_path</span><span class="p">,</span>
+                                      <span class="n">learning_episodes</span><span class="o">=</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;learning_episodes&quot;</span><span class="p">],</span>
+                                      <span class="n">test_episodes</span><span class="o">=</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;test_episodes&quot;</span><span class="p">],</span>
+                                      <span class="n">result_directory</span><span class="o">=</span><span class="n">result_directory</span><span class="p">)</span>
+                <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
+        <span class="c"># give executing process the sign that creation is now finished</span>
+        <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MmlfOperation.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Consolidates the results of the MMLF operation.&quot;&quot;&quot;</span>
+        <span class="k">return</span>  <span class="c"># Consolidation into a csv-file currently not supported.</span>
+        <span class="c"># Consolidate the results in an csv table</span>
+        <span class="n">output_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
+                                        <span class="s">&#39;results.csv&#39;</span><span class="p">),</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">results_writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">output_file</span><span class="p">)</span>
+
+        <span class="c"># Determine directory in which the operation&#39;s results are stored</span>
+        <span class="n">log_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span> <span class="s">&#39;logs&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_name</span><span class="p">)</span>
+
+        <span class="c"># For all configurations tested</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">conf_dir</span> <span class="ow">in</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">log_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">log_dir</span><span class="p">)</span>
+                           <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">log_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">))]:</span>
+            <span class="c"># Read agent configuration dict</span>
+            <span class="n">agent_conf</span> <span class="o">=</span> <span class="n">ElementTree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">,</span> <span class="s">&#39;agent.xml&#39;</span><span class="p">))</span>
+            <span class="n">conf_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">agent_conf</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;configDict&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+            <span class="c"># Read environment configuration dict</span>
+            <span class="n">env_conf</span> <span class="o">=</span> <span class="n">ElementTree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">,</span> <span class="s">&#39;env.xml&#39;</span><span class="p">))</span>
+            <span class="n">conf_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">env_conf</span><span class="o">.</span><span class="n">getroot</span><span class="p">()</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;configDict&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+
+            <span class="c"># Evaluate the values of all dict entries</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">conf_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">conf_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+            <span class="c"># Flatten (potentially) nested dict</span>
+            <span class="n">expanded_conf_dict</span> <span class="o">=</span> <span class="n">MmlfOperation</span><span class="o">.</span><span class="n">_flatten_dict</span><span class="p">(</span><span class="n">conf_dict</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">keys</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">keys</span> <span class="o">=</span> <span class="n">expanded_conf_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="c"># TODO: Currently hard coded</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;reward&#39;</span><span class="p">)</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;accumulated_reward&#39;</span><span class="p">)</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;offline_reward&#39;</span><span class="p">)</span>
+                <span class="n">keys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;offline_accumulated_reward&#39;</span><span class="p">)</span>
+                <span class="n">results_writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span>
+
+            <span class="c"># For all runs conducted with this setup</span>
+            <span class="k">for</span> <span class="n">run_dir</span> <span class="ow">in</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">conf_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">))]:</span>
+                <span class="c"># Read in the accumulated reward per episode file</span>
+                <span class="n">reward_file</span> <span class="o">=</span> \
+                    <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">run_dir</span><span class="p">,</span> <span class="s">&#39;environment_logs&#39;</span><span class="p">,</span> <span class="s">&#39;reward&#39;</span><span class="p">),</span>
+                         <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">rewards</span> <span class="o">=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">reward_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()]</span>
+                <span class="c"># Chop off overlong sequences</span>
+                <span class="n">rewards</span> <span class="o">=</span> <span class="n">rewards</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;learning_episodes&quot;</span><span class="p">]]</span>
+
+                <span class="n">expanded_conf_dict</span><span class="p">[</span><span class="s">&#39;reward&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rewards</span>
+                <span class="n">expanded_conf_dict</span><span class="p">[</span><span class="s">&#39;accumulated_reward&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">rewards</span><span class="p">)</span>
+
+                <span class="c"># Read in the accumulated reward per episode file of the</span>
+                <span class="c"># offline test</span>
+                <span class="n">offline_reward_file</span> <span class="o">=</span> \
+                    <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">run_dir</span><span class="p">,</span> <span class="s">&#39;environment_logs&#39;</span><span class="p">,</span>
+                                      <span class="s">&#39;offlineReward&#39;</span><span class="p">),</span><span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">offline_rewards</span> <span class="o">=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">offline_reward_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()]</span>
+                <span class="c"># Chop off overlong sequences</span>
+                <span class="n">offline_rewards</span> <span class="o">=</span> <span class="n">offline_rewards</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;test_episodes&quot;</span><span class="p">]]</span>
+
+                <span class="n">expanded_conf_dict</span><span class="p">[</span><span class="s">&#39;offline_reward&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">offline_rewards</span>
+                <span class="n">expanded_conf_dict</span><span class="p">[</span><span class="s">&#39;offline_accumulated_reward&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">offline_rewards</span><span class="p">)</span>
+
+                <span class="n">results_writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">([</span><span class="n">expanded_conf_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">])</span>
+
+        <span class="n">output_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+    <span class="nd">@classmethod</span>
+<div class="viewcode-block" id="MmlfOperation._flatten_dict"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MmlfOperation._flatten_dict">[docs]</a>    <span class="k">def</span> <span class="nf">_flatten_dict</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">input_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Flatten the (potentially) nested dict *input_dict* &quot;&quot;&quot;</span>
+        <span class="n">flattened_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">_flatten_dict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">subkey</span><span class="p">,</span> <span class="n">subvalue</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                    <span class="n">flattened_dict</span><span class="p">[</span><span class="n">key</span> <span class="o">+</span> <span class="s">&#39;_&#39;</span> <span class="o">+</span> <span class="n">subkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">subvalue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">flattened_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">flattened_dict</span>
+
+</div></div>
+<div class="viewcode-block" id="MMLFProcess"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MMLFProcess">[docs]</a><span class="k">class</span> <span class="nc">MMLFProcess</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Process for executing an MMLF run</span>
+
+<span class="sd">    One MMLF process consists of a executing one run of a predefined number of</span>
+<span class="sd">    episodes of a MMLF world.</span>
+
+<span class="sd">    The following **parameters** are mandatory:</span>
+
+<span class="sd">      :mmlf_path: The path to the MMLF code</span>
+<span class="sd">      :world_conf_path:   The relative path of the world configuration file</span>
+<span class="sd">                          within the specified MMLF rw area</span>
+<span class="sd">      :learning_episodes:   The number of episodes the MMLF agent is allowed</span>
+<span class="sd">                            to train (i.e. optimize its policy)</span>
+<span class="sd">      :test_episodes:   The number of episodes the learned policy is tested.</span>
+<span class="sd">                        This can be set to 1 for deterministic environments.</span>
+<span class="sd">      :result_directory:   The directory where the stdout of the MMLF run is</span>
+<span class="sd">                           stored</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MMLFProcess.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MMLFProcess.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mmlf_path</span><span class="p">,</span> <span class="n">world_conf_path</span><span class="p">,</span> <span class="n">learning_episodes</span><span class="p">,</span>
+                 <span class="n">test_episodes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">MMLFProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span> <span class="o">=</span> <span class="n">result_directory</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mmlf_path</span> <span class="o">=</span> <span class="n">mmlf_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">world_conf_path</span> <span class="o">=</span> <span class="n">world_conf_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">learning_episodes</span> <span class="o">=</span> <span class="n">learning_episodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_episodes</span> <span class="o">=</span> <span class="n">test_episodes</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_class</span> <span class="o">=</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="MMLFProcess.__call__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.mmlf.html#pySPACE.missions.operations.mmlf.MMLFProcess.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes this process on the respective modality &quot;&quot;&quot;</span>
+        <span class="c"># Restore configuration</span>
+        <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
+
+        <span class="c">############## Prepare benchmarking ##############</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MMLFProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">pre_benchmarking</span><span class="p">()</span>
+
+        <span class="c"># Redirect stdout to a log file</span>
+        <span class="n">process_log_file_name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
+                                              <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y%m</span><span class="si">%d</span><span class="s">_%H_%M_%S&quot;</span><span class="p">),</span>
+                                              <span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">())</span>
+        <span class="n">log_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">process_log_file_name</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">log_file</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">log_file</span>
+        <span class="c"># Insert path to MMLF to python search path and import it</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mmlf_path</span><span class="p">)</span>
+        <span class="n">mmlf</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&quot;mmlf&quot;</span><span class="p">)</span>
+
+        <span class="c"># On distributed file systems, it might happen that our configuration</span>
+        <span class="c"># file is not yet available on the machine where this process is</span>
+        <span class="c"># executed</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">world_conf_path</span><span class="p">):</span>
+            <span class="n">mmlf</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Config file </span><span class="si">%s</span><span class="s"> not yet available on local machine&quot;</span>
+                                                        <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_conf_path</span><span class="p">)</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">mmlf</span><span class="o">.</span><span class="n">initializeRWArea</span><span class="p">(</span><span class="n">rwPath</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
+
+        <span class="c"># Create and start world</span>
+        <span class="n">world</span> <span class="o">=</span> <span class="n">mmlf</span><span class="o">.</span><span class="n">loadWorldFromConfigFile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">world_conf_path</span><span class="p">,</span> <span class="n">useGUI</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">world</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">learning_episodes</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">mmlf</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;An exception of type </span><span class="si">%s</span><span class="s"> occurred: </span><span class="si">%s</span><span class="s">&quot;</span>
+                                                    <span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+            <span class="k">print</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&quot;traceback&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">print_exc</span><span class="p">()</span>
+        <span class="c"># Stop the world</span>
+        <span class="n">world</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+        <span class="c"># Restore stdout</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">__stdout__</span>
+
+        <span class="c">############## Clean up after benchmarking ##############</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MMLFProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,257 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.preprocessing.differentiation &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.preprocessing.differentiation</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Differentiate :class:`~pySPACE.resources.data_types.time_series.TimeSeries` channel wise</span>
+
+<span class="sd">:Author: Marc Tabie (mtabie@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2010/01/20</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+<div class="viewcode-block" id="Simple2DifferentiationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple2DifferentiationNode">[docs]</a><span class="k">class</span> <span class="nc">Simple2DifferentiationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+   <span class="sd">&quot;&quot;&quot; Calculate difference to previous time point to generate new :class:`~pySPACE.resources.data_types.time_series.TimeSeries`</span>
+<span class="sd">   </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :datapoints: The indices of the data points that are used as features,</span>
+<span class="sd">            If None, all data points are used.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : diff2</span>
+
+<span class="sd">   &quot;&quot;&quot;</span>
+   <span class="c"># Simple copy of the TimeDifferenceFeatureNode with slight change at the end.</span>
+   <span class="c"># More complex would be a short time regression between more than two points.</span>
+   <span class="c"># Yet the possibility to make it a &quot;real&quot; differentiation is in comment.</span>
+<div class="viewcode-block" id="Simple2DifferentiationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple2DifferentiationNode.__init__">[docs]</a>   <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">datapoints</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">moving_window_length</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">keep_number_of_samples</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> 
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+       <span class="nb">super</span><span class="p">(</span><span class="n">Simple2DifferentiationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datapoints</span> <span class="o">=</span> <span class="n">datapoints</span><span class="p">,</span>
+                                     <span class="n">moving_window_length</span> <span class="o">=</span> <span class="n">moving_window_length</span><span class="p">,</span>
+                                     <span class="n">keep_number_of_samples</span> <span class="o">=</span> <span class="n">keep_number_of_samples</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="Simple2DifferentiationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple2DifferentiationNode._execute">[docs]</a>   <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+       <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       f&#39; = (f(x+h)-f(x))</span>
+<span class="sd">       &quot;&quot;&quot;</span>
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+       
+       <span class="c">#create new channel names</span>
+       <span class="n">new_names</span> <span class="o">=</span> <span class="p">[]</span>
+       <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+           <span class="n">new_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>  <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">channel</span><span class="p">]))</span>
+       <span class="c">#Derive the f&#39; d2 from data x</span>
+       <span class="n">timeSeries</span> <span class="o">=</span> <span class="p">[]</span>
+       <span class="k">for</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
+           <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+           <span class="k">if</span><span class="p">((</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
+               <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+                   <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">channel</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="p">][</span><span class="n">channel</span><span class="p">])</span><span class="c">#*8*sampling_frequency</span>
+               <span class="n">timeSeries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+       <span class="c">#padding with zero&#39;s if the original length of the time series have to remain equal.</span>
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_number_of_samples</span><span class="p">:</span>
+           <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+               <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+           <span class="n">timeSeries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+       <span class="c">#Create a new time_series with the new data and channel names</span>
+       <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timeSeries</span><span class="p">))</span>
+       <span class="n">result_time_series</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">new_names</span>
+       <span class="c">#if necessary adjust the length of the time series</span>
+       <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_number_of_samples</span><span class="p">:</span>
+           <span class="n">result_time_series</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-=</span> <span class="mi">1</span>
+       
+       <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="Simple5DifferentiationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple5DifferentiationNode">[docs]</a><span class="k">class</span> <span class="nc">Simple5DifferentiationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+   <span class="sd">&quot;&quot;&quot; Calculate smoothed derivative using 5 time points</span>
+
+<span class="sd">    Method taken from</span>
+<span class="sd">    http://www.holoborodko.com/pavel/numerical-methods/numerical-derivative/smooth-low-noise-differentiators/</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        f&#39;(x)=\\frac{2(f(x+h)-f(x-h))-(f(x+2h)-f(x-2h))}{8h}</span>
+
+<span class="sd">    Further smoothing functions are available, but seemingly not necessary,</span>
+<span class="sd">    because we have already a smoothing of the signal when doing the subsampling.</span>
+<span class="sd">    Dividing by 8h is omitted, because it is just multiplication</span>
+<span class="sd">    with the same scalar each time.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :datapoints: The indices of the data points that are used as features,</span>
+<span class="sd">            If None, all data points are used.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : diff5</span>
+<span class="sd">   &quot;&quot;&quot;</span>
+   <span class="c"># Simple copy of the TimeDifferenceFeatureNode with slight change at the end.</span>
+   <span class="c"># More complex would be a short time regression between more than two points.</span>
+   <span class="c"># Yet the possibility to make it a &quot;real&quot; differentiation is in comment.</span>
+<div class="viewcode-block" id="Simple5DifferentiationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple5DifferentiationNode.__init__">[docs]</a>   <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">datapoints</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">moving_window_length</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="n">keep_number_of_samples</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> 
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+       <span class="nb">super</span><span class="p">(</span><span class="n">Simple5DifferentiationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datapoints</span> <span class="o">=</span> <span class="n">datapoints</span><span class="p">,</span>
+                                     <span class="n">moving_window_length</span> <span class="o">=</span> <span class="n">moving_window_length</span><span class="p">,</span>
+                                     <span class="n">keep_number_of_samples</span> <span class="o">=</span> <span class="n">keep_number_of_samples</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="Simple5DifferentiationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.differentiation.html#pySPACE.missions.nodes.preprocessing.differentiation.Simple5DifferentiationNode._execute">[docs]</a>   <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+       <span class="sd">&quot;&quot;&quot; Calculate derivative</span>
+
+<span class="sd">       .. math::</span>
+
+<span class="sd">            f&#39;(x)=\\frac{2(f(x+h)-f(x-h))-(f(x+2h)-f(x-2h))}{8h}</span>
+<span class="sd">       &quot;&quot;&quot;</span>
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+           <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+       <span class="c">#create new channel names</span>
+       <span class="n">new_names</span> <span class="o">=</span> <span class="p">[]</span>
+       <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+           <span class="n">new_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span>  <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">channel</span><span class="p">]))</span>
+       <span class="c">#Derive the f&#39; d5 from data x</span>
+       <span class="n">timeSeries</span> <span class="o">=</span> <span class="p">[]</span>
+       <span class="k">for</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
+           <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+           <span class="k">if</span><span class="p">((</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">4</span><span class="p">)</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">):</span>
+               <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+                   <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="p">][</span><span class="n">channel</span><span class="p">]</span><span class="o">-</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">channel</span><span class="p">]</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">3</span><span class="p">][</span><span class="n">channel</span><span class="p">]</span><span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="n">datapoint</span><span class="o">+</span><span class="mi">4</span><span class="p">][</span><span class="n">channel</span><span class="p">])</span><span class="c">#*8*sampling_frequency</span>
+               <span class="n">timeSeries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+       <span class="c">#padding with zero&#39;s if the original length of the time series have to remain equal.</span>
+       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_number_of_samples</span><span class="p">:</span>
+           <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+               <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)):</span>
+                   <span class="n">temp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+               <span class="n">timeSeries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+       <span class="c">#Create a new time_series with the new data and channel names</span>
+       <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timeSeries</span><span class="p">))</span>
+       <span class="n">result_time_series</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">new_names</span>
+       <span class="c">#if necessary adjust the length of the time series</span>
+       <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">keep_number_of_samples</span><span class="p">:</span>
+           <span class="n">result_time_series</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-=</span> <span class="mi">4</span>
+       
+       <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;diff2&quot;</span><span class="p">:</span> <span class="n">Simple2DifferentiationNode</span><span class="p">,</span>
+                <span class="s">&quot;diff5&quot;</span><span class="p">:</span> <span class="n">Simple5DifferentiationNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

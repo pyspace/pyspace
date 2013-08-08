@@ -1,0 +1,541 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.visualization.eeg_visualization &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.visualization.eeg_visualization</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Visualization of :mod:`time series &lt;pySPACE.resources.data_types.time_series&gt;`  based on EEG signals to combine it with mapping to real sensor positions &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">pylab</span><span class="o">,</span> <span class="nn">numpy</span><span class="o">,</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.visualization.base</span> <span class="kn">import</span> <span class="n">VisualizationBase</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.stream</span> <span class="kn">import</span> <span class="n">StreamDataset</span>
+<span class="kn">from</span> <span class="nn">matplotlib.mlab</span> <span class="kn">import</span> <span class="n">griddata</span>
+
+<div class="viewcode-block" id="ElectrodeCoordinationPlotNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.eeg_visualization.html#pySPACE.missions.nodes.visualization.eeg_visualization.ElectrodeCoordinationPlotNode">[docs]</a><span class="k">class</span> <span class="nc">ElectrodeCoordinationPlotNode</span><span class="p">(</span><span class="n">VisualizationBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Node for plotting EEG time series as topographies.</span>
+<span class="sd">     </span>
+<span class="sd">    This node uses time series data and plots snapshots of the activity in the</span>
+<span class="sd">    brain, i.e. in the electrode configuration space. The node inherits the</span>
+<span class="sd">    functionality of the VisualisationBase.</span>
+<span class="sd">    </span>
+<span class="sd">    Therefore, see documentation of :mod:`VisualisationBase &lt;pySPACE.missions.nodes.visualization.base&gt;` </span>
+<span class="sd">    to view basic functionality.</span>
+<span class="sd">    </span>
+<span class="sd">   **Parameters**</span>
+<span class="sd">     </span>
+<span class="sd">    :Layout Options:</span>
+<span class="sd">    </span>
+<span class="sd">        :contourlines:</span>
+<span class="sd">            If set to True, contour lines are added to the plot.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">        :nose_ears:</span>
+<span class="sd">            Mark nose as triangle and ears as bars (common for EEG plots)</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">                        </span>
+<span class="sd">        :smooth_corners:</span>
+<span class="sd">            If true, the generated graphics will be rectangular, i.e., the</span>
+<span class="sd">            corners around the round head shape are filled. This is achieved by</span>
+<span class="sd">            adding sham electrodes to the corners, who&#39;s signals are calculated</span>
+<span class="sd">            as the means of neighboring electrodes.</span>
+<span class="sd">        </span>
+<span class="sd">            .. note:: This is only for visualization purposes and does not</span>
+<span class="sd">                reflect the true data! Be careful with use in scientific</span>
+<span class="sd">                publications!</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">        :add_info:</span>
+<span class="sd">            If set to True, additional information (e.g. number of trial) is</span>
+<span class="sd">            displayed.</span>
+<span class="sd">                </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">        :figlabels:</span>
+<span class="sd">            If this option is True, channel names and channel coordinates.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">        :single_plot:</span>
+<span class="sd">            All results per window are plotted into one figure with columns</span>
+<span class="sd">            being classes and rows being time points.</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">    :Influence the way how the data is plotted:</span>
+<span class="sd">    </span>
+<span class="sd">        :clip:</span>
+<span class="sd">            If set to True, the values are clipped to maximum and minimum</span>
+<span class="sd">            defined by parameter limits. This is only working if limits are</span>
+<span class="sd">            defined. </span>
+
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">                </span>
+<span class="sd">            </span>
+<span class="sd">        :limits:</span>
+<span class="sd">            Here, the user can set the limits for the color in the contour plot</span>
+<span class="sd">            (e.g. [-1.0,1.0]). If this option is not set, the colorbar is</span>
+<span class="sd">            normalized according to the data.</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - </span>
+<span class="sd">            node : Time_Series_Source</span>
+<span class="sd">        -</span>
+<span class="sd">             node : Electrode_Coordination_Plot</span>
+<span class="sd">             parameters :</span>
+<span class="sd">                  figlabels : True</span>
+<span class="sd">                  create_movie : True</span>
+<span class="sd">                  time_stamps : [200, 400]</span>
+<span class="sd">                  timeshift : -200</span>
+<span class="sd">                  smooth_corners : False</span>
+<span class="sd">        - </span>
+<span class="sd">             node: Nil_Sink</span>
+<span class="sd">             </span>
+<span class="sd">    Here is an alternative call:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -  </span>
+<span class="sd">            node : Electrode_Coordination_Plot</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                 single_trial : True</span>
+<span class="sd">                 accum_avg : True</span>
+<span class="sd">                 separate_training_and_test : True</span>
+<span class="sd">                 add_info : True</span>
+<span class="sd">                 time_stamps : [400]</span>
+<span class="sd">                 limit2class : Target</span>
+<span class="sd">        </span>
+<span class="sd">    :Author: Sirko Straube (sirko.straube@dfki.de)</span>
+<span class="sd">    :Date of Last Revision: 2013/01/01</span>
+<span class="sd">    </span>
+<span class="sd">    .. todo:: Depending on which plot backend is used, the resizing of the</span>
+<span class="sd">                figure does not work well. Currently this is not well supported</span>
+<span class="sd">                by matplotlib. Change when support is improved. The key command</span>
+<span class="sd">                is fig.set_size_inches([a,b]) and the dpi property.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ElectrodeCoordinationPlotNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.eeg_visualization.html#pySPACE.missions.nodes.visualization.eeg_visualization.ElectrodeCoordinationPlotNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">clip</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">contourlines</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">limits</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">nose_ears</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">smooth_corners</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">add_info</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">single_plot</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">figlabels</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">ElectrodeCoordinationPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">limits</span><span class="p">:</span>
+            <span class="n">limits</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">limits</span><span class="p">]</span> <span class="c">#make sure limits consists of floats</span>
+            
+        <span class="c"># define electrode grid.</span>
+        <span class="n">xi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">125</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+        <span class="n">yi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">xi</span><span class="o">=</span><span class="n">xi</span><span class="p">,</span>
+                                      <span class="n">yi</span><span class="o">=</span><span class="n">yi</span><span class="p">,</span>
+                                      <span class="n">clip</span> <span class="o">=</span> <span class="n">clip</span><span class="p">,</span>
+                                      <span class="n">contourlines</span> <span class="o">=</span> <span class="n">contourlines</span><span class="p">,</span>
+                                      <span class="n">limits</span> <span class="o">=</span> <span class="n">limits</span><span class="p">,</span>
+                                      <span class="n">nose_ears</span> <span class="o">=</span> <span class="n">nose_ears</span><span class="p">,</span>
+                                      <span class="n">smooth_corners</span> <span class="o">=</span> <span class="n">smooth_corners</span><span class="p">,</span>
+                                      <span class="n">add_info</span> <span class="o">=</span> <span class="n">add_info</span><span class="p">,</span>
+                                      <span class="n">single_plot</span> <span class="o">=</span> <span class="n">single_plot</span><span class="p">,</span>
+                                      <span class="n">figlabels</span> <span class="o">=</span> <span class="n">figlabels</span><span class="p">,</span>
+                                      <span class="n">time_checked</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+ </div>
+<div class="viewcode-block" id="ElectrodeCoordinationPlotNode._plotValues"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.eeg_visualization.html#pySPACE.missions.nodes.visualization.eeg_visualization.ElectrodeCoordinationPlotNode._plotValues">[docs]</a>    <span class="k">def</span> <span class="nf">_plotValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">values</span><span class="p">,</span>            <span class="c">#dict  TimeSeries values</span>
+                    <span class="n">plot_label</span><span class="p">,</span>        <span class="c">#str   Plot-Label</span>
+                    <span class="n">fig_num</span><span class="p">,</span>           <span class="c">#int   Figure-number for classify plots</span>
+                                       <span class="c">#      1: average,</span>
+                                       <span class="c">#      2: single trial,</span>
+                                       <span class="c">#      3: average accumulating</span>
+                    <span class="n">store_dir</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>  <span class="c">#str   Directory to store the plots</span>
+                    <span class="n">counter</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>        <span class="c">#int   Plotcounter for all trials</span>
+        <span class="c">#compute sampling_frequency and classes to plot</span>
+        <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">list_of_classes</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">num_of_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">)</span>
+        <span class="c">#autoscale color bar or use user scaling</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">:</span>
+            <span class="n">levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_levels</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">levels</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="c">#compute maximum and minimum for colorbar scaling if not existing</span>
+            <span class="n">vmax</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()))</span>
+            <span class="n">vmin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()))</span>
+            <span class="n">levels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_levels</span><span class="p">(</span><span class="n">limits</span><span class="o">=</span><span class="p">[</span><span class="n">vmin</span><span class="p">,</span> <span class="n">vmax</span><span class="p">])</span>
+            <span class="c">#normalizer=matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)</span>
+        
+        <span class="c">#computing time points to show</span>
+        <span class="n">num_tpoints</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">all_tpoints</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>
+                                   <span class="n">num_tpoints</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1000</span><span class="o">/</span><span class="n">sampling_frequency</span><span class="p">),</span>
+                                   <span class="mi">1000</span> <span class="o">/</span> <span class="n">sampling_frequency</span>
+                                   <span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_stamps</span> <span class="o">==</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">tpoints</span> <span class="o">=</span> <span class="n">all_tpoints</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c">#check if desired time points are existing and confirm</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_checked</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_stamps</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">all_tpoints</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Electrode_Coordination_Plot:: At least&quot;</span> \
+                                      <span class="s">&quot; one desired time stamp not available!&quot;</span> \
+                                      <span class="s">&quot; Legal time stamps are &quot;</span> \
+                                      <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">all_tpoints</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;. Switching to &quot;</span> \
+                                      <span class="s">&quot;next legal time point. Please check &quot;</span> \
+                                      <span class="s">&quot;for consistency!&quot;</span><span class="p">)</span>
+                        
+                        <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">new_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">new_t</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">t</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1000</span><span class="o">/</span><span class="n">sampling_frequency</span><span class="p">))[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        
+                            <span class="c">#if we obtain an empty list reset to timeshift</span>
+                            <span class="k">if</span> <span class="n">new_t</span> <span class="o">==</span> <span class="p">[]:</span>
+                                <span class="n">new_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">new_t</span> <span class="o">=</span> <span class="n">new_t</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>
+                        
+                        <span class="c">#finally check for too high or low values</span>
+                        <span class="k">if</span> <span class="n">new_t</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span><span class="p">:</span>
+                            <span class="n">new_t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>
+                        <span class="k">elif</span> <span class="n">new_t</span> <span class="o">&gt;</span> <span class="n">all_tpoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                            <span class="n">new_t</span> <span class="o">=</span> <span class="n">all_tpoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                
+                        <span class="bp">self</span><span class="o">.</span><span class="n">time_stamps</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">time_stamps</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span> <span class="o">=</span> <span class="n">new_t</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time_checked</span> <span class="o">=</span> <span class="bp">True</span> <span class="c">#has to be performed only once</span>
+                
+            <span class="n">tpoints</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_stamps</span><span class="p">)</span>
+        
+        <span class="n">num_of_tpoints</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">tpoints</span><span class="p">)</span>
+        
+        <span class="c"># selecting formatting and clearing figure</span>
+        <span class="n">default_size</span> <span class="o">=</span> <span class="p">[</span><span class="mf">8.</span><span class="p">,</span> <span class="mf">6.</span><span class="p">]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_plot</span><span class="p">:</span>
+            <span class="n">num_of_rows</span> <span class="o">=</span> <span class="n">num_of_tpoints</span>
+            <span class="k">if</span> <span class="n">num_of_rows</span> <span class="o">&gt;</span> <span class="mi">4</span><span class="p">:</span>
+                <span class="n">default_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="n">num_of_rows</span><span class="o">+</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="mi">4</span><span class="p">))</span>
+                <span class="n">default_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">default_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="nb">int</span><span class="p">((</span><span class="n">num_of_rows</span><span class="o">+</span><span class="mi">3</span><span class="p">)</span><span class="o">/</span><span class="mi">4</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">num_of_rows</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="n">f</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig_num</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">[</span><span class="n">default_size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">num_of_classes</span><span class="p">,</span> <span class="n">default_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">*</span><span class="n">num_of_rows</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_backend</span><span class="p">()</span> <span class="ow">in</span> <span class="n">pylab</span><span class="o">.</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">interactive_bk</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">counter</span><span class="o">%</span><span class="mi">20</span> <span class="o">==</span> <span class="mi">19</span><span class="p">:</span> <span class="c">#clear every 20th trial</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig_num</span><span class="p">)</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        
+        <span class="c"># Iterate  over the time window</span>
+        <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_of_tpoints</span><span class="p">):</span>
+            
+            <span class="n">pylab</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.025</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span> <span class="c">#shift a bit to the left</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_plot</span><span class="p">:</span>
+                <span class="n">pl_offset</span><span class="o">=</span><span class="n">time_index</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pl_offset</span><span class="o">=</span><span class="mi">0</span>
+
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">):</span>
+                <span class="n">current_plot_num</span><span class="o">=</span><span class="p">(</span><span class="n">num_of_classes</span><span class="o">*</span><span class="n">pl_offset</span><span class="p">)</span><span class="o">+</span><span class="n">index</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="n">num_of_rows</span><span class="p">,</span> <span class="n">num_of_classes</span><span class="p">,</span> <span class="n">current_plot_num</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        
+                <span class="c"># Get the values for the respective class</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+
+                <span class="n">ec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMetadata</span><span class="p">(</span><span class="s">&quot;electrode_coordinates&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ec</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">ec</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">ec</span>
+                    
+                <span class="c"># observe channels</span>
+                <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">ec</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+                <span class="n">fcn</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel</span> <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">channel</span> <span class="ow">in</span> <span class="n">ec</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">fcn</span> <span class="o">==</span> <span class="p">[]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Unsupported channels ignored:</span><span class="si">%s</span><span class="s"> .&quot;</span><span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">fcn</span><span class="p">),</span>
+                                <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">channel_names</span> <span class="o">==</span> <span class="p">[]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;No channel for plotting left.&quot;</span><span class="p">,</span>
+                              <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+                    <span class="k">return</span>
+
+                <span class="n">ec_2d</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">project2d</span><span class="p">(</span><span class="n">ec</span><span class="p">)</span>
+                
+                <span class="c"># Define x and y coordinates of electrodes in the order of the channels</span>
+                <span class="c"># of data</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ec_2d</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">])</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ec_2d</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">])</span>
+            
+<span class="c">#                x = numpy.array([self.electrode_coordinates[key][0] * numpy.cos(self.electrode_coordinates[key][1]/180*numpy.pi)</span>
+<span class="c">#                                        for key in channel_names])</span>
+<span class="c">#                y = numpy.array([self.electrode_coordinates[key][0] * numpy.sin(self.electrode_coordinates[key][1]/180*numpy.pi) </span>
+<span class="c">#                                        for key in channel_names])</span>
+                
+                <span class="c"># The values of the electrodes at this point of time </span>
+                <span class="n">pos</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">all_tpoints</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">tpoints</span><span class="p">[</span><span class="n">time_index</span><span class="p">])</span>
+                
+                <span class="n">z</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">pos</span><span class="p">,</span> <span class="p">:]</span>
+        
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_corners</span><span class="p">:</span>
+                    <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_corners</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">pos</span><span class="p">)</span>
+                
+                <span class="c">#griddata returns a masked array</span>
+                <span class="c">#you can get the data via zi[~zi.mask]            </span>
+                <span class="n">zi</span> <span class="o">=</span> <span class="n">griddata</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">xi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span><span class="p">)</span>
+                
+                <span class="c">#clip values</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">:</span>
+                    <span class="n">zi</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">zi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="c">#minimum and maximum</span>
+                    
+                <span class="c"># contour the gridded data,</span>
+                <span class="c"># plotting dots at the nonuniform data points.</span>
+                
+                <span class="n">cs</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span><span class="p">,</span> <span class="n">zi</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">jet</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contourlines</span><span class="p">:</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">xi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">yi</span><span class="p">,</span> <span class="n">zi</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">,</span> <span class="n">levels</span><span class="o">=</span><span class="n">levels</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">figlabels</span><span class="p">:</span>
+                    <span class="c"># plot data points.</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">smooth_corners</span><span class="p">:</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c"># dont plot invented electrode positions</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">],</span> <span class="n">y</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">)</span>
+                    <span class="c"># Add channel labels</span>
+                    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">ec_2d</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">:</span>
+                            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="p">)</span>
+                        
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_info</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">counter</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="o">-</span><span class="mi">98</span><span class="p">,</span> <span class="s">&#39;Trial No. &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">counter</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="o">-</span><span class="mi">98</span><span class="p">,</span> <span class="s">&#39;Trial No. &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">counter</span><span class="p">),</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nose_ears</span><span class="p">:</span>
+                    <span class="c">#nose</span>
+                    <span class="n">ytips</span><span class="o">=</span><span class="p">[</span><span class="mf">87.00</span><span class="p">,</span><span class="mf">87.00</span><span class="p">,</span> <span class="mi">97</span><span class="p">]</span>
+                    <span class="n">xtips</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">10.00</span><span class="p">,</span><span class="mf">10.00</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">xtips</span><span class="p">,</span><span class="n">ytips</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">)</span>
+                    
+                    <span class="c">#left</span>
+                    <span class="n">xtips</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">108.0</span><span class="p">,</span><span class="o">-</span><span class="mf">113.0</span><span class="p">,</span><span class="o">-</span><span class="mf">113.0</span><span class="p">,</span><span class="o">-</span><span class="mf">108.0</span><span class="p">]</span>
+                    <span class="n">ytips</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">10.0</span><span class="p">,</span><span class="o">-</span><span class="mf">10.0</span><span class="p">,</span><span class="mf">10.0</span><span class="p">,</span><span class="mf">10.0</span><span class="p">]</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">xtips</span><span class="p">,</span><span class="n">ytips</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">)</span>
+
+                    <span class="c">#right</span>
+                    <span class="n">xtips</span><span class="o">=</span><span class="p">[</span><span class="mf">108.0</span><span class="p">,</span><span class="mf">114.0</span><span class="p">,</span><span class="mf">113.0</span><span class="p">,</span><span class="mf">108.0</span><span class="p">]</span>
+                    <span class="n">ytips</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">10.0</span><span class="p">,</span><span class="o">-</span><span class="mf">10.0</span><span class="p">,</span><span class="mf">10.0</span><span class="p">,</span><span class="mf">10.0</span><span class="p">]</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="n">xtips</span><span class="p">,</span><span class="n">ytips</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">,</span> <span class="n">edgecolor</span><span class="o">=</span><span class="s">&#39;none&#39;</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">125</span><span class="p">,</span> <span class="mi">125</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_plot</span> <span class="ow">or</span> <span class="n">time_index</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span> <span class="c">#if single_plot=True do only for the first row</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">class_label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">(),</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            
+            <span class="n">caxis</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">axes</span><span class="p">([</span><span class="o">.</span><span class="mi">85</span><span class="p">,</span> <span class="o">.</span><span class="mi">1</span><span class="p">,</span> <span class="o">.</span><span class="mo">04</span><span class="p">,</span> <span class="o">.</span><span class="mi">75</span><span class="p">])</span>
+            <span class="n">cb</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">mappable</span><span class="o">=</span><span class="n">cs</span><span class="p">,</span> <span class="n">cax</span><span class="o">=</span><span class="n">caxis</span><span class="p">)</span>
+            <span class="c"># TODO: The label read &#39;Amplitude ($\mu$V)&#39;</span>
+            <span class="c">#       Removed the unit. Or can we really still assume </span>
+            <span class="c">#       a (correct) \muV scale after all preprocessing?</span>
+            <span class="n">cb</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s">r&#39;Amplitude&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">16</span><span class="p">)</span>
+    
+            <span class="c"># Position of the time axes</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">axes</span><span class="p">([</span><span class="o">.</span><span class="mi">79</span><span class="p">,</span> <span class="o">.</span><span class="mi">94</span><span class="p">,</span> <span class="o">.</span><span class="mi">18</span><span class="p">,</span> <span class="o">.</span><span class="mo">04</span><span class="p">])</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            
+            <span class="n">pylab</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">tpoints</span><span class="p">[</span><span class="n">time_index</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span>  <span class="n">width</span><span class="o">=</span><span class="mf">1000.0</span><span class="o">/</span><span class="n">sampling_frequency</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">tpoints</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tpoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;time (ms)&quot;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[],</span><span class="n">xticks</span><span class="o">=</span><span class="p">[</span><span class="n">all_tpoints</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">tpoints</span><span class="p">[</span><span class="n">time_index</span><span class="p">],</span> <span class="n">all_tpoints</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]])</span>
+            
+            <span class="c"># Draw or store the figure</span>
+            <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+                <span class="c">#pylab.show()</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_plot</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">current_plot_num</span><span class="o">==</span><span class="p">(</span><span class="n">num_of_rows</span><span class="o">*</span><span class="n">num_of_classes</span><span class="p">):</span> <span class="c">#save only if everything is plotted</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+                <span class="c">#pylab.show()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">current_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                <span class="k">if</span> <span class="n">current_split</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span>\
+                <span class="n">plot_label</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)):</span> <span class="c">#more than one split and first call</span>
+                    <span class="n">plot_label</span> <span class="o">=</span> <span class="n">plot_label</span> <span class="o">+</span> <span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)</span>
+                    
+                <span class="n">f_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plot_label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">tpoints</span><span class="p">[</span><span class="n">time_index</span><span class="p">]))</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s">&quot;.png&quot;</span><span class="p">)</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_data</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">pickle</span>
+            <span class="n">f_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plot_label</span><span class="p">)</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">values</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s">&quot;.pickle&quot;</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="p">))</span>
+
+        </div>
+<div class="viewcode-block" id="ElectrodeCoordinationPlotNode._smooth_corners"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.eeg_visualization.html#pySPACE.missions.nodes.visualization.eeg_visualization.ElectrodeCoordinationPlotNode._smooth_corners">[docs]</a>    <span class="k">def</span> <span class="nf">_smooth_corners</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">time_index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add sham electrodes to the corners of the coordinate system &quot;&quot;&quot;</span>
+        <span class="c"># invent new corner electrodes using x and y positions of the margin</span>
+        <span class="c"># electrodes of the 64 electrode cap. Data is mean of neighbouring</span>
+        <span class="c"># electrodes based, again, on the 64 electrode cap.</span>
+        <span class="c"># </span>
+        <span class="c"># frontleft FL positioned at [x(FT9), y(Fp1)]</span>
+        <span class="n">data_view</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        
+        <span class="n">x</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT9&#39;</span><span class="p">)])</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">y</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Fp1&#39;</span><span class="p">)])</span>
+        <span class="n">nz</span> <span class="o">=</span>  <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Fp1&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;AF7&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;F7&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT9&#39;</span><span class="p">)]</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">nz</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">)</span>
+        <span class="c"># frontright FR positioned at [x(FT10), y(Fp1)]</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT10&#39;</span><span class="p">)])</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">y</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Fp1&#39;</span><span class="p">)])</span>
+        <span class="n">nz</span> <span class="o">=</span>  <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Fp2&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;AF8&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;F8&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT10&#39;</span><span class="p">)]</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">nz</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">)</span>
+        <span class="c"># backleft BL positioned at [x(FT9), y(Oz)]</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT9&#39;</span><span class="p">)])</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">y</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Oz&#39;</span><span class="p">)])</span>
+        <span class="n">nz</span> <span class="o">=</span>  <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;TP9&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;P7&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;PO9&#39;</span><span class="p">)]</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">nz</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">)</span>
+        <span class="c"># backright BR positioned at [x(FT10), y(Oz)]</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">x</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;FT10&#39;</span><span class="p">)])</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">,</span><span class="n">y</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;Oz&#39;</span><span class="p">)])</span>
+        <span class="n">nz</span> <span class="o">=</span>  <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;TP10&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;P8&#39;</span><span class="p">)]</span> <span class="o">+</span>\
+              <span class="n">data_view</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="s">&#39;PO10&#39;</span><span class="p">)]</span>
+        <span class="n">z</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">nz</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span>
+        </div>
+<div class="viewcode-block" id="ElectrodeCoordinationPlotNode._compute_levels"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.eeg_visualization.html#pySPACE.missions.nodes.visualization.eeg_visualization.ElectrodeCoordinationPlotNode._compute_levels">[docs]</a>    <span class="k">def</span> <span class="nf">_compute_levels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">limits</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">limits</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">limits</span><span class="p">:</span>
+                <span class="n">limits</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">limits</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c">#should never be reached</span>
+                <span class="k">return</span> <span class="bp">None</span>
+                
+        <span class="n">rel_precision</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="s">&#39;%1.e&#39;</span><span class="o">%</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="o">-</span><span class="mi">3</span><span class="p">:])</span> <span class="c">#determine the precision of the values</span>
+        <span class="n">epsilon</span><span class="o">=</span><span class="nb">pow</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="n">rel_precision</span><span class="o">-</span><span class="mi">5</span><span class="p">)</span> <span class="c">#add a small amount to make sure that clipping works</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="mi">100</span> <span class="c">#split into 100 steps</span>
+        <span class="n">levels</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">limits</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">limits</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">epsilon</span><span class="p">,</span><span class="n">step</span><span class="p">)</span>
+        <span class="n">levels</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">levels</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">rel_precision</span><span class="p">)</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">levels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="n">levels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">epsilon</span>
+        <span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">levels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">epsilon</span>
+        <span class="k">return</span> <span class="n">levels</span>
+        
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Electrode_Coordination_Plot&quot;</span><span class="p">:</span> <span class="n">ElectrodeCoordinationPlotNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

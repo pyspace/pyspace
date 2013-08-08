@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_generation.wavelet &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_generation.wavelet</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Generate features based on wavelet transformation</span>
+
+<span class="sd">.. note:: Currently there is only a simple wrapper around pywt</span>
+<span class="sd">          http://www.pybytes.com/pywavelets/</span>
+<span class="sd">          So one has to install this package.</span>
+<span class="sd">          Scipy does not seem to give a real support for wavelets.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pywt</span>
+    <span class="n">pywt_error</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="n">pywt_error</span> <span class="o">=</span> <span class="bp">True</span>
+
+<div class="viewcode-block" id="PywtWaveletNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.wavelet.html#pySPACE.missions.nodes.feature_generation.wavelet.PywtWaveletNode">[docs]</a><span class="k">class</span> <span class="nc">PywtWaveletNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Extract features based on the discrete wavelet transform from pywavelets</span>
+
+<span class="sd">    The components of the wavelet transform are returned as new features.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        This node is only a wrapper around the</span>
+<span class="sd">        pywavelet package (http://www.pybytes.com/pywavelets/)</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :wavelet:</span>
+<span class="sd">            Name of the wanted wavelet, including the number of taps</span>
+
+<span class="sd">            The pywt documentation currently names the following possibilities::</span>
+
+<span class="sd">                :haar family: haar</span>
+<span class="sd">                :db family:   db1, db2, db3, db4, db5, db6, db7, db8, db9, db10,</span>
+<span class="sd">                              db11, db12, db13, db14, db15, db16, db17, db18,</span>
+<span class="sd">                              db19, db20</span>
+<span class="sd">                :sym family:  sym2, sym3, sym4, sym5, sym6, sym7, sym8, sym9,</span>
+<span class="sd">                              sym10, sym11, sym12, sym13, sym14, sym15, sym16,</span>
+<span class="sd">                              sym17, sym18, sym19, sym20</span>
+<span class="sd">                :coif family: coif1, coif2, coif3, coif4, coif5</span>
+<span class="sd">                :bior family: bior1.1, bior1.3, bior1.5, bior2.2, bior2.4,</span>
+<span class="sd">                              bior2.6, bior2.8, bior3.1, bior3.3, bior3.5,</span>
+<span class="sd">                              bior3.7, bior3.9, bior4.4, bior5.5, bior6.8</span>
+<span class="sd">                :rbio family: rbio1.1, rbio1.3, rbio1.5, rbio2.2, rbio2.4,</span>
+<span class="sd">                              rbio2.6, rbio2.8, rbio3.1, rbio3.3, rbio3.5,</span>
+<span class="sd">                              rbio3.7, rbio3.9, rbio4.4, rbio5.5, rbio6.8</span>
+<span class="sd">                :dmey family: dmey</span>
+
+<span class="sd">            which refer to Haar, Daubechies, Symlets, Coiflets, Biorthogonal,</span>
+<span class="sd">            Reverse biorthogonal and Discrete Meyer wavelets</span>
+<span class="sd">            being used to transform the time series.</span>
+
+<span class="sd">            (*recommended, default: &#39;haar&#39;*)</span>
+
+<span class="sd">        :mode:</span>
+<span class="sd">            One of the pywt extension modes::</span>
+
+<span class="sd">                [&#39;zpd&#39;, &#39;cpd&#39;, &#39;sym&#39;, &#39;ppd&#39;, &#39;sp1&#39;, &#39;per&#39;]</span>
+
+<span class="sd">            which mean zero, constant, symmetric, periodic and smooth padding and</span>
+<span class="sd">            periodization. The latter uses the minimum number</span>
+<span class="sd">            of coefficients in comparison to periodic padding.</span>
+
+<span class="sd">            (*optional, default: &#39;sym&#39;*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : DWT</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                mode : &#39;cpd&#39;</span>
+<span class="sd">                wavelet: &#39;haar&#39;</span>
+
+<span class="sd">    :Input: TimeSeries</span>
+<span class="sd">    :Output: FeatureVector</span>
+<span class="sd">    :requires: pywavelets</span>
+<span class="sd">    :Author: Mario Michael Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/12/04</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PywtWaveletNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.wavelet.html#pySPACE.missions.nodes.feature_generation.wavelet.PywtWaveletNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wavelet</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;sym&#39;</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PywtWaveletNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">wavelet</span> <span class="ow">in</span> <span class="n">pywt</span><span class="o">.</span><span class="n">wavelist</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;No or wrong wavelet specified (</span><span class="si">%s</span><span class="s">). Using &#39;haar&#39;.&quot;</span><span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="n">wavelet</span><span class="p">))</span>
+            <span class="n">wavelet</span> <span class="o">=</span> <span class="s">&quot;haar&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mode</span> <span class="ow">in</span> <span class="n">pywt</span><span class="o">.</span><span class="n">MODES</span><span class="o">.</span><span class="n">modes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Wrong mode (</span><span class="si">%s</span><span class="s">) specified. Using &#39;sym&#39;.&quot;</span><span class="o">%</span><span class="n">mode</span><span class="p">)</span>
+            <span class="n">mode</span> <span class="o">=</span> <span class="s">&#39;sym&#39;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">wavelet</span><span class="o">=</span><span class="n">wavelet</span><span class="p">,</span>
+                                      <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+                                      <span class="n">feature_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PywtWaveletNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.wavelet.html#pySPACE.missions.nodes.feature_generation.wavelet.PywtWaveletNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the wavelet features from the given data x</span>
+
+<span class="sd">        The feature names will get an A for approximation and</span>
+<span class="sd">        D for details coefficients.</span>
+<span class="sd">        So on example name is: *Waveletname_Channelname_DetailsIndex*,</span>
+<span class="sd">        where index is the position of the coefficient in the</span>
+<span class="sd">        transformed list. Details is *A* or *D*.</span>
+<span class="sd">        Each channel is processed separately and its name is used in *channelname*.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+
+        <span class="n">new_data</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">feature_names</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+            <span class="n">cA</span><span class="p">,</span> <span class="n">cD</span> <span class="o">=</span> <span class="n">pywt</span><span class="o">.</span><span class="n">dwt</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">n</span><span class="p">],</span> <span class="n">wavelet</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wavelet</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cA</span><span class="p">):</span>
+                <span class="n">new_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wavelet</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">channel</span><span class="o">+</span><span class="s">&quot;_A&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cD</span><span class="p">):</span>
+                <span class="n">new_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wavelet</span><span class="o">+</span><span class="s">&quot;_&quot;</span><span class="o">+</span><span class="n">channel</span><span class="o">+</span><span class="s">&quot;_D&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">feature_names</span>
+
+        <span class="n">feature_vector</span> <span class="o">=</span>\
+            <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">new_data</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">feature_vector</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;DWT&quot;</span><span class="p">:</span> <span class="n">PywtWaveletNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,404 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Analyzing performance results" href="tutorial_analysis_gui.html" />
+    <link rel="prev" title="Feature Selection, Classification using WEKA" href="tutorial_interface_weka.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_analysis_gui.html" title="Analyzing performance results"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_interface_weka.html" title="Feature Selection, Classification using WEKA"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial_interface_weka.html"
+                        title="previous chapter">Feature Selection, Classification using WEKA</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial_analysis_gui.html"
+                        title="next chapter">Analyzing performance results</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/tutorial_interface_to_mmlf.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="empirical-evaluations-in-reinforcement-learning-with-pyspace-and-mmlf">
+<span id="tutorial-interface-to-mmlf"></span><h1>Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF<a class="headerlink" href="#empirical-evaluations-in-reinforcement-learning-with-pyspace-and-mmlf" title="Permalink to this headline">¶</a></h1>
+<p>This tutorial explains how large scale empirical evaluations in the field of
+Reinforcement Learning (RL) can be conducted with pySPACE. For this kind of analysis
+the python package MMLF is required.
+MMLF is a general framework for problems in the domain of RL.
+It can be obtained from <a class="reference external" href="http://mmlf.sourceforge.net/">http://mmlf.sourceforge.net/</a>.</p>
+<p>Empirical evaluations in RL aim at comparing the performance
+of different agents in a (generalized) domain.
+The following things need to be specified:</p>
+<blockquote>
+<div><ul>
+<li><dl class="first docutils">
+<dt>A specific domain OR (in case of a generalized domain) a template for a domain</dt>
+<dd><p class="first last">and the parameters used for instantiating specific domains from the generalized domain.
+Please take a look at Whiteson et al.
+&#8220;Generalized Domains for Empirical Evaluations in Reinforcement Learning&#8221;
+for more details about the concept of generalized domains.</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">A parameterized definition of the agent to be used and the parameters that should be tested</p>
+</li>
+<li><dl class="first docutils">
+<dt>The number of independent runs that will be conducted for each combination</dt>
+<dd><p class="first last">of agent instantiation and domain</p>
+</dd>
+</dl>
+</li>
+<li><p class="first">The number of episodes the RL agent is allowed to learn</p>
+</li>
+<li><dl class="first docutils">
+<dt>The number of episodes the learned policy is evaluated</dt>
+<dd><p class="first last">to get a reliable estimate of its performance</p>
+</dd>
+</dl>
+</li>
+</ul>
+</div></blockquote>
+<p>This information is specified using a <a class="reference internal" href="yaml.html#yaml"><em>YAML</em></a> operation specification
+file. One example for such a configuration file is the following:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="c1"># This operation allows to conduct empirical evaluation in Reinforcement Learning</span>
+<span class="c1"># scenarios. It is based on the MMLF software. MMLF is written in python and can be </span>
+<span class="c1"># obtained at http://mmlf.sourceforge.net/. Under this URL, documentation for the MMLF</span>
+<span class="c1"># is also available that might be useful for understanding this operation.</span>
+<span class="c1">#</span>
+<span class="c1"># Further information about MMLF operations can be found in the corresponding tutorial</span>
+<span class="c1"># &quot;Empiricial Evaluations in Reinforcment Learning with pySPACE and MMLF&quot;</span>
+<span class="c1"># :ref:`docs.tutorials.tutorial_interface_to_mmlf`</span>
+<span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">mmlf</span>
+
+<span class="c1"># The path under which the MMLF package can be found</span>
+<span class="l-Scalar-Plain">mmlf_path</span> <span class="p-Indicator">:</span> <span class="s">&quot;/home/user/python-packages/mmlf&quot;</span>
+
+<span class="c1"># Determines how many independent runs will be conducted for each parameter setting</span>
+<span class="l-Scalar-Plain">runs</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">1</span>
+
+<span class="c1"># Determines how many episodes the agent can learn</span>
+<span class="l-Scalar-Plain">learning_episodes</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">500</span>
+
+<span class="c1"># Determines how many episodes the policy learned by an agent is evaluated</span>
+<span class="c1"># This can be set to 1 for deterministic environments, but should b e set to</span>
+<span class="c1"># larger values for stochastic environments</span>
+<span class="l-Scalar-Plain">test_episodes</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">100</span>
+
+<span class="c1"># The name of the MMLF world that will be used</span>
+<span class="c1"># Available worlds are among others &quot;mountain_car&quot;, &quot;single_pole_balancing&quot;,</span>
+<span class="c1"># &quot;double_pole_balancing&quot;, and &quot;maze2d.</span>
+<span class="l-Scalar-Plain">world_name</span> <span class="p-Indicator">:</span> <span class="s">&quot;mountain_car&quot;</span>
+
+<span class="c1"># The template for the MMLF environment XML configuration.</span>
+<span class="c1"># For more details, please take a look at the MMLf documentation</span>
+<span class="c1"># The __XX__ entries are placeholders of the template which are</span>
+<span class="c1"># instantiated by all values given in generalized_domain</span>
+<span class="c1"># to yield concrete environments.</span>
+<span class="l-Scalar-Plain">environment_template</span> <span class="p-Indicator">:</span> 
+   <span class="l-Scalar-Plain">&lt;environment environmentmodulename=&quot;mcar_env&quot;&gt;</span>
+     <span class="l-Scalar-Plain">&lt;configDict maxStepsPerEpisode = &quot;500&quot;</span>
+                 <span class="l-Scalar-Plain">accelerationFactor = &quot;__acceleration_factor__&quot;</span>
+                 <span class="l-Scalar-Plain">maxGoalVelocity = &quot;__max_goal_velocity__&quot;</span>
+                 <span class="l-Scalar-Plain">positionNoise = &quot;0.0&quot;</span>
+                 <span class="l-Scalar-Plain">velocityNoise = &quot;0.0&quot;</span>
+     <span class="l-Scalar-Plain">/&gt;</span>
+   <span class="l-Scalar-Plain">&lt;/environment&gt;</span>
+
+<span class="c1"># In order to avoid method overfit (please take a look at the paper by</span>
+<span class="c1"># Whiteson et al. &quot;Generalized Domains for Empirical Evaluations in </span>
+<span class="c1"># Reinforcement Learning&quot; for more details), an agent should be tested</span>
+<span class="c1"># not only in one specific instantiation of an environment, but in several</span>
+<span class="c1"># slightly different versions of an environment. These differences</span>
+<span class="c1"># can be obtained by varying certain parameters of the environment. </span>
+<span class="c1"># This example will test each agent in four slightly different versions of</span>
+<span class="c1"># the mountain car domain.</span>
+<span class="l-Scalar-Plain">generalized_domain</span><span class="p-Indicator">:</span>
+   <span class="p-Indicator">-</span> <span class="p-Indicator">{</span><span class="s">&quot;__acceleration_factor__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.001</span><span class="p-Indicator">,</span> <span class="s">&quot;__max_goal_velocity__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.07</span><span class="p-Indicator">}</span>
+   <span class="p-Indicator">-</span> <span class="p-Indicator">{</span><span class="s">&quot;__acceleration_factor__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.0075</span><span class="p-Indicator">,</span> <span class="s">&quot;__max_goal_velocity__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.07</span><span class="p-Indicator">}</span>
+   <span class="p-Indicator">-</span> <span class="p-Indicator">{</span><span class="s">&quot;__acceleration_factor__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.001</span><span class="p-Indicator">,</span> <span class="s">&quot;__max_goal_velocity__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.02</span><span class="p-Indicator">}</span>
+   <span class="p-Indicator">-</span> <span class="p-Indicator">{</span><span class="s">&quot;__acceleration_factor__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.0075</span><span class="p-Indicator">,</span> <span class="s">&quot;__max_goal_velocity__&quot;</span><span class="p-Indicator">:</span> <span class="nv">0.02</span><span class="p-Indicator">}</span>
+
+<span class="c1"># The template for the MMLF agent XML configuration. </span>
+<span class="c1"># For more details, please take a look at the MMLf documentation</span>
+<span class="c1"># The __XX__ entries are placeholders of the template which are</span>
+<span class="c1"># instantiated by all values given in parameter_ranges, </span>
+<span class="c1"># parameter_settings etc. (see below) to yield concrete agents</span>
+<span class="l-Scalar-Plain">agent_template</span> <span class="p-Indicator">:</span> 
+   <span class="l-Scalar-Plain">&lt;agent agentmodulename=&quot;td_lambda_agent&quot;&gt;</span>
+    <span class="l-Scalar-Plain">&lt;configDict gamma = &quot;__gamma__&quot;</span>
+                 <span class="l-Scalar-Plain">epsilon = &quot;__epsilon__&quot;</span>
+                 <span class="l-Scalar-Plain">lambda = &quot;__lambda__&quot;</span>
+                 <span class="l-Scalar-Plain">minTraceValue = &quot;0.5&quot;</span>
+                 <span class="l-Scalar-Plain">defaultStateDimDiscretizations = &quot;7&quot;</span>
+                 <span class="l-Scalar-Plain">defaultActionDimDiscretizations = &quot;5&quot;</span>
+                 <span class="l-Scalar-Plain">update_rule = &quot;&#39;SARSA&#39;&quot;</span>
+                 <span class="l-Scalar-Plain">function_approximator =  &quot;dict(name = &#39;CMAC&#39;, learning_rate = 0.5, update_rule = &#39;exaggerator&#39;, number_of_tilings = 10, defaultQ = 0.0)&quot;</span>
+                 <span class="l-Scalar-Plain">policyLogFrequency = &quot;250&quot;</span>
+     <span class="l-Scalar-Plain">/&gt;</span>
+   <span class="l-Scalar-Plain">&lt;/agent&gt;</span>
+
+<span class="c1"># &quot;parameter_ranges&quot; is used to determine the values of each parameter </span>
+<span class="c1"># that are tested. If there is more than one parameter, then each</span>
+<span class="c1"># possible combination (i.e. the crossproduct) is tested. </span>
+<span class="c1"># Please be aware of the potential combinatorial explosion.</span>
+<span class="c1"># The given example would test 3*2*3=18 different agent</span>
+<span class="c1"># configurations!</span>
+<span class="c1"># Alternatively, one could also specify concrete parameter combinations</span>
+<span class="c1"># that should be tested by using &quot;parameter_settings&quot; instead of</span>
+<span class="c1"># &quot;parameter_ranges&quot;. Please look at the weka_classification_operation.yaml</span>
+<span class="c1"># example for more details on that.</span>
+<span class="l-Scalar-Plain">parameter_ranges</span><span class="p-Indicator">:</span> 
+    <span class="l-Scalar-Plain">__gamma__</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">0.9</span><span class="p-Indicator">,</span> <span class="nv">0.99</span><span class="p-Indicator">,</span> <span class="nv">1.0</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">__epsilon__</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">0.0</span><span class="p-Indicator">,</span> <span class="nv">0.1</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">__lambda__</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">0.0</span><span class="p-Indicator">,</span> <span class="nv">0.5</span><span class="p-Indicator">,</span> <span class="nv">0.9</span><span class="p-Indicator">]</span>
+</pre></div>
+</div>
+<p>One important difference of the MMLF operation compared to other operations is
+that it is not necessary to define an input.
+This is because RL is not focused on data processing as (un-)supervised ML is.
+The input is indirectly described by parameters.</p>
+<p>The given operation can be executed with the command:</p>
+<div class="highlight-python"><pre>python launch.py --mcore --config user.yaml --operation example/mmlf_operation.yaml</pre>
+</div>
+<p>The given command will last approximately 30 minutes
+(depending on the speed of your machine).
+Each run of each combination of agent and environment instantiation
+will result in an individual process.
+The operation creates a MMLF rw-area in the operation result directory
+collections/operation_results/DATE.
+This rw-area consists of two subdirectories &#8220;config&#8221; and &#8220;logs&#8221;.</p>
+<p>In the configuration directory, for each combination of agent and environment instantiation,
+three files are created: One which contains the agent configuration (prefix agent),
+one which contains the environment configuration (prefix env),
+and one which defines the world (prefix world).
+The suffix of the configuration files encodes the specific parameter settings.
+One should keep in mind that the file names might become very long (too long for some file systems).
+This is currently an unresolved issue.</p>
+<p>The second important subdirectory is the &#8220;logs&#8221;-directory.
+In this directory, the results of the individual runs are stored.
+On the top level, several subdirectories are created with obscure names
+such as &#8220;351782211&#8221;. These numbers are basically hash values of the agent&#8217;s
+and environment&#8217;s parameters. This means that different parametrizations
+will store their results in different subdirectories
+but different runs with the same parametrization will go into the same subdirectory.
+Each of the subdirectories contains the specific agent
+and environment configuration used as well as one subdirectory for each run
+whose name is the start time of the run.
+Depending on the specific agent, different information might be stored in the run-directories.
+However, for this tutorial it is only relevant that in the subdirectory &#8220;environment_logs&#8221;,
+there are two files &#8220;reward&#8221; and &#8220;offline_reward&#8221;.
+The former contains the reward per episode the agent got during learning,
+the later the reward per epsiode the learned policy achieved.</p>
+<p>At the end of the operation, the logged information are consolidated
+into a csv-file named results.csv.
+This file has the same structure as the result files generated by the weka_classification operation.
+Thus, the stored results can later on be analysed using the analysis operation.
+The csv-file is structured as followed:</p>
+<blockquote>
+<div>For each individual run, one line is created
+that contains the specific values of the used agent and environment configuration.
+Furthermore, four columns are used for storing information
+about the achieved reward
+(reward: sequence of rewards per episode during learning,
+accumulated_reward : accumulated reward during learning,
+offline_reward: sequence of rewards per episode for learned policy,
+offline_accumulated_reward : accumulated reward during testing learned policy).</div></blockquote>
+<p>One thing which is important to note is the way parameter names are determined:</p>
+<blockquote>
+<div>Most parameters of agents and environments
+are named as in the xml-configuration files
+(for instance minTraceValue stays minTraceValue).
+However parameters like &#8220;learning_rate&#8221;
+which is a parameter of the function_approximator
+is named &#8220;function_approximator_learning_rate&#8221; in order to avoid name-clashes.
+The placeholders used in the YAML configuration file are NOT used for determining names!</div></blockquote>
+<p>As mentioned above, the results are stored in the same format
+as the results of weka-classification operation.
+Thus, the following analysis operation (see also <a class="footnote-reference" href="#f1" id="id1">[1]</a>) can be used
+to generate informative plots of the results:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">analysis</span>
+
+<span class="l-Scalar-Plain">input_path</span><span class="p-Indicator">:</span> <span class="s">&quot;operation_results/20100120_09_49_27&quot;</span>
+
+<span class="c1"># We are interested in the effect of the three variable &quot;gamma&quot;, &quot;epsilon&quot;, and &quot;lambda&quot;</span>
+<span class="l-Scalar-Plain">parameters</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&quot;gamma&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;epsilon&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;lambda&quot;</span><span class="p-Indicator">]</span> 
+
+<span class="c1"># We are interested in the two simple metrics &quot;accumulated_reward&quot; and &quot;offline_accumulated_reward&quot;</span>
+<span class="c1"># and in the sequence of rewards obtained during learning and testing.</span>
+<span class="l-Scalar-Plain">metrics</span><span class="p-Indicator">:</span> 
+    <span class="p-Indicator">-</span> <span class="p-Indicator">[</span><span class="s">&quot;reward&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;sequence&quot;</span><span class="p-Indicator">,</span> <span class="p-Indicator">{</span><span class="s">&#39;mwa_window_length&#39;</span><span class="p-Indicator">:</span> <span class="nv">25</span><span class="p-Indicator">}]</span>
+    <span class="p-Indicator">-</span> <span class="s">&quot;accumulated_reward&quot;</span>
+    <span class="p-Indicator">-</span> <span class="p-Indicator">[</span><span class="s">&quot;offline_reward&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;sequence&quot;</span><span class="p-Indicator">,</span> <span class="p-Indicator">{</span><span class="s">&#39;mwa_window_length&#39;</span><span class="p-Indicator">:</span> <span class="nv">25</span><span class="p-Indicator">}]</span>
+    <span class="p-Indicator">-</span> <span class="s">&quot;offline_accumulated_reward&quot;</span>
+</pre></div>
+</div>
+<p>Important to note is that</p>
+<blockquote>
+<div><ul>
+<li><p class="first">The parameter names have to be those from the results.csv file
+and not from the parameter_ranges of the MMLF operation.</p>
+</li>
+<li><p class="first">In addition to normal metrics like &#8220;accumulated_reward&#8221;
+and &#8220;offline_accumulated_reward&#8221; there are also two so-called
+&#8220;sequence metrics&#8221;.
+These metrics do not consist of a single float value
+but of a sequence of float values
+(in this example the rewards per episode for all episodes).
+This has to be indicated by a 3-tuple like the following:</p>
+<div class="highlight-python"><pre>["reward", "sequence", {'mwa_window_length': 25}].</pre>
+</div>
+<p>First comes the name of the metric in the result-csv file.
+Second a flag that indicates that it is a sequence metric.
+And third a dictionary with optional parameters;
+in this example the length of the moving window average
+used for smoothing the values (mwa_window_length).</p>
+</li>
+</ul>
+</div></blockquote>
+<p>An operation chain which would execute first the mmlf operation
+and then the analysis operation could be configured as follows:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="c1"># Since we start with an MMLF operation, no input is required, since the experiment setting is done in the first operation</span>
+<span class="l-Scalar-Plain">input_path</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&quot;dummy&quot;</span><span class="p-Indicator">]</span>
+
+<span class="c1"># Each agent-environment combination is tested 10 times</span>
+<span class="c1"># This overrides the setting from the operation specification</span>
+<span class="c1"># file</span>
+<span class="l-Scalar-Plain">runs</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">10</span>
+
+<span class="c1"># Start with a MMLF operation and analyze the results with the analysis operation</span>
+<span class="l-Scalar-Plain">operations</span><span class="p-Indicator">:</span>
+   <span class="p-Indicator">-</span>
+       <span class="l-Scalar-Plain">examples/mmlf_operation.yaml</span>
+   <span class="p-Indicator">-</span>
+       <span class="l-Scalar-Plain">examples/mmlf_analysis.yaml</span>
+</pre></div>
+</div>
+<p>Last but not least some results the analysis operation
+should generate for the given operation chain:</p>
+<img alt="../_images/accumulated_reward_gamma_vs_epsilon.png" src="../_images/accumulated_reward_gamma_vs_epsilon.png" style="width: 500px;" />
+<img alt="../_images/accumulated_reward_histogram.png" src="../_images/accumulated_reward_histogram.png" style="width: 500px;" />
+<img alt="../_images/reward_gamma.png" src="../_images/reward_gamma.png" style="width: 500px;" />
+<p>The first image shows how the accumulated reward during training changes
+for different values of gamma and epsilon.
+The second figure shows a histogram of the &#8220;accumulated reward distribution&#8221;.
+This figure shows some information about how susceptible the learner is
+to the variations of the given parameters.
+The last figure shows the change of obtained reward per episode
+over time for different values of gamma.
+The given figures averages over all values of lambda.
+If one is interested in the same figure for a specific value of
+lambda (say 0.0), the same figures for this condition are found
+in the subdirectory lambda:0.0.</p>
+<p class="rubric">Footnotes</p>
+<table class="docutils footnote" frame="void" id="f1" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>Alternatively, one can also use the
+<a class="reference internal" href="tutorial_analysis_gui.html#tutorial-performance-results-analysis"><em>interactive performance results analysis GUI</em></a> .</td></tr>
+</tbody>
+</table>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_analysis_gui.html" title="Analyzing performance results"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_interface_weka.html" title="Feature Selection, Classification using WEKA"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

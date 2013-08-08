@@ -1,0 +1,199 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.resources.dataset_defs.bci_competition &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.resources.dataset_defs.bci_competition</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Read data from the BCI competition</span>
+
+<span class="sd">Storing is not needed, because the data will be transformed to another collection.</span>
+
+<span class="sd">Currently, only the use of the &quot;train&quot; datasets of the BCI Competition III,</span>
+<span class="sd">Data set II: P300 speller paradigm is supported. </span>
+<span class="sd">See http://www.bbci.de/competition/iii/ for further information.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">      :dataset_md:</span>
+<span class="sd">          A dictionary with all the collections&#39;s meta data.</span>
+<span class="sd">          </span>
+<span class="sd">          (*optional, default: None*)</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">scipy.io</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+<div class="viewcode-block" id="BciCompetitionDataset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.bci_competition.html#pySPACE.resources.dataset_defs.bci_competition.BciCompetitionDataset">[docs]</a><span class="k">class</span> <span class="nc">BciCompetitionDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Class for reading the Berlin BrainComputerInterface-competition data</span>
+<span class="sd">    </span>
+<span class="sd">    This module contains a class (*BciCompetitionDataset*) that encapsulates</span>
+<span class="sd">    most relevant code to use the data from the BCI competition.</span>
+<span class="sd">    Currently, only reading of the data is supported.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="BciCompetitionDataset.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.bci_competition.html#pySPACE.resources.dataset_defs.bci_competition.BciCompetitionDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BciCompetitionDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span><span class="o">=</span><span class="n">dataset_md</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_directory</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;dataset_directory&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_path</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;mat_file&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataset_md</span> <span class="o">=</span> <span class="n">dataset_md</span>
+    </div>
+<div class="viewcode-block" id="BciCompetitionDataset.store"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.bci_competition.html#pySPACE.resources.dataset_defs.bci_competition.BciCompetitionDataset.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Not yet implemented!&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Storing of BciCompetitionDataset is currently not supported!&quot;</span><span class="p">)</span>
+    
+    </div>
+<div class="viewcode-block" id="BciCompetitionDataset.get_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.bci_competition.html#pySPACE.resources.dataset_defs.bci_competition.BciCompetitionDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the train or test data for the given split in the given run.</span>
+<span class="sd">        </span>
+<span class="sd">        **Parameters**</span>
+<span class="sd">          </span>
+<span class="sd">          :run_nr: The number of the run whose data should be loaded.</span>
+<span class="sd">          </span>
+<span class="sd">          :split_nr: The number of the split whose data should be loaded.</span>
+<span class="sd">          </span>
+<span class="sd">          :train_test: &quot;train&quot; if the training data should be loaded.</span>
+<span class="sd">                       &quot;test&quot; if the test data should be loaded.</span>
+<span class="sd">    </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Do lazy loading of the time series objects.</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_directory</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_path</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">loadmat</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="n">signal</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Signal&#39;</span><span class="p">]</span>
+        <span class="n">flashing</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Flashing&#39;</span><span class="p">]</span>
+        <span class="n">stimulus_code</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusCode&#39;</span><span class="p">]</span>
+        <span class="n">stimulus_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusType&#39;</span><span class="p">]</span>
+        <span class="n">target_char</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;TargetChar&#39;</span><span class="p">]</span>
+
+        <span class="n">window</span> <span class="o">=</span> <span class="mi">240</span>
+        <span class="n">channels</span> <span class="o">=</span> <span class="mi">64</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">data_collection</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">responses</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">window</span><span class="p">,</span> <span class="n">channels</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+            <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">rowcolcnt</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">flashing</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">flashing</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">rowcol</span><span class="o">=</span><span class="n">stimulus_code</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">responses</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,:,:]</span><span class="o">=</span><span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">-</span><span class="mi">24</span><span class="p">,:]</span>
+                    <span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
+
+            <span class="n">avgresp</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">responses</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">targets</span> <span class="o">=</span> <span class="n">stimulus_code</span><span class="p">[</span><span class="n">epoch</span><span class="p">,:]</span><span class="o">*</span><span class="n">stimulus_type</span><span class="p">[</span><span class="n">epoch</span><span class="p">,:]</span>
+            <span class="n">target_rowcol</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_rowcol</span><span class="p">:</span>
+                    <span class="n">target_rowcol</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+            <span class="n">target_rowcol</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">avgresp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">temp</span> <span class="o">=</span> <span class="n">avgresp</span><span class="p">[</span><span class="n">i</span><span class="p">,:,:]</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_array</span> <span class="o">=</span> <span class="n">temp</span><span class="p">,</span>
+                                  <span class="n">channel_names</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span> 
+                                  <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">window</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">data_collection</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Target&quot;</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data_collection</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Standard&quot;</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">data_collection</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

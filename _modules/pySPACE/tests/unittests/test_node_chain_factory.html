@@ -1,0 +1,212 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.unittests.test_node_chain_factory &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.unittests.test_node_chain_factory</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Unit tests for the NodeChainFactory</span>
+
+<span class="sd">:Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2008/11/04</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c"># The root of the code</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+      
+<span class="kn">import</span> <span class="nn">pylab</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChain</span><span class="p">,</span> <span class="n">NodeChainFactory</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.preprocessing.normalization</span> <span class="kn">import</span> <span class="n">DetrendingNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.preprocessing.subsampling</span> <span class="kn">import</span> <span class="n">SubsamplingNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.spatial_filtering.csp</span> <span class="kn">import</span> <span class="n">CSPNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.source.time_series_source</span> <span class="kn">import</span> <span class="n">TimeSeriesSourceNode</span>
+<span class="kn">import</span> <span class="nn">pySPACE.missions.support.windower</span> <span class="kn">as</span> <span class="nn">windower</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.support.windower</span> <span class="kn">import</span> <span class="n">WindowFactory</span>
+                                          
+
+<div class="viewcode-block" id="NodeChainFactoryTestCase"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tests.unittests.test_node_chain_factory.html#pySPACE.tests.unittests.test_node_chain_factory.NodeChainFactoryTestCase">[docs]</a><span class="k">class</span> <span class="nc">NodeChainFactoryTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    
+<div class="viewcode-block" id="NodeChainFactoryTestCase.setUp"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tests.unittests.test_node_chain_factory.html#pySPACE.tests.unittests.test_node_chain_factory.NodeChainFactoryTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+           </div>
+<div class="viewcode-block" id="NodeChainFactoryTestCase.test_dataflow_from_yaml"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tests.unittests.test_node_chain_factory.html#pySPACE.tests.unittests.test_node_chain_factory.NodeChainFactoryTestCase.test_dataflow_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">test_dataflow_from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">simpleYAMLInput</span> <span class="o">=</span><span class="s">&quot;&quot;&quot;</span>
+<span class="s">-</span>
+<span class="s">    node : Time_Series_Source</span>
+<span class="s">-</span>
+<span class="s">    node : Detrending</span>
+<span class="s">    parameters : </span>
+<span class="s">        detrend_method : &quot;eval(__import__(&#39;pylab&#39;).detrend_mean)&quot;</span>
+<span class="s">- </span>
+<span class="s">    node : Subsampling</span>
+<span class="s">    parameters : </span>
+<span class="s">        target_frequency : 100.0</span>
+<span class="s">- </span>
+<span class="s">    node : CSP</span>
+<span class="s">    parameters : </span>
+<span class="s">         retained_channels : 4</span>
+<span class="s">&quot;&quot;&quot;</span> 
+
+        <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">NodeChain</span><span class="p">,</span>
+                                          <span class="n">simpleYAMLInput</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">flow</span><span class="p">,</span> <span class="n">NodeChain</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">TimeSeriesSourceNode</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="nb">isinstance</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">DetrendingNode</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="nb">isinstance</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">SubsamplingNode</span><span class="p">)</span> <span class="ow">and</span>
+                     <span class="nb">isinstance</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">CSPNode</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">detrend_method</span> <span class="o">==</span> <span class="n">pylab</span><span class="o">.</span><span class="n">detrend_mean</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">==</span> <span class="mf">100.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">flow</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">.</span><span class="n">retained_channels</span> <span class="o">==</span> <span class="mi">4</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="NodeChainFactoryTestCase.test_window_definitions_from_yaml"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tests.unittests.test_node_chain_factory.html#pySPACE.tests.unittests.test_node_chain_factory.NodeChainFactoryTestCase.test_window_definitions_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">test_window_definitions_from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">simpleYAMLInput</span> <span class="o">=</span> \
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">skip_ranges : </span>
+<span class="sd">         - {start : 0, end: 15000}</span>
+<span class="sd">window_defs :</span>
+<span class="sd">     s16: </span>
+<span class="sd">         classname : A</span>
+<span class="sd">         markername : &quot;S 16&quot;</span>
+<span class="sd">         startoffsetms : -1400</span>
+<span class="sd">         endoffsetms : -120</span>
+<span class="sd">         jitter : 0</span>
+<span class="sd">         excludedefs : []</span>
+<span class="sd">     null: </span>
+<span class="sd">         classname : B</span>
+<span class="sd">         markername : &quot;null&quot;</span>
+<span class="sd">         startoffsetms : -1280</span>
+<span class="sd">         endoffsetms : 0</span>
+<span class="sd">         jitter : 0</span>
+<span class="sd">         excludedefs : [all]</span>
+<span class="sd">exclude_defs: </span>
+<span class="sd">      all:</span>
+<span class="sd">        markernames : [&quot;S  1&quot;, &quot;S  2&quot;, &quot;S  8&quot;, &quot;S 16&quot;, &quot;S 24&quot;, &quot;S 32&quot;]</span>
+<span class="sd">        preexcludems : 2000</span>
+<span class="sd">        postexcludems : 2000</span>
+<span class="sd">&quot;&quot;&quot;</span> 
+
+        <span class="n">windows</span> <span class="o">=</span> <span class="n">WindowFactory</span><span class="o">.</span><span class="n">window_definitions_from_yaml</span><span class="p">(</span><span class="n">simpleYAMLInput</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">windows</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> 
+                     <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">windower</span><span class="o">.</span><span class="n">LabeledWindowDef</span><span class="p">)</span>
+                     <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">windower</span><span class="o">.</span><span class="n">LabeledWindowDef</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">classname</span><span class="p">,</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">classname</span><span class="p">])</span>
+                      <span class="o">==</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;A&#39;</span><span class="p">,</span> <span class="s">&#39;B&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">markername</span><span class="p">,</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">markername</span><span class="p">])</span>
+                      <span class="o">==</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;S 16&#39;</span><span class="p">,</span> <span class="s">&#39;null&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">startoffsetms</span><span class="p">,</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">startoffsetms</span><span class="p">])</span> 
+                      <span class="o">==</span> <span class="nb">set</span><span class="p">([</span><span class="o">-</span><span class="mi">1400</span><span class="p">,</span> <span class="o">-</span><span class="mi">1280</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endoffsetms</span><span class="p">,</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">endoffsetms</span><span class="p">])</span>
+                      <span class="o">==</span> <span class="nb">set</span><span class="p">([</span><span class="o">-</span><span class="mi">120</span><span class="p">,</span> <span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">skipfirstms</span> <span class="o">==</span> <span class="mi">15000</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">excludedefs</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">or</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">excludedefs</span> <span class="o">==</span> <span class="p">[])</span>
+        <span class="n">window</span> <span class="o">=</span> <span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">windows</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">excludedefs</span> <span class="o">!=</span> <span class="p">[]</span> <span class="k">else</span> <span class="n">windows</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">window</span><span class="o">.</span><span class="n">excludedefs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">6</span>
+                     <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">window</span><span class="o">.</span><span class="n">excludedefs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">windower</span><span class="o">.</span><span class="n">ExcludeDef</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">window</span><span class="o">.</span><span class="n">excludedefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">preexcludems</span> <span class="o">==</span> <span class="mi">2000</span><span class="p">)</span>           
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="n">window</span><span class="o">.</span><span class="n">excludedefs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">postexcludems</span> <span class="o">==</span> <span class="mi">2000</span><span class="p">)</span>
+        </div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>  
+    
+    <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="s">&#39;test_node_chain_factory&#39;</span><span class="p">)</span>
+    
+    <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,351 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.classification.adaptive_threshold_classifier &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.classification.adaptive_threshold_classifier</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Setting adaptive threshold&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+
+
+
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode">[docs]</a><span class="k">class</span> <span class="nc">AdaptiveThresholdPreprocessingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Setting adaptive threshold as described by Semmaoui, H., etal. (2012)</span>
+<span class="sd">    </span>
+<span class="sd">    This node can be used to threshold a continuous signal with a adaptive threshold.</span>
+<span class="sd">    The advantage over a simple fixed threshold method is the adaption to the signal.</span>
+<span class="sd">    For example if a sensor value drifts over time either in positive or negative </span>
+<span class="sd">    direction, a fixed threshold method can have big problems with this one. For </span>
+<span class="sd">    a negative drift the &quot;zero&quot; value may get so low that the fixed threshold is </span>
+<span class="sd">    never reached again, the other way round a positive drift can lead to a continuous </span>
+<span class="sd">    overcoming of the fixed threshold. The adaptive threshold is based on the following</span>
+<span class="sd">    publication:</span>
+<span class="sd">    </span>
+<span class="sd">    Semmaoui, H., etal. (2012).</span>
+<span class="sd">    Setting adaptive spike detection threshold for smoothed TEO based on robust statistics theory.</span>
+<span class="sd">    IEEE Transactions on Biomedical Engineering, 59(2):474 - 482.</span>
+<span class="sd">    (http://ieeexplore.ieee.org/stamp/stamp.jsp?arnumber=06070974)</span>
+
+<span class="sd">    The formula is given as:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math:: T(t) = mean(t)_N + p*std(t)_N, </span>
+<span class="sd">    </span>
+<span class="sd">    where T(t) is the threshold at a given timepoint t, mean(t)_N is the mean at </span>
+<span class="sd">    timepoint t calculated over the last N samples p is the sensitivity factor and </span>
+<span class="sd">    std(t)_N is the standard deviation at timepoint t calculated over the last N </span>
+<span class="sd">    samples.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    The processing is split into two parts, this node implements the first part </span>
+<span class="sd">    which does the actual thresholding and safes a timeseries containing zeros, </span>
+<span class="sd">    accept at those timepoints where the signal exceeded the threshold. NOTICE </span>
+<span class="sd">    only the very first timepoint where the signal overcame the threshold is </span>
+<span class="sd">    marked with the value 1 all other values remain a zero. In a second step </span>
+<span class="sd">    see &quot;AdaptiveThresholdClassifierNode&quot; below the results are transfered into </span>
+<span class="sd">    prediction vectors. This is done since the threshold methods needs the whole </span>
+<span class="sd">    data in order to continuously calculate the mean and std. dev., otherwise the </span>
+<span class="sd">    first N samples of each window could not be used for analysis. IMPORTANT the </span>
+<span class="sd">    preprocessing has to be done without any windowing accept the NULL marker, </span>
+<span class="sd">    with a fixed nullmarkerstride.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :width_adaptiveThreshold:</span>
+<span class="sd">            Specifies the width of the window used for calculating the mean and </span>
+<span class="sd">            the standard deviation for the threshold in ms</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default:2000*)</span>
+<span class="sd">        </span>
+<span class="sd">        :p_adaptiveThreshold:</span>
+<span class="sd">            Specifies the p for the adaptive threshold</span>
+<span class="sd">                </span>
+<span class="sd">            (*optional, default:8*)</span>
+<span class="sd">                </span>
+<span class="sd">        :time_below_threshold:</span>
+<span class="sd">            Specifies how long the signal has to be below the signal before a new </span>
+<span class="sd">            thresholding is allowed in ms. This is helpful if only the beginning </span>
+<span class="sd">            of some event should be detected in the signal.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default:1000*) </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">        node : AdaptiveThreshold_Preprocessing</span>
+<span class="sd">        parameters :</span>
+<span class="sd">            width_adaptive_threshold : 2000</span>
+<span class="sd">            p_adaptive_threshold : 8</span>
+<span class="sd">            time_below_threshold : 1000</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2013/01/17</span>
+<span class="sd">    :Last change: 2013/01/23 by Marc Tabie</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width_adaptive_threshold</span> <span class="o">=</span> <span class="mi">2000</span><span class="p">,</span> <span class="n">p_adaptive_threshold</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span> <span class="n">time_below_threshold</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">,</span>  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AdaptiveThresholdPreprocessingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">width_AT</span> <span class="o">=</span> <span class="n">width_adaptive_threshold</span><span class="p">,</span>                  <span class="c">#Width of the adaptive threshold</span>
+                                      <span class="n">ringbuffer_AT</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>                                 <span class="c">#Ringbuffer for storing old data for the adaptive Threshold</span>
+                                      <span class="n">p_AT</span> <span class="o">=</span> <span class="n">p_adaptive_threshold</span><span class="p">,</span>                          <span class="c">#p of the adaptive threshold</span>
+                                      <span class="n">variables_AT</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span>                             <span class="c">#Values for calculating the adaptive threshold see function adaptive_threshold()</span>
+                                      <span class="n">below_threshold</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>                               <span class="c">#Array which indicates how long each signal was below the threshold</span>
+                                      <span class="n">time_below_threshold</span> <span class="o">=</span> <span class="n">time_below_threshold</span><span class="p">)</span>          <span class="c">#Time in ms where the signal has to below the threshold in order to make a new detection</span>
+        </div>
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    </div>
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the preprocessing on the given data vector x&quot;&quot;&quot;</span>
+        <span class="c">#Number of retained channels</span>
+        <span class="n">num_channels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span> <span class="o">==</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="c"># When the node is called for the first time initialize all parameters/variables</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">width_AT</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">width_AT</span><span class="o">*</span><span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)</span>
+            
+            <span class="c">#Convert the time from ms to samples</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_below_threshold</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">time_below_threshold</span><span class="o">*</span><span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.</span><span class="p">)</span>
+            
+            <span class="c">#Create and prefill the array which indicates how long a signal was below the threshold</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_channels</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span><span class="o">.</span><span class="n">fill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_below_threshold</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+            
+            <span class="c">#Create the ringbuffer and the variables list for the adaptive threshold </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ringbuffer_AT</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">width_AT</span><span class="p">,</span><span class="n">num_channels</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">4</span><span class="p">,</span><span class="n">num_channels</span><span class="p">))</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c">#Create the array for the thresholded data</span>
+        <span class="n">threshold_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="c">#For each sample of each retained channel</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_channels</span><span class="p">):</span>
+            <span class="n">data_index</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="n">data</span><span class="p">[:,</span><span class="n">i</span><span class="p">]:</span>
+                <span class="c">#calculate the adaptive threshold</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptive_threshold</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                <span class="c">#if the actual sample exceeds the threshold...</span>
+                <span class="k">if</span><span class="p">(</span><span class="n">sample</span> <span class="o">&gt;=</span> <span class="n">value</span><span class="p">):</span>
+                    <span class="c">#and the resting time was observed</span>
+                    <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_below_threshold</span><span class="p">):</span>
+                        <span class="c">#store a 1 indicating a onset</span>
+                        <span class="n">threshold_data</span><span class="p">[</span><span class="n">data_index</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                    <span class="c">#reset the resting time counter</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c">#increase the time the signal was below the signal</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">below_threshold</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">data_index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c">#return the thresholded data</span>
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">threshold_data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div>
+<div class="viewcode-block" id="AdaptiveThresholdPreprocessingNode.adaptive_threshold"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdPreprocessingNode.adaptive_threshold">[docs]</a>    <span class="k">def</span> <span class="nf">adaptive_threshold</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_point</span><span class="p">,</span> <span class="n">channel_counter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adaptive threshold for single values</span>
+<span class="sd">    </span>
+<span class="sd">        data_point = new datapoint</span>
+<span class="sd">        channel_counter = index for the retained channels in the ringbuffer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">i</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">])</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">width_AT</span>
+
+        <span class="n">S1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">data_point</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">ringbuffer_AT</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">])</span>\
+         <span class="o">*</span> <span class="p">((</span><span class="n">n</span><span class="o">-</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">data_point</span> <span class="o">+</span> <span class="p">(</span><span class="n">n</span><span class="o">+</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ringbuffer_AT</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">])))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">=</span> <span class="n">S1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span><span class="o">+</span><span class="p">(</span><span class="n">data_point</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">ringbuffer_AT</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">p_AT</span><span class="o">*</span><span class="n">math</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">S1</span><span class="o">/</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="n">n</span><span class="p">))</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span><span class="o">/</span><span class="n">n</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ringbuffer_AT</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_point</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">i</span><span class="o">+</span><span class="mf">1.0</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="n">n</span><span class="p">):</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables_AT</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">channel_counter</span><span class="p">]</span>
+</div></div>
+<div class="viewcode-block" id="AdaptiveThresholdClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">AdaptiveThresholdClassifierNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Adaptive threshold onset detection classifier</span>
+<span class="sd">    </span>
+<span class="sd">    This node parses timeseries generated by the &quot;AdaptiveThresholdPreprocessingNode&quot;</span>
+<span class="sd">    Basically each data channel of the windows passed to this node are scanned for </span>
+<span class="sd">    values equal to 1. If in enough channels specified by num_channels_above_threshold</span>
+<span class="sd">    the value 1 is found this window is labeled with the positive class otherwise it </span>
+<span class="sd">    belongs to the negative class</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :labels:</span>
+<span class="sd">            Specifies the names corresponding to the two classes separated</span>
+<span class="sd">            by the threshold method. NOTICE first give the negative class </span>
+<span class="sd">            followed by the positive one</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default:[&#39;noMovement&#39;,&#39;Movement&#39;]*)</span>
+<span class="sd">            </span>
+<span class="sd">        :num_channels_above_threshold:</span>
+<span class="sd">            Specifies how many channels inside a window have to exceed the </span>
+<span class="sd">            threshold in order to detect an onset</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default:1*)</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">        node : AdaptiveThreshold_Classifier</span>
+
+<span class="sd">    :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2013/01/17</span>
+<span class="sd">    :Last change: 2013/01/23 by Marc Tabie</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AdaptiveThresholdClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;no_movement&#39;</span><span class="p">,</span><span class="s">&#39;movement&#39;</span><span class="p">],</span> <span class="n">num_channels_above_threshold</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AdaptiveThresholdClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span><span class="p">,</span>               <span class="c">#Labels for the different classes</span>
+                                      <span class="n">num_channels_above</span><span class="o">=</span><span class="n">num_channels_above_threshold</span><span class="p">,</span><span class="n">test</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AdaptiveThresholdClassifierNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdClassifierNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="AdaptiveThresholdClassifierNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdClassifierNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="AdaptiveThresholdClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.adaptive_threshold_classifier.html#pySPACE.missions.nodes.classification.adaptive_threshold_classifier.AdaptiveThresholdClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector x&quot;&quot;&quot;</span>
+        <span class="n">num_channels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        
+        <span class="n">data</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">if</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;num_channels_above_threshold was set to </span><span class="si">%d</span><span class="s">. The value has to be greater then zero, now its set to 1&quot;</span> <span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">elif</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span> <span class="o">&gt;</span> <span class="n">num_channels</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;num_channels_above_threshold was set to </span><span class="si">%d</span><span class="s">. But only </span><span class="si">%d</span><span class="s"> channels are retained, now its set to </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span><span class="p">,</span><span class="n">num_channels</span><span class="p">,</span><span class="n">num_channels</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span> <span class="o">=</span> <span class="n">num_channels</span>
+        <span class="n">movements_found</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_channels</span><span class="p">)</span>
+
+        <span class="c">#For each sample of each retained channel</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_channels</span><span class="p">):</span>
+            <span class="k">if</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span><span class="n">i</span><span class="p">])):</span>
+                <span class="n">movements_found</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c"># If onsets in enough channels were found label with positive vale else with negative</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">movements_found</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_channels_above</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span>
+                                <span class="n">prediction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">),</span>
+                                <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;AdaptiveThreshold_Preprocessing&quot;</span><span class="p">:</span> <span class="n">AdaptiveThresholdPreprocessingNode</span><span class="p">,</span>
+                 <span class="s">&quot;AdaptiveThreshold_Classifier&quot;</span><span class="p">:</span> <span class="n">AdaptiveThresholdClassifierNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

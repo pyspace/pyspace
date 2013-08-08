@@ -1,0 +1,240 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.visualization.feature_vector_vis &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.visualization.feature_vector_vis</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Visualize :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` elements&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">mdp.nodes</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+
+<div class="viewcode-block" id="LLEVisNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode">[docs]</a><span class="k">class</span> <span class="nc">LLEVisNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Show a 2d scatter plot of all :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` based on Locally Linear Embedding (LLE) from MDP</span>
+<span class="sd">    </span>
+<span class="sd">    This node collects all training examples it obtains along with their</span>
+<span class="sd">    label. It computes than an embedding of all these examples in a 2d space</span>
+<span class="sd">    using the &quot;Locally Linear Embedding&quot; algorithm and plots a scatter plot of</span>
+<span class="sd">    the examples in this space.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :neighbors:</span>
+<span class="sd">            The number of neighbor vectors that should be considered for each</span>
+<span class="sd">            instance during locally linear embedding</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 15*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        - </span>
+<span class="sd">            node : Time_Series_Source</span>
+<span class="sd">        -</span>
+<span class="sd">            node : All_Train_Splitter</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Time_Domain_Features</span>
+<span class="sd">        -</span>
+<span class="sd">            node : LLE_Vis</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                neighbors : 10</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Nil_Sink</span>
+
+<span class="sd">    Known Issues:</span>
+<span class="sd">    This node will use pylab.show() to show the figure. There is no store</span>
+<span class="sd">    method implemented yet. On Macs, pylab.show() might sometimes fail due to</span>
+<span class="sd">    a wrong plotting backend. A possible workaround in that case is to</span>
+<span class="sd">    manually set the plotting backend to &#39;MacOSX&#39;. This has to be done before</span>
+<span class="sd">    pylab is imported, so one can temporarily add &quot;import matplotlib;</span>
+<span class="sd">    matplotlib.use(&#39;MacOSX&#39;)&quot; to the very beginning of launch.py.</span>
+<span class="sd">                    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/07/07</span>
+<span class="sd">     </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LLEVisNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LLEVisNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+                  <span class="n">neighbors</span> <span class="o">=</span> <span class="n">neighbors</span><span class="p">,</span> 
+                  <span class="c"># A set of colors that can be used to distinguish different classes</span>
+                  <span class="n">colors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&quot;r&quot;</span><span class="p">,</span> <span class="s">&quot;b&quot;</span><span class="p">]),</span>
+                  <span class="c"># A mapping from class label to its color in the plot</span>
+                  <span class="n">class_colors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
+                  <span class="c"># Remembers the classes (colors) of the instances seen</span>
+                  <span class="n">instance_colors</span> <span class="o">=</span> <span class="p">[],</span> 
+                  <span class="c">#</span>
+                  <span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
+                  <span class="p">)</span>  
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+        <span class="n">figure</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span> <span class="mf">0.99</span><span class="p">,</span>
+                               <span class="n">wspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="LLEVisNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="c"># Though this node is not really trainable, it returns true in order</span>
+        <span class="c"># to get trained. The reason is that during this training phase, </span>
+        <span class="c"># it visualizes all samChannel_Visples that are passed as arguments</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="LLEVisNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="LLEVisNode._get_train_set"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._get_train_set">[docs]</a>    <span class="k">def</span> <span class="nf">_get_train_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data that can be used for training &quot;&quot;&quot;</span>
+        <span class="c"># We take data that is provided by the input node for training</span>
+        <span class="c"># NOTE: This might involve training of the preceding nodes</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
+        
+        <span class="c"># Add the data provided by the input node for testing to the</span>
+        <span class="c"># training set</span>
+        <span class="c"># NOTE: This node is not really learning but just collecting all</span>
+        <span class="c">#       examples. Because of that it must take</span>
+        <span class="c">#       all data for training (even when use_test_data is False) </span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">train_set</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">train_set</span>
+    
+    </div>
+<div class="viewcode-block" id="LLEVisNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This node is not really trained but uses the labeled examples  to</span>
+<span class="sd">        generate a scatter plot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>        
+        <span class="c"># Determine color of this class if not yet done</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> 
+        
+        <span class="c"># Stor the given example along with its class (encoded in the color)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instance_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">])</span>
+        
+        </div>
+<div class="viewcode-block" id="LLEVisNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stops the training, i.e. create the 2d representation</span>
+<span class="sd">        </span>
+<span class="sd">        Uses the Locally Linear Embedding algorithm to create a 2d </span>
+<span class="sd">        representation of the data and creates a 2d scatter plot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">instances</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="p">)</span>
+        
+        <span class="c"># Compute LLE and project the data</span>
+        <span class="n">lle_projected_data</span> <span class="o">=</span> <span class="n">mdp</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">LLENode</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neighbors</span><span class="p">,</span>
+                                               <span class="n">output_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">instances</span><span class="p">)</span>
+
+        <span class="c"># Create scatter plot of the projected data</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">lle_projected_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">lle_projected_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span>
+                      <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_colors</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="LLEVisNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;LLE_Vis&quot;</span><span class="p">:</span> <span class="n">LLEVisNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

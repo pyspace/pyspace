@@ -1,0 +1,278 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.meta.consume_training_data &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.meta.consume_training_data</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Splits training data for internal usage and usage of successor nodes </span>
+
+<span class="sd">.. todo:: Documentation: node-name should not be module name: Generalization?</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">repeat</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
+
+<div class="viewcode-block" id="ConsumeTrainingDataNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode">[docs]</a><span class="k">class</span> <span class="nc">ConsumeTrainingDataNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Split training data for internal usage and usage of successor nodes</span>
+<span class="sd">    </span>
+<span class="sd">    This node allows to handle situations where some model needs to be trained </span>
+<span class="sd">    and later on evaluated on the given training data (using test data may not </span>
+<span class="sd">    be allowed for certain reasons). Simply training and evaluating the model</span>
+<span class="sd">    on the same data is not an option, since the evaluation would have a strong</span>
+<span class="sd">    optimistic bias (model is well adapted to the data it was trained on).</span>
+<span class="sd">    </span>
+<span class="sd">    One example of such a situation is when a node chain is trained on the data that</span>
+<span class="sd">    should be combined later on with an ensemble of node chains trained on historic</span>
+<span class="sd">    data. The ensemble training should not happen on the same data as</span>
+<span class="sd">    training.  </span>
+<span class="sd">    </span>
+<span class="sd">    This node therefore splits the training data into two parts: one for internal</span>
+<span class="sd">    use (training the model) and one for usage of successor nodes</span>
+<span class="sd">    (model evaluation). The ratio of training data that should be used </span>
+<span class="sd">    internally can be controlled with the argument *consumption_rate* (a value</span>
+<span class="sd">    between 0.0 and 1.0).</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: </span>
+<span class="sd">            When defining  this node in the pySPACE YAML syntax, &quot;wrapped_node&quot;</span>
+<span class="sd">            can be the definition of a node in YAML syntax (see below).</span>
+<span class="sd">            The node object is then created automatically based on this definition.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">         </span>
+<span class="sd">     :wrapped_node: </span>
+<span class="sd">         The node that is trained with the internally used training data.</span>
+<span class="sd">        </span>
+<span class="sd">     :consumption_rate:</span>
+<span class="sd">        The rate of training data that is used internally for training </span>
+<span class="sd">        *wrapped_node*. The remaining data is supplied for the successor nodes.</span>
+<span class="sd">    </span>
+<span class="sd">     :random_seed:</span>
+<span class="sd">        The seed of the random generator. Defaults to 0.</span>
+<span class="sd">       </span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node: ConsumeTrainingData</span>
+<span class="sd">            parameters : </span>
+<span class="sd">                 consumption_rate : 0.8</span>
+<span class="sd">                 wrapped_node : </span>
+<span class="sd">                      node : Flow_Node</span>
+<span class="sd">                      parameters :</span>
+<span class="sd">                           input_dim : 64</span>
+<span class="sd">                           output_dim : 1</span>
+<span class="sd">                           nodes : </span>
+<span class="sd">                              ......</span>
+<span class="sd">                              </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/08/06</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ConsumeTrainingDataNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wrapped_node</span><span class="p">,</span> <span class="n">consumption_rate</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">wrapped_node</span> <span class="c"># Necessary to determine whether trainable.</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConsumeTrainingDataNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c">#############################################</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">wrapped_node</span><span class="p">,</span>
+                                      <span class="n">consumption_rate</span> <span class="o">=</span> <span class="n">consumption_rate</span><span class="p">,</span>
+                                      <span class="n">internal_training_set</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">external_training_set</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="n">random_seed</span><span class="p">))</span>
+        </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ConsumeTrainingDataNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">node_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates a node based on the node_spec to overwrite default &quot;&quot;&quot;</span>
+        <span class="c"># This node requires one parameters, namely a list of nodes</span>
+        <span class="k">assert</span><span class="p">(</span><span class="s">&quot;parameters&quot;</span> <span class="ow">in</span> <span class="n">node_spec</span> 
+                <span class="ow">and</span> <span class="s">&quot;wrapped_node&quot;</span> <span class="ow">in</span> <span class="n">node_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]),</span>\
+                   <span class="s">&quot;ConsumeTrainingDataNode requires specification of a wrapped node!&quot;</span>
+        <span class="c"># Create all nodes that are packed together in this layer</span>
+        <span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">node_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">][</span><span class="s">&quot;wrapped_node&quot;</span><span class="p">])</span>
+        <span class="n">node_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;wrapped_node&quot;</span><span class="p">)</span>
+        <span class="c"># Create the node object</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">ConsumeTrainingDataNode</span><span class="p">(</span><span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">wrapped_node</span><span class="p">,</span>
+                                           <span class="o">**</span><span class="n">node_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
+            
+        <span class="k">return</span> <span class="n">node_obj</span>
+         </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">is_supervised</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode._get_train_set"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode._get_train_set">[docs]</a>    <span class="k">def</span> <span class="nf">_get_train_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data that can be used for training &quot;&quot;&quot;</span>
+        <span class="c"># We take data that is provided by the input node for training</span>
+        <span class="c"># NOTE: This might involve training of the preceding nodes</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">))</span>
+        
+        <span class="c"># Divide available instances according to label</span>
+        <span class="n">all_instances</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">train_set</span><span class="p">:</span>
+            <span class="n">all_instances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+        
+        <span class="c"># Split into training data used internally and training data that is </span>
+        <span class="c"># available for successor nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">internal_training_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_training_set</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">instances</span> <span class="ow">in</span> <span class="n">all_instances</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
+            <span class="n">split_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">consumption_rate</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">internal_training_set</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[:</span><span class="n">split_index</span><span class="p">],</span>
+                                                  <span class="n">repeat</span><span class="p">(</span><span class="n">label</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">external_training_set</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">split_index</span><span class="p">:],</span>
+                                                  <span class="n">repeat</span><span class="p">(</span><span class="n">label</span><span class="p">)))</span>   
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">internal_training_set</span>
+    </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns data for training of subsequent nodes</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo:: to document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training is requested.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        
+        <span class="c"># If we haven&#39;t computed the data for training yet</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for training.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="c"># Train this node</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_sweep</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
+            
+            <span class="c"># Compute a generator the yields the train data and</span>
+            <span class="c"># encapsulate it in an object that memoizes its outputs and</span>
+            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that&#39;ll</span>
+            <span class="c"># yield the same sequence</span>
+            <span class="n">train_data_generator</span> <span class="o">=</span> \
+                     <span class="n">itertools</span><span class="o">.</span><span class="n">imap</span><span class="p">(</span><span class="k">lambda</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="p">:</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">),</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">external_training_set</span><span class="p">)</span> 
+                     
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">train_data_generator</span><span class="p">,</span>
+                                                      <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span> 
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training finished&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="c"># Return a fresh copy of the generator  </span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Trains the wrapped nodes on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Finish the training of the node.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">stop_training</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the node on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="ConsumeTrainingDataNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.consume_training_data.html#pySPACE.missions.nodes.meta.consume_training_data.ConsumeTrainingDataNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

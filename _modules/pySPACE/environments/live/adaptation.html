@@ -1,0 +1,358 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.live.adaptation &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.live.adaptation</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Script for running threshold adaptation</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+
+<span class="n">online_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;pySPACELiveLogger&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChain</span><span class="p">,</span> <span class="n">NodeChainFactory</span>
+
+
+<div class="viewcode-block" id="LiveAdaptor"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor">[docs]</a><span class="k">class</span> <span class="nc">LiveAdaptor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; The class that performs the threshold to a given</span>
+<span class="sd">        cost function in order to scale the relation of</span>
+<span class="sd">        false positives to false negatives.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="LiveAdaptor.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_active_potential</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pyspace_flow</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_stream_process</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span> <span class="o">=</span> <span class="p">{}</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.set_eeg_stream_manager"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.set_eeg_stream_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_eeg_stream_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream_manager</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span> <span class="o">=</span> <span class="n">stream_manager</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.load_model"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.load_model">[docs]</a>    <span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">datasets</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load only the model &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="o">=</span> <span class="n">directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span> <span class="o">=</span> <span class="n">datasets</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Look for original flow...&quot;</span><span class="p">)</span>
+        <span class="c"># test, if a copy of the original (e.g. without threshold optimization) flow exists</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s">&quot;threshold_adaptation_flow&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">flh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="s">&quot;abri_flow_&quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot;_unadapted.pickle&quot;</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                    <span class="n">flh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                    <span class="c"># there exists no copy of the orignal flow</span>
+                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Create backup copy of original flow&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">copy_flow</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Reloading &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; models ... Done!&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.copy_flow"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.copy_flow">[docs]</a>    <span class="k">def</span> <span class="nf">copy_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">trained_flow_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;train_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">prewindowing_flow_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;prewindowing_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">prewindowing_offline_flow_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;prewindowing_offline_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">prewindowed_train_flow_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;prewindowed_train_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">)</span>
+        <span class="c"># using the trained flow for adaptation</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">trained_flow_path</span><span class="p">):</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copyfile</span><span class="p">(</span><span class="n">trained_flow_path</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="s">&quot;abri_flow_&quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot;_unadapted&quot;</span><span class="p">))</span>
+        <span class="c"># using the prewindowing flow and prewindowed-trained flow for adaptation</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">flh_1</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">flh_2</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">prewindowing_flow</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">postprocessing_flow</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">unadapted_flow</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">prewindowing_flow_path</span><span class="p">):</span>
+                <span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">prewindowing_flow_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">prewindowing_offline_flow_path</span><span class="p">):</span>
+                <span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">prewindowing_offline_flow_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">flh_2</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;prewindowed_train_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flh_2</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">unadapted_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+</span> <span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">flh_2</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">unadapted_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="s">&quot;abri_flow_&quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot;_unadapted&quot;</span><span class="p">),</span> <span class="s">&#39;w+&#39;</span><span class="p">)</span>
+            <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">unadapted_flow</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">unadapted_file</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.prepare_adaptation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.prepare_adaptation">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_adaptation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adaptation_files</span><span class="p">,</span> <span class="n">datasets</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Prepares the threshold adaptation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Preparing Adaptation&quot;</span><span class="p">)</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;adaptation files:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">adaptation_files</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s">&quot;threshold_adaptation_flow&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="n">spec_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">spec_dir</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;threshold_adaptation_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;threshold_adaptation_flow&quot;</span><span class="p">])</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;windower_spec_path:&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_threshold_adaptation&quot;</span><span class="p">])</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;dataflow_spec_&quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot;:&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;threshold_adaptation_flow&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+
+        <span class="c"># start the eeg server</span>
+        <span class="c"># check if multiple datasets are given for adaptation</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">adaptation_files</span><span class="p">,</span><span class="s">&#39;__iter__&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_data</span> <span class="o">=</span> <span class="n">adaptation_files</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Using multiple data sets:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">adaptation_data</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_data</span> <span class="o">=</span> <span class="p">[</span><span class="n">adaptation_files</span><span class="p">]</span>
+
+
+        <span class="c"># Adaptation is done in separate threads, we send the time series</span>
+        <span class="c"># windows to these threads via two queues</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Initializing Queues&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Creating flows&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">flow_generator</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;create a generator to yield all the windows&quot;&quot;&quot;</span>
+            <span class="c"># Yield all windows until a None item is found in the queue</span>
+            <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="n">window</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">block</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">window</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">break</span>
+                <span class="k">yield</span> <span class="n">window</span>
+
+        <span class="c"># Create the actual data flows for S1 vs P3 discrimination</span>
+        <span class="c"># and S1 vs LRP discrimination</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s">&quot;threshold_adaptation_flow&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">aBRI_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">Flow_Class</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">,</span>
+                                                         <span class="n">flow_spec</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;threshold_adaptation_flow&quot;</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">aBRI_flow</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="n">flow_generator</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;threshold adaptation preparations finished&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.queue_filler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.queue_filler">[docs]</a>    <span class="k">def</span> <span class="nf">queue_filler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">label</span><span class="p">,</span><span class="n">key</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;positive_event&#39;</span><span class="p">]:</span>
+            <span class="c"># if the second traget is shown without any resonse,</span>
+            <span class="c"># the previous target was a &quot;Missed&quot;</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;negative_event&#39;</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">elif</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;trigger_event&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;positive_event&#39;</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">elif</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;negative_event&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.adaptation_fct"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.adaptation_fct">[docs]</a>    <span class="k">def</span> <span class="nf">adaptation_fct</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A function that is executed in a separate thread &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">copy_flow</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Adaptation of &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; started&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aBRI_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Adaptation of &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; finished&quot;</span><span class="p">)</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Storing &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; model...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aBRI_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="s">&quot;abri_flow_adapted_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">))</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; Model stored!&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.stream_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.stream_data">[docs]</a>    <span class="k">def</span> <span class="nf">stream_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A function that forwards the data to the worker threads &quot;&quot;&quot;</span>
+        <span class="n">adaptation_data_set_counter</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_data</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Start streaming adaptation dataset &quot;</span> <span class="o">+</span> <span class="n">dataset</span><span class="p">)</span>
+            <span class="c"># Start EEG client</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">start_eeg_stream</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span>
+
+            <span class="c"># create windower</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Creating Windower&quot;</span><span class="p">)</span>
+            <span class="n">spec_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">spec_dir</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_threshold_adaptation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_threshold_adaptation&quot;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">create_windower</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_threshold_adaptation&quot;</span><span class="p">],</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+
+            <span class="n">window_counter</span>  <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+
+            <span class="c"># Put all windows into the queues so that they can be processed by</span>
+            <span class="c"># the two adaptation threads</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Streaming data started&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Got instance number &quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">window_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; with class </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">label</span><span class="p">)</span>
+                <span class="n">window_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c"># Skip the first few adaptation examples since there might be no</span>
+                <span class="c"># clear distinction between standards and targets</span>
+                <span class="k">if</span> <span class="s">&quot;ignore_num_first_examples&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">window_counter</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;ignore_num_first_examples&quot;</span><span class="p">]:</span>
+                        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Ignoring first &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">window_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; training samples&quot;</span><span class="p">)</span>
+                        <span class="k">continue</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">queue_filler</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">label</span><span class="p">,</span><span class="n">key</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">adaptation_data_set_counter</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Dataset number&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">adaptation_data_set_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;streamed&quot;</span><span class="p">)</span>
+
+            <span class="n">adaptation_data_set_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Streaming data finished&quot;</span><span class="p">)</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span> <span class="s">&quot;Submit stream end data item...&quot;</span><span class="p">)</span>
+
+        <span class="c"># Put a None into the queues to stop classification threads</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span> <span class="s">&quot;Stream end data item submitted&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.start_adaptation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.start_adaptation">[docs]</a>    <span class="k">def</span> <span class="nf">start_adaptation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Adapts the threshold to a specified error function&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s">&quot;threshold_adaptation_flow&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_stream_process</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="c"># Stream the data</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data_stream_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_data</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">key</span><span class="p">,))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data_stream_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="c"># Start two threads for adaptation</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_fct</span><span class="p">,</span> <span class="n">args</span> <span class="o">=</span> <span class="p">(</span><span class="n">key</span><span class="p">,))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">stop_server</span><span class="p">()</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;EEG manager stopped!&quot;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="LiveAdaptor.is_adaptation_active"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.is_adaptation_active">[docs]</a>    <span class="k">def</span> <span class="nf">is_adaptation_active</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether adaptation is finished or still running &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">adaptation_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="LiveAdaptor.stop_adaptation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.stop_adaptation">[docs]</a>    <span class="k">def</span> <span class="nf">stop_adaptation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Force the end of the adaptation &quot;&quot;&quot;</span>
+        <span class="c"># We stop the pyspace adaptation by disconnecting the EEG stream from it</span>
+        <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Cancelling data transfer&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Stopping adaptation ...&quot;</span><span class="p">)</span>
+
+        <span class="c"># Wait until pysapce has finished adaptation</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span> <span class="s">&quot;Check if adaptation is still active ...&quot;</span><span class="p">)</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_adaptation_active</span><span class="p">():</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span> <span class="s">&quot;Adaptation is still active ...&quot;</span><span class="p">)</span>
+
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Adaptation finished&quot;</span><span class="p">)</span>
+
+        <span class="c"># Close the EEG client&#39;s socket</span>
+        <span class="k">return</span> <span class="mi">0</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

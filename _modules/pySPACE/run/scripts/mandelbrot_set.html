@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.run.scripts.mandelbrot_set &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.run.scripts.mandelbrot_set</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Example module that can be used with the :mod:`~pySPACE.missions.operations.generic` operation.</span>
+
+<span class="sd">This module shows how the mandelbrot set can be computed in a distributed </span>
+<span class="sd">fashion. For this, it is required that two module-level</span>
+<span class="sd">functions are defined: &quot;process&quot; and &quot;consolidate&quot;. The actual subpart of </span>
+<span class="sd">the computation is  performed by the function &quot;process&quot; (which is called once</span>
+<span class="sd">for each process) and the function &quot;consolidate&quot; is called once at the end</span>
+<span class="sd">of an operation and is responsible for merging the results of the</span>
+<span class="sd">sub-computations into the the overall result.</span>
+<span class="sd">    </span>
+<span class="sd">:Author:  Jan Hendrik Metzen</span>
+<span class="sd">:Created: 2012/11/30</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">ogrid</span><span class="p">,</span> <span class="n">zeros</span><span class="p">,</span> <span class="n">conj</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<div class="viewcode-block" id="process"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.scripts.mandelbrot_set.html#pySPACE.run.scripts.mandelbrot_set.process">[docs]</a><span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="n">process_id</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="n">parameter_setting</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Perform computation for specific configuration and store results.</span>
+<span class="sd">    </span>
+<span class="sd">    This function is called once per process for the specific configuration.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :process_id:</span>
+<span class="sd">            Globally unique id of this process. Might be used e.g. for</span>
+<span class="sd">            creating a file into which the results of this function are stored.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">            </span>
+<span class="sd">        :result_directory:</span>
+<span class="sd">            Directory into which the results of the computation of this</span>
+<span class="sd">            function are stored.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">            </span>
+<span class="sd">        :config:</span>
+<span class="sd">            Configuration parameters. All parameters which parametrize the </span>
+<span class="sd">            actual computation MUST go into this dictionary.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">            </span>
+<span class="sd">        :parameter_setting:</span>
+<span class="sd">            Dictionary containing the mapping from parameter name (must be </span>
+<span class="sd">            contained in configuration_template string) to parameter value.</span>
+<span class="sd">            The specific parameter values define this particular computation.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># This function needs to be implemented! Replace the following lines </span>
+    <span class="c"># by your own implementation!</span>
+    
+    <span class="c"># Example showing the computation of the mandelbrot set where different</span>
+    <span class="c"># rectangular patches of the set are computed in different processes</span>
+    <span class="c"># Code is based on http://www.scipy.org/Tentative_NumPy_Tutorial/Mandelbrot_Set_Example</span>
+    <span class="k">def</span> <span class="nf">mandelbrot</span><span class="p">(</span><span class="n">xind</span><span class="p">,</span> <span class="n">yind</span><span class="p">,</span> <span class="n">xstep</span><span class="p">,</span> <span class="n">ystep</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">maxit</span><span class="o">=</span><span class="mi">50</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns an image of the Mandelbrot fractal of size (h,w).&quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="p">,</span><span class="n">x</span> <span class="o">=</span> <span class="n">ogrid</span><span class="p">[(</span><span class="o">-</span><span class="mf">1.4</span><span class="o">+</span><span class="n">yind</span><span class="o">*</span><span class="n">ystep</span><span class="p">):(</span><span class="o">-</span><span class="mf">1.4</span><span class="o">+</span><span class="p">(</span><span class="n">yind</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">ystep</span><span class="p">):(</span><span class="n">h</span><span class="o">*</span><span class="mi">1j</span><span class="p">),</span>
+                    <span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="o">+</span><span class="n">xind</span><span class="o">*</span><span class="n">xstep</span><span class="p">):(</span><span class="o">-</span><span class="mf">2.0</span><span class="o">+</span><span class="p">(</span><span class="n">xind</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">ystep</span><span class="p">):(</span><span class="n">w</span><span class="o">*</span><span class="mi">1j</span><span class="p">)]</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="o">*</span><span class="mi">1j</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">c</span>
+        <span class="n">divtime</span> <span class="o">=</span> <span class="n">maxit</span> <span class="o">+</span> <span class="n">zeros</span><span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">maxit</span><span class="p">):</span>
+            <span class="n">z</span>  <span class="o">=</span> <span class="n">z</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">c</span>
+            <span class="n">diverge</span> <span class="o">=</span> <span class="n">z</span><span class="o">*</span><span class="n">conj</span><span class="p">(</span><span class="n">z</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="o">**</span><span class="mi">2</span>            <span class="c"># who is diverging</span>
+            <span class="n">div_now</span> <span class="o">=</span> <span class="n">diverge</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">divtime</span><span class="o">==</span><span class="n">maxit</span><span class="p">)</span>  <span class="c"># who is diverging now</span>
+            <span class="n">divtime</span><span class="p">[</span><span class="n">div_now</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>                  <span class="c"># note when</span>
+            <span class="n">z</span><span class="p">[</span><span class="n">diverge</span><span class="p">]</span> <span class="o">=</span> <span class="mi">2</span>                        <span class="c"># avoid diverging too much</span>
+
+        <span class="k">return</span> <span class="n">divtime</span>
+        
+    <span class="c"># Compute subpart of the mandelbrot set</span>
+    <span class="n">mb_part</span> <span class="o">=</span> <span class="n">mandelbrot</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s">&quot;xind&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s">&quot;yind&quot;</span><span class="p">],</span> <span class="n">config</span><span class="p">[</span><span class="s">&quot;xstep&quot;</span><span class="p">],</span> 
+                         <span class="n">config</span><span class="p">[</span><span class="s">&quot;ystep&quot;</span><span class="p">],</span> <span class="n">h</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s">&quot;resolution&quot;</span><span class="p">],</span>
+                         <span class="n">w</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s">&quot;resolution&quot;</span><span class="p">])</span>
+        
+    <span class="c"># Serialize the result</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">result_directory</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="n">process_id</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">((</span><span class="n">parameter_setting</span><span class="p">,</span> <span class="n">mb_part</span><span class="p">),</span> <span class="n">f</span><span class="p">,</span> 
+                 <span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>                               
+    </div>
+<div class="viewcode-block" id="consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.run.scripts.mandelbrot_set.html#pySPACE.run.scripts.mandelbrot_set.consolidate">[docs]</a><span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="n">result_directory</span><span class="p">,</span> <span class="n">config_template</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Consolidates results of single processes.</span>
+<span class="sd">    </span>
+<span class="sd">    This function is called once per operation.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :process_id:</span>
+<span class="sd">            Globally unique id of this process. Might be used e.g. for</span>
+<span class="sd">            creating a file into which the results of this function are stored.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">        :result_directory:</span>
+<span class="sd">            Directory into which the results of the computation of this</span>
+<span class="sd">            function are stored.</span>
+<span class="sd">            </span>
+<span class="sd">            (*obligatory*)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># This function needs to be implemented! Replace the following lines </span>
+    <span class="c"># by your own implementation!</span>
+    
+    <span class="c"># Merging subslices of the mandelbrot set</span>
+    <span class="n">resolution</span> <span class="o">=</span> <span class="n">config_template</span><span class="p">[</span><span class="s">&quot;resolution&quot;</span><span class="p">]</span>
+    
+    <span class="n">subresults</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">result_directory</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;*.pickle&quot;</span><span class="p">)</span>
+    <span class="n">mb</span> <span class="o">=</span> <span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">subresults</span><span class="p">)</span><span class="o">**.</span><span class="mi">5</span><span class="o">*</span><span class="n">resolution</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">subresults</span><span class="p">)</span><span class="o">**.</span><span class="mi">5</span><span class="o">*</span><span class="n">resolution</span><span class="p">),</span> 
+                <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">subresult</span> <span class="ow">in</span> <span class="n">subresults</span><span class="p">:</span>
+        <span class="n">parameter_setting</span><span class="p">,</span> <span class="n">mb_part</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">subresult</span><span class="p">))</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">subresult</span><span class="p">)</span>
+        
+        <span class="n">xind</span> <span class="o">=</span> <span class="n">parameter_setting</span><span class="p">[</span><span class="s">&quot;__XIND__&quot;</span><span class="p">]</span>
+        <span class="n">yind</span> <span class="o">=</span> <span class="n">parameter_setting</span><span class="p">[</span><span class="s">&quot;__YIND__&quot;</span><span class="p">]</span>
+        <span class="n">mb</span><span class="p">[</span><span class="n">xind</span><span class="o">*</span><span class="n">resolution</span><span class="p">:(</span><span class="n">xind</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">resolution</span><span class="p">,</span>
+           <span class="n">yind</span><span class="o">*</span><span class="n">resolution</span><span class="p">:(</span><span class="n">yind</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">resolution</span><span class="p">]</span> <span class="o">=</span> <span class="n">mb_part</span><span class="o">.</span><span class="n">T</span>
+    
+    <span class="c"># Plot and store set as graphic</span>
+    <span class="kn">from</span> <span class="nn">scipy</span> <span class="kn">import</span> <span class="n">misc</span>
+    <span class="n">misc</span><span class="o">.</span><span class="n">imsave</span><span class="p">(</span><span class="n">result_directory</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;mb.pdf&quot;</span><span class="p">,</span> <span class="n">mb</span><span class="p">)</span>
+
+
+<span class="c"># Note that we could run the script easily without using pySPACE; however, this</span>
+<span class="c"># would become impractical for higher resolutions</span></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">result_directory</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&quot;tempfile&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">mkdtemp</span><span class="p">()</span>
+    
+    <span class="n">process_id</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">xind</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">yind</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;xind&quot;</span> <span class="p">:</span> <span class="n">xind</span><span class="p">,</span> <span class="s">&quot;yind&quot;</span> <span class="p">:</span> <span class="n">yind</span><span class="p">,</span> <span class="s">&quot;xstep&quot;</span> <span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span> 
+                      <span class="s">&quot;ystep&quot;</span> <span class="p">:</span> <span class="mf">0.4</span><span class="p">,</span> <span class="s">&quot;resolution&quot;</span> <span class="p">:</span> <span class="mi">200</span><span class="p">}</span>
+            <span class="n">process</span><span class="p">(</span><span class="n">process_id</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> 
+                    <span class="p">{</span><span class="s">&quot;__XIND__&quot;</span><span class="p">:</span> <span class="n">xind</span><span class="p">,</span> <span class="s">&quot;__YIND__&quot;</span><span class="p">:</span> <span class="n">yind</span><span class="p">})</span>
+            
+            <span class="n">process_id</span> <span class="o">+=</span> <span class="mi">1</span>
+            
+    <span class="n">consolidate</span><span class="p">(</span><span class="n">result_directory</span><span class="p">,</span> <span class="p">{</span><span class="s">&quot;resolution&quot;</span><span class="p">:</span> <span class="mi">200</span><span class="p">})</span>
+    
+    <span class="k">print</span> <span class="s">&quot;Result is stored in directory: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">result_directory</span>
+    
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

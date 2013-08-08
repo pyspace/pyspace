@@ -1,0 +1,616 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.classification.ensemble &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.classification.ensemble</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Ensemble classifiers</span>
+
+<span class="sd">http://en.wikipedia.org/wiki/Ensemble_learning</span>
+
+<span class="sd">Current implementations use gating for training ensemble methods.</span>
+
+<span class="sd">Each gating function expects as input a special kind of </span>
+<span class="sd">:class:`~pySPACE.resources.data_types.prediction_vector.PredictionVector`: Each</span>
+<span class="sd">component in the vector should correspond to the classification of one node chain</span>
+<span class="sd">of the ensembles (i.e. the dimensionality should be equal to the cardinality</span>
+<span class="sd">of the ensemble and each value of the vector should be one of the prediction</span>
+<span class="sd">scores and you should get a list of labels).</span>
+
+<span class="sd">This can be created using the</span>
+<span class="sd">:class:`~pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoader`</span>
+<span class="sd">or the</span>
+<span class="sd">:class:`~pySPACE.missions.nodes.meta.same_input_layer.SameInputLayerNode`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">import</span> <span class="nn">heapq</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="c"># the output is of Gating Functions is a prediction vector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+
+<div class="viewcode-block" id="ProbVotingGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ProbVotingGatingNode">[docs]</a><span class="k">class</span> <span class="nc">ProbVotingGatingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Add up prediction values for labels to find out most probable label </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :enforce_absolute_values:</span>
+<span class="sd">            Switch to map the prediction values to their absolute value.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default:False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : ProbVotingGating</span>
+
+<span class="sd">    :Author: Mario M. Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/10/01</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ProbVotingGatingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ProbVotingGatingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enforce_absolute_values</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ProbVotingGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">enforce_absolute_values</span><span class="o">=</span><span class="n">enforce_absolute_values</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="ProbVotingGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ProbVotingGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Label with highest sum of prediction values wins &quot;&quot;&quot;</span>
+        <span class="n">pred</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enforce_absolute_values</span><span class="p">:</span>
+                <span class="n">pred</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">pred</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">pred</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">best</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span><span class="o">=</span><span class="n">best</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                <span class="n">label</span><span class="o">=</span><span class="n">best</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="LabelVotingGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.LabelVotingGatingNode">[docs]</a><span class="k">class</span> <span class="nc">LabelVotingGatingNode</span><span class="p">(</span><span class="n">ProbVotingGatingNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gating function to classify based on the majority vote</span>
+<span class="sd">    </span>
+<span class="sd">    This gating function counts how often each class occurs in the feature</span>
+<span class="sd">    vectors. It assigns the instance to the class that got the most votes.</span>
+<span class="sd">    It does not require training.</span>
+<span class="sd">    If there is no clear vote, the base class is used.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">    see: base node documentation</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : LabelVotingGating</span>
+
+<span class="sd">    :Author: Mario M. Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/10/01</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="c">#    def __init__(self, **kwargs):</span>
+<span class="c">#        super(VotingGatingNode, self).__init__(**kwargs)</span>
+
+<div class="viewcode-block" id="LabelVotingGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.LabelVotingGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="n">prediction_value</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">prediction</span> <span class="k">for</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">])</span>
+        
+        <span class="n">votes_counter</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">:</span>
+            <span class="n">votes_counter</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">voting</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">votes</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">votes</span> <span class="ow">in</span> <span class="n">votes_counter</span><span class="o">.</span><span class="n">iteritems</span><span class="p">())</span>
+        <span class="n">max_label</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">votes</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">voting</span> <span class="k">if</span> <span class="n">votes</span> <span class="o">==</span> <span class="n">voting</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">max_label</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">majority_vote</span> <span class="o">=</span> <span class="n">voting</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span><span class="o">=</span><span class="n">prediction_value</span><span class="p">,</span>
+                                    <span class="n">label</span><span class="o">=</span><span class="n">majority_vote</span><span class="p">,</span> <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">relevant_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">index</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">max_label</span><span class="p">]</span>
+            <span class="n">new_data</span> <span class="o">=</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">relevant_indices</span><span class="p">],</span> 
+                                <span class="n">label</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">relevant_indices</span><span class="p">],</span> 
+                                <span class="n">predictor</span> <span class="o">=</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">relevant_indices</span><span class="p">])</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">LabelVotingGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">new_data</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode">[docs]</a><span class="k">class</span> <span class="nc">PrecisionWeightedGatingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gating function to classify based on weighted majority vote</span>
+<span class="sd">    </span>
+<span class="sd">    This gating function computes weights for the ensemble&#39;s classification results based on</span>
+<span class="sd">    training data. These weights are set based on the relative</span>
+<span class="sd">    precision (compared to the other classification results) on the predicted class.</span>
+<span class="sd">    If more than *required_vote_ratio* of the sum of weighted votes are for class</span>
+<span class="sd">    1, than this node classifies as class 1 from *class_labels*, else as</span>
+<span class="sd">    class 2 from *class_labels*.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of the two classes.</span>
+<span class="sd">            This is important, when you want that the prediction</span>
+<span class="sd">            value is negative for the first class and</span>
+<span class="sd">            positive for the other one.</span>
+<span class="sd">            Here it is used to define the relevant class</span>
+<span class="sd">            for the voting.</span>
+<span class="sd">    </span>
+<span class="sd">        :required_vote_ratio:</span>
+<span class="sd">            Determines the value the weighted sum of votes has to exceed</span>
+<span class="sd">            to classify for the first class.</span>
+<span class="sd">            The acceptable range is from zero to one,</span>
+<span class="sd">            where zero means, classification is always class one</span>
+<span class="sd">            and one means, classification is class two if and only if</span>
+<span class="sd">            all the votes are for class one. </span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default: 0.5*)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Precision_Weighted_Gating_Function</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">                required_vote_ratio : 0.25</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/05/21</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span><span class="p">,</span> <span class="n">required_vote_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecisionWeightedGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">class_labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> \
+               <span class="s">&quot;</span><span class="si">%s</span><span class="s"> can only be used for binary classification tasks!&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span> <span class="o">=</span> <span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">required_vote_ratio</span> <span class="o">=</span> <span class="n">required_vote_ratio</span><span class="p">,</span>
+                                      <span class="n">classification_counter</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">correct_classification_counter</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">weights</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+   </div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classification_counter</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classification_counter</span> <span class="o">=</span> <span class="p">[</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">))]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span> <span class="o">=</span> <span class="p">[</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">))]</span>
+            
+        
+        <span class="k">for</span> <span class="n">index1</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">)):</span>
+            <span class="c"># Count how often each classifier (index1) classifies instances to the</span>
+            <span class="c"># two classes </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classification_counter</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">index1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">+=</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">index1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="n">class_label</span><span class="p">:</span>
+                <span class="c"># Count the how often each classifier (index1) classifies instances</span>
+                <span class="c"># of the two classes correctly</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">[</span><span class="n">index1</span><span class="p">][</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">index1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span> <span class="o">+=</span><span class="mi">1</span>
+        </div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="c"># Initialization</span>
+        <span class="n">precisions</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">))]</span>
+        <span class="n">acc_precision</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="p">[</span><span class="nb">dict</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">))]</span>
+        
+        <span class="k">for</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">)):</span>
+                <span class="c"># Compute the precision of classifier &quot;i&quot; on class &quot;class_label&quot;</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classification_counter</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">precision</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">])</span>\
+                                <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">classification_counter</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">precision</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">precisions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">precision</span>
+                <span class="c"># Compute the accumulated precision</span>
+                <span class="n">acc_precision</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">precision</span>
+                
+            <span class="c"># Set weights to their relative contribution to the</span>
+            <span class="c"># accumulated precision.</span>
+            <span class="c"># Note: This is not a very well-founded way of computing weights</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">correct_classification_counter</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">acc_precision</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span> <span class="o">=</span>  <span class="n">precisions</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span> <span class="o">/</span> <span class="n">acc_precision</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;ZeroDevision problem occurred. Check Classifiers for class </span><span class="si">%s</span><span class="s">.&quot;</span><span class="o">%</span><span class="n">class_label</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">class_label</span><span class="p">]</span> <span class="o">=</span>  <span class="mi">1</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">PrecisionWeightedGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="PrecisionWeightedGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.PrecisionWeightedGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="c"># Count weighted votes for the two classes       </span>
+        <span class="n">votes_counter</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">):</span>
+            <span class="n">votes_counter</span><span class="p">[</span><span class="n">prediction</span><span class="p">]</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="n">prediction</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+        
+        <span class="c"># Compute ratio of votes that voted for class 1</span>
+        <span class="n">vote_ratio</span> <span class="o">=</span> \
+            <span class="nb">float</span><span class="p">(</span><span class="n">votes_counter</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">votes_counter</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+        
+        <span class="c"># If this ratio is above the threshold &quot;self.required_vote_ratio&quot;,</span>
+        <span class="c"># classify instance as class 1 else as class 2</span>
+        <span class="n">vote</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">vote_ratio</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">required_vote_ratio</span> \
+                        <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span> <span class="o">=</span> <span class="n">vote_ratio</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">vote</span><span class="p">,</span> <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+    </div></div>
+<div class="viewcode-block" id="ChampionGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode">[docs]</a><span class="k">class</span> <span class="nc">ChampionGatingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gating function to classify with the classifier that performs best on training data</span>
+<span class="sd">    </span>
+<span class="sd">    This gating function evaluates the ensemble classifiers on the training data.</span>
+<span class="sd">    It picks the classifier that maximizes the F-Measure on the *relevant_class*</span>
+<span class="sd">    and uses this one to classify instances from the test data.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :relevant_class:</span>
+<span class="sd">            Determines the class being relevant for the F-measure calculation.</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default: first occurring class in training phase*)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Champion_Gating_Function</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                relevant_class : &quot;Target&quot;</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/05/21</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ChampionGatingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">relevant_class</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ChampionGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">relevant_class</span> <span class="o">=</span> <span class="n">relevant_class</span><span class="p">,</span>
+                                      <span class="n">confusion_matrix</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">chosen_index</span> <span class="o">=</span>  <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ChampionGatingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="ChampionGatingNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="ChampionGatingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_class</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relevantclass</span><span class="o">=</span><span class="n">label</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span> <span class="o">=</span> <span class="p">[</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">))]</span>
+                    
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_class</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_class</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+=</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;fp&quot;</span><span class="p">]</span> <span class="o">+=</span><span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tn&quot;</span><span class="p">]</span> <span class="o">+=</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;fn&quot;</span><span class="p">]</span> <span class="o">+=</span><span class="mi">1</span>
+                    </div>
+<div class="viewcode-block" id="ChampionGatingNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Compute the  f-measures on the chosen class</span>
+        <span class="n">f_measures</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;fp&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">precision</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;fp&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">precision</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">recall</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;tp&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">confusion_matrix</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="s">&quot;fn&quot;</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">precision</span> <span class="o">+</span> <span class="n">recall</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">f_measures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">precision</span><span class="o">*</span><span class="n">recall</span><span class="o">/</span><span class="p">(</span><span class="n">precision</span> <span class="o">+</span> <span class="n">recall</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">f_measures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        
+        <span class="c"># Choose classifier that maximizes F-Measure</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chosen_index</span> <span class="o">=</span> <span class="n">f_measures</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">f_measures</span><span class="p">))</span>
+        
+    </div>
+<div class="viewcode-block" id="ChampionGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.ChampionGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector *data* &quot;&quot;&quot;</span>
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">chosen_index</span><span class="p">],</span> <span class="n">label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">chosen_index</span><span class="p">],</span>
+            <span class="n">predictor</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">chosen_index</span><span class="p">])</span>
+    </div></div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode">[docs]</a><span class="k">class</span> <span class="nc">RidgeRegressionGatingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gating function using ridge regression to learn weighting</span>
+<span class="sd">    </span>
+<span class="sd">    This method performs ridge regression solving the linear least</span>
+<span class="sd">    squares solution with Tikhonov regularization:</span>
+<span class="sd">    weights = (A^TA + Tau^T Tau)^-1 * A^T b</span>
+<span class="sd">    where A is the feature matrix, b is the class vector and Tau is</span>
+<span class="sd">    the Tikhonov regularization matrix.</span>
+<span class="sd">    It classifies as class 1 from *class_labels* if the dot product of </span>
+<span class="sd">    weights and data is larger than the the *classification_threshold* else</span>
+<span class="sd">    as class 2 from *class_labels*.    </span>
+<span class="sd">    </span>
+<span class="sd">    The regularization matrix is diag(regularization_coefficient**0.5).</span>
+
+<span class="sd">    .. todo:: Implement the usage of prediction values</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of the two classes.</span>
+<span class="sd">            This is important, when you want that the prediction</span>
+<span class="sd">            value is negative for the first class and</span>
+<span class="sd">            positive for the other one.</span>
+<span class="sd">            Here it is used to define the relevant class</span>
+<span class="sd">            where the resulting voting value has to exceed the threshold.</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default:[&quot;Standard&quot;,&quot;Target&quot;]*)</span>
+<span class="sd">    </span>
+<span class="sd">        :use_labels:</span>
+<span class="sd">            Should determine whether the labels are mapped to </span>
+<span class="sd">            -1 and 1 or if the prediction value is used.</span>
+<span class="sd">            NOT yet implemented!</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default:True*)</span>
+<span class="sd">    </span>
+<span class="sd">        :regularization_coefficient:</span>
+<span class="sd">            Necessary parameter of the Tikhanov regularization.</span>
+<span class="sd">            As a default this is not active.</span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default:0.0*)</span>
+<span class="sd">    </span>
+<span class="sd">        :classification_threshold:</span>
+<span class="sd">            Threshold which has to be exceeded by regression,</span>
+<span class="sd">            such that the sample is classified with the second class. </span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default:0.0*)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Ridge_Regression_Gating_Function</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">                regularization_coefficien : 0.0</span>
+<span class="sd">                classification_threshold : 0.2</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/05/21</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RidgeRegressionGatingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;Standard&quot;</span><span class="p">,</span><span class="s">&quot;Target&quot;</span><span class="p">],</span> <span class="n">use_labels</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">regularization_coefficient</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> 
+                 <span class="n">classification_threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RidgeRegressionGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span> <span class="o">=</span> <span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">use_labels</span> <span class="o">=</span> <span class="n">use_labels</span><span class="p">,</span>
+                                      <span class="n">regularization_coefficient</span> <span class="o">=</span> <span class="n">regularization_coefficient</span><span class="p">,</span>
+                                      <span class="n">classification_threshold</span> <span class="o">=</span> <span class="n">classification_threshold</span><span class="p">,</span>
+                                      <span class="n">A</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">b</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">weights</span><span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+   </div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="c"># Collect data and corresponding class labels in two lists</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="p">[]</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_labels</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="s">&quot;__len__&quot;</span><span class="p">))</span>
+            <span class="c"># TODO: Check mapping</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span><span class="o">*</span><span class="mi">2</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+                              <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="c"># This method performs ridge regression solving the linear least</span>
+        <span class="c"># squares solution with  Tikhonov regularization:</span>
+        <span class="c"># weights = (A^TA + Tau^T Tau)^-1 * A^T b</span>
+        <span class="c"># where Tau is the Tikhonov regularization matrix</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">,</span> \
+               <span class="s">&quot;</span><span class="si">%s</span><span class="s"> can only be used for binary classification tasks!&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
+        
+        <span class="n">tau</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diag</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">regularization_coefficient</span> 
+                                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])])</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weights</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">A</span><span class="p">)</span> <span class="o">+</span> <span class="n">tau</span><span class="p">),</span>
+                                        <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">b</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">LinAlgError</span><span class="p">(</span><span class="s">&quot;Singular matrix. Choose a larger &quot;</span>
+                                              <span class="s">&quot;regularization coefficient!&quot;</span><span class="p">)</span> 
+            
+        <span class="nb">super</span><span class="p">(</span><span class="n">RidgeRegressionGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="RidgeRegressionGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.RidgeRegressionGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector *data* </span>
+<span class="sd">        </span>
+<span class="sd">        Classifies as class 1 if the dot product of weights and data</span>
+<span class="sd">        is larger than the the classification threshold else as class 2.       </span>
+<span class="sd">        .. todo:: Check mapping&quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span><span class="o">*</span><span class="mi">2</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weights</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="n">vote</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">value</span> <span class="o">&gt;</span>  <span class="bp">self</span><span class="o">.</span><span class="n">classification_threshold</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">prediction</span> <span class="o">=</span> <span class="n">value</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">vote</span><span class="p">,</span> <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+        
+        </div></div>
+<div class="viewcode-block" id="KNNGatingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode">[docs]</a><span class="k">class</span> <span class="nc">KNNGatingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Gating function based on k-Nearest-Neighbors</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :n: Number of considered neighbors</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: 1*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : :KNN_Gating_Function</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                n : 1</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/05/21</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="KNNGatingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">KNNGatingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">n</span> <span class="o">=</span> <span class="n">n</span><span class="p">,</span>
+                                      <span class="n">training_examples</span> <span class="o">=</span> <span class="p">[])</span>
+</div>
+<div class="viewcode-block" id="KNNGatingNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="KNNGatingNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="KNNGatingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_examples</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="KNNGatingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.ensemble.html#pySPACE.missions.nodes.classification.ensemble.KNNGatingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector *data* &quot;&quot;&quot;</span>
+        <span class="n">distance_fct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="nb">sum</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">!=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">)))</span>
+        <span class="n">label_distance</span> <span class="o">=</span> <span class="p">((</span><span class="n">label</span><span class="p">,</span> <span class="n">distance_fct</span><span class="p">(</span><span class="n">training_data</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span><span class="p">))</span> 
+                           <span class="k">for</span> <span class="n">training_data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_examples</span><span class="p">)</span>
+        <span class="n">n_smallest_labels</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> 
+                               <span class="n">heapq</span><span class="o">.</span><span class="n">nsmallest</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">,</span> <span class="n">label_distance</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="n">votes_counter</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">n_smallest_labels</span><span class="p">:</span>
+            <span class="n">votes_counter</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">voting</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">((</span><span class="n">votes</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">votes</span> <span class="ow">in</span> <span class="n">votes_counter</span><span class="o">.</span><span class="n">iteritems</span><span class="p">())</span>
+        <span class="n">majority_vote</span> <span class="o">=</span> <span class="n">voting</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="n">majority_vote</span><span class="p">,</span> <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Voting_Gating_Function&quot;</span><span class="p">:</span> <span class="n">LabelVotingGatingNode</span><span class="p">,</span>
+                <span class="s">&quot;Precision_Weighted_Gating_Function&quot;</span> <span class="p">:</span> <span class="n">PrecisionWeightedGatingNode</span><span class="p">,</span>
+                <span class="s">&quot;Champion_Gating_Function&quot;</span> <span class="p">:</span> <span class="n">ChampionGatingNode</span><span class="p">,</span>
+                <span class="s">&quot;Ridge_Regression_Gating_Function&quot;</span><span class="p">:</span> <span class="n">RidgeRegressionGatingNode</span><span class="p">,</span>
+                <span class="s">&quot;KNN_Gating_Function&quot;</span> <span class="p">:</span> <span class="n">KNNGatingNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

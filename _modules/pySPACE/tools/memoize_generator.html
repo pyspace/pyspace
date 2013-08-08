@@ -1,0 +1,169 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tools.memoize_generator &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tools.memoize_generator</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; This module contains a class that provides memoization support for</span>
+<span class="sd">generator. Most likely there would be cleaner and more general</span>
+<span class="sd">ways of doing this but for the moment is suffices... </span>
+
+<span class="sd">Meaning of this method:</span>
+<span class="sd">https://secure.wikimedia.org/wikipedia/en/wiki/Memoization</span>
+
+<span class="sd">:Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2008/11/25</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<div class="viewcode-block" id="MemoizeGeneratorNotRefreshableException"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.memoize_generator.html#pySPACE.tools.memoize_generator.MemoizeGeneratorNotRefreshableException">[docs]</a><span class="k">class</span> <span class="nc">MemoizeGeneratorNotRefreshableException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="MemoizeGenerator"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.memoize_generator.html#pySPACE.tools.memoize_generator.MemoizeGenerator">[docs]</a><span class="k">class</span> <span class="nc">MemoizeGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Object to encapsulate a generator so that one iterate over</span>
+<span class="sd">    the generators output several time. The output is computed</span>
+<span class="sd">    only once and then stored in a cache. Be careful in cases where</span>
+<span class="sd">    the generator might produce memory-intensive outputs!</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="MemoizeGenerator.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.memoize_generator.html#pySPACE.tools.memoize_generator.MemoizeGenerator.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">generator</span><span class="p">,</span> <span class="n">caching</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stores the generator and creates an empty cache</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: </span>
+<span class="sd">                Since the output of the generator is ordered,</span>
+<span class="sd">                the cache is an ordered sequence of variable length like a list</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator</span> <span class="o">=</span> <span class="n">generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">caching</span> <span class="o">=</span> <span class="n">caching</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">refreshable</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache</span> <span class="o">=</span> <span class="p">[]</span>
+        </div>
+<div class="viewcode-block" id="MemoizeGenerator._fetch_from_generator"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.memoize_generator.html#pySPACE.tools.memoize_generator.MemoizeGenerator._fetch_from_generator">[docs]</a>    <span class="k">def</span> <span class="nf">_fetch_from_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fetches one fresh value from the generator, store it in the</span>
+<span class="sd">        cache and yield it</span>
+<span class="sd">        &quot;&quot;&quot;</span> 
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">nextValue</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nextValue</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">refreshable</span> <span class="o">=</span> <span class="bp">False</span>
+                
+            <span class="k">yield</span> <span class="n">nextValue</span>
+        </div>
+<div class="viewcode-block" id="MemoizeGenerator.fresh"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.memoize_generator.html#pySPACE.tools.memoize_generator.MemoizeGenerator.fresh">[docs]</a>    <span class="k">def</span> <span class="nf">fresh</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return one generator that yields the same values</span>
+<span class="sd">        like the internal one that was passed to __init__. </span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: It does not recompute values that have already</span>
+<span class="sd">            been requested before but just uses these from the internal cache.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: Calling fresh invalidates all existing </span>
+<span class="sd">                generators that have been created before using this method,</span>
+<span class="sd">                i.e. there can only be one generator at a time </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">,</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">_fetch_from_generator</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">refreshable</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">MemoizeGeneratorNotRefreshableException</span><span class="p">(</span> <span class="s">&quot;This MemoizeGenerator does not cache elements from the generator and can thus not be reset&quot;</span><span class="p">)</span> 
+                
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fetch_from_generator</span><span class="p">()</span>
+        </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,424 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.backends.mpi_backend &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.backends.mpi_backend</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Distribute the processes on a High Performance Cluster</span>
+
+<span class="sd">Very simple Implementation.</span>
+
+<span class="sd">.. todo:: Documentation</span>
+
+<span class="sd">:Author: Yohannes Kassahun (kassahun@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2011/01/11</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">logging.handlers</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+<span class="kn">from</span> <span class="nn">pySPACE.environments.backends.base</span> <span class="kn">import</span> <span class="n">Backend</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.progressbar</span> <span class="kn">import</span> <span class="n">ProgressBar</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">,</span> <span class="n">ETA</span><span class="p">,</span> <span class="n">Bar</span>
+
+
+<div class="viewcode-block" id="MpiBackend"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend">[docs]</a><span class="k">class</span> <span class="nc">MpiBackend</span><span class="p">(</span><span class="n">Backend</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    A message passing interface (mpi) backend to pySPACE</span>
+<span class="sd">    </span>
+<span class="sd">    In order to use this backend, you need a working MPI distribution and mpi4py. </span>
+<span class="sd">    You can download mpi4py from http://code.google.com/p/mpi4py/. mpi4py is </span>
+<span class="sd">    compatible with a python 2.3  to 2.7 or 3.0 to 3.1 distribution. </span>
+
+<span class="sd">    This backend assumes a global file system that is seen by all nodes running </span>
+<span class="sd">    the processes. </span>
+<span class="sd"> </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="MpiBackend.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MpiBackend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span> <span class="o">=</span> <span class="s">&#39;/usr/lib64/openmpi/bin/mpirun&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_PYTHON</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="p">,</span>
+                             <span class="s">&quot;app&quot;</span><span class="p">,</span>
+                             <span class="s">&quot;backends&quot;</span><span class="p">,</span>
+                             <span class="s">&quot;mpi_runner.py&quot;</span><span class="p">])</span>
+        <span class="c"># start as many processes as the total number of processors</span>
+        <span class="c"># available</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span> <span class="o">=</span> <span class="mi">156</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span> <span class="o">=</span> <span class="mi">39</span></div>
+<div class="viewcode-block" id="MpiBackend.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+        
+</div>
+<div class="viewcode-block" id="MpiBackend.stage_in"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.stage_in">[docs]</a>    <span class="k">def</span> <span class="nf">stage_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Stage the current operation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MpiBackend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">stage_in</span><span class="p">(</span><span class="n">operation</span><span class="p">)</span>
+        <span class="c"># init of process lists, because backend is only initialized once        </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ProcessingSuccessful</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">TotalProcessesFinished</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">CrashedProcesses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c"># Set up progress bar</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Operation progress: &#39;</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">(),</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">Bar</span><span class="p">(),</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">ETA</span><span class="p">()]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span> <span class="o">=</span> <span class="n">ProgressBar</span><span class="p">(</span><span class="n">widgets</span> <span class="o">=</span> <span class="n">widgets</span><span class="p">,</span> 
+                                       <span class="n">maxval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">number_processes</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="c"># The handler that is used remotely for logging</span>
+        <span class="n">handler_class</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">SocketHandler</span>
+        <span class="n">handler_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;host&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s">&quot;port&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">}</span>
+        
+        <span class="c"># Set up stage in directory</span>
+        <span class="n">stagein_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
+                                   <span class="s">&quot;.stagein&quot;</span><span class="p">])</span>
+        <span class="c"># Check if hosts file is created in the right directoy</span>
+        <span class="n">HostfileCreated</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span><span class="s">&#39;hostsfile&#39;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">HostfileCreated</span><span class="p">)):</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;hostsfile not created !&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Please create the hosts file with a filename &#39;hostsfile&#39; under &quot;</span><span class="p">,</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+            <span class="k">raise</span> <span class="ne">UserWarning</span><span class="p">(</span><span class="s">&#39;Missing hostsfile.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">stagein_dir</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">stagein_dir</span><span class="p">)</span>   
+
+        <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">print</span> <span class="s">&quot;Preparing processes. This might take a few minutes....&quot;</span>
+        <span class="c"># Until not all Processes have been created prepare all processes</span>
+        <span class="c"># from the queue for remote execution and execute them</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="n">process</span> <span class="o">!=</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="n">process</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="n">handler_class</span><span class="p">,</span> <span class="n">handler_args</span><span class="p">)</span>
+            <span class="c"># since preparing the process might be quite faster than executing</span>
+            <span class="c"># it we need another queue where processes get out when they have</span>
+            <span class="c"># finished execution</span>
+            <span class="c">#self.result_handlers.put(1)</span>
+            <span class="c"># Execute all functions in the process pool but return immediately</span>
+            <span class="c">#self.pool.apply_async(process, callback=self.dequeue_process)</span>
+            <span class="n">proc_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">stagein_dir</span><span class="p">,</span>
+                                          <span class="s">&quot;process_</span><span class="si">%d</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">])</span>
+            <span class="n">proc_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">proc_file_name</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">process</span><span class="p">,</span> <span class="n">proc_file</span><span class="p">)</span>
+            <span class="n">proc_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="c"># Add task to job specification</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">proc_file_name</span><span class="p">)</span>
+            <span class="c"># Get the next process</span>
+            <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">i</span><span class="o">+=</span><span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - staged&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;staged&quot;</span>        
+        </div>
+<div class="viewcode-block" id="MpiBackend.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Executes all processes specified in the currently staged</span>
+<span class="sd">        operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s">&quot;staged&quot;</span><span class="p">)</span>
+        
+        </div>
+<div class="viewcode-block" id="MpiBackend.check_status"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a description of the current state of the operations</span>
+<span class="sd">        execution. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#self.progress_bar.update(float(self.current_job.info()[&quot;percentDone&quot;]))</span>
+        <span class="c">#return float(self.current_job.info()[&quot;percentDone&quot;]) / 100.0</span>
+        <span class="c">#return float(self.current_process) / self.current_operation.number_processes</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+</div>
+<div class="viewcode-block" id="MpiBackend.not_xor"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.not_xor">[docs]</a>    <span class="k">def</span> <span class="nf">not_xor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span><span class="p">((</span><span class="n">a</span> <span class="ow">or</span> <span class="n">b</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">a</span> <span class="ow">and</span> <span class="n">b</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="MpiBackend.retrieve"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.retrieve">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the result of the operation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;executing&quot;</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - executing&quot;</span><span class="p">)</span> 
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)):</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--loadbalance&#39;</span><span class="p">]</span><span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--nolocal&#39;</span><span class="p">]</span><span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--hostfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span><span class="s">&#39;hostsfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;-n&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">))]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_PYTHON</span><span class="p">]</span> <span class="o">+</span>  
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span><span class="p">]</span> <span class="o">+</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)</span>
+            <span class="c"># Start the processes. </span>
+            <span class="n">p</span> <span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="c">#self.pids.append(p)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span>
+            <span class="c">#print args</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c">#copy the arguments of the processes to run</span>
+            <span class="n">sub_process_args_list</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span><span class="p">:</span> 
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span><span class="p">])</span>
+            <span class="n">args</span> <span class="o">=</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--loadbalance&#39;</span><span class="p">]</span><span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--nolocal&#39;</span><span class="p">]</span><span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;--hostfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span><span class="s">&#39;hostsfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="s">&#39;-n&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sub_process_args_list</span><span class="p">))]</span> <span class="o">+</span>
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_PYTHON</span><span class="p">]</span> <span class="o">+</span>  
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span><span class="p">]</span> <span class="o">+</span> 
+                <span class="n">sub_process_args_list</span><span class="p">)</span>
+            <span class="c"># Start the processes. </span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+            <span class="c">#self.pids.append(p) # TODO: call p.poll() for p in self.pids after all processes have exited</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span>
+            <span class="c">#print args</span>
+
+        <span class="c"># Create a list of boolean for processes which are finished.</span>
+        <span class="c"># First we assume that all processes are not started, so we set</span>
+        <span class="c"># every element of the list to false</span>
+        <span class="n">FinishedProcesses</span><span class="o">=</span><span class="p">[</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">))]</span> 
+        
+        <span class="c"># Wait until all processes finish and start new processes</span>
+        <span class="c"># when old ones finish</span>
+
+        <span class="k">print</span> <span class="s">&quot;Waiting for the processes to finish....&quot;</span>
+
+        <span class="c"># Counter for the processes which are finished. It will be reset</span>
+        <span class="c"># after &#39;NumberOfProcessesToRunLater&#39; processes are finished</span>
+        <span class="n">CounterProcessesFinished</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">processes_Finished</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">processes_Finished</span><span class="p">:</span>
+          <span class="k">try</span><span class="p">:</span>
+             <span class="n">processes_Finished</span> <span class="o">=</span> <span class="bp">True</span>
+             <span class="k">for</span> <span class="n">LoopCounter</span><span class="p">,</span> <span class="n">process_args</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">):</span>
+                 <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">not_xor</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">process_args</span><span class="o">+</span><span class="s">&quot;_Finished&quot;</span><span class="p">),</span> 
+                               <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">process_args</span><span class="o">+</span><span class="s">&quot;_Crashed&quot;</span><span class="p">))):</span>
+                    <span class="n">processes_Finished</span> <span class="o">=</span> <span class="bp">False</span>
+                 <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="n">FinishedProcesses</span><span class="p">[</span><span class="n">LoopCounter</span><span class="p">]</span> <span class="o">==</span> <span class="bp">False</span><span class="p">):</span>
+                       <span class="c"># Record that the process is finished                       </span>
+                       <span class="n">FinishedProcesses</span><span class="p">[</span><span class="n">LoopCounter</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+                       <span class="c"># If the process is crashed take note of that</span>
+                       <span class="k">if</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">process_args</span><span class="o">+</span><span class="s">&quot;_Crashed&quot;</span><span class="p">)):</span>
+                           <span class="bp">self</span><span class="o">.</span><span class="n">CrashedProcesses</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">process_args</span><span class="p">)</span>
+                       <span class="c"># Increment the counter for the number of processes finished</span>
+                       <span class="c"># by one</span>
+                       <span class="n">CounterProcessesFinished</span> <span class="o">+=</span> <span class="mi">1</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">TotalProcessesFinished</span> <span class="o">+=</span> <span class="mi">1</span> 
+                       <span class="c"># update the progress bar</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">TotalProcessesFinished</span><span class="p">)</span>
+                       <span class="k">if</span> <span class="p">(</span><span class="n">CounterProcessesFinished</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span><span class="p">):</span>
+                          <span class="c"># Define a variable for a subset of processes to run</span>
+                          <span class="n">sub_process_args_list</span> <span class="o">=</span> <span class="p">[]</span>
+                          <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)):</span>
+                              <span class="k">break</span>
+                          <span class="k">elif</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span><span class="p">)</span><span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)):</span>
+                              <span class="n">sub_process_args_list</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span><span class="p">:</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span><span class="p">])</span>
+                          <span class="k">else</span><span class="p">:</span>
+                              <span class="n">sub_process_args_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)]</span>
+                          <span class="n">args</span> <span class="o">=</span> <span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span><span class="p">]</span> <span class="o">+</span>
+                                 <span class="p">[</span><span class="s">&#39;--loadbalance&#39;</span><span class="p">]</span><span class="o">+</span>
+                                 <span class="p">[</span><span class="s">&#39;--nolocal&#39;</span><span class="p">]</span><span class="o">+</span>
+                                 <span class="p">[</span><span class="s">&#39;--hostfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                                 <span class="p">[</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="o">+</span> <span class="s">&quot;/&quot;</span> <span class="o">+</span><span class="s">&#39;hostsfile&#39;</span><span class="p">]</span> <span class="o">+</span>
+                                 <span class="p">[</span><span class="s">&#39;-n&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sub_process_args_list</span><span class="p">))]</span> <span class="o">+</span>
+                                 <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_PYTHON</span><span class="p">]</span> <span class="o">+</span>  
+                                 <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span><span class="p">]</span> <span class="o">+</span> 
+                                 <span class="n">sub_process_args_list</span><span class="p">)</span>
+                          <span class="c"># Start the processes</span>
+                          <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sub_process_args_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                             <span class="n">p</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+                          <span class="c">#print args                          </span>
+                          <span class="c"># Adjust the start index</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span>
+                          <span class="c"># Reset the counter for processes finished</span>
+                          <span class="n">CounterProcessesFinished</span> <span class="o">=</span> <span class="mi">0</span>
+             <span class="c"># sleep for one second                </span>
+             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+          <span class="k">except</span> <span class="p">(</span><span class="ne">KeyboardInterrupt</span><span class="p">,</span> <span class="ne">SystemExit</span><span class="p">):</span> <span class="c"># if processes hang forever</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ProcessingSuccessful</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="k">print</span> <span class="s">&quot;*********************************************************************************************************&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;pySPACE forced to stop ...&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Please wait until mpi_backend is finished with consolidating the results generated and with clean up ...&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;**********************************************************************************************************&quot;</span>
+            <span class="kn">import</span> <span class="nn">pySPACE.resources.dataset_defs.performance_result.PerformanceResultSummary</span> <span class="kn">as</span> <span class="nn">PerformanceResultSummary</span>
+            <span class="c"># merge the remaining files</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Starting merging . . .&quot;</span>
+            <span class="n">PerformanceResultSummary</span><span class="o">.</span><span class="n">merge_performance_results</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
+            <span class="k">print</span> <span class="s">&quot;Merging complete . . .&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+            <span class="k">break</span> <span class="c">#The while loop will break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - processing finished&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Change the state to retrieved</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;retrieved&quot;</span>
+        
+        <span class="k">return</span> <span class="bp">None</span>
+
+</div>
+<div class="viewcode-block" id="MpiBackend.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Consolidates the results of the single processes into a consistent result of the whole</span>
+<span class="sd">        operation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s">&quot;retrieved&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ProcessingSuccessful</span> <span class="o">==</span><span class="bp">True</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CrashedProcesses</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">consolidate</span><span class="p">()</span>
+                 
+        <span class="k">if</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ProcessingSuccessful</span> <span class="o">==</span><span class="bp">True</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CrashedProcesses</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)):</span>
+            <span class="kn">import</span> <span class="nn">pySPACE.resources.dataset_defs.performance_result.PerformanceResultSummary</span> <span class="kn">as</span> <span class="nn">PerformanceResultSummary</span>
+            <span class="c"># merge the remaining files</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Starting merging . . .&quot;</span>
+            <span class="n">PerformanceResultSummary</span><span class="o">.</span><span class="n">merge_performance_results</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
+            <span class="k">print</span> <span class="s">&quot;Merging complete . . .&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;***************************************************************************************************&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - consolidated&quot;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;consolidated&quot;</span>
+        
+        </div>
+<div class="viewcode-block" id="MpiBackend.cleanup"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.cleanup">[docs]</a>    <span class="k">def</span> <span class="nf">cleanup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Remove the current operation and all potential results that</span>
+<span class="sd">        have been stored in this object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;idling&quot;</span>
+
+        <span class="c"># Cleaning up...</span>
+        <span class="n">stagein_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
+                                   <span class="s">&quot;.stagein&quot;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ProcessingSuccessful</span> <span class="o">==</span> <span class="bp">True</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">CrashedProcesses</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+           <span class="n">deleted</span> <span class="o">=</span> <span class="bp">False</span>
+
+           <span class="k">while</span> <span class="ow">not</span> <span class="n">deleted</span><span class="p">:</span>
+               <span class="k">try</span><span class="p">:</span>
+                  <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s">&quot;..&quot;</span><span class="p">)</span>
+                  <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">stagein_dir</span><span class="p">)</span>
+                  <span class="n">deleted</span> <span class="o">=</span> <span class="bp">True</span>
+               <span class="k">except</span> <span class="ne">OSError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+                  <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="mi">66</span><span class="p">:</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Could not remove .stagein dir &quot;</span> 
+                             <span class="s">&quot;, waiting for NFS lock&quot;</span><span class="p">,</span>
+                              <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+                  <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+               
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - cleaned up&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Idling...&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Remove the file logger for this operation</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">removeHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_handler</span><span class="p">)</span>       
+        <span class="c"># close listener socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span> <span class="o">=</span> <span class="bp">None</span> 
+        
+    </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

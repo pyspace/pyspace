@@ -1,0 +1,653 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.preprocessing.subsampling &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.preprocessing.subsampling</h1><div class="highlight"><pre>
+<span class="c"># This Python file uses the following encoding: utf-8</span>
+<span class="c"># The upper line is needed for the copyright symbol in this module.</span>
+<span class="sd">&quot;&quot;&quot; Reduce sampling rate of the :class:`~pySPACE.resources.data_types.time_series.TimeSeries` by a specified fraction</span>
+
+<span class="sd">Here different combinations with filters are possible.</span>
+
+<span class="sd">.. todo:: Move gcd function to better place.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="kn">import</span> <span class="n">interp1d</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.preprocessing</span> <span class="kn">import</span> <span class="n">filtering</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools</span> <span class="kn">import</span> <span class="n">prime_factors</span>
+
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">linspace</span>
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">scipy.signal</span>
+
+<div class="viewcode-block" id="gcd"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.gcd">[docs]</a><span class="k">def</span> <span class="nf">gcd</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Return the greatest common divisor of a and b.</span>
+<span class="sd">    </span>
+<span class="sd">    :Input:</span>
+<span class="sd">    </span>
+<span class="sd">        * a -- an integer</span>
+<span class="sd">        * b -- an integer</span>
+<span class="sd">        </span>
+<span class="sd">    :Output:</span>
+<span class="sd">    </span>
+<span class="sd">        * an integer -- the gcd of a and b</span>
+<span class="sd">        </span>
+<span class="sd">    Examples:</span>
+<span class="sd">    </span>
+<span class="sd">    &gt;&gt;&gt; gcd(97,100)</span>
+<span class="sd">    1</span>
+<span class="sd">    &gt;&gt;&gt; gcd(97 * 10**15, 19**20 * 97**2)</span>
+<span class="sd">    97L</span>
+<span class="sd">    </span>
+<span class="sd">    © William Stein, 2004</span>
+<span class="sd">    </span>
+<span class="sd">    http://modular.math.washington.edu/ent/ent_py</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">a</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="n">a</span> <span class="o">=</span> <span class="o">-</span><span class="n">a</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="n">b</span> <span class="o">=</span> <span class="o">-</span><span class="n">b</span>
+    <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="n">b</span>
+    <span class="k">if</span> <span class="n">b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span> <span class="k">return</span> <span class="n">a</span>
+    <span class="k">while</span> <span class="n">b</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span> 
+        <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">a</span> <span class="o">%</span> <span class="n">b</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">a</span>
+
+
+</div>
+<div class="viewcode-block" id="SubsamplingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.SubsamplingNode">[docs]</a><span class="k">class</span> <span class="nc">SubsamplingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Downsampling with a simple low pass filter</span>
+<span class="sd">    </span>
+<span class="sd">    This is done by upsampling with a linear interpolation and downsampling </span>
+<span class="sd">    with a corresponding low pass filter.</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/08/25</span>
+<span class="sd">    :Revised: 2010/02/25 by Mario Krell</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SubsamplingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.SubsamplingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">target_frequency</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SubsamplingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">)</span>
+                        
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Use Decimation to reduce the sampling rate&quot;</span><span class="p">,</span><span class="ne">DeprecationWarning</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SubsamplingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.SubsamplingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Subsample the given data x and return a new time series &quot;&quot;&quot;</span>
+        <span class="c"># Compute the upsampling and downsampling factor</span>
+        <span class="n">source_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="n">target_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="n">reduce_fraction_factor</span> <span class="o">=</span> <span class="n">gcd</span><span class="p">(</span><span class="n">source_frequency</span><span class="p">,</span> <span class="n">target_frequency</span><span class="p">)</span>
+        <span class="n">upsampling_factor</span> <span class="o">=</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">reduce_fraction_factor</span>
+        <span class="n">downsampling_factor</span> <span class="o">=</span> <span class="n">source_frequency</span> <span class="o">/</span><span class="n">reduce_fraction_factor</span>
+        <span class="c"># Upsampling</span>
+        <span class="k">if</span> <span class="n">upsampling_factor</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">upsampled_time_series</span> <span class="o">=</span> <span class="n">x</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># We make a linear interpolation for upsampling as an easy version.</span>
+            <span class="c"># This should be enough because of the following Lowpassfilter.</span>
+            <span class="c"># It is maybe a better version to construction a C^1 spline, </span>
+            <span class="c"># because it prevents artifacts in frequency, but this would  </span>
+            <span class="c"># decrease processing speed significantly.</span>
+            
+            <span class="c"># The new Data Array for the upsampled data</span>
+            <span class="c"># The last timepoint does not bring additional points. </span>
+            <span class="c"># This results in the -1+1 calculation.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Using upsampling.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            
+            <span class="n">interpolated_time_series</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">upsampling_factor</span><span class="o">*</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                                       <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)))</span>
+
+            <span class="c"># Array that corresponds to the x value of the fictive function </span>
+            <span class="c"># (original data)</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="c"># Array that corresponds to the x value of the fictive function </span>
+            <span class="c"># (upsampled data)</span>
+            <span class="n">newTime</span> <span class="o">=</span> <span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">interpolated_time_series</span><span class="p">))</span>
+            <span class="c"># Linear interpolation of each channel</span>
+            <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">x</span><span class="p">[:,</span><span class="n">channel_index</span><span class="p">])</span>
+                <span class="n">interpolated_time_series</span><span class="p">[:,</span><span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="p">(</span><span class="n">newTime</span><span class="p">)</span>
+            <span class="n">upsampled_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+                                                            <span class="n">interpolated_time_series</span><span class="p">)</span>
+                        
+        <span class="c"># Low Pass filtering: According to Shannon-Nyquist&#39;s sampling theorem, </span>
+        <span class="c"># we should only retain frequency components below 1/2*target_frequency</span>
+        <span class="c"># We multiply with 0.45 instead of 0.5 because of the finite window </span>
+        <span class="c"># length</span>
+        <span class="n">lpf_node</span> <span class="o">=</span> <span class="n">filtering</span><span class="o">.</span><span class="n">SimpleLowPassFilterNode</span><span class="p">(</span><span class="n">cutoff_frequency</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">*</span> <span class="mf">0.45</span><span class="p">)</span>
+        <span class="n">filtered_time_series</span> <span class="o">=</span> <span class="n">lpf_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">upsampled_time_series</span><span class="p">)</span>
+        
+        <span class="c"># Downsampling (can be achieved by a simple re-striding)</span>
+        <span class="c"># Note: We have to create a new array since otherwise the off-strided </span>
+        <span class="c">#       data remains in memory</span>
+        <span class="n">downsampled_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">filtered_time_series</span><span class="p">[::</span><span class="n">downsampling_factor</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">downsampled_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">downsampled_data</span><span class="p">)</span> 
+        <span class="n">downsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+        
+<span class="c">#        # Uncomment for graphical analyzation</span>
+<span class="c">#        import pylab</span>
+<span class="c">#        pylab.figure(1)</span>
+<span class="c">#        pylab.plot(pylab.linspace(0.0, 1.0, x.shape[0]),</span>
+<span class="c">#                   x[:,x.channel_names.index(&#39;Pz&#39;)],</span>
+<span class="c">#                   label = &#39;Pz&#39; + &quot;_subsampled&quot;)</span>
+<span class="c">#        pylab.figure(2)</span>
+<span class="c">#        pylab.subplot(312)</span>
+<span class="c">#        pylab.specgram(x[:,x.channel_names.index(&#39;Pz&#39;)], Fs = x.sampling_frequency,</span>
+<span class="c">#                       NFFT = 64, noverlap = 63)</span>
+<span class="c">#        pylab.colorbar()</span>
+<span class="c">#        pylab.show()</span>
+
+        <span class="k">return</span> <span class="n">downsampled_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="FFTResamplingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.FFTResamplingNode">[docs]</a><span class="k">class</span> <span class="nc">FFTResamplingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Downsampling with a FFT filter</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        - </span>
+<span class="sd">            node : FFTResampling</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                target_frequency : 25.0</span>
+<span class="sd">                window : &quot;nut&quot; # optional, window to apply before downsampling</span>
+<span class="sd">                mirror : True #  optional, to make the data periodic before applying the FFT</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    possible windows are:</span>
+<span class="sd">    &#39;flattop&#39; - &#39;flat&#39;, &#39;flt&#39; &#39;boxcar&#39; - &#39;ones&#39;, &#39;box&#39;</span>
+<span class="sd">    &#39;triang&#39; - &#39;traing&#39;, &#39;tri&#39; &#39;parzen&#39; - &#39;parz&#39;,</span>
+<span class="sd">    &#39;par&#39; &#39;bohman&#39; - &#39;bman&#39;, &#39;bmn&#39; &#39;blackmanharris&#39; - &#39;blackharr&#39;,</span>
+<span class="sd">    &#39;bkh&#39;, &#39;nuttall&#39; - &#39;nutl&#39;, &#39;nut&#39; &#39;barthann&#39; - &#39;brthan&#39;,</span>
+<span class="sd">    &#39;bth&#39; &#39;blackman&#39; - &#39;black&#39;, &#39;blk&#39; &#39;hamming&#39; - &#39;hamm&#39;,</span>
+<span class="sd">    &#39;ham&#39; &#39;bartlett&#39; - &#39;bart&#39;, &#39;brt&#39; &#39;hanning&#39; - &#39;hann&#39;,</span>
+<span class="sd">    &#39;han&#39; (&#39;kaiser&#39;, beta) - &#39;ksr&#39; (&#39;gaussian&#39;, std) - &#39;gauss&#39;,</span>
+<span class="sd">    &#39;gss&#39; (&#39;general gauss&#39;, power, width) - &#39;general&#39;,</span>
+<span class="sd">    &#39;ggs&#39; (&#39;slepian&#39;, width) - &#39;slep&#39;, &#39;optimal&#39;, &#39;dss&#39;</span>
+
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2010/02/25</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FFTResamplingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.FFTResamplingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">target_frequency</span><span class="p">,</span>
+                 <span class="n">window</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">mirror</span> <span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FFTResamplingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">,</span> 
+                                      <span class="n">window</span> <span class="o">=</span> <span class="n">window</span><span class="p">,</span> <span class="n">new_len</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">mirror</span><span class="o">=</span><span class="n">mirror</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FFTResamplingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.FFTResamplingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Subsample the given data and return a new time series &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_len</span> <span class="o">==</span> <span class="mi">0</span> <span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new_len</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="o">*</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">*</span><span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mirror</span><span class="p">:</span>
+            <span class="n">downsampled_time_series</span> <span class="o">=</span> \
+                <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> 
+                                        <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_len</span><span class="p">,</span>
+                                                            <span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                                            <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">downsampled_time_series</span> <span class="o">=</span> \
+                <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> 
+                                        <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">resample</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">data</span><span class="p">))),</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_len</span><span class="o">*</span><span class="mi">2</span><span class="p">,</span>
+                                                            <span class="n">t</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                                            <span class="n">window</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window</span><span class="p">)[:</span><span class="bp">self</span><span class="o">.</span><span class="n">new_len</span><span class="p">])</span>
+        <span class="n">downsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+        <span class="k">return</span> <span class="n">downsampled_time_series</span>
+    </div></div>
+<div class="viewcode-block" id="DownsamplingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DownsamplingNode">[docs]</a><span class="k">class</span> <span class="nc">DownsamplingNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Pure downsampling without filter</span>
+<span class="sd">    </span>
+<span class="sd">    Reduce sampling rate by picking the values according to the downsampling factor.</span>
+<span class="sd">    No low pass filter is used as needed for a proper decimation.</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        - </span>
+<span class="sd">            node : Downsampling</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                target_frequency : 25.0</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DownsamplingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DownsamplingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">target_frequency</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DownsamplingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">,</span>
+                                      <span class="n">downsampling_factor</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DownsamplingNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DownsamplingNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Subsample the given data data and return a new time series &quot;&quot;&quot;</span>
+        <span class="c"># Compute the downsampling factor</span>
+        <span class="n">source_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="n">target_frequency</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">*</span> <span class="mi">100</span><span class="p">))</span>
+        <span class="n">reduce_fraction_factor</span> <span class="o">=</span> <span class="n">gcd</span><span class="p">(</span><span class="n">source_frequency</span><span class="p">,</span> <span class="n">target_frequency</span><span class="p">)</span>
+        <span class="n">new_downsampling_factor</span> <span class="o">=</span> <span class="n">source_frequency</span> <span class="o">/</span><span class="n">reduce_fraction_factor</span>
+        
+        <span class="n">upsampling_factor</span> <span class="o">=</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">reduce_fraction_factor</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">upsampling_factor</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Upsampling used but not implemented!&quot;</span>
+                      <span class="o">+</span><span class="s">&quot; Check target frequency and real frequency!&quot;</span><span class="p">,</span>
+                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        
+        <span class="c"># reset filter if downsampling factor has changed</span>
+        <span class="k">if</span> <span class="n">new_downsampling_factor</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">=</span> <span class="n">new_downsampling_factor</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Inapplicable downsampling factor: &quot;</span>
+                          <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span>
+                          <span class="o">+</span><span class="s">&quot; Downsampling will be skipped&quot;</span><span class="p">,</span>
+                          <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+
+        <span class="c"># omit downsampling, if inapplicable</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span>
+                        
+        <span class="c"># Downsampling (can be achieved by a simple re-striding)</span>
+        <span class="c"># Note: We have to create a new array since otherwise the off-strided </span>
+        <span class="c">#       data remains in memory</span>
+        <span class="n">downsampled_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">[::</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">,</span> <span class="p">:])</span>
+        <span class="n">downsampled_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">downsampled_data</span><span class="p">)</span> 
+        <span class="n">downsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+                
+        <span class="k">return</span> <span class="n">downsampled_time_series</span>
+    
+    </div></div>
+<div class="viewcode-block" id="DecimationBase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase">[docs]</a><span class="k">class</span> <span class="nc">DecimationBase</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Decimate the signal to a given sampling frequency</span>
+<span class="sd">    </span>
+<span class="sd">    This class is the base class for the other decimation nodes</span>
+<span class="sd">    and can not be used directly.</span>
+
+<span class="sd">    The decimation is performed by doing a downsampling </span>
+<span class="sd">    with a preceding filtering by a corresponding low pass filter beforehand. </span>
+<span class="sd">    According to Shannon-Nyquist&#39;s sampling theorem, </span>
+<span class="sd">    only frequencies below 1/2*target_frequency should be retained.</span>
+<span class="sd">    </span>
+<span class="sd">    For the decimation, one should use the FIR decimation (preferred)</span>
+<span class="sd">    or IIR decimation, see below.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :target_frequency:</span>
+<span class="sd">            The frequency after the decimation.</span>
+
+<span class="sd">            (*required*)</span>
+<span class="sd">            </span>
+<span class="sd">        :multi_step:</span>
+<span class="sd">            The decimation is done in multiple sets,</span>
+<span class="sd">            if the downsampling factor is high.</span>
+<span class="sd">            The steps are chosen by the node.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: True*)</span>
+<span class="sd">            </span>
+<span class="sd">        :comp_type:</span>
+<span class="sd">            Type of computation for the filtering.</span>
+<span class="sd">            One of the following Strings: &#39;normal&#39;, &#39;parallel&#39;, &#39;gpu&#39;....</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: &#39;normal&#39;*)</span>
+<span class="sd">            </span>
+<span class="sd">        :norm_cutoff_freq:</span>
+<span class="sd">            Cutoff frequency for the low pass filter.</span>
+<span class="sd">            Normalized to the target frequency.</span>
+<span class="sd">            </span>
+<span class="sd">             (*optional, default: &#39;norm_cutoff_freq&#39;*)</span>
+<span class="sd">            </span>
+<span class="sd">        :norm_trans_region_width:</span>
+<span class="sd">            Width of transition region for the low pass filter.</span>
+<span class="sd">            Normalized to the target frequency.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: &#39;norm_trans_region_width&#39;*)</span>
+<span class="sd">            </span>
+<span class="sd">        :filter_frequency:</span>
+<span class="sd">            Optional frequency of the filter, if the value</span>
+<span class="sd">            should not be chosen automatically.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">                              </span>
+<span class="sd">    :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DecimationBase.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">target_frequency</span><span class="p">,</span>
+                 <span class="n">multi_step</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                 <span class="n">comp_type</span> <span class="o">=</span> <span class="s">&#39;normal&#39;</span><span class="p">,</span>
+                 <span class="n">norm_cutoff_freq</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="mf">3.</span><span class="p">,</span>
+                 <span class="n">norm_trans_region_width</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="mf">6.</span><span class="p">,</span>
+                 <span class="n">filter_frequency</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DecimationBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">,</span>
+                                        <span class="n">filter_frequency</span> <span class="o">=</span> <span class="n">filter_frequency</span><span class="p">,</span>
+                                        <span class="n">low_pass_nodes</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                        <span class="n">downsampling_nodes</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                        <span class="n">downsampling_factor</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                        <span class="n">comp_type</span> <span class="o">=</span> <span class="n">comp_type</span><span class="p">,</span>
+                                        <span class="n">multi_step</span> <span class="o">=</span> <span class="n">multi_step</span><span class="p">,</span>
+                                        <span class="n">multi_step_factors</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                        <span class="n">trans_regions</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                        <span class="n">norm_trans_region_width</span> <span class="o">=</span> <span class="n">norm_trans_region_width</span><span class="p">,</span>
+                                        <span class="n">norm_cutoff_freq</span> <span class="o">=</span> <span class="n">norm_cutoff_freq</span><span class="p">)</span>
+                                        </div>
+<div class="viewcode-block" id="DecimationBase.compute_filter_factors"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase.compute_filter_factors">[docs]</a>    <span class="k">def</span> <span class="nf">compute_filter_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># compute the optimal downsamplinf factor according to Crochiere and Rabiner, </span>
+        <span class="c"># IEEE Trans. on Acoust. Speech and Signal proc, Vol. 23, N0.5, 1975</span>
+        <span class="c"># &quot;Optimum FIR digital filter implementations for decimation,</span>
+        <span class="c"># interpolation, and narrow-band filtering&quot;</span>
+        <span class="c"># it is asummed that two steps are used</span>
+        
+        <span class="c"># get filter transition region width </span>
+        <span class="n">f</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_cutoff_freq</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_trans_region_width</span>
+        
+        <span class="c"># compute theoretically optimal filter</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span>
+        <span class="n">d_opt_num</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">d</span><span class="o">*</span><span class="n">f</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">-</span><span class="n">f</span><span class="p">))</span>
+        
+        <span class="n">d_opt_denom</span> <span class="o">=</span> <span class="mf">2.</span> <span class="o">-</span> <span class="n">f</span> <span class="o">*</span> <span class="p">(</span><span class="n">d</span> <span class="o">+</span> <span class="mf">1.</span><span class="p">)</span>
+        
+        <span class="n">d_opt</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">*</span> <span class="n">d_opt_num</span> <span class="o">/</span> <span class="n">d_opt_denom</span>
+        
+        <span class="c"># compute final (rounded) downsampling factors</span>
+        <span class="n">d_small</span> <span class="o">=</span> <span class="n">prime_factors</span><span class="o">.</span><span class="n">next_least_nice_integer_divisor</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">d_opt</span><span class="p">)</span>
+        
+        <span class="c"># store multi step factors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d_small</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="o">/</span><span class="n">d_small</span><span class="p">)</span>
+        
+        <span class="c"># use biggest factor first to save computation time</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+        
+        <span class="c">#compute the individual transition regions</span>
+        <span class="n">norm_pass_band</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_cutoff_freq</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_trans_region_width</span>
+        <span class="c"># first (wide) transition region</span>
+        <span class="c"># full width between pass band in final filter response to</span>
+        <span class="c"># stopband of intermediate filter  </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_cutoff_freq</span> <span class="o">-</span> <span class="n">norm_pass_band</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c"># second, more steep transition region</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_trans_region_width</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="DecimationBase.initialize_filters"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase.initialize_filters">[docs]</a>    <span class="k">def</span> <span class="nf">initialize_filters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># if the decimation factor is to big, the decimation is performed in several steps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">low_pass_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trans_regions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">&gt;</span> <span class="mi">10</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compute_filter_factors</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trans_regions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm_trans_region_width</span><span class="p">)</span>
+           
+        <span class="n">target_frequency</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span>
+                  
+        <span class="c"># create all filters</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">dec_factor</span><span class="p">,</span> <span class="n">trans_reg_width</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">trans_regions</span><span class="p">):</span>
+
+            <span class="c"># compute general target frequencies</span>
+            <span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">dec_factor</span> 
+            <span class="n">filter_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm_cutoff_freq</span>
+            
+            <span class="c"># in the last step, use (eventually) the manually specified frequency</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multi_step_factors</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_frequency</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">filter_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">filter_frequency</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">low_pass_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">create_filter</span><span class="p">(</span>
+                                        <span class="n">target_frequency</span><span class="o">=</span><span class="n">filter_frequency</span><span class="p">,</span>
+                                        <span class="n">downsampling_factor</span><span class="o">=</span><span class="n">dec_factor</span><span class="p">,</span>
+                                        <span class="n">transition_region_width</span> <span class="o">=</span> <span class="n">trans_reg_width</span><span class="p">))</span>
+        
+            <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">DownsamplingNode</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">))</span>
+            </div>
+<div class="viewcode-block" id="DecimationBase.create_filter"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase.create_filter">[docs]</a>    <span class="k">def</span> <span class="nf">create_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">target_frequency</span><span class="p">,</span> <span class="n">downsampling_factor</span><span class="p">,</span> <span class="n">transition_region_width</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="DecimationBase._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationBase._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Subsample the given data data and return a new time series &quot;&quot;&quot;</span>
+        <span class="c"># compute the downsampling factor, if needed (first one or changed)</span>
+        
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+            
+            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Upsampling not implemented.&quot;</span><span class="o">+</span>
+                          <span class="s">&quot; Downsampling factor needs to be an integer.&quot;</span><span class="p">,</span>
+                          <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Inapplicable downsampling factor: &quot;</span>
+                          <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span>
+                          <span class="o">+</span><span class="s">&quot; Downsampling will be skipped&quot;</span><span class="p">,</span>
+                          <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">initialize_filters</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="c"># omit downsampling, if inapplicable</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">data</span>
+        
+        <span class="k">for</span> <span class="nb">filter</span><span class="p">,</span> <span class="n">downsampler</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">low_pass_nodes</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_nodes</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="nb">filter</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+            <span class="n">data</span> <span class="o">=</span> <span class="n">downsampler</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                
+        <span class="k">return</span> <span class="n">data</span>
+    
+              </div></div>
+<div class="viewcode-block" id="DecimationIIRNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationIIRNode">[docs]</a><span class="k">class</span> <span class="nc">DecimationIIRNode</span><span class="p">(</span><span class="n">DecimationBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Downsampling with a preceding IIR filter</span>
+<span class="sd">    </span>
+<span class="sd">    The decimation is performed by doing a downsampling </span>
+<span class="sd">    with a preceding filtering by a corresponding low pass filter beforehand. </span>
+<span class="sd">    According to Shannon-Nyquist&#39;s sampling theorem, </span>
+<span class="sd">    only frequencies below 1/2*target_frequency should be retained.</span>
+<span class="sd">    </span>
+<span class="sd">    The decimation is applied in multiple steps, if the sampling factor </span>
+<span class="sd">    is too big.</span>
+<span class="sd">        </span>
+<span class="sd">    The Filering is done using a IIR filter.</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : DecimationIIR</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                target_frequency : 25 </span>
+
+<span class="sd">    :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="DecimationIIRNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationIIRNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DecimationIIRNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    
+    </div>
+<div class="viewcode-block" id="DecimationIIRNode.create_filter"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationIIRNode.create_filter">[docs]</a>    <span class="k">def</span> <span class="nf">create_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">target_frequency</span><span class="p">,</span><span class="n">downsampling_factor</span><span class="p">,</span><span class="n">transition_region_width</span><span class="p">):</span>
+                
+        <span class="k">return</span> <span class="n">filtering</span><span class="o">.</span><span class="n">IIRFilterNode</span><span class="p">([</span><span class="n">target_frequency</span><span class="p">],</span> 
+                                         <span class="n">comp_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_type</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="DecimationFIRNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationFIRNode">[docs]</a><span class="k">class</span> <span class="nc">DecimationFIRNode</span><span class="p">(</span><span class="n">DecimationBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Downsampling with a preceding FIR filter</span>
+<span class="sd">    </span>
+<span class="sd">    The decimation is performed by doing a downsampling </span>
+<span class="sd">    with a preceding filtering by a corresponding low pass filter beforehand. </span>
+<span class="sd">    According to Shannon-Nyquist&#39;s sampling theorem, </span>
+<span class="sd">    only frequencies below 1/2*target_frequency should be retained.</span>
+<span class="sd">        </span>
+<span class="sd">    The decimation is applied in multiple steps, if the sampling factor </span>
+<span class="sd">    is too big.</span>
+<span class="sd">    </span>
+<span class="sd">    The filtering procedure is applied by an FIR filter, and only for values that are </span>
+<span class="sd">    significant due to the downsampling procedure.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :comp_type:</span>
+<span class="sd">            Computation type of the filter, see FIRFilterNode for further information.</span>
+
+<span class="sd">            (*optional, default: &#39;normal&#39;*)</span>
+
+<span class="sd">        :skipping:</span>
+<span class="sd">            If output samples should be skipped in the filtering process,</span>
+<span class="sd">            because they are discarded in the downsampling process.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: True*)</span>
+<span class="sd">            </span>
+<span class="sd">        :time_shift:</span>
+<span class="sd">            Parameter time_shift of the filter, see FIRFilterNode for further information.</span>
+
+<span class="sd">            (*optional, default: &#39;middle&#39;*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : DecimationFIR</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                target_frequency : 25 </span>
+<span class="sd">       </span>
+<span class="sd">    :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DecimationFIRNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationFIRNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">comp_type</span> <span class="o">=</span> <span class="s">&#39;normal&#39;</span><span class="p">,</span>
+                 <span class="n">skipping</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">time_shift</span> <span class="o">=</span> <span class="s">&quot;middle&quot;</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DecimationFIRNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">comp_type</span> <span class="o">=</span> <span class="n">comp_type</span><span class="p">,</span>
+                                                <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">skipping</span><span class="o">=</span><span class="n">skipping</span><span class="p">,</span>
+                                      <span class="n">time_shift</span> <span class="o">=</span> <span class="n">time_shift</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DecimationFIRNode.create_filter"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.subsampling.html#pySPACE.missions.nodes.preprocessing.subsampling.DecimationFIRNode.create_filter">[docs]</a>    <span class="k">def</span> <span class="nf">create_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">target_frequency</span><span class="p">,</span><span class="n">downsampling_factor</span><span class="p">,</span><span class="n">transition_region_width</span><span class="p">):</span>
+        
+        <span class="n">skip</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">skipping</span><span class="p">:</span>
+            <span class="n">skip</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">downsampling_factor</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+                
+        <span class="k">return</span> <span class="n">filtering</span><span class="o">.</span><span class="n">FIRFilterNode</span><span class="p">([</span><span class="n">target_frequency</span><span class="p">],</span> 
+                                         <span class="n">comp_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_type</span><span class="p">,</span>
+                                         <span class="n">width</span><span class="o">=</span><span class="n">transition_region_width</span><span class="p">,</span>
+                                         <span class="n">skip</span><span class="o">=</span><span class="n">skip</span><span class="p">,</span>
+                                         <span class="n">time_shift</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_shift</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Resampling&quot;</span><span class="p">:</span> <span class="n">FFTResamplingNode</span><span class="p">,</span>
+                <span class="s">&quot;Decimation&quot;</span><span class="p">:</span> <span class="n">DecimationFIRNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

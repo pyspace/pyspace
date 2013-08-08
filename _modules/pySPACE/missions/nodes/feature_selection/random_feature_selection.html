@@ -1,0 +1,206 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_selection.random_feature_selection &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_selection.random_feature_selection</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Randomly select a number of features </span>
+
+<span class="sd">.. todo:: generalize or put together with other node</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+
+<div class="viewcode-block" id="RandomFeatureSelectionNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.random_feature_selection.html#pySPACE.missions.nodes.feature_selection.random_feature_selection.RandomFeatureSelectionNode">[docs]</a><span class="k">class</span> <span class="nc">RandomFeatureSelectionNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Randomly select a given number of features</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">      :num_retained_features: </span>
+<span class="sd">            The number of features that should be retained by the node. This</span>
+<span class="sd">            information must be specified if selected_features_path is not </span>
+<span class="sd">            specified.</span>
+<span class="sd">            </span>
+<span class="sd">         (*optional, default: None*)</span>
+<span class="sd">         </span>
+<span class="sd">      :selected_features_path:</span>
+<span class="sd">            An absolute path from which the selected features are loaded. If </span>
+<span class="sd">            not specified, these features are learned from the training data.</span>
+<span class="sd">            In this case, num_retained_features must be specified.</span>
+
+<span class="sd">         (*optional, default: None*)</span>
+<span class="sd">         </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : RandomFeatureSelection</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                  num_retained_features : 100</span>
+<span class="sd">              </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/02/03</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RandomFeatureSelectionNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.random_feature_selection.html#pySPACE.missions.nodes.feature_selection.random_feature_selection.RandomFeatureSelectionNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_retained_features</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">selected_features_path</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>   
+        <span class="nb">super</span><span class="p">(</span><span class="n">RandomFeatureSelectionNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># Load patterns from file if requested</span>
+        <span class="k">if</span> <span class="n">selected_features_path</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">features_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">selected_features_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">features_file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">num_retained_features</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">num_retained_features</span><span class="p">:</span>
+                    <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">retained_feature_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">num_retained_features</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">num_retained_features</span><span class="p">:</span>
+                    <span class="kn">import</span> <span class="nn">warnings</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Only </span><span class="si">%s</span><span class="s"> features available, cannot retain &quot;</span>
+                                  <span class="s">&quot;</span><span class="si">%s</span><span class="s"> features!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">),</span>
+                                                    <span class="n">num_retained_features</span><span class="p">))</span>
+            <span class="n">features_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+              <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">retained_feature_indices</span><span class="p">,</span>
+              <span class="n">num_retained_features</span> <span class="o">=</span> <span class="n">num_retained_features</span><span class="p">,</span>  
+              <span class="n">feature_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RandomFeatureSelectionNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.random_feature_selection.html#pySPACE.missions.nodes.feature_selection.random_feature_selection.RandomFeatureSelectionNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_vector</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Projects the feature vector onto the retained features &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># The indices of the features that will be retained</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">feature_vector</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                                                          <span class="bp">self</span><span class="o">.</span><span class="n">num_retained_features</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span> 
+
+        <span class="c"># Project the features onto the selected subspace</span>
+        <span class="n">proj_features</span> <span class="o">=</span> <span class="n">feature_vector</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">]</span>
+        <span class="c"># Update the feature_names list</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> 
+                                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">]</span>
+        <span class="c"># Create feature vector instance</span>
+        <span class="n">projected_feature_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">proj_features</span><span class="p">,</span>
+                                                 <span class="n">feature_names</span><span class="p">)</span> 
+    
+        <span class="k">return</span> <span class="n">projected_feature_vector</span>
+    </div>
+<div class="viewcode-block" id="RandomFeatureSelectionNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.random_feature_selection.html#pySPACE.missions.nodes.feature_selection.random_feature_selection.RandomFeatureSelectionNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            
+            <span class="c"># This node only stores the order of the selected features&#39; indices</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;selected_features&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;wb&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">,</span> 
+                                            <span class="n">protocol</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+            <span class="c"># Store feature names</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;feature_names_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

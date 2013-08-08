@@ -1,0 +1,1223 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.spatial_filtering.sensor_selection &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.spatial_filtering.sensor_selection</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Methods for sensor selection optimization algorithms</span>
+
+<span class="sd">.. note:: The words *sensor* and *channel* are used as synonyms.</span>
+
+<span class="sd">.. todo:: Adapt to new subflow concept for speed up via parallelization.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">map</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&quot;scipy&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">__version__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">))</span> <span class="o">&lt;</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">8</span><span class="p">,</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="kn">from</span> <span class="nn">scipy.linalg.decomp</span> <span class="kn">import</span> <span class="n">qr</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">scipy.linalg</span> <span class="kn">import</span> <span class="n">qr</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
+
+<span class="c"># sensor ranking imports</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.source.external_generator_source</span>\
+<span class="kn">import</span> <span class="n">ExternalGeneratorSourceNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChain</span>
+
+<span class="c"># parallelization in evaluation</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">processing</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="kn">as</span> <span class="nn">processing</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<div class="viewcode-block" id="SensorSelectionBase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase">[docs]</a><span class="k">class</span> <span class="nc">SensorSelectionBase</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Template for nodes that select sensors</span>
+<span class="sd">    </span>
+<span class="sd">    This node implements the basic framework for nodes that select sensors.</span>
+<span class="sd">    The train method has to be overwritten as it is the place for the specific</span>
+<span class="sd">    selection procedures and criteria.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">          :num_selected_sensors: Determines how many sensors are kept.</span>
+<span class="sd">          </span>
+<span class="sd">                    (*optional, default: 2*)</span>
+<span class="sd">          </span>
+<span class="sd">          :store:   In contrary to the base node, the default of this node</span>
+<span class="sd">                    is to store the chosen sensors and rankings.</span>
+
+<span class="sd">                    If the store parameter is set to True, one file named</span>
+<span class="sd">                    &quot;sensor_selection.txt&quot; will be saved.</span>
+<span class="sd">                    This text file holds the list of</span>
+<span class="sd">                    chosen sensors with no particular order. If the</span>
+<span class="sd">                    SensorSelectionRankingNode is used, another file called</span>
+<span class="sd">                    &quot;ordered_list_of_picks.txt&quot; will be saved.</span>
+<span class="sd">                    This is an ordered list of the</span>
+<span class="sd">                    picks that were made due to the ranking.</span>
+<span class="sd">                    E.g., in a &quot;remove_1&quot; setting, the</span>
+<span class="sd">                    first sensor in the list is the first that was removed.</span>
+<span class="sd">                    In a &quot;add_1&quot; setting it is the first one that was added.</span>
+<span class="sd">                    Additionally, one file called &quot;sensor_ranking.txt&quot;</span>
+<span class="sd">                    will be created. This file is a merge of the aforementioned.</span>
+<span class="sd">                    The first entries are the selected channels</span>
+<span class="sd">                    that can&#39;t be ranked</span>
+<span class="sd">                    in alphabetical order.</span>
+<span class="sd">                    Then come the (de-)selected sensors in order of</span>
+<span class="sd">                    descending relevance. </span>
+<span class="sd">                    </span>
+<span class="sd">                    (*optional, default: True*)</span>
+
+<span class="sd">    The following shows a complete example using the</span>
+<span class="sd">    SensorSelectionRankingNode to illustrate, how nodes of this type</span>
+<span class="sd">    can be used. In this case, the number of sensors is first reduced to 8</span>
+<span class="sd">    removing 2 sensors at a time, than increased back to 16 adding 4 at a</span>
+<span class="sd">    time. </span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        - </span>
+<span class="sd">            node : Time_Series_Source</span>
+<span class="sd">        -</span>
+<span class="sd">            node : CV_Splitter</span>
+<span class="sd">        -</span>
+<span class="sd">            node : FFT_Band_Pass_Filter</span>
+<span class="sd">            parameters : </span>
+<span class="sd">                    pass_band : [0.0, 4.0]</span>
+<span class="sd">                    keep_in_history : True</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Sensor_Selection_Ranking</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                ranking : Remove_One_Performance_Ranking</span>
+<span class="sd">                num_selected_sensors : 8</span>
+<span class="sd">                recast_method : remove_2</span>
+<span class="sd">                ranking_spec :</span>
+<span class="sd">                    pool_size : 2</span>
+<span class="sd">                    std_weight : 1</span>
+<span class="sd">                    flow :</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : CV_Splitter</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : Time_Domain_Features</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : 2SVM</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : Classification_Performance_Sink</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Sensor_Selection_Ranking</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                ranking : Add_One_Performance_Ranking</span>
+<span class="sd">                num_selected_sensors : 16</span>
+<span class="sd">                recast_method : add_4</span>
+<span class="sd">                store : True</span>
+<span class="sd">                ranking_spec :</span>
+<span class="sd">                    std_weight : 1</span>
+<span class="sd">                    pool_size : 2</span>
+<span class="sd">                    flow :</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : CV_Splitter</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : Time_Domain_Features</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : 2SVM</span>
+<span class="sd">                        -</span>
+<span class="sd">                            node : Classification_Performance_Sink</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Time_Domain_Features</span>
+<span class="sd">        -</span>
+<span class="sd">            node : 2SVM</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Classification_Performance_Sink</span>
+<span class="sd">        </span>
+<span class="sd">    :Author: Mario Krell &amp; David Feess 2011/09/23</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SensorSelectionBase.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_selected_sensors</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span> <span class="n">store</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorSelectionBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">store</span> <span class="o">=</span> <span class="n">store</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c"># mapping of old parameter to new generalized one (electrodes-&gt;sensors)</span>
+        <span class="k">if</span> <span class="s">&#39;num_selected_electrodes&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+            <span class="n">num_selected_sensors</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;num_selected_electrodes&#39;</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Please use &#39;num_selected_sensors&#39; instead of &#39;num_selected_electrodes&#39; in sensor selection node!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">num_selected_sensors</span><span class="o">=</span><span class="n">num_selected_sensors</span><span class="p">,</span>
+                                      <span class="n">channel_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SensorSelectionBase.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="SensorSelectionBase.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="SensorSelectionBase._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This method has to be overwritten by the different sensor selection nodes &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Your method should overwrite the train method!&quot;</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="SensorSelectionBase._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Project the data onto the selected channels. &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s">&#39;add_remove&#39;</span><span class="p">,</span><span class="s">&#39;None&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;add&#39;</span><span class="p">):</span>
+            <span class="c"># &quot;add channels&quot; case - base on historic data that contained all channels </span>
+            <span class="n">initial_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># &quot;remove channels&quot; case - work on what&#39;s left</span>
+            <span class="n">initial_data</span> <span class="o">=</span> <span class="n">data</span>
+            
+        <span class="n">projected_data</span> <span class="o">=</span> <span class="n">initial_data</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span><span class="p">]</span>
+        <span class="n">new_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">projected_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">,</span>
+                              <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                              <span class="n">data</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span>
+        <span class="n">new_data</span><span class="o">.</span><span class="n">inherit_meta_from</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_data</span>
+        </div>
+<div class="viewcode-block" id="SensorSelectionBase.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionBase.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Store the names of the selected sensors into *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s">&quot;_</span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+             
+            <span class="c"># This node stores which sensors have been selected</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;sensor_selection&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="SensorSelectionRankingNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode">[docs]</a><span class="k">class</span> <span class="nc">SensorSelectionRankingNode</span><span class="p">(</span><span class="n">SensorSelectionBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Iteratively choose sensors depending on a ranking function</span>
+<span class="sd">    </span>
+<span class="sd">    This node collects the training data and generates a ranker. Then it</span>
+<span class="sd">    evaluates different sub-/supersets of the current set of sensors using</span>
+<span class="sd">    this ranker, and dismisses or adds sensors according to the ranking result. </span>
+<span class="sd">    </span>
+<span class="sd">    The ranking function can (and often will) in fact consist of the evaluation</span>
+<span class="sd">    of an entire classification flow. After that, e.g., achieved performance or</span>
+<span class="sd">    the values of certain classifier parameters can be used as ranking.</span>
+<span class="sd">    See the PerformanceRanker and CoefficientRanker classes for details.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The code of this node is partly copied from parameter optimization node.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :num_selected_sensors: Determines how many sensors are kept.</span>
+<span class="sd">          </span>
+<span class="sd">          :ranking: String specifying the desired method for the ranking of</span>
+<span class="sd">              sensors. The string must be known to the create_ranker method.</span>
+<span class="sd">              So far implemented:</span>
+<span class="sd">              </span>
+<span class="sd">              * &quot;Remove_One_Performance_Ranking&quot;</span>
+<span class="sd">                  Based on the current set of sensors, the ranking of one</span>
+<span class="sd">                  sensor is computed by removing it and evaluating the</span>
+<span class="sd">                  performance based on the remaining sensors. The</span>
+<span class="sd">                  classification node chain has to be specified. One would</span>
+<span class="sd">                  typically use this together with a &quot;remove_*&quot; ranking_spec</span>
+<span class="sd">                  (see below) to implement a &quot;recursive backwards</span>
+<span class="sd">                  elimination&quot;.</span>
+<span class="sd">                  </span>
+<span class="sd">              * &quot;Add_One_Performance_Ranking&quot;</span>
+<span class="sd">                  This Ranker takes the current set as fixed and extends it by</span>
+<span class="sd">                  previously dismissed sensors. This implementation gains</span>
+<span class="sd">                  access to the previously dismissed channels through the</span>
+<span class="sd">                  data.history. Thus, in order for this to work, make sure</span>
+<span class="sd">                  that a previous node in the flow (that works on a larger set </span>
+<span class="sd">                  of sensors) has set &quot;keep_in_history : True&quot;. See the</span>
+<span class="sd">                  example flow in the documentation of SensorSelectionBase.</span>
+<span class="sd">                  The current set of sensors plus one of the dismissed</span>
+<span class="sd">                  sensors will be evaluated. This will be repeated for each</span>
+<span class="sd">                  of the previously dismissed sensors. The ranking results</span>
+<span class="sd">                  from the classification performance. One would typically use</span>
+<span class="sd">                  this together with a &quot;add_n&quot; ranking_spec to re-add the n best</span>
+<span class="sd">                  performing sensors.</span>
+<span class="sd">                  </span>
+<span class="sd">              * &quot;Coefficient_Ranking&quot; </span>
+<span class="sd">                  performs a classification flow (which has</span>
+<span class="sd">                  to be specified in ranking_spec) using all currently active </span>
+<span class="sd">                  sensors. The actual ranking is then provided by the</span>
+<span class="sd">                  classifier&#39;s get_sensor_ranking method.</span>
+<span class="sd">          </span>
+<span class="sd">          :ranking_spec: Arguments passed to the ranker upon creation. Often</span>
+<span class="sd">              contains a classification flow of some sort.</span>
+<span class="sd">              </span>
+<span class="sd">          :recast_method: Determines how the set of sensors is altered based</span>
+<span class="sd">              on the ranking. Most commonly, the worst sensor will be removed</span>
+<span class="sd">              until the desired number of sensors is reached. Alternatively,</span>
+<span class="sd">              n sensors at a time could be removed. When using</span>
+<span class="sd">              &quot;Add_One_Performance_Ranking&quot; sensors can even be added. Syntax</span>
+<span class="sd">              is {add/remove}_n, e.g., add_3, remove_4.</span>
+<span class="sd">              </span>
+<span class="sd">              NB: When performing performance ranking, remove_* should be used</span>
+<span class="sd">                  only together with the Remove_One_Performance_Ranking, and</span>
+<span class="sd">                  add_* should only be used with Add_One_Performance_Ranking.</span>
+<span class="sd">              </span>
+<span class="sd">              (*optional, default: remove_1*)</span>
+
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    See the description of SensorSelectionBase for an example usage of this node.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de) &amp; David Feess</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SensorSelectionRankingNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ranking_spec</span><span class="p">,</span><span class="n">ranking</span><span class="p">,</span> <span class="n">recast_method</span><span class="o">=</span><span class="s">&#39;remove_1&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorSelectionRankingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">ranking</span> <span class="o">=</span> <span class="n">ranking</span><span class="p">,</span>
+                                      <span class="n">ranking_spec</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="p">,</span>
+                                      <span class="n">recast_method</span> <span class="o">=</span> <span class="n">recast_method</span><span class="p">,</span>
+                                      <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">training_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">add_remove</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">picked_sensors</span><span class="o">=</span><span class="p">[])</span>
+</div>
+<div class="viewcode-block" id="SensorSelectionRankingNode.create_ranker"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode.create_ranker">[docs]</a>    <span class="k">def</span> <span class="nf">create_ranker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ranking_name</span><span class="p">,</span><span class="n">ranking_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; A ranking method should return a sorted list of tuples (sensor, score),</span>
+<span class="sd">        Where the first element is the worst sensor with the lowest score.</span>
+<span class="sd">        Thus, in cases where a high score denotes a bad sensor: swap sign!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">ranking_name</span> <span class="o">==</span> <span class="s">&quot;Remove_One_Performance_Ranking&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">RemoveOnePerformanceRanker</span><span class="p">(</span><span class="n">ranking_spec</span><span class="o">=</span><span class="n">ranking_spec</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ranking_name</span> <span class="o">==</span> <span class="s">&quot;Coefficient_Ranking&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">CoefficientRanker</span><span class="p">(</span><span class="n">ranking_spec</span><span class="o">=</span><span class="n">ranking_spec</span><span class="p">,</span><span class="n">run_number</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ranking_name</span> <span class="o">==</span> <span class="s">&quot;Add_One_Performance_Ranking&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">AddOnePerformanceRanker</span><span class="p">(</span><span class="n">ranking_spec</span><span class="o">=</span><span class="n">ranking_spec</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SensorSelectionRankingNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Save the *data*</span>
+<span class="sd">        </span>
+<span class="sd">        The actual training is done after all data has been collected.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
+    </div>
+<div class="viewcode-block" id="SensorSelectionRankingNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Recast sensor set &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">replace_keywords_in_load_path</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span> <span class="o">=</span> \
+                <span class="nb">__import__</span><span class="p">(</span><span class="s">&quot;yaml&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="c"># Parse desired recast method </span>
+        <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">add_remove</span><span class="p">,</span> <span class="n">add_remove_n</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">recast_method</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)</span>
+        <span class="n">add_remove_n</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">add_remove_n</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ranker</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">create_ranker</span><span class="p">(</span><span class="n">ranking_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ranking</span><span class="p">,</span><span class="n">ranking_spec</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ranking_spec</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_remove</span> <span class="o">==</span> <span class="s">&#39;remove&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">remove_sensors</span><span class="p">(</span><span class="n">add_remove_n</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_remove</span> <span class="o">==</span> <span class="s">&#39;add&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_sensors</span><span class="p">(</span><span class="n">add_remove_n</span><span class="p">)</span>
+        
+</div>
+<div class="viewcode-block" id="SensorSelectionRankingNode.remove_sensors"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode.remove_sensors">[docs]</a>    <span class="k">def</span> <span class="nf">remove_sensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Iteratively remove n sensors from the current (sub)set&quot;&quot;&quot;</span>
+        <span class="c"># Memorize which channels are left through their channel_names list index. </span>
+        <span class="n">active_elements</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">))</span>
+        <span class="c"># If a list of already picked elements has been loaded, remove those:</span>
+        <span class="k">for</span> <span class="n">prev_dismissed</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="p">:</span>
+            <span class="n">active_elements</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">prev_dismissed</span><span class="p">))</span>
+        <span class="c"># Remove elements one-by-one until we retain only the requested number</span>
+        <span class="c"># of elements.</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_sensors</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> active sensors remaining.&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">))</span>
+            <span class="n">selected_channels</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">active_elements</span><span class="p">]</span>
+            <span class="c"># Ranker receives the complete set of active sensors</span>
+            <span class="n">ranking</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ranker</span><span class="o">.</span><span class="n">get_ranking</span><span class="p">(</span><span class="n">selected_channels</span><span class="o">=</span><span class="n">selected_channels</span><span class="p">,</span>
+                                            <span class="n">training_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="p">)</span>
+            <span class="c"># remove the worst n from active elements</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="c"># bad sensors are in front in the ranking, because omitting</span>
+                <span class="c"># them  results in high performance</span>
+                <span class="n">dismissed_sensor</span> <span class="o">=</span> <span class="n">ranking</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dismissed_sensor</span><span class="p">)</span>
+                <span class="n">active_elements</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dismissed_sensor</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Dismissing sensor </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="n">dismissed_sensor</span><span class="p">)</span>
+
+                <span class="c"># Save the picked sensors  in every round as failsafe</span>
+                <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">temp_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+                <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+                <span class="c"># if not index == None:</span>
+                <span class="c">#     node_dir += &quot;_%i&quot; % int(index)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;ordered_list_of_picks&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="p">))</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span> <span class="o">=</span> <span class="n">active_elements</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ranking</span><span class="p">)):</span>
+            <span class="n">sensor</span> <span class="o">=</span> <span class="n">ranking</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sensor</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SensorSelectionRankingNode.add_sensors"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode.add_sensors">[docs]</a>    <span class="k">def</span> <span class="nf">add_sensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Iteratively add n sensors to the current subset&quot;&quot;&quot;</span>
+        <span class="c"># first generate actual training data - get dataset from history, because</span>
+        <span class="c"># also channels that had already been deselected are required here.</span>
+        <span class="c"># This step assumes that the last history entry originates from a node</span>
+        <span class="c"># before a channel selection that decreased the number of channels</span>
+        <span class="n">complete_training_data</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="p">]</span>
+        <span class="n">old_channels</span> <span class="o">=</span> <span class="n">complete_training_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span>
+        <span class="c"># active elements to start with are the channels left in training_data</span>
+        <span class="c"># but we need their index with respect to the complete_training_data</span>
+        <span class="n">active_elements</span> <span class="o">=</span> <span class="p">[</span><span class="n">old_channels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+                               <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">]</span>
+        <span class="c"># Behavior if load_path is used is not yet implemented</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="p">[]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Behavior if load_path is used is not yet implemented for add_sensors!&quot;</span><span class="p">,</span>
+                <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_sensors</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> active sensors remaining.&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">))</span>
+            <span class="n">selected_channels</span> <span class="o">=</span> <span class="p">[</span><span class="n">old_channels</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">active_elements</span><span class="p">]</span>
+            <span class="c"># Ranker receives the complete set of sensors</span>
+            <span class="n">ranking</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ranker</span><span class="o">.</span><span class="n">get_ranking</span><span class="p">(</span><span class="n">selected_channels</span><span class="o">=</span><span class="n">selected_channels</span><span class="p">,</span>
+                                    <span class="n">training_data</span><span class="o">=</span><span class="n">complete_training_data</span><span class="p">)</span>
+            <span class="c"># add the best n to active elements</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                <span class="c"># good sensors are in front in the ranking</span>
+                <span class="n">chosen_sensor</span> <span class="o">=</span> <span class="n">ranking</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">chosen_sensor</span><span class="p">)</span>
+                <span class="n">active_elements</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">old_channels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">chosen_sensor</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Readding sensor </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="n">chosen_sensor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span> <span class="o">=</span> <span class="n">active_elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">=</span> \
+                <span class="p">[</span><span class="n">old_channels</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span><span class="p">]</span>
+                </div>
+<div class="viewcode-block" id="SensorSelectionRankingNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionRankingNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Store the names of the selected sensors into *result_dir* &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorSelectionRankingNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> 
+                                                                  <span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s">&quot;_</span><span class="si">%i</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="c"># Further, we also store in which order sensors were</span>
+            <span class="c"># selected/deselected.</span>
+            <span class="c"># This list is in the order the sensors were picked.</span>
+            <span class="c"># -&gt; remove: worst first, add: best first </span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;ordered_list_of_picks&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+            <span class="c"># Last but not least, we get a ranking by joining the 2 above lists</span>
+            <span class="n">best</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">best</span><span class="p">)</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span><span class="p">):</span>
+                <span class="c"># remove case: order of picks = bad -&gt; good</span>
+                <span class="n">best</span> <span class="o">=</span> <span class="n">best</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c"># add case: order of picks = good -&gt; bad</span>
+                <span class="c"># the best sensors are sorted alphabetically, because there&#39;s</span>
+                <span class="c"># no information in the order. FIXTHIS</span>
+                <span class="n">best</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                <span class="n">best</span> <span class="o">=</span> <span class="n">best</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">picked_sensors</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;sensor_ranking&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">best</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="SensorSelectionSSNRNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionSSNRNode">[docs]</a><span class="k">class</span> <span class="nc">SensorSelectionSSNRNode</span><span class="p">(</span><span class="n">SensorSelectionBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Select sensors based on maximizing the SSNR</span>
+<span class="sd">    </span>
+<span class="sd">    This node searches for an optimal sensor configuration for a given number</span>
+<span class="sd">    of sensors. It can use different meta-heuristics (like evolutionary </span>
+<span class="sd">    algorithms or recursive backward elimination) for this search. The</span>
+<span class="sd">    objective function that shall be maximized can be configured</span>
+<span class="sd">    and is based on the signal to signal-plus-noise ratio (SSNR).</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">          :erp_class_label: Label of the class for which an ERP should be evoked. </span>
+<span class="sd">               For instance &quot;Target&quot; for a P300 oddball paradigm.</span>
+<span class="sd">    </span>
+<span class="sd">          :num_selected_sensors: Determines how many sensors are kept.</span>
+
+<span class="sd">          :retained_channels: The number of pseudo-channels that are kept after </span>
+<span class="sd">                xDAWN filtering when using virtual sensor space. </span>
+<span class="sd">                Even though this node only selects sensors </span>
+<span class="sd">                and does no spatial filtering, this information is relevant since</span>
+<span class="sd">                the SSNR after xDAWN spatial filtering is used in objective </span>
+<span class="sd">                functions in virtual sensor space and the SSNR depends </span>
+<span class="sd">                on the number of pseudo-channels. If one does not use virtual</span>
+<span class="sd">                sensor space, this information can be ignored.</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: num_selected_sensors*)</span>
+<span class="sd">              </span>
+<span class="sd">          :search_heuristic: The search heuristic that is used to search an</span>
+<span class="sd">              optimal sensor configuration. Can be either &quot;evolutionary_search&quot;</span>
+<span class="sd">              or &quot;recursive_backward_elimination&quot;.</span>
+<span class="sd">              </span>
+<span class="sd">              (*optional, default: &quot;evolutionary_algorithm&quot;*)</span>
+<span class="sd">              </span>
+<span class="sd">          :objective_function: The objective function that is used to determine</span>
+<span class="sd">               which sensor selection are well suited and which less suited.</span>
+<span class="sd">               Available objective functions are &quot;ssnr_vs&quot; (the signal to </span>
+<span class="sd">               signal-plus-noise ratio in virtual sensor space), &quot;ssnr_as&quot; </span>
+<span class="sd">               (the signal to signal-plus-noise ratio in actual sensor space),</span>
+<span class="sd">               &quot;ssnr_vs_loeo&quot; (the minimum signal to signal-plus-noise ratio </span>
+<span class="sd">               in virtual sensor space when one of selected sensors wouldn&#39;t</span>
+<span class="sd">               be present)</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: &quot;ssnr_vs&quot;*)</span>
+<span class="sd">                </span>
+<span class="sd">          :population_size: The number of individuals of which one generation </span>
+<span class="sd">                of the EA consists of. Each individual corresponds to one </span>
+<span class="sd">                sensor configuration.</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: 20*)</span>
+<span class="sd">                </span>
+<span class="sd">          :num_survivors: The number of individuals which survive at the end of</span>
+<span class="sd">                a generation of the EA. The ratio of num_survivors to population_size </span>
+<span class="sd">                determines the selection pressure.</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: *8*)</span>
+<span class="sd">                </span>
+<span class="sd">          :mutant_ratio: The ratio of the next generation that consist of</span>
+<span class="sd">                survivors that a underwent a mutation.</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: *0.3*)</span>
+<span class="sd">          </span>
+<span class="sd">          :crossover_ratio: The ratio of the next generation that consist of</span>
+<span class="sd">                offspring of two survivors that were crossovered.</span>
+<span class="sd">                </span>
+<span class="sd">                (*optional, default: *0.3*)</span>
+
+<span class="sd">          :iterations: The number of sensor configurations that are evaluated </span>
+<span class="sd">              before the EA terminates. The larger this value, the better </span>
+<span class="sd">              performance (higher SSNR) can be expected but the computation time </span>
+<span class="sd">              increases, too.</span>
+
+<span class="sd">              (*optional, default: *1000*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">            -</span>
+<span class="sd">                node : Sensor_Selection_SSNR</span>
+<span class="sd">                parameters :</span>
+<span class="sd">                     erp_class_label : &quot;&#39;Target&#39;&quot;</span>
+<span class="sd">                     num_selected_sensors : 8</span>
+<span class="sd">                     retained_channels : 4</span>
+<span class="sd">                     search_heuristic : &quot;&#39;evolutionary_algorithm&#39;&quot;</span>
+<span class="sd">                     iterations : 1000</span>
+<span class="sd">                     mutant_ratio : 0.3</span>
+<span class="sd">                     crossover_ratio : 0.3</span>
+<span class="sd">                     diversity_support : 0.0</span>
+<span class="sd">                     objective_function : &quot;&#39;ssnr_vs&#39;&quot;</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2011/08/22</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="SensorSelectionSSNRNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionSSNRNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_selected_sensors</span><span class="p">,</span> <span class="n">erp_class_label</span><span class="o">=</span><span class="s">&quot;Target&quot;</span><span class="p">,</span>
+                 <span class="n">retained_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">search_heuristic</span><span class="o">=</span><span class="s">&quot;evolutionary_algorithm&quot;</span><span class="p">,</span>
+                 <span class="n">objective_function</span><span class="o">=</span><span class="s">&quot;ssnr_vs&quot;</span><span class="p">,</span> <span class="n">population_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">num_survivors</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> 
+                 <span class="n">mutant_ratio</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">crossover_ratio</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorSelectionSSNRNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">num_selected_sensors</span><span class="o">=</span><span class="n">num_selected_sensors</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c"># Check parameters</span>
+        <span class="n">search_heuristics</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;evolutionary_algorithm&quot;</span><span class="p">,</span> 
+                             <span class="s">&quot;recursive_backward_elimination&quot;</span><span class="p">]</span>
+
+        <span class="k">assert</span> <span class="n">search_heuristic</span> <span class="ow">in</span> <span class="n">search_heuristics</span><span class="p">,</span> \
+            <span class="s">&quot;Unknown search heuristic </span><span class="si">%s</span><span class="s">. Must be in </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">search_heuristic</span><span class="p">,</span>
+                                                             <span class="n">search_heuristics</span><span class="p">)</span>
+
+        <span class="n">objective_functions</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;ssnr_vs&quot;</span><span class="p">,</span> <span class="s">&quot;ssnr_as&quot;</span><span class="p">,</span> <span class="s">&quot;ssnr_vs_test&quot;</span><span class="p">]</span>
+
+        <span class="k">assert</span> <span class="n">objective_function</span> <span class="ow">in</span> <span class="n">objective_functions</span><span class="p">,</span> \
+            <span class="s">&quot;Unknown objective function </span><span class="si">%s</span><span class="s">. Must be in </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">objective_function</span><span class="p">,</span>
+                                                               <span class="n">objective_functions</span><span class="p">)</span>
+
+        <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.spatial_filtering.xdawn</span> <span class="kn">import</span> <span class="n">SSNR</span>
+        <span class="c"># Set permanent attributes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="c"># Label of the class for which an ERP should be evoked.</span>
+                                      <span class="n">erp_class_label</span> <span class="o">=</span> <span class="n">erp_class_label</span><span class="p">,</span>
+                                      <span class="c"># Object for handling SSNR related calculations</span>
+                                      <span class="n">ssnr</span> <span class="o">=</span> <span class="n">SSNR</span><span class="p">(</span><span class="n">erp_class_label</span><span class="p">,</span> <span class="n">retained_channels</span><span class="p">),</span>
+
+                                      <span class="n">num_selected_sensors</span><span class="o">=</span><span class="n">num_selected_sensors</span><span class="p">,</span>
+                                      <span class="n">search_heuristic</span><span class="o">=</span><span class="n">search_heuristic</span><span class="p">,</span>
+                                      <span class="n">objective_function</span><span class="o">=</span><span class="n">objective_function</span><span class="p">,</span>
+                                      <span class="n">population_size</span><span class="o">=</span><span class="n">population_size</span><span class="p">,</span>
+                                      <span class="n">num_survivors</span><span class="o">=</span><span class="n">num_survivors</span><span class="p">,</span>
+                                      <span class="n">mutant_ratio</span><span class="o">=</span><span class="n">mutant_ratio</span><span class="p">,</span>
+                                      <span class="n">crossover_ratio</span><span class="o">=</span><span class="n">crossover_ratio</span><span class="p">,</span>
+                                      <span class="n">iterations</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">iterations</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SensorSelectionSSNRNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionSSNRNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Train node on given example *data* for class *label*. &quot;&quot;&quot;</span>
+        <span class="c"># If this is the first data sample we obtain</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">add_example</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="SensorSelectionSSNRNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.SensorSelectionSSNRNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>        
+        <span class="c"># Determine objective function</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span> <span class="o">==</span> <span class="s">&quot;ssnr_vs&quot;</span><span class="p">:</span>
+            <span class="n">objective_function</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">selection</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_vs</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span> <span class="o">==</span> <span class="s">&quot;ssnr_vs_test&quot;</span><span class="p">:</span>
+            <span class="n">objective_function</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">selection</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_vs_test</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">objective_function</span> <span class="o">==</span> <span class="s">&quot;ssnr_as&quot;</span><span class="p">:</span>
+            <span class="n">objective_function</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">selection</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">ssnr_as</span><span class="p">(</span><span class="n">selection</span><span class="p">)</span>
+
+        <span class="c"># Determine search heuristic</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_heuristic</span> <span class="o">==</span> <span class="s">&quot;evolutionary_algorithm&quot;</span><span class="p">:</span>
+            <span class="n">heuristic_search</span> <span class="o">=</span> \
+                <span class="n">EvolutionaryAlgorithm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_sensors</span><span class="p">,</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_survivors</span><span class="p">,</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">mutant_ratio</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">crossover_ratio</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_heuristic</span> <span class="o">==</span> <span class="s">&quot;recursive_backward_elimination&quot;</span><span class="p">:</span>
+            <span class="n">heuristic_search</span> <span class="o">=</span> \
+                <span class="n">RecursiveBackwardElimination</span><span class="p">(</span><span class="n">total_elements</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ssnr</span><span class="o">.</span><span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                               <span class="n">num_selected_sensors</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_selected_sensors</span><span class="p">)</span>
+
+        <span class="c"># Search for a set of sensors that yield a maximal SSNR using</span>
+        <span class="c"># heuristic search</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span> <span class="o">=</span> \
+            <span class="n">heuristic_search</span><span class="o">.</span><span class="n">optimize</span><span class="p">(</span><span class="n">objective_function</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_channels</span> <span class="o">=</span> \
+                <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_indices</span><span class="p">]</span>
+
+
+<span class="c">#==============================================================================#</span>
+
+</div></div>
+<div class="viewcode-block" id="evaluate_sensor_selection"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.evaluate_sensor_selection">[docs]</a><span class="k">def</span> <span class="nf">evaluate_sensor_selection</span><span class="p">(</span><span class="n">cns</span><span class="p">,</span> <span class="n">flow</span><span class="p">,</span> <span class="n">metric</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">sensor_identifier</span><span class="p">,</span> 
+                                 <span class="n">training_data</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Execute the evaluation flow &quot;&quot;&quot;</span>
+    <span class="c"># Getting together the two evaluation functions without self variables</span>
+    <span class="n">node_sequence</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExternalGeneratorSourceNode</span><span class="p">(),</span>
+                     <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">cns</span><span class="p">)]</span>
+    
+    <span class="c"># For all nodes of the flow</span>
+    <span class="k">for</span> <span class="n">sub_node_spec</span> <span class="ow">in</span> <span class="n">flow</span><span class="p">:</span>
+        <span class="c"># Use factory method to create node</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">sub_node_spec</span><span class="p">)</span>
+
+        <span class="c"># Append this node to the sequence of node</span>
+        <span class="n">node_sequence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_obj</span><span class="p">)</span>
+    
+    <span class="c"># Check if the nodes have to cache their outputs</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">):</span>
+        <span class="c"># If a node is trainable, it uses the outputs of its input node</span>
+        <span class="c"># at least twice, so we have to cache.</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+            <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="c"># Split node might also request the data from their input nodes</span>
+        <span class="c"># (once for each split), depending on their implementation. We</span>
+        <span class="c"># assume the worst case and activate caching</span>
+        <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_split_node</span><span class="p">():</span>
+            <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+    <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">)</span>
+        
+    <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">runs</span><span class="p">):</span>
+        <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+        <span class="c"># Set input data</span>
+        <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="n">training_data</span><span class="p">)</span>
+        <span class="c"># For every split of the data</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span> <span class="c"># As long as more splits are available</span>
+            <span class="c"># Compute the results of the flow for the current split</span>
+            <span class="c"># by calling the method on its last node</span>
+            <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">process_current_split</span><span class="p">()</span>
+
+            <span class="c"># If no more splits are available</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">use_next_split</span><span class="p">():</span>
+                <span class="k">break</span>
+        <span class="c"># reset flow, collection is kept for the different runs</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">flow</span><span class="p">:</span>
+            <span class="n">node</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+    <span class="c"># Determine performance of the flow and store it in dict</span>
+    <span class="n">result_collection</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_result_dataset</span><span class="p">()</span>
+    <span class="n">performance</span> <span class="o">=</span> \
+        <span class="n">result_collection</span><span class="o">.</span><span class="n">get_average_performance</span><span class="p">(</span><span class="n">metric</span><span class="p">)</span> \
+        <span class="o">-</span> <span class="n">w</span> <span class="o">*</span> <span class="n">result_collection</span><span class="o">.</span><span class="n">get_performance_std</span><span class="p">(</span><span class="n">metric</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">sensor_identifier</span><span class="p">,</span> <span class="n">performance</span><span class="p">)</span>
+
+
+<span class="c">#==============================================================================#</span>
+
+</div>
+<div class="viewcode-block" id="PerformanceRanker"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.PerformanceRanker">[docs]</a><span class="k">class</span> <span class="nc">PerformanceRanker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Rank sensors by performance after evaluating classification flows</span>
+<span class="sd">    </span>
+<span class="sd">    This class provides the functionality to evaluate different classification</span>
+<span class="sd">    flows. Every flow has an sensor_identifier string associated.</span>
+<span class="sd">    Afterwards, the classification performances (or a derived value - see </span>
+<span class="sd">    std_weight parameter) are sorted and returned together with the associated</span>
+<span class="sd">    identifier. </span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: Classification performances are multiplied with (-1).</span>
+<span class="sd">              In this way, high performances appear first in the sorted results.</span>
+<span class="sd">    </span>
+<span class="sd">    The flows differ in the sensors/channels that are used by using</span>
+<span class="sd">    multiple Channel Name Selection (CNS) nodes. The way how these CNS nodes are</span>
+<span class="sd">    generated, however, is specific for every particular selection procedure</span>
+<span class="sd">    (such as &quot;remove one backwards elimination&quot; vs. &quot;add one forward assembly&quot;).</span>
+<span class="sd">    The actual generation of the flows happens in generate_cns_nodes. This</span>
+<span class="sd">    template class only has a dummy for that method - overwrite it in your</span>
+<span class="sd">    ranker! See RemoveOnePerformanceRanker or AddOnePerformanceRanker for</span>
+<span class="sd">    examples.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :flow: The processing chain (YAML readable). Usually, the flow</span>
+<span class="sd">            will at least consist of a CV-Splitter, a classifier, and a</span>
+<span class="sd">            :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.ClassificationPerformanceSink`.</span>
+<span class="sd">            See the documentation of :class:`SensorSelectionBase` for an example.</span>
+
+<span class="sd">        :metric: The :ref:`metric &lt;metrics&gt;`</span>
+<span class="sd">            for the classification performance used for</span>
+<span class="sd">            the calculation of the ranking,</span>
+<span class="sd">            if a performance value is used.</span>
+
+<span class="sd">            (*optional, default: Balanced_accuracy*)</span>
+
+<span class="sd">        :std_weight:</span>
+<span class="sd">            As a result of cross validation often more than one</span>
+<span class="sd">            performance result (*p*) per sensor set is calculated.</span>
+<span class="sd">            The score (*s*) of one particular constellation is thus computed</span>
+<span class="sd">            by calculating</span>
+
+<span class="sd">            .. math:: s = mean(p) - \\text{std\_weight} \\cdot \\text{std\_dev}(p)</span>
+
+<span class="sd">            Hence, for std_weight = 0 the mean is used. With increasing</span>
+<span class="sd">            std_weight large spreads get penalized more strongly.</span>
+
+<span class="sd">            (*optional, default: 0*)</span>
+
+<span class="sd">        :runs: May be specified to perform multiple runs (and thus different</span>
+<span class="sd">            CV-Splits)</span>
+
+<span class="sd">            (*optional, default: 1*)</span>
+
+<span class="sd">        :pool_size: May be specified to achieve parallelization of the</span>
+<span class="sd">            classification subflow as normally only the main flow is parallelled.</span>
+
+<span class="sd">            .. note:: Currently a pool size larger than 1 will not work with the MulticoreBackend,</span>
+<span class="sd">                      because multiprocessing can&#39;t be nested.</span>
+<span class="sd">                      Use loadl backend instead or no pool size!</span>
+
+<span class="sd">            .. todo:: Distribute subflows with the subflowhandler using backend specific parallelization.</span>
+
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de) &amp; David Feess</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PerformanceRanker.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.PerformanceRanker.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ranking_spec</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="p">[</span><span class="s">&quot;flow&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;metric&quot;</span><span class="p">,</span><span class="s">&quot;Balanced_accuracy&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std_weight</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;std_weight&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">runs</span> <span class="o">=</span><span class="n">ranking_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;runs&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;pool_size&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="PerformanceRanker.get_ranking"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.PerformanceRanker.get_ranking">[docs]</a>    <span class="k">def</span> <span class="nf">get_ranking</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the ranking of the selected channels.&quot;&quot;&quot;</span>
+        <span class="c"># to get the ranking, classification flows have to be evaluated on </span>
+        <span class="c"># different subsets of the channels. These subsets are generated by</span>
+        <span class="c"># different channel name selection nodes *cns_nodes*</span>
+        <span class="n">cns_nodes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_cns_nodes</span><span class="p">(</span><span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">)</span>
+        <span class="n">ranking</span><span class="o">=</span><span class="p">[]</span>
+        <span class="c"># one core case</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">sensor_identifier</span><span class="p">,</span><span class="n">cns_node</span> <span class="ow">in</span> <span class="n">cns_nodes</span><span class="p">:</span>
+                <span class="n">sensor</span><span class="p">,</span><span class="n">performance</span> <span class="o">=</span> \
+                    <span class="n">evaluate_sensor_selection</span><span class="p">(</span><span class="n">cns</span><span class="o">=</span><span class="n">cns_node</span><span class="p">,</span>
+                                                 <span class="n">flow</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">,</span>
+                                                 <span class="n">metric</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">,</span>
+                                                 <span class="n">w</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">std_weight</span><span class="p">,</span>
+                                                 <span class="n">sensor_identifier</span><span class="o">=</span><span class="n">sensor_identifier</span><span class="p">,</span>
+                                                 <span class="n">training_data</span><span class="o">=</span><span class="n">training_data</span><span class="p">,</span>
+                                                 <span class="n">runs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">runs</span><span class="p">)</span>
+                <span class="n">ranking</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">sensor</span><span class="p">,</span><span class="o">-</span><span class="n">performance</span><span class="p">))</span>
+        <span class="c"># multiple cores: parallel case</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span><span class="p">)</span>
+            <span class="c"># This won&#39;t work with mcore</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">evaluate_sensor_selection</span><span class="p">,</span>
+                <span class="n">kwds</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;cns&quot;</span><span class="p">:</span><span class="n">cns_node</span><span class="p">,</span><span class="s">&quot;flow&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">,</span>
+                      <span class="s">&quot;metric&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">,</span><span class="s">&quot;w&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">std_weight</span><span class="p">,</span>
+                      <span class="s">&quot;sensor_identifier&quot;</span><span class="p">:</span><span class="n">sensor_identifier</span><span class="p">,</span>
+                      <span class="s">&quot;training_data&quot;</span><span class="p">:</span><span class="n">training_data</span><span class="p">,</span><span class="s">&quot;runs&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">runs</span><span class="p">})</span>
+                <span class="k">for</span> <span class="n">sensor_identifier</span><span class="p">,</span><span class="n">cns_node</span> <span class="ow">in</span> <span class="n">cns_nodes</span><span class="p">]</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="c"># self._log(&quot;Waiting for parallel processes to finish&quot;)</span>
+            <span class="c"># this is not a node! there&#39;s no self._log here!</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                <span class="n">sensor</span><span class="p">,</span><span class="n">performance</span> <span class="o">=</span><span class="n">result</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+                <span class="n">ranking</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">sensor</span><span class="p">,</span><span class="o">-</span><span class="n">performance</span><span class="p">))</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">pool</span><span class="p">)</span>
+        <span class="c"># sort by performance before return</span>
+        <span class="c"># NB: Performances have been multiplied by (-1), s.t. high performances</span>
+        <span class="c"># appear first in the sorted lists.</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ranking</span><span class="p">,</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="PerformanceRanker.generate_cns_nodes"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.PerformanceRanker.generate_cns_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">generate_cns_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This method has to be overwritten by the different sensor selection nodes &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Your method should overwrite the &quot;</span>
+                                  <span class="s">&quot;generate_cns_nodes method in your Ranker!&quot;</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="RemoveOnePerformanceRanker"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RemoveOnePerformanceRanker">[docs]</a><span class="k">class</span> <span class="nc">RemoveOnePerformanceRanker</span><span class="p">(</span><span class="n">PerformanceRanker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Rank sensors by evaluating if classification performance drops without them</span>
+<span class="sd">    </span>
+<span class="sd">    Consider a set of n sensors. This ranker will always remove one sensor</span>
+<span class="sd">    creating n-1 sized subsets. Every size n-1 subset is evaluated.</span>
+<span class="sd">    </span>
+<span class="sd">    NB: high performance == Unimportant sensor == good sensor to remove </span>
+<span class="sd">    </span>
+<span class="sd">    See the description of PerformanceRanker for the required parameters.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de) &amp; David Feess</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="RemoveOnePerformanceRanker.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RemoveOnePerformanceRanker.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RemoveOnePerformanceRanker</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RemoveOnePerformanceRanker.generate_cns_nodes"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RemoveOnePerformanceRanker.generate_cns_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">generate_cns_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate Channel Name Selection Nodes that use the current channels minus 1</span>
+<span class="sd">        .. todo:: training_data parameter is not necessary!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># generates the list with cns nodes, each of which has a different</span>
+        <span class="c"># sensor removed. This function is specifically what makes this the</span>
+        <span class="c"># &quot;remove_one&quot;-ranker</span>
+        <span class="n">cns_nodes</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">selected_channels</span><span class="p">:</span>
+            <span class="c"># Remove element temporarily and create channel name selector node</span>
+            <span class="c"># that selects all the remaining</span>
+            <span class="n">channels</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">selected_channels</span><span class="p">)</span>
+            <span class="n">channels</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+            <span class="n">cns_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">element</span><span class="p">,{</span><span class="s">&#39;node&#39;</span><span class="p">:</span> <span class="s">&#39;Channel_Name_Selector&#39;</span><span class="p">,</span> 
+                                       <span class="s">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;selected_channels&#39;</span><span class="p">:</span> <span class="n">channels</span><span class="p">}}))</span>
+        <span class="k">return</span> <span class="n">cns_nodes</span>
+
+        </div></div>
+<div class="viewcode-block" id="AddOnePerformanceRanker"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.AddOnePerformanceRanker">[docs]</a><span class="k">class</span> <span class="nc">AddOnePerformanceRanker</span><span class="p">(</span><span class="n">PerformanceRanker</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Rank sensors by evaluating performance increase on usage</span>
+<span class="sd">    </span>
+<span class="sd">    Consider a set N of sensors and a fixed subset K of the sensors in N.</span>
+<span class="sd">    This ranker will always add one sensor of N\K to K </span>
+<span class="sd">    creating k+1 sized subsets. Every subset is than evaluated.</span>
+<span class="sd">    The score of the added sensors is determined by the classification performance, s.t.</span>
+<span class="sd">    high performance == good sensor to add</span>
+<span class="sd">    </span>
+<span class="sd">    See the description of PerformanceRanker for the required parameters.</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de) &amp; David Feess</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="AddOnePerformanceRanker.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.AddOnePerformanceRanker.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AddOnePerformanceRanker</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AddOnePerformanceRanker.generate_cns_nodes"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.AddOnePerformanceRanker.generate_cns_nodes">[docs]</a>    <span class="k">def</span> <span class="nf">generate_cns_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate Channel Name Selection Nodes that use the current channels plus 1&quot;&quot;&quot;</span>
+        <span class="c"># generates the list with cns nodes, each of which has a different</span>
+        <span class="c"># sensor added. This function is specifically what makes this the</span>
+        <span class="c"># &quot;add_one&quot;-ranker</span>
+        <span class="n">channels_to_pick_from</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">training_data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span> 
+                                            <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">selected_channels</span><span class="p">]</span>
+
+        <span class="n">cns_nodes</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">channels_to_pick_from</span><span class="p">:</span>
+            <span class="c"># Remove element temporarily and create channel name selector node</span>
+            <span class="c"># that selects all the remaining</span>
+            <span class="n">channels</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">selected_channels</span><span class="p">)</span>
+            <span class="n">channels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+            <span class="n">cns_nodes</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">element</span><span class="p">,{</span><span class="s">&#39;node&#39;</span><span class="p">:</span> <span class="s">&#39;Channel_Name_Selector&#39;</span><span class="p">,</span> 
+                                       <span class="s">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;selected_channels&#39;</span><span class="p">:</span> <span class="n">channels</span><span class="p">}}))</span>
+        <span class="k">return</span> <span class="n">cns_nodes</span>
+
+</div></div>
+<div class="viewcode-block" id="CoefficientRanker"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.CoefficientRanker">[docs]</a><span class="k">class</span> <span class="nc">CoefficientRanker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Get a ranking from the second last processing node </span>
+<span class="sd">    </span>
+<span class="sd">    This ranking is given by this node,</span>
+<span class="sd">    by adding up channel weights of linear classifiers or spatial filters.</span>
+<span class="sd">    The details remain to the used node.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :flow: The classification flow (YAML readable). Usually, the flow</span>
+<span class="sd">            will at least consist of a CV-Splitter, a classifier , and a </span>
+<span class="sd">            Classification_Performance_Sink. See the documentation of </span>
+<span class="sd">            SensorSelectionBase for an example.</span>
+
+<span class="sd">            (*optional, default: 1*)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="CoefficientRanker.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.CoefficientRanker.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ranking_spec</span><span class="p">,</span><span class="n">run_number</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">ranking_spec</span><span class="p">[</span><span class="s">&quot;flow&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_number</span> <span class="o">=</span> <span class="n">run_number</span>
+</div>
+<div class="viewcode-block" id="CoefficientRanker.get_ranking"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.CoefficientRanker.get_ranking">[docs]</a>    <span class="k">def</span> <span class="nf">get_ranking</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">selected_channels</span><span class="p">,</span> <span class="n">training_data</span><span class="p">):</span>
+        <span class="n">cns_node</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;node&#39;</span><span class="p">:</span> <span class="s">&#39;Channel_Name_Selector&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;parameters&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s">&#39;selected_channels&#39;</span><span class="p">:</span> <span class="n">selected_channels</span><span class="p">}}</span>
+        <span class="c"># code copy from evaluate_sensor_selection</span>
+        <span class="n">node_sequence</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExternalGeneratorSourceNode</span><span class="p">(),</span>
+                     <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">cns_node</span><span class="p">)]</span>
+        
+        <span class="c"># For all nodes of the flow</span>
+        <span class="k">for</span> <span class="n">sub_node_spec</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span>
+            <span class="c"># Use factory method to create node</span>
+            <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">sub_node_spec</span><span class="p">)</span>
+    
+            <span class="c"># Append this node to the sequence of node</span>
+            <span class="n">node_sequence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_obj</span><span class="p">)</span>
+        
+        <span class="c"># Check if the nodes have to cache their outputs</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">):</span>
+            <span class="c"># If a node is trainable, it uses the outputs of its input node</span>
+            <span class="c"># at least twice, so we have to cache.</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+                <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="c"># Split node might also request the data from their input nodes</span>
+            <span class="c"># (once for each split), depending on their implementation. We</span>
+            <span class="c"># assume the worst case and activate caching</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_split_node</span><span class="p">():</span>
+                <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    
+        <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">)</span>
+        <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+        <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="n">training_data</span><span class="p">)</span>
+        <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">process_current_split</span><span class="p">()</span>
+        <span class="c"># Since the last node is the sink node the second last is expected</span>
+        <span class="c"># to give the ranking</span>
+        <span class="c"># It can be a linear classification node or a spatial filter  </span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">get_sensor_ranking</span><span class="p">()</span>
+        <span class="k">del</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="c">#==============================================================================# </span>
+
+</div></div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm">[docs]</a><span class="k">class</span> <span class="nc">EvolutionaryAlgorithm</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Black-box optimization using an evolutionary algorithm</span>
+<span class="sd">    </span>
+<span class="sd">    This implementation is tailored for the specific case that one wants to</span>
+<span class="sd">    select M out of N elements and is looking for the M elements that maximize</span>
+<span class="sd">    an objective function. For simplicity, it is assumed, the one works on the</span>
+<span class="sd">    indices, i.e. the N-elementary set is {0,1,...,N-1}. </span>
+<span class="sd">    </span>
+<span class="sd">    One may either provide the objective function to the object and let it</span>
+<span class="sd">    autonomously optimize this function or use its &quot;ask and tell&quot; interface</span>
+<span class="sd">    and keep control over the optimization procedure.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">          :total_elements: The number of total elements (i.e. N)</span>
+<span class="sd">          </span>
+<span class="sd">          :num_selected_elements: The number of elements to be selected (i.e. M)</span>
+<span class="sd">    </span>
+<span class="sd">          :population_size: The number of individuals of which one generation </span>
+<span class="sd">                of the EA consists of. </span>
+<span class="sd">                </span>
+<span class="sd">          :num_survivors: The number of individuals which survive at the end of</span>
+<span class="sd">                a generation. The ratio of num_survivors to population_size </span>
+<span class="sd">                determines the selection pressure.</span>
+<span class="sd">                </span>
+<span class="sd">          :mutant_ratio: The ratio of the next generation that consist of</span>
+<span class="sd">                survivors that a underwent a mutation.</span>
+<span class="sd">          </span>
+<span class="sd">          :crossover_ratio: The ratio of the next generation that consist of</span>
+<span class="sd">                offspring of two survivors that were crossovered.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EvolutionaryAlgorithm.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_elements</span><span class="p">,</span> <span class="n">num_selected_elements</span><span class="p">,</span> 
+                 <span class="n">population_size</span><span class="p">,</span> <span class="n">num_survivors</span><span class="p">,</span> <span class="n">mutant_ratio</span><span class="p">,</span> <span class="n">crossover_ratio</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="n">mutant_ratio</span> <span class="o">+</span> <span class="n">crossover_ratio</span> <span class="o">&lt;=</span> <span class="mf">1.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span> <span class="o">=</span> <span class="n">total_elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_elements</span> <span class="o">=</span> <span class="n">num_selected_elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population_size</span> <span class="o">=</span> <span class="n">population_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_survivors</span> <span class="o">=</span> <span class="n">num_survivors</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mutant_ratio</span> <span class="o">=</span> <span class="n">mutant_ratio</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">crossover_ratio</span> <span class="o">=</span> <span class="n">crossover_ratio</span>
+
+        <span class="c"># Create population to be used in evolutionary algorithm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="p">[</span><span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span><span class="p">),</span> 
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_elements</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">)]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span> <span class="o">=</span> <span class="mi">0</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitnesses</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_fitness</span> <span class="o">=</span> <span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_individual</span> <span class="o">=</span> <span class="bp">None</span>
+        </div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm.optimize"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm.optimize">[docs]</a>    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective_function</span><span class="p">,</span> <span class="n">evaluations</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Search for maximum of objective_function</span>
+<span class="sd">        </span>
+<span class="sd">        Search for maximum of the given *objective_function*. Restrict number of </span>
+<span class="sd">        evaluations of objective function to *evaluations*.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">evaluations</span><span class="p">):</span>
+            <span class="c"># Fetch next configuration from evolutionary algorithm</span>
+            <span class="n">selected_elements</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_current_elements</span><span class="p">()</span>
+
+            <span class="c"># Compute fitness for this configuration</span>
+            <span class="n">fitness</span> <span class="o">=</span> <span class="n">objective_function</span><span class="p">(</span><span class="n">selected_elements</span><span class="p">)</span>
+            
+            <span class="c"># Tell EA the fitness of configuration</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tell_fitness</span><span class="p">(</span><span class="n">fitness</span><span class="p">)</span>
+            
+        <span class="c"># Return best configuration found</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_elements</span><span class="p">()</span>
+        
+        </div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm.get_best_elements"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm.get_best_elements">[docs]</a>    <span class="k">def</span> <span class="nf">get_best_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the individual with the maximal fitness. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_individual</span>
+    </div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm.get_current_elements"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm.get_current_elements">[docs]</a>    <span class="k">def</span> <span class="nf">get_current_elements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the currently active individual. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span><span class="p">]</span>
+    </div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm.tell_fitness"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm.tell_fitness">[docs]</a>    <span class="k">def</span> <span class="nf">tell_fitness</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fitness</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add a fitness sample for the current individual. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fitnesses</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">fitness</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span><span class="p">]))</span>
+        
+        <span class="c"># If we have found an individual that gives rise to</span>
+        <span class="c"># the maximally fitness found so far: </span>
+        <span class="k">if</span> <span class="n">fitness</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_fitness</span><span class="p">:</span>
+            <span class="c"># Remember this sensor configuration and its SSNR</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_fitness</span> <span class="o">=</span> <span class="n">fitness</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best_individual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span><span class="p">]</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="p">):</span>
+            <span class="c"># Evaluation of a generation is finished.       </span>
+            <span class="c"># Determine survivors            </span>
+            <span class="n">survivors</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> 
+                            <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fitnesses</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)[:</span><span class="bp">self</span><span class="o">.</span><span class="n">num_survivors</span><span class="p">])</span>
+            <span class="c"># Create next generation&#39;s population by randomly picking survivors</span>
+            <span class="c"># of the previous generation and optionally mutate them</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">population</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">population_size</span><span class="p">):</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">r</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mutant_ratio</span><span class="p">:</span> <span class="c"># Mutation</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mutate</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">survivors</span><span class="p">)))</span>
+                <span class="k">elif</span> <span class="n">r</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">mutant_ratio</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">crossover_ratio</span><span class="p">:</span> <span class="c"># Crossover</span>
+                    <span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">survivors</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_crossover</span><span class="p">(</span><span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c"># Cloning</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">population</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">survivors</span><span class="p">))</span>
+                                
+            <span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fitnesses</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">currentIndivudualIndex</span> <span class="o">+=</span> <span class="mi">1</span>
+                    </div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm._mutate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm._mutate">[docs]</a>    <span class="k">def</span> <span class="nf">_mutate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">individual</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Mutate the given individual with the given probability. &quot;&quot;&quot;</span>
+        <span class="n">individual</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">individual</span><span class="p">)</span> 
+        
+        <span class="c"># Replace one randomly chosen currently activate element by</span>
+        <span class="c"># an inactive element</span>
+        <span class="n">inactive_elements</span> <span class="o">=</span> \
+            <span class="p">[</span><span class="n">element</span> <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span><span class="p">)</span>
+                                            <span class="k">if</span> <span class="n">element</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">individual</span><span class="p">]</span>
+        <span class="n">individual</span><span class="p">[</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">individual</span><span class="p">)))]</span> <span class="o">=</span> \
+                                    <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">inactive_elements</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">individual</span>
+</div>
+<div class="viewcode-block" id="EvolutionaryAlgorithm._crossover"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.EvolutionaryAlgorithm._crossover">[docs]</a>    <span class="k">def</span> <span class="nf">_crossover</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent1</span><span class="p">,</span> <span class="n">parent2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create offspring by crossover of two parent individuals. &quot;&quot;&quot;</span>
+        <span class="n">elements</span> <span class="o">=</span> \
+            <span class="nb">set</span><span class="p">([</span><span class="n">element</span> <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span><span class="p">)</span>
+                            <span class="k">if</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">parent1</span> <span class="ow">or</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">parent2</span><span class="p">])</span>
+        
+        <span class="n">individual</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">elements</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">parent1</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">individual</span>
+</div></div>
+<div class="viewcode-block" id="RecursiveBackwardElimination"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RecursiveBackwardElimination">[docs]</a><span class="k">class</span> <span class="nc">RecursiveBackwardElimination</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Black-box optimization using recursive backward elimination</span>
+<span class="sd">    </span>
+<span class="sd">    This implementation is tailored for the specific case that one wants to</span>
+<span class="sd">    select M out of N elements and is looking for the M elements that maximize</span>
+<span class="sd">    an objective function. For simplicity, it is assumed, the one works on the</span>
+<span class="sd">    indices, i.e. the N-elementary set is {0,1,...,N-1}. </span>
+<span class="sd">    </span>
+<span class="sd">    One may either call *optimize* which returns a set of M sensors that are</span>
+<span class="sd">    selected using recursive backward elimination or call *rank* which returns</span>
+<span class="sd">    a ranking of all sensors. For *rank* the specific value of M is not</span>
+<span class="sd">    relevant and may be omitted.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">          :total_elements: The number of total elements (i.e. N)</span>
+<span class="sd">          </span>
+<span class="sd">          :num_selected_elements: The number of elements to be selected (i.e. M)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="RecursiveBackwardElimination.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RecursiveBackwardElimination.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_elements</span><span class="p">,</span> <span class="n">num_selected_elements</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span> <span class="o">=</span> <span class="n">total_elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_elements</span> <span class="o">=</span> <span class="n">num_selected_elements</span>
+        </div>
+<div class="viewcode-block" id="RecursiveBackwardElimination.optimize"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RecursiveBackwardElimination.optimize">[docs]</a>    <span class="k">def</span> <span class="nf">optimize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective_function</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Search for an optimal configuration consisting of M elements &quot;&quot;&quot;</span>
+        <span class="n">active_elements</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span><span class="p">)</span>
+        <span class="c"># Remove elements one-by-one until we retain only the requested number</span>
+        <span class="c"># of elements.</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_selected_elements</span><span class="p">:</span>
+            <span class="c"># Compute the performance that is obtained when one of the remaining</span>
+            <span class="c"># elements is removed</span>
+            <span class="n">configuration_performance</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">active_elements</span><span class="p">:</span>
+                <span class="c"># Remove element temporarily and determine performance</span>
+                <span class="n">active</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span>
+                <span class="n">active</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                <span class="n">configuration_performance</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">objective_function</span><span class="p">(</span><span class="n">active</span><span class="p">),</span>
+                                                  <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(),</span> <span class="c"># Break ties randomly </span>
+                                                  <span class="n">element</span><span class="p">))</span>
+            <span class="c"># Remove element which makes the objective function maximal when</span>
+            <span class="c"># removed permanently</span>
+            <span class="n">dismissed_sensor</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">configuration_performance</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">active_elements</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">dismissed_sensor</span><span class="p">)</span>
+            
+        <span class="c"># Return the selected sensors</span>
+        <span class="k">return</span> <span class="n">active_elements</span>
+        </div>
+<div class="viewcode-block" id="RecursiveBackwardElimination.rank"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.sensor_selection.html#pySPACE.missions.nodes.spatial_filtering.sensor_selection.RecursiveBackwardElimination.rank">[docs]</a>    <span class="k">def</span> <span class="nf">rank</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">objective_function</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Rank the elements. &quot;&quot;&quot;</span>
+        <span class="n">ranking</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">active_elements</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_elements</span><span class="p">)</span>
+        <span class="c"># Remove elements one-by-one. Elements which are removed early </span>
+        <span class="c"># come last in the ranking.</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="c"># Compute the performance that is obtained when one of the remaining</span>
+            <span class="c"># elements is removed</span>
+            <span class="n">configuration_performance</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="n">active_elements</span><span class="p">:</span>
+                <span class="c"># Remove element temporarily and determine performance</span>
+                <span class="n">active</span><span class="o">=</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">active_elements</span><span class="p">)</span>
+                <span class="n">active</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+                <span class="n">configuration_performance</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">objective_function</span><span class="p">(</span><span class="n">active</span><span class="p">),</span>
+                                                  <span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(),</span> <span class="c"># Break ties randomly </span>
+                                                  <span class="n">element</span><span class="p">))</span>
+            <span class="c"># Remove element which makes the objective function maximal when</span>
+            <span class="c"># removed permanently</span>
+            <span class="n">dismissed_sensor</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">configuration_performance</span><span class="p">)[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="n">active_elements</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">dismissed_sensor</span><span class="p">)</span>
+            <span class="n">ranking</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dismissed_sensor</span><span class="p">)</span>
+        
+        <span class="c"># Append remaining (i.e. best sensor)</span>
+        <span class="n">ranking</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">active_elements</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c"># Return the ranking</span>
+        <span class="k">return</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">ranking</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Sensor_Selection_SSNR&quot;</span> <span class="p">:</span> <span class="n">SensorSelectionSSNRNode</span><span class="p">,</span>
+                <span class="s">&quot;Sensor_Selection_Ranking&quot;</span> <span class="p">:</span> <span class="n">SensorSelectionRankingNode</span><span class="p">,</span>
+                <span class="s">&quot;Electrode_Selection_SSNR&quot;</span> <span class="p">:</span> <span class="n">SensorSelectionSSNRNode</span><span class="p">,</span>
+                <span class="s">&quot;Electrode_Selection_Ranking&quot;</span> <span class="p">:</span> <span class="n">SensorSelectionRankingNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

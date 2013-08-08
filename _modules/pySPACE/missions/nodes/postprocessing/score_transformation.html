@@ -1,0 +1,911 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.postprocessing.score_transformation &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.postprocessing.score_transformation</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: UTF-8 -*</span>
+<span class="sd">&quot;&quot;&quot; Transform the classification score (especially the one of the SVM) &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+
+<div class="viewcode-block" id="EmptyBinException"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.EmptyBinException">[docs]</a><span class="k">class</span> <span class="nc">EmptyBinException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode">[docs]</a><span class="k">class</span> <span class="nc">PlattsSigmoidFitNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Map prediction scores to probability estimates with a sigmoid fit</span>
+<span class="sd">    </span>
+<span class="sd">    This node uses a sigmoid fit to map a prediction score to a class </span>
+<span class="sd">    probability estimate, i.e. a value between 0 and 1, where e.g. 0.5 means</span>
+<span class="sd">    50% probability of the positive class which must not necessarily correspond</span>
+<span class="sd">    to a SVM score of 0.</span>
+<span class="sd">    For more information see &#39;Probabilistic Outputs for Support Vector</span>
+<span class="sd">    Machines and Comparisons to Regularized Likelihood Methods&#39; (Platt) 1999.</span>
+<span class="sd">    The parametric form of the sigmoid function is:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">        P(c|x) =\\text{appr } P_{A,B}(s(x)) = \\frac{1}{1+e^{As(x)+B}}</span>
+<span class="sd">    </span>
+<span class="sd">    where c is the actual class, x the data, s(x) the prediction score and</span>
+<span class="sd">    A and B are calculated through the training examples.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: Learning this transformation on the same training data</span>
+<span class="sd">        than the classifier was trained is not recommended</span>
+<span class="sd">        for non-linear kernels (due to over-fitting).</span>
+<span class="sd">    </span>
+<span class="sd">    The best parameter setting z*=(A*,B*) is determined by solving the </span>
+<span class="sd">    following regularized maximum likelihood problem:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math::</span>
+<span class="sd">        \\min F(z)= - \\sum_{i=1}^l{(t_i \\log(p_i) + (1-t_i) \\log(1-p_i))}, </span>
+
+<span class="sd">    for :math:`p_i=P_{A,B}(s(x_i))` and :math:`t_i` are target probabilities defined according</span>
+<span class="sd">    to *priors* and :math:`c_i`. </span>
+<span class="sd">    </span>
+<span class="sd">    The implementation is improved to ensure convergence and to avoid numerical</span>
+<span class="sd">    difficulties (see &#39;A Note on Platt&#39;s Probabilistic Outputs for Support</span>
+<span class="sd">    Vector Machines&#39; (HT Lin, RC Weng) 2007).</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :priors:</span>
+<span class="sd">            A tuple that consists the number of examples expected for</span>
+<span class="sd">            each class (first element negative class, second element</span>
+<span class="sd">            positive class). If the parameter is not specified, the numbers in</span>
+<span class="sd">            the training set are used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">        </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of classes, i.e. the mapping of class labels</span>
+<span class="sd">            onto integers. The first element of the list should be the negative</span>
+<span class="sd">            class, the second should be the positive class.</span>
+<span class="sd">            If this parameter is not specified, the order is determined based on</span>
+<span class="sd">            the order of occurrence in the training data (which is more or less</span>
+<span class="sd">            arbitrary). </span>
+<span class="sd">    </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">            </span>
+<span class="sd">        :oversampling:</span>
+<span class="sd">            If True different class distributions are balanced by oversampling</span>
+<span class="sd">            and random drawing where appropriate (if the overrepresented class</span>
+<span class="sd">            is not divisible by the underrepresented class).</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">        :store_plots:</span>
+<span class="sd">            If True &#39;reliable diagrams&#39; of the training and test data are stored.</span>
+<span class="sd">            A discretization of the scores is made to calculate empirical </span>
+<span class="sd">            probabilities. The number of scores per bin is displayed on every</span>
+<span class="sd">            data point in the figure and shows how accurate the estimate</span>
+<span class="sd">            is (the higher the number the better). If the fit is reliable the</span>
+<span class="sd">            empirical probabilities should scatter around the diagonal in the</span>
+<span class="sd">            right plots. Although the store variable is set to True if this</span>
+<span class="sd">            variable is set.</span>
+<span class="sd">            </span>
+<span class="sd">        :store_probabilities:        </span>
+<span class="sd">            If True the calculated probability and the corresponding label for </span>
+<span class="sd">            each prediction is pickeled and saved in the results directory. </span>
+<span class="sd">            Although the store variable is set to True if this variable is set. </span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">            </span>
+<span class="sd">        :store:</span>
+<span class="sd">            If True store_plots and store_probabilities are set to True. </span>
+<span class="sd">            This is the &quot;simple&quot; way to store both the plots and the </span>
+<span class="sd">            probabilities. </span>
+<span class="sd">            </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : SigmoidFit</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&#39;NoLRP&#39;,&#39;LRP&#39;]</span>
+<span class="sd">                </span>
+<span class="sd">            </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PlattsSigmoidFitNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">priors</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span> <span class="n">oversampling</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">store_plots</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">store_probabilities</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PlattsSigmoidFitNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">store_plots</span> <span class="ow">or</span> <span class="n">store_probabilities</span> <span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">elif</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">):</span>
+            <span class="n">store_plots</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">store_probabilities</span> <span class="o">=</span> <span class="bp">True</span>
+
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">priors</span> <span class="o">=</span> <span class="n">priors</span><span class="p">,</span>
+                                      <span class="n">class_labels</span> <span class="o">=</span> <span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">oversampling</span> <span class="o">=</span> <span class="n">oversampling</span><span class="p">,</span>
+                                      <span class="n">scores</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">labels</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">probabilities</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">store_plots</span> <span class="o">=</span> <span class="n">store_plots</span><span class="p">,</span>
+                                      <span class="n">store_probabilities</span> <span class="o">=</span> <span class="n">store_probabilities</span><span class="p">)</span>
+                    </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collect SVM output and true labels. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_phase_started</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">))</span>
+            </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Compute parameter A and B for sigmoid fit.&quot;&quot;&quot;</span>
+        
+        <span class="k">def</span> <span class="nf">func_value</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot; Compute the function value avoiding &#39;catastrophic cancellation&#39;.</span>
+<span class="sd">                   -(t_i log(p_i) + (1-t_i)log(1- p_i))</span>
+<span class="sd">                =  t_i log(1+exp(as_i+b)) + (t_i-1)((as_i+b)-log(1+exp(as_i+b)))</span>
+<span class="sd">                =  t_i log(1+exp(as_i+b)) + (t_i-1)(as_i+b) - </span>
+<span class="sd">                                     t_i log(1+exp(as_i+b)) + log(1+exp(as_i+b))</span>
+<span class="sd">                =  (t_i-1)(as_i+b) + log(1+exp(as_i+b)) *</span>
+<span class="sd">                =  t_i(as_i+b) + log(exp(-as_i-b)) + log(1+exp(as_i+b))</span>
+<span class="sd">                =  t_i(as_i+b) + log((1+exp(as_i+b))/exp(as_i+b))</span>
+<span class="sd">                =  t_i(as_i+b) + log(1+exp(-as_i-b))   **</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">fapb</span> <span class="o">=</span> <span class="n">s</span><span class="o">*</span><span class="n">a</span><span class="o">+</span><span class="n">b</span>
+            <span class="c"># * is used if fapb[i]&lt;0, ** otherwise</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([(</span><span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">fapb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fapb</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="k">if</span> <span class="n">fapb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span> \
+                      <span class="k">else</span> <span class="n">t</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="n">fapb</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fapb</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> \
+                      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fapb</span><span class="p">))])</span>
+            <span class="k">return</span> <span class="n">f</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Performing training of sigmoid mapping.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">oversampling</span><span class="p">:</span>
+            <span class="c"># first assume that the negative class is the overrepresented class</span>
+            <span class="n">overrepresented_inst</span> <span class="o">=</span> <span class="p">[</span><span class="n">score</span> <span class="k">for</span> <span class="n">score</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> \
+                                       <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">label</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">underrepresented_inst</span> <span class="o">=</span> <span class="p">[</span><span class="n">score</span> <span class="k">for</span> <span class="n">score</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> \
+                                       <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">label</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">overrepresented_inst</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">):</span>
+                <span class="c"># check if assumption was correct</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">overrepresented_inst</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">):</span>
+                    <span class="n">tmp</span> <span class="o">=</span> <span class="n">overrepresented_inst</span>
+                    <span class="n">overrepresented_inst</span> <span class="o">=</span> <span class="n">underrepresented_inst</span>
+                    <span class="n">underrepresented_inst</span> <span class="o">=</span> <span class="n">tmp</span>
+                <span class="n">oversampling_factor</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">overrepresented_inst</span><span class="p">)</span> <span class="o">/</span> \
+                                                      <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="n">oversampling_factor</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">underrepresented_inst</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">((</span><span class="n">oversampling_factor</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> \
+                                        <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">)</span> <span class="o">*</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">overrepresented_inst</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span> 
+                    <span class="n">num_draw_random</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">overrepresented_inst</span><span class="p">)</span> <span class="o">-</span> \
+                                <span class="n">oversampling_factor</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">)</span>
+                    <span class="c"># Randomizer has to be fixed for reproducibility</span>
+                    <span class="kn">import</span> <span class="nn">random</span>
+                    <span class="n">randomizer</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_draw_random</span><span class="p">):</span>
+                        <span class="n">selected_score</span><span class="o">=</span><span class="n">randomizer</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">underrepresented_inst</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">selected_score</span><span class="p">)</span>
+                        <span class="n">underrepresented_inst</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">selected_score</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">num_draw_random</span> <span class="o">*</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">priors</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span>
+        
+        <span class="c"># Parameter settings</span>
+        <span class="n">maxiter</span> <span class="o">=</span> <span class="mi">100</span> <span class="c"># Maximum number of iterations</span>
+        <span class="n">minstep</span> <span class="o">=</span> <span class="mf">1.0e-10</span> <span class="c"># Minimum step taken in line search</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="mf">1.0e-12</span> <span class="c"># Set to any value &gt; 0</span>
+        
+        <span class="c"># Construct initial value: target support in array targets, </span>
+        <span class="n">hiTarget</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mf">1.0</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">loTarget</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">h</span> <span class="o">=</span> <span class="p">(</span><span class="n">loTarget</span><span class="p">,</span><span class="n">hiTarget</span><span class="p">)</span>
+        <span class="n">targets</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">h</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">])</span>
+        <span class="c"># initial function value in fval</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="mf">1.0</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">priors</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mf">1.0</span><span class="p">))</span>
+        <span class="n">fval</span> <span class="o">=</span> <span class="n">func_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="n">targets</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">it</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">maxiter</span><span class="p">):</span>
+            <span class="c"># update gradient and Hessian (use H&#39; = H + sigma I)</span>
+            <span class="n">h11</span> <span class="o">=</span> <span class="n">h22</span> <span class="o">=</span> <span class="n">sigma</span>
+            <span class="n">h21</span> <span class="o">=</span> <span class="n">g1</span> <span class="o">=</span> <span class="n">g2</span> <span class="o">=</span> <span class="mf">0.0</span>
+            
+            <span class="n">fApB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span>
+            
+            <span class="n">pq</span><span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">])),</span>
+                <span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))]</span> <span class="k">if</span> <span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span> \
+                <span class="k">else</span> <span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">])),</span>
+                      <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))]</span> \
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fApB</span><span class="p">))])</span>
+            
+            <span class="n">d1</span> <span class="o">=</span> <span class="n">targets</span> <span class="o">-</span> <span class="n">pq</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">d2</span> <span class="o">=</span> <span class="n">pq</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">pq</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">h11</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="n">d2</span><span class="p">)</span>
+            <span class="n">h21</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">*</span><span class="n">d2</span><span class="p">)</span>
+            <span class="n">h22</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">d2</span><span class="p">)</span>
+            <span class="n">g1</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">*</span><span class="n">d1</span><span class="p">)</span>
+            <span class="n">g2</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
+            
+            <span class="c"># stopping criteria: if gradient is really tiny, stop</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.0e-5</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">g2</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1.0e-5</span><span class="p">):</span>
+                <span class="k">break</span>
+            
+            <span class="c"># finding Newton direction: -inv(H&#39;)*g</span>
+            <span class="n">det</span> <span class="o">=</span> <span class="n">h11</span><span class="o">*</span><span class="n">h22</span><span class="o">-</span><span class="n">h21</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">dA</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">h22</span><span class="o">*</span><span class="n">g1</span><span class="o">-</span><span class="n">h21</span><span class="o">*</span><span class="n">g2</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+            <span class="n">dB</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="o">-</span><span class="n">h21</span><span class="o">*</span><span class="n">g1</span><span class="o">+</span><span class="n">h11</span><span class="o">*</span><span class="n">g2</span><span class="p">)</span><span class="o">/</span><span class="n">det</span>
+            <span class="n">gd</span> <span class="o">=</span> <span class="n">g1</span><span class="o">*</span><span class="n">dA</span><span class="o">+</span><span class="n">g2</span><span class="o">*</span><span class="n">dB</span>
+            
+            <span class="c"># line search</span>
+            <span class="n">stepsize</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">while</span> <span class="n">stepsize</span> <span class="o">&gt;=</span> <span class="n">minstep</span><span class="p">:</span>
+                <span class="n">newA</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">+</span><span class="n">stepsize</span><span class="o">*</span><span class="n">dA</span>
+                <span class="n">newB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="o">+</span><span class="n">stepsize</span><span class="o">*</span><span class="n">dB</span>
+                <span class="n">newf</span> <span class="o">=</span> <span class="n">func_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="n">targets</span><span class="p">,</span><span class="n">newA</span><span class="p">,</span><span class="n">newB</span><span class="p">)</span>
+                <span class="c"># check sufficient decrease</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">newf</span> <span class="o">&lt;</span> <span class="n">fval</span><span class="o">+</span><span class="mf">0.0001</span><span class="o">*</span><span class="n">stepsize</span><span class="o">*</span><span class="n">gd</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">newA</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">newB</span>
+                    <span class="n">fval</span> <span class="o">=</span> <span class="n">newf</span>
+                    <span class="k">break</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">stepsize</span> <span class="o">/=</span> <span class="mf">2.0</span>
+            
+            <span class="k">if</span> <span class="n">stepsize</span> <span class="o">&lt;</span> <span class="n">minstep</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">logging</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Line search fails. A= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; B= &quot;</span> \
+                             <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; g1= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; g2= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">g2</span><span class="p">)</span> \
+                             <span class="o">+</span><span class="s">&quot; dA= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">dA</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; dB= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">dB</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; gd= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">gd</span><span class="p">),</span>
+                             <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+                <span class="k">break</span>
+            
+        <span class="k">if</span> <span class="n">it</span><span class="o">&gt;=</span><span class="n">maxiter</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">logging</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reaching maximal iterations. g1= &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">g1</span><span class="p">)</span><span class="o">+</span><span class="s">&quot; g2= &quot;</span> \
+                      <span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">g2</span><span class="p">),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Finished training of sigmoid mapping in </span><span class="si">%d</span><span class="s"> iterations.&quot;</span> <span class="o">%</span> <span class="n">it</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate each prediction with the sigmoid mapping learned.&quot;&quot;&quot;</span>
+        
+        <span class="n">fApB</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">prediction</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span>
+        <span class="k">if</span> <span class="n">fApB</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_prediction</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fApB</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_prediction</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">)</span><span class="o">+</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="c"># enforce mapping to interval [0,1]</span>
+        <span class="n">new_prediction</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">new_prediction</span><span class="p">))</span>
+        <span class="n">new_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">new_prediction</span> <span class="o">&lt;=</span> <span class="mf">0.5</span> \
+                                                       <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="c"># Safe the new calculated probabilities</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_probabilities</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">probabilities</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">[</span><span class="n">new_prediction</span> <span class="p">,</span> <span class="n">new_label</span><span class="p">]</span> <span class="p">)</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">new_label</span><span class="p">,</span>
+                                <span class="n">prediction</span><span class="o">=</span><span class="n">new_prediction</span><span class="p">,</span>
+                                <span class="n">predictor</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">predictor</span><span class="p">)</span>
+ </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode._discretize"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode._discretize">[docs]</a>    <span class="k">def</span> <span class="nf">_discretize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Discretize predictions into bins. </span>
+<span class="sd">        </span>
+<span class="sd">        Return bin scores and 2d list of discretized labels. &quot;&quot;&quot;</span>
+        <span class="k">while</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cut</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span><span class="o">/</span><span class="n">bins</span>
+                <span class="n">current_bin</span><span class="o">=</span><span class="mi">0</span>
+                <span class="n">l_discrete</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:[]}</span>
+                <span class="n">bin_scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">p</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">*</span><span class="p">(</span><span class="n">current_bin</span><span class="o">+</span><span class="mi">2</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">EmptyBinException</span><span class="p">(</span><span class="s">&quot;One bin without any examples!&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">*</span><span class="p">(</span><span class="n">current_bin</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                        <span class="n">current_bin</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">bin_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="p">)</span>
+                        <span class="n">l_discrete</span><span class="p">[</span><span class="n">current_bin</span><span class="p">]</span><span class="o">=</span><span class="p">[</span><span class="n">l</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">l_discrete</span><span class="p">[</span><span class="n">current_bin</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l_discrete</span><span class="p">)</span><span class="o">==</span><span class="n">bins</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="p">])</span>
+                    <span class="k">del</span> <span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="p">]</span>
+                    <span class="k">del</span> <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span> <span class="o">+</span> \
+                                  <span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="p">(</span><span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span><span class="p">))</span><span class="o">/</span><span class="mf">2.0</span>
+            <span class="k">except</span> <span class="n">EmptyBinException</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">bins</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">bins</span><span class="o">-=</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Could not discretize data!&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">bin_scores</span><span class="p">,</span> <span class="n">l_discrete</span>
+    </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode._empirical_probability"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode._empirical_probability">[docs]</a>    <span class="k">def</span> <span class="nf">_empirical_probability</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l_discrete</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return dictionary of empirical class probabilities for discretized label list.&quot;&quot;&quot;</span>
+        <span class="n">plot_emp_prob</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">len_list</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">)):</span>
+            <span class="n">plot_emp_prob</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+            <span class="n">len_list</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+            <span class="k">for</span> <span class="n">score_list</span> <span class="ow">in</span> <span class="n">l_discrete</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">len_list</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">score_list</span><span class="p">))</span>
+                <span class="n">plot_emp_prob</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">score_list</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">label</span><span class="p">)</span><span class="o">/</span> \
+                                                         <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">score_list</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">len_list</span><span class="p">,</span> <span class="n">plot_emp_prob</span>
+    </div>
+<div class="viewcode-block" id="PlattsSigmoidFitNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.PlattsSigmoidFitNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stores plots of score distribution and sigmoid fit or/and </span>
+<span class="sd">            the calculated probabilities with the corresponding label.</span>
+<span class="sd">        .. todo:: change plot calculations to upper if else syntax</span>
+<span class="sd">        .. todo:: add the corresponding data point to the saved probabilities</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="p">:</span>
+            <span class="c"># Create the directory for the stored results</span>
+            <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+            <span class="kn">import</span> <span class="nn">os</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            <span class="c"># Safe the probabilities in a pickle file </span>
+            <span class="k">if</span><span class="p">(</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_probabilities</span> <span class="p">):</span>
+                <span class="kn">import</span> <span class="nn">pickle</span>
+                <span class="n">f_name</span><span class="o">=</span><span class="n">node_dir</span> <span class="o">+</span> <span class="s">&quot;/probabilities_</span><span class="si">%d</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">probabilities</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">f_name</span><span class="p">,</span><span class="s">&#39;w&#39;</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_plots</span><span class="p">:</span>
+                <span class="c"># reliable plot of training (before sigmoid fit)</span>
+                <span class="n">sort_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+                <span class="n">predictions</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+                
+                <span class="n">plot_scores_train</span><span class="p">,</span><span class="n">l_discrete_train</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+                <span class="n">len_list_train</span><span class="p">,</span> <span class="n">plot_emp_prob_train</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_train</span><span class="p">)</span>
+                
+                <span class="c"># training data after sigmoid fit</span>
+                <span class="n">fApB</span> <span class="o">=</span> <span class="n">predictions</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span>
+                <span class="n">new_predictions</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="o">+</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="o">/</span> \
+                                 <span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> \
+                                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fApB</span><span class="p">))]</span>
+                
+                <span class="n">plot_scores_train_fit</span><span class="p">,</span> <span class="n">l_discrete_train_fit</span> <span class="o">=</span> \
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">new_predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">)</span>
+                <span class="n">len_list_train_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_train_fit</span> <span class="o">=</span> \
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_train_fit</span><span class="p">)</span>
+                
+                <span class="c"># test data before sigmoid fit</span>
+                <span class="n">test_scores</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">test_labels</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
+                    <span class="n">test_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span>
+                    <span class="n">test_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+                
+                <span class="n">sort_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">test_scores</span><span class="p">)</span>
+                <span class="n">labels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">test_labels</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+                <span class="n">predictions</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">test_scores</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+                
+                <span class="n">plot_scores_test</span><span class="p">,</span><span class="n">l_discrete_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+                <span class="n">len_list_test</span><span class="p">,</span> <span class="n">plot_emp_prob_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_test</span><span class="p">)</span>
+                
+                <span class="c"># test data after sigmoid fit</span>
+                <span class="n">fApB</span> <span class="o">=</span> <span class="n">predictions</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span>
+                <span class="n">new_predictions</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">)</span><span class="o">+</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="o">/</span> \
+                                 <span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">**</span><span class="nb">int</span><span class="p">(</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">&gt;=</span><span class="mi">0</span><span class="p">)</span><span class="o">*</span><span class="n">fApB</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> \
+                                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">fApB</span><span class="p">))]</span>
+                
+                <span class="n">plot_scores_test_fit</span><span class="p">,</span> <span class="n">l_discrete_test_fit</span> <span class="o">=</span> \
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">new_predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">)</span>
+                <span class="n">len_list_test_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_test_fit</span> <span class="o">=</span> \
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_test_fit</span><span class="p">)</span>
+                
+                
+                
+                <span class="kn">import</span> <span class="nn">pylab</span>
+                <span class="kn">from</span> <span class="nn">matplotlib.transforms</span> <span class="kn">import</span> <span class="n">offset_copy</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_train</span><span class="p">,</span><span class="n">plot_emp_prob_train</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">len_list_train</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">*</span><span class="n">x</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">))</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM prediction Score (training data)&quot;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+                
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+                <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_train_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_train_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                                                 <span class="n">len_list_train_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM Probability (training data)&quot;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+                
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_test</span><span class="p">,</span><span class="n">plot_emp_prob_test</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">len_list_test</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">*</span><span class="n">x</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">B</span><span class="p">))</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM prediction Scores (test data)&quot;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+                
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+                <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_test_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_test_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                                                  <span class="n">len_list_test_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM Probability (test data)&quot;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">node_dir</span> <span class="o">+</span> <span class="s">&quot;/reliable_diagrams_</span><span class="si">%d</span><span class="s">.png&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="SigmoidTransformationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.SigmoidTransformationNode">[docs]</a><span class="k">class</span> <span class="nc">SigmoidTransformationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Transform score to interval [0,1] with a sigmoid function</span>
+<span class="sd">    </span>
+<span class="sd">    The new decision border will be at 0.5.</span>
+<span class="sd">    </span>
+<span class="sd">    .. warning::</span>
+<span class="sd">        This is NOT a probability mapping and parameters should be set for</span>
+<span class="sd">        the function.</span>
+<span class="sd">    </span>
+<span class="sd">    This node is intended to be externally optimized, such that it</span>
+<span class="sd">    generalizes the threshold optimization for soft metrics.</span>
+<span class="sd">    </span>
+<span class="sd">    The used sigmoid fit function is :math:`\\frac{1}{1+e^{Ax+B}}`. </span>
+<span class="sd">    It is 0.5 at :math:`x = -\\frac{B}{A}`.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :A:</span>
+<span class="sd">            Scaling of prediction value. See above.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: -1*)</span>
+<span class="sd">        </span>
+<span class="sd">        :B:</span>
+<span class="sd">            Shifting of scaled prediction. See above.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 0*)</span>
+<span class="sd">            </span>
+<span class="sd">        :offset:</span>
+<span class="sd">            Has the meaning of :math:`-\\frac{B}{A}` and replaces the parameter B if used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*) </span>
+<span class="sd">        </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of classes, i.e. the mapping of class labels</span>
+<span class="sd">            onto integers. The first element of the list should be the negative</span>
+<span class="sd">            class, the second should be the positive class.</span>
+<span class="sd">            In the context positive should be the class mapped greater than 0.5</span>
+<span class="sd">            and the other class should be the negative one.</span>
+<span class="sd">            If the original prediction value had the same orientation,</span>
+<span class="sd">            *A* should be chosen negative.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: [&#39;Standard&#39;,&#39;Target&#39;]*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : SigTrans</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&#39;NoLRP&#39;,&#39;LRP&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="SigmoidTransformationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.SigmoidTransformationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Standard&#39;</span><span class="p">,</span><span class="s">&#39;Target&#39;</span><span class="p">],</span> 
+                <span class="n">A</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">B</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">offset</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SigmoidTransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">offset</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="o">-</span><span class="n">A</span> <span class="o">*</span><span class="n">offset</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span> <span class="o">=</span> <span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">A</span> <span class="o">=</span> <span class="n">A</span><span class="p">,</span>
+                                      <span class="n">B</span> <span class="o">=</span> <span class="n">B</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="SigmoidTransformationNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.SigmoidTransformationNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    </div>
+<div class="viewcode-block" id="SigmoidTransformationNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.SigmoidTransformationNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    </div>
+<div class="viewcode-block" id="SigmoidTransformationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.SigmoidTransformationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate each prediction with the sigmoid mapping learned. &quot;&quot;&quot;</span>
+        
+        <span class="c"># code simply copied from PlattsSigmoidFitNode fur eventual future changes</span>
+        <span class="n">fApB</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">prediction</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span>
+        <span class="k">if</span> <span class="n">fApB</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_prediction</span><span class="o">=</span><span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mf">1.0</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">fApB</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_prediction</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">fApB</span><span class="p">)</span><span class="o">+</span><span class="mf">1.0</span><span class="p">)</span>
+        <span class="c"># enforce mapping to interval [0,1]</span>
+        <span class="n">new_prediction</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="nb">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">new_prediction</span><span class="p">))</span>
+        <span class="n">new_label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">new_prediction</span> <span class="o">&lt;=</span> <span class="mf">0.5</span> \
+                                                       <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">new_label</span><span class="p">,</span>
+                                <span class="n">prediction</span><span class="o">=</span><span class="n">new_prediction</span><span class="p">,</span>
+                                <span class="n">predictor</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="LinearFitNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode">[docs]</a><span class="k">class</span> <span class="nc">LinearFitNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Linear mapping between score and [0,1]</span>
+<span class="sd">    </span>
+<span class="sd">    This node maps the unbounded SVM score linear to bound it between [0,1].</span>
+<span class="sd">    If the result can be interpreted as probability can be seen in the</span>
+<span class="sd">    reliable diagrams.</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of classes, i.e. the mapping of class labels</span>
+<span class="sd">            onto integers. The first element of the list should be the negative</span>
+<span class="sd">            class, the second should be the positive class.</span>
+<span class="sd">            If this parameter is not specified, the order is determined based on</span>
+<span class="sd">            the order of occurrence in the training data (which is more or less</span>
+<span class="sd">            arbitrary). </span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">        </span>
+<span class="sd">        :store:</span>
+<span class="sd">            If True &#39;reliable diagrams&#39; of the training and test data are stored.</span>
+<span class="sd">            A discretization of the scores is made to calculate empirical </span>
+<span class="sd">            probabilities. The number of scores per bin is displayed on every</span>
+<span class="sd">            data point in the figure and shows how accurate the estimate</span>
+<span class="sd">            is (the higher the number the better). If the fit is reliable the</span>
+<span class="sd">            empirical probabilities should scatter around the diagonal in the</span>
+<span class="sd">            right plots.</span>
+<span class="sd">            </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : LinearFit</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&#39;NoLRP&#39;,&#39;LRP&#39;]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LinearFitNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LinearFitNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span> <span class="o">=</span> <span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">scores</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">labels</span> <span class="o">=</span> <span class="p">[])</span>
+                    </div>
+<div class="viewcode-block" id="LinearFitNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="LinearFitNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="LinearFitNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collect SVM output and true labels. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_phase_started</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">))</span>       
+            </div>
+<div class="viewcode-block" id="LinearFitNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Compute max range of the score according to the class.&quot;&quot;&quot;</span>
+        <span class="n">positive_inst</span> <span class="o">=</span> <span class="p">[</span><span class="n">score</span> <span class="k">for</span> <span class="n">score</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> \
+                                       <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">label</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">negative_inst</span> <span class="o">=</span> <span class="p">[</span><span class="n">score</span> <span class="k">for</span> <span class="n">score</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> \
+                                       <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span> <span class="k">if</span> <span class="n">label</span><span class="o">==</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">negative_inst</span><span class="p">)),</span><span class="nb">max</span><span class="p">(</span><span class="n">positive_inst</span><span class="p">))</span>
+        </div>
+<div class="viewcode-block" id="LinearFitNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Evaluate each prediction with the linear mapping learned.&quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">x</span><span class="o">.</span><span class="n">prediction</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">new_prediction</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="k">elif</span> <span class="n">x</span><span class="o">.</span><span class="n">prediction</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">new_prediction</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">prediction</span> <span class="o">+</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">label</span><span class="p">)])</span> <span class="o">/</span> \
+                        <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">label</span><span class="p">)])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_prediction</span> <span class="o">=</span> <span class="mf">1.0</span>
+
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                                <span class="n">prediction</span><span class="o">=</span><span class="n">new_prediction</span><span class="p">,</span>
+                                <span class="n">predictor</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">predictor</span><span class="p">)</span>
+ </div>
+<div class="viewcode-block" id="LinearFitNode._discretize"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode._discretize">[docs]</a>    <span class="k">def</span> <span class="nf">_discretize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">bins</span><span class="o">=</span><span class="mi">12</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Discretize predictions into bins. Return bin scores and 2d list of discretized labels. &quot;&quot;&quot;</span>
+        <span class="k">while</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">cut</span> <span class="o">=</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">+</span> <span class="nb">abs</span><span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span><span class="o">/</span><span class="n">bins</span>
+                <span class="n">current_bin</span><span class="o">=</span><span class="mi">0</span>
+                <span class="n">l_discrete</span><span class="o">=</span><span class="p">{</span><span class="mi">0</span><span class="p">:[]}</span>
+                <span class="n">bin_scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">p</span><span class="p">,</span><span class="n">l</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">*</span><span class="p">(</span><span class="n">current_bin</span><span class="o">+</span><span class="mi">2</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">EmptyBinException</span><span class="p">(</span><span class="s">&quot;One bin without any examples!&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">predictions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="o">*</span><span class="p">(</span><span class="n">current_bin</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                        <span class="n">current_bin</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">bin_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="n">cut</span><span class="p">)</span>
+                        <span class="n">l_discrete</span><span class="p">[</span><span class="n">current_bin</span><span class="p">]</span><span class="o">=</span><span class="p">[</span><span class="n">l</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">l_discrete</span><span class="p">[</span><span class="n">current_bin</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l_discrete</span><span class="p">)</span><span class="o">==</span><span class="n">bins</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="p">])</span>
+                    <span class="k">del</span> <span class="n">l_discrete</span><span class="p">[</span><span class="n">bins</span><span class="p">]</span>
+                    <span class="k">del</span> <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span> <span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span> <span class="o">+</span> \
+                                  <span class="p">(</span><span class="n">predictions</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="p">(</span><span class="n">bin_scores</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">cut</span><span class="o">/</span><span class="mf">2.0</span><span class="p">))</span><span class="o">/</span><span class="mf">2.0</span>
+            <span class="k">except</span> <span class="n">EmptyBinException</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">bins</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="n">bins</span><span class="o">-=</span><span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Could not discretize data!&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">bin_scores</span><span class="p">,</span> <span class="n">l_discrete</span>
+    </div>
+<div class="viewcode-block" id="LinearFitNode._empirical_probability"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode._empirical_probability">[docs]</a>    <span class="k">def</span> <span class="nf">_empirical_probability</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l_discrete</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return dictionary of empirical class probabilities for discretized label list.&quot;&quot;&quot;</span>
+        <span class="n">plot_emp_prob</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">len_list</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">)):</span>
+            <span class="n">plot_emp_prob</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+            <span class="n">len_list</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">=</span><span class="p">[]</span>
+            <span class="k">for</span> <span class="n">score_list</span> <span class="ow">in</span> <span class="n">l_discrete</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">len_list</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">score_list</span><span class="p">))</span>
+                <span class="n">plot_emp_prob</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">score_list</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">label</span><span class="p">)</span><span class="o">/</span> \
+                                                         <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">score_list</span><span class="p">)))</span>
+        <span class="k">return</span> <span class="n">len_list</span><span class="p">,</span> <span class="n">plot_emp_prob</span>
+        
+        </div>
+<div class="viewcode-block" id="LinearFitNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.score_transformation.html#pySPACE.missions.nodes.postprocessing.score_transformation.LinearFitNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+      <span class="sd">&quot;&quot;&quot; Stores plots of score distribution and sigmoid fit. &quot;&quot;&quot;</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="p">:</span>
+        <span class="c"># reliable plot of training (before linear fit)</span>
+        <span class="n">sort_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scores</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+
+        <span class="n">plot_scores_train</span><span class="p">,</span><span class="n">l_discrete_train</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+        <span class="n">len_list_train</span><span class="p">,</span> <span class="n">plot_emp_prob_train</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_train</span><span class="p">)</span>
+        
+        <span class="c"># training data after linear fit</span>
+        <span class="n">new_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">score</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> \
+                                                      <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> \
+                                                      <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="n">plot_scores_train_fit</span><span class="p">,</span> <span class="n">l_discrete_train_fit</span> <span class="o">=</span> \
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">new_predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">len_list_train_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_train_fit</span> <span class="o">=</span> \
+                               <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_train_fit</span><span class="p">)</span>
+
+        <span class="c"># test data before sigmoid fit</span>
+        <span class="n">test_scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">test_labels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
+            <span class="n">test_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span>
+            <span class="n">test_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+        
+        <span class="n">sort_index</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">test_scores</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">test_labels</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+        <span class="n">predictions</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">test_scores</span><span class="p">)[</span><span class="n">sort_index</span><span class="p">]</span>
+        
+        <span class="n">plot_scores_test</span><span class="p">,</span><span class="n">l_discrete_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">predictions</span><span class="p">,</span> <span class="n">labels</span><span class="p">)</span>
+        <span class="n">len_list_test</span><span class="p">,</span> <span class="n">plot_emp_prob_test</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_test</span><span class="p">)</span>
+
+        <span class="c"># test data after sigmoid fit</span>
+        <span class="n">new_predictions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">score</span> <span class="ow">in</span> <span class="n">predictions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">score</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">score</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> \
+                                                      <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="k">elif</span> <span class="n">score</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> \
+                                                      <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">new_predictions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+        
+        <span class="n">plot_scores_test_fit</span><span class="p">,</span> <span class="n">l_discrete_test_fit</span> <span class="o">=</span> \
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_discretize</span><span class="p">(</span><span class="n">new_predictions</span><span class="p">,</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">len_list_test_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_test_fit</span> <span class="o">=</span> \
+                               <span class="bp">self</span><span class="o">.</span><span class="n">_empirical_probability</span><span class="p">(</span><span class="n">l_discrete_test_fit</span><span class="p">)</span>
+
+        <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+        <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+        <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+        
+        <span class="kn">import</span> <span class="nn">pylab</span>
+        <span class="kn">from</span> <span class="nn">matplotlib.transforms</span> <span class="kn">import</span> <span class="n">offset_copy</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="mi">10</span><span class="p">))</span>
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_train</span><span class="p">,</span><span class="n">plot_emp_prob_train</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">len_list_train</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mf">0.0</span><span class="p">,</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+        <span class="n">y1</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">y2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x2</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">)),</span><span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span><span class="p">)),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM prediction Score (training data)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+        
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_train_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_train_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                                         <span class="n">len_list_train_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_train_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM Probability (training data)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+        
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span>
+        <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_test</span><span class="p">,</span><span class="n">plot_emp_prob_test</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">len_list_test</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">x1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mf">0.0</span><span class="p">,</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+        <span class="n">x2</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="o">.</span><span class="mo">02</span><span class="p">)</span>
+        <span class="n">y1</span> <span class="o">=</span> <span class="p">(</span><span class="n">x1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">y2</span> <span class="o">=</span> <span class="p">(</span><span class="n">x2</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                               <span class="n">x1</span><span class="p">,</span><span class="n">x2</span><span class="p">,[</span><span class="bp">self</span><span class="o">.</span><span class="n">max_range</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]]),</span>
+                   <span class="n">numpy</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([[</span><span class="mf">0.0</span><span class="p">,</span><span class="mf">0.0</span><span class="p">],</span><span class="n">y1</span><span class="p">,</span><span class="n">y2</span><span class="p">,[</span><span class="mf">1.0</span><span class="p">,</span><span class="mf">1.0</span><span class="p">]]),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM prediction Score (test data)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+        
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">transOffset</span><span class="o">=</span><span class="n">offset_copy</span><span class="p">(</span><span class="n">ax</span><span class="o">.</span><span class="n">transData</span><span class="p">,</span><span class="n">fig</span><span class="o">=</span><span class="n">fig</span><span class="p">,</span><span class="n">x</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span><span class="n">y</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span><span class="n">units</span><span class="o">=</span><span class="s">&#39;inches&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">plot_scores_test_fit</span><span class="p">,</span> <span class="n">plot_emp_prob_test_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> 
+                                                          <span class="n">len_list_test_fit</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">x</span><span class="p">,),(</span><span class="n">y</span><span class="p">,),</span><span class="s">&#39;ro&#39;</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">transOffset</span><span class="p">)</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">((</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="s">&#39;-&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">(</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">plot_scores_test_fit</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;SVM Probability (test data)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Empirical Probability&quot;</span><span class="p">)</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">node_dir</span> <span class="o">+</span> <span class="s">&quot;/reliable_diagrams_</span><span class="si">%d</span><span class="s">.png&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;PSF&quot;</span><span class="p">:</span> <span class="n">PlattsSigmoidFitNode</span><span class="p">,</span>
+                <span class="s">&quot;SigTrans&quot;</span><span class="p">:</span> <span class="n">SigmoidTransformationNode</span><span class="p">,</span>
+                <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,459 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.type_manipulation.type_conversion &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.type_manipulation.type_conversion</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Convert feature to prediction vectors and TimeSeries and vice versa</span>
+
+<span class="sd">**Known issues**</span>
+<span class="sd">    No unit tests!</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+<div class="viewcode-block" id="Prediction2FeaturesNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Prediction2FeaturesNode">[docs]</a><span class="k">class</span> <span class="nc">Prediction2FeaturesNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use the prediction values as features</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the type</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVector`</span>
+<span class="sd">    to the type</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`.</span>
+<span class="sd">    This is needed, whenever one want to feed classification</span>
+<span class="sd">    predictions into a node that expects feature vectors (e.g. gating functions).</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :name: </span>
+<span class="sd">            String. A prefix of the new feature.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: &#39;&#39;*)</span>
+<span class="sd">     </span>
+<span class="sd">     **Exemplary Call**</span>
+
+<span class="sd">     .. code-block:: yaml</span>
+
+<span class="sd">         -</span>
+<span class="sd">             node : Prediction2Features</span>
+<span class="sd">             parameters :</span>
+<span class="sd">                 name : &quot;SVM_&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2010/08/06</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Prediction2FeaturesNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Prediction2FeaturesNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Prediction2FeaturesNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span><span class="p">,</span>
+                                      <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[],</span>
+                                      <span class="n">label</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="Prediction2FeaturesNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Prediction2FeaturesNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the prediction features from the given data</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo:: Give the possibility to give the new feature names to the</span>
+<span class="sd">                  transformation manually. Especially useful for ensemble approaches.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">PredictionVector</span><span class="p">),</span> \
+                <span class="s">&quot;Prediction2FeaturesNode requires PredictionVector inputs &quot;</span> \
+                <span class="s">&quot;not </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">f_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;prediction&quot;</span>
+            <span class="k">return</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([[</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">]]),</span> <span class="p">[</span><span class="n">f_name</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c">#type(data.prediction) == list:</span>
+            <span class="n">f_names</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">&quot;prediction_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">))]</span>
+            <span class="k">return</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">data</span><span class="o">.</span><span class="n">prediction</span><span class="p">]),</span><span class="n">f_names</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="Features2PredictionNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Features2PredictionNode">[docs]</a><span class="k">class</span> <span class="nc">Features2PredictionNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use the feature vectors as prediction values</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the type</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVector`</span>
+<span class="sd">    to the type</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`.</span>
+<span class="sd">    The feature values are used as individual predictions</span>
+<span class="sd">    and the labels are created based on the passed parameter &quot;class_labels&quot;.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels: </span>
+<span class="sd">            List of length two of class_labels </span>
+<span class="sd">            </span>
+<span class="sd">            If a feature&#39;s values is larger than 0, the second class label is</span>
+<span class="sd">            used as the prediction vector&#39;s label otherwise the first. </span>
+<span class="sd">            </span>
+<span class="sd">     </span>
+<span class="sd">     **Exemplary Call**</span>
+
+<span class="sd">     .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Features2Prediction</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&#39;Standard&#39;, &#39;Target&#39;]</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/089/24</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Features2PredictionNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Features2PredictionNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Features2PredictionNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span> <span class="o">=</span><span class="n">class_labels</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="Features2PredictionNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Features2PredictionNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the prediction features from the given data&quot;&quot;&quot;</span>
+        
+        <span class="k">assert</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">),</span> \
+                <span class="s">&quot;Features2PredictionNode requires FeatureVector inputs &quot;</span> \
+                <span class="s">&quot;not </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                
+        <span class="n">classification_rule</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">0</span> \
+                                        <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">classification_rule</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]),</span>  
+                                <span class="n">prediction</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]))</span>
+
+</div></div>
+<div class="viewcode-block" id="uniquify_list"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.uniquify_list">[docs]</a><span class="k">def</span> <span class="nf">uniquify_list</span><span class="p">(</span><span class="n">seq</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Uniquify a list by preserving its original order &quot;&quot;&quot;</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> 
+</div>
+<div class="viewcode-block" id="FeatureVector2TimeSeriesNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.FeatureVector2TimeSeriesNode">[docs]</a><span class="k">class</span> <span class="nc">FeatureVector2TimeSeriesNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Convert feature vector to time series</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the type</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVector` to</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.time_series.TimeSeries`.</span>
+<span class="sd">    The feature values are extracted and put into their respective place of</span>
+<span class="sd">    sensor name and time. The *sampling_frequency* is also calculated.</span>
+
+<span class="sd">    .. todo:: In the case of not using *reshape*, the code needs some tuning.</span>
+<span class="sd">              An index mapping needs to be determined and for new samples</span>
+<span class="sd">              only to be applied.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :reshape:</span>
+<span class="sd">            Assuming, that the data is in a simple structure</span>
+<span class="sd">            (the features are sorted first by sensors and second by time),</span>
+<span class="sd">            a simple reshape is required and no complex iteration over all</span>
+<span class="sd">            entries. This speeds up the transformation and is turned on</span>
+<span class="sd">            by this parameter.</span>
+
+<span class="sd">            If you are unsure, just leave the parameter as it is.</span>
+<span class="sd">            With the first incoming sample, the structure will be checked</span>
+<span class="sd">            and if possible the parameter changed.</span>
+
+<span class="sd">            If the structure of your data changes, you should reset this node.</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">     .. code-block:: yaml</span>
+
+<span class="sd">         -</span>
+<span class="sd">             node : FeatureVector2TimeSeries</span>
+
+<span class="sd">    :Author: Mario Michael Krell</span>
+<span class="sd">    :Created: 2011/09/23</span>
+<span class="sd">    :Refactored: 2013/04/24</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="FeatureVector2TimeSeriesNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.FeatureVector2TimeSeriesNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">reshape</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVector2TimeSeriesNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">sensor_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">times</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">feat_sensor_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">feat_times</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">reshape</span><span class="o">=</span><span class="n">reshape</span><span class="p">,</span>
+                                      <span class="n">frequency</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">shape_test</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span><span class="c"># test if reshape can be active</span>
+</div>
+<div class="viewcode-block" id="FeatureVector2TimeSeriesNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.FeatureVector2TimeSeriesNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract feature values from and match it to their respective sensor name and time &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">),</span> \
+               <span class="s">&quot;LabeledFeature2TimeSeries requires FeatureVector inputs &quot;</span> \
+               <span class="s">&quot;not </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="c"># sensor name is what comes after the first underscore</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feat_sensor_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">fnames</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                              <span class="k">for</span> <span class="n">fnames</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span> <span class="o">=</span> <span class="n">uniquify_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_sensor_names</span><span class="p">)</span>
+
+        <span class="c"># time is what comes after the second underscore</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feat_times</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">((</span><span class="n">fnames</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])[:</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+                               <span class="k">for</span> <span class="n">fnames</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_times</span><span class="p">))</span>
+            <span class="c"># sort list</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># calculate sampling frequency</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c"># check structure of feature names, if it fits to reshape approach</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshape</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape_test</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reshape</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">)</span>
+            <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshape</span><span class="p">:</span>
+                        <span class="k">break</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="n">i</span><span class="o">*</span><span class="n">m</span><span class="o">+</span><span class="n">j</span>
+                    <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_times</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">and</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">feat_sensor_names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">reshape</span> <span class="o">=</span> <span class="bp">False</span>
+                            <span class="k">break</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">shape_test</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reshaping activated.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshape</span><span class="p">:</span>
+            <span class="c"># create 2-dimensional array. all fills with zero.</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="p">)))</span>
+            <span class="c"># try to find the correct place (channel name and time)</span>
+            <span class="c"># to insert the feature values</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)):</span>
+                <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_times</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_sensor_names</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                <span class="n">matrix</span><span class="p">[</span><span class="n">col</span><span class="p">][</span><span class="n">row</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_array</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">matrix</span> <span class="o">=</span> <span class="n">data_array</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">times</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="p">))</span>
+
+        <span class="c"># generate new time series object</span>
+        <span class="c"># all filled with zeros instead of data</span>
+        <span class="n">new_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span>
+                              <span class="n">channel_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sensor_names</span><span class="p">,</span>
+                              <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_data</span>
+</div></div>
+<div class="viewcode-block" id="Feature2MonoTimeSeriesNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Feature2MonoTimeSeriesNode">[docs]</a><span class="k">class</span> <span class="nc">Feature2MonoTimeSeriesNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Convert feature vector to time series with only one time stamp</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the type *FeatureVector* to *TimeSeries*.</span>
+<span class="sd">    No real mapping of the features to the corresponding times series place is done.</span>
+<span class="sd">    Instead every feature is identified with a channel.</span>
+<span class="sd">    </span>
+<span class="sd">    The purpose of this node is to enable the user to use time series nodes on</span>
+<span class="sd">    feature vectors, especially on feature vectors without any time structure.</span>
+<span class="sd">       </span>
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">     .. code-block:: yaml</span>
+
+<span class="sd">         -</span>
+<span class="sd">             node : Feature2MonoTimeSeries</span>
+
+
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/08/31</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Feature2MonoTimeSeriesNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Feature2MonoTimeSeriesNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Identify feature names with channel names &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">),</span> \
+               <span class="s">&quot;Feature2MonoTimeSeries requires FeatureVector inputs &quot;</span> \
+               <span class="s">&quot;not </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
+
+        <span class="n">new_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span>
+                              <span class="n">channel_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span>
+                              <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_data</span>
+</div>
+<div class="viewcode-block" id="Feature2MonoTimeSeriesNode.is_invertable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Feature2MonoTimeSeriesNode.is_invertable">[docs]</a>    <span class="k">def</span> <span class="nf">is_invertable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Inversion is only a mapping of names &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="Feature2MonoTimeSeriesNode._invert"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.Feature2MonoTimeSeriesNode._invert">[docs]</a>    <span class="k">def</span> <span class="nf">_invert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; The invert function is needed for the inverse node &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">),</span> \
+            <span class="s">&quot;Feature2MonoTimeSeries inversion requires TimeSeries inputs &quot;</span> \
+            <span class="s">&quot;not </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">),</span> <span class="s">&quot;Wrong array shape: </span><span class="si">%s</span><span class="s">.&quot;</span><span class="o">%</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">new_data</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">data_array</span><span class="p">,</span>
+                        <span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_data</span>
+</div></div>
+<div class="viewcode-block" id="MonoTimeSeries2FeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.MonoTimeSeries2FeatureNode">[docs]</a><span class="k">class</span> <span class="nc">MonoTimeSeries2FeatureNode</span><span class="p">(</span><span class="n">Feature2MonoTimeSeriesNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Convert time series with only one time stamp to feature vector</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the type *TimeSeries* to *FeatureVector*.</span>
+<span class="sd">    Each channel is mapped to one feature.</span>
+<span class="sd">    </span>
+<span class="sd">    The purpose of this node is to enable the user to use time series nodes on</span>
+<span class="sd">    feature vectors. Especially on feature vectors without any time structure.</span>
+<span class="sd">    Therefore this node is the back transformation from the</span>
+<span class="sd">    :class:`pySPACE.missions.nodes.type_manipulation.type_conversion.Feature2MonoTimeSeriesNode`</span>
+<span class="sd">       </span>
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">     .. code-block:: yaml</span>
+
+<span class="sd">         -</span>
+<span class="sd">             node : MonoTimeSeries2Feature</span>
+
+<span class="sd">       </span>
+<span class="sd">    :Author: Mario Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2012/08/31</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MonoTimeSeries2FeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.MonoTimeSeries2FeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Identify channel names with feature names &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">MonoTimeSeries2FeatureNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_invert</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MonoTimeSeries2FeatureNode._invert"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.MonoTimeSeries2FeatureNode._invert">[docs]</a>    <span class="k">def</span> <span class="nf">_invert</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Irrelevant inversion introduced just for completeness &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">MonoTimeSeries2FeatureNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    </div></div>
+<div class="viewcode-block" id="CastDatatypeNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.CastDatatypeNode">[docs]</a><span class="k">class</span> <span class="nc">CastDatatypeNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Changes the datatype of the data</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :datatype:</span>
+<span class="sd">            Type to cast to.</span>
+
+<span class="sd">            (*optional, default: &quot;eval(numpy.float64)&quot;*)</span>
+<span class="sd">            </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : CastDatatype</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2012/03/29</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="CastDatatypeNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.CastDatatypeNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">,</span>
+                 <span class="n">selected_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CastDatatypeNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datatype</span><span class="o">=</span><span class="n">datatype</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="CastDatatypeNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.type_manipulation.type_conversion.html#pySPACE.missions.nodes.type_manipulation.type_conversion.CastDatatypeNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Apply the cast &quot;&quot;&quot;</span>
+        <span class="c">#Determine the indices of the channels which will be filtered</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Cast data&quot;</span><span class="p">)</span>
+        <span class="n">casted_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datatype</span><span class="p">)</span>
+            
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">casted_data</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Prediction2Features&quot;</span><span class="p">:</span> <span class="n">Prediction2FeaturesNode</span><span class="p">,</span>
+                <span class="s">&quot;Features2Prediction&quot;</span><span class="p">:</span> <span class="n">Features2PredictionNode</span><span class="p">,</span>
+                <span class="s">&quot;LabeledFeature2TimeSeries&quot;</span><span class="p">:</span> <span class="n">FeatureVector2TimeSeriesNode</span><span class="p">,</span>
+                <span class="s">&quot;Feature2TimeSeries&quot;</span><span class="p">:</span> <span class="n">FeatureVector2TimeSeriesNode</span><span class="p">,</span>
+                <span class="s">&quot;CastDataType&quot;</span><span class="p">:</span> <span class="n">CastDatatypeNode</span>
+                <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

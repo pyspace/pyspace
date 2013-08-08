@@ -1,0 +1,282 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.preprocessing.window_func &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.preprocessing.window_func</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Multiply a signal with a window &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="c"># These imports are all for loading the functions.yaml file for the abbreviations of functions for benchmarking.</span>
+<span class="c"># Kept here local for debugging and because the file is just used in this node.</span>
+<span class="c"># Maybe this will change.</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="kn">import</span> <span class="nn">yaml</span>
+    <span class="kn">import</span> <span class="nn">pySPACE</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+
+<div class="viewcode-block" id="InvalidWindowException"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.InvalidWindowException">[docs]</a><span class="k">class</span> <span class="nc">InvalidWindowException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+</div>
+<div class="viewcode-block" id="WindowFuncNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.WindowFuncNode">[docs]</a><span class="k">class</span> <span class="nc">WindowFuncNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Multiply the :class:`~pySPACE.resources.data_types.time_series.TimeSeries` with a window</span>
+<span class="sd">    </span>
+<span class="sd">    If the window has trailing zeros, the time series is chopped.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :window_function_str:</span>
+<span class="sd">            This string has to be either the name of a function specified in </span>
+<span class="sd">            functions.yaml or a lambda expression that evaluates to a valid </span>
+<span class="sd">            window function. Such a window function has to be of the form </span>
+<span class="sd">            lambda n: lambda x: something</span>
+<span class="sd">            where n is the number of samples (the length of the window </span>
+<span class="sd">            function) and x is the respective value.</span>
+<span class="sd">        </span>
+<span class="sd">        :reduce_window:</span>
+<span class="sd">            If True, zeros at the beginning or ending are chopped.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Windowing</span>
+<span class="sd">            parameters : </span>
+<span class="sd">                window_function_str : &quot;hanning&quot; # loaded from functions.yaml</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/09/01</span>
+<span class="sd">    :Revised: 2009/09/15 (Mario Krell)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="WindowFuncNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.WindowFuncNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_function_str</span><span class="p">,</span> <span class="n">reduce_window</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                
+        <span class="nb">super</span><span class="p">(</span><span class="n">WindowFuncNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="c"># Do the import of the abbreviations of the functions.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">window_function_str</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;lambda&quot;</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+
+                <span class="n">functions_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span>
+                                                   <span class="s">&#39;functions.yaml&#39;</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">functions</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">functions_file</span><span class="p">)</span>
+                <span class="n">functions_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                <span class="c"># Running outside of pySPACE, not able to load functions from YAML file</span>
+                <span class="c"># TODO: Fix that</span>
+                <span class="n">functions</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Function in spec folder could not be loaded. Please fix that!&quot;</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">window_function_str</span> <span class="o">=</span> <span class="n">functions</span><span class="p">[</span><span class="n">window_function_str</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="c"># window_function_str is not the key for a function in functions.yaml,</span>
+                <span class="c"># we assume that it is the window function itself</span>
+                <span class="k">pass</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">window_function_str</span> <span class="o">=</span> <span class="n">window_function_str</span><span class="p">,</span>
+                                      <span class="n">reduce_window</span> <span class="o">=</span> <span class="n">reduce_window</span><span class="p">,</span>
+                                      <span class="n">num_of_samples</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">window_array</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="WindowFuncNode.create_window_array"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.WindowFuncNode.create_window_array">[docs]</a>    <span class="k">def</span> <span class="nf">create_window_array</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create a permanent array for the windowing of the data&quot;&quot;&quot;</span>
+        <span class="c"># the window is given as a lambda expression where the first variable </span>
+        <span class="c"># is the length of the window (num of samples of the data) and the </span>
+        <span class="c"># second one is for the time axis</span>
+        
+        <span class="c"># resolve first variable</span>
+        <span class="n">window_function</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_function_str</span><span class="p">)(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_of_samples</span><span class="p">)</span>
+        <span class="c"># resolve second variable for final window creation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">window_function</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> \
+                                                   <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_of_samples</span><span class="p">)])</span>
+        
+        <span class="c"># Check if there are zeros at the beginning or end of window</span>
+        <span class="c"># If yes, skip these ranges (i.e. shorten the time series window)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_array</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_has_zeros</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">)</span> <span class="o">!=</span> \
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">num_of_samples</span><span class="p">)</span>
+        
+        <span class="c"># A window with only zeros does not make sense</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">InvalidWindowException</span><span class="p">(</span><span class="s">&quot;The window does contain only zeros!&quot;</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="WindowFuncNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.WindowFuncNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Apply the windowing to the given data and return the result &quot;&quot;&quot;</span>        
+        <span class="c">#Create a window of the correct length for the given data</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_of_samples</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_of_samples</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">create_window_array</span><span class="p">()</span>
+             
+        <span class="n">data_array</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c">#Do the actual windowing</span>
+        <span class="c"># TODO: check if windowed_data = (self.window_array.T * data) works also???</span>
+        <span class="n">windowed_data</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_array</span> <span class="o">*</span> <span class="n">data_array</span><span class="o">.</span><span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+        
+        <span class="c"># Skip trailing zeros</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_has_zeros</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduce_window</span><span class="p">:</span>
+            <span class="n">windowed_data</span> <span class="o">=</span> <span class="n">windowed_data</span><span class="p">[</span>
+                <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="p">:]</span>
+        
+            <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">windowed_data</span><span class="p">)</span>
+            
+            <span class="c"># Adjust start and end time when chopping was done</span>
+            <span class="n">result_time_series</span><span class="o">.</span><span class="n">start_time</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">start_time</span> <span class="o">+</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span>
+            <span class="n">result_time_series</span><span class="o">.</span><span class="n">end_time</span> <span class="o">=</span> \
+                <span class="n">data</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_not_equal_zero</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                                 <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">windowed_data</span><span class="p">)</span>
+                    
+        <span class="k">return</span> <span class="n">result_time_series</span>
+
+</div></div>
+<div class="viewcode-block" id="ScaleNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.ScaleNode">[docs]</a><span class="k">class</span> <span class="nc">ScaleNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Scale all value by a constant factor</span>
+
+<span class="sd">    Scales (i.e. multiplies) all values with a given factor.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :factor:</span>
+<span class="sd">            The factor</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : Scale</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                factor : 2</span>
+
+<span class="sd">    :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2013/03/08</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="ScaleNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.ScaleNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ScaleNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">factor</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">factor</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">factor</span><span class="o">=</span><span class="n">factor</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ScaleNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.preprocessing.window_func.html#pySPACE.missions.nodes.preprocessing.window_func.ScaleNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply the scaling to the given data x</span>
+<span class="sd">        and return a new time series.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span>
+
+        <span class="n">result_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_time_series</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Windowing&quot;</span><span class="p">:</span> <span class="n">WindowFuncNode</span><span class="p">,</span>
+                <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

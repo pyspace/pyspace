@@ -1,0 +1,294 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.sink.time_series_sink &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.sink.time_series_sink</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Gather all time series objects that are passed through</span>
+
+<span class="sd">:Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2008/11/28</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.time_series</span> <span class="kn">import</span> <span class="n">TimeSeriesDataset</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+
+<div class="viewcode-block" id="TimeSeriesSinkNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode">[docs]</a><span class="k">class</span> <span class="nc">TimeSeriesSinkNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Collect all :mod:`time series objects &lt;pySPACE.resources.data_types.time_series&gt;` in a :mod:`collection &lt;pySPACE.resources.dataset_defs.time_series&gt;`</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">      :sort_string: </span>
+<span class="sd">          A lambda function string that is passed to the TimeSeriesDataset and</span>
+<span class="sd">          evaluated before the data is stored.</span>
+<span class="sd">                    </span>
+<span class="sd">          (*optional, default: None*)</span>
+<span class="sd">          </span>
+<span class="sd">      :max_num_stored_objects:</span>
+<span class="sd">          Number of maximal stored time series objects. Can be used if only a part</span>
+<span class="sd">          of a dataset should be exported, e.g. for size purposes in debugging.</span>
+<span class="sd">          Applies to train and test set separately.</span>
+<span class="sd">          </span>
+<span class="sd">          (*optional, default: numpy.inf*)</span>
+<span class="sd">    </span>
+<span class="sd">      :merge:</span>
+<span class="sd">         Can be set to true if the use wants to get one timeseries containing the</span>
+<span class="sd">         entier input data</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - </span>
+<span class="sd">            node: Time_Series_Sink</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/11/28    </span>
+<span class="sd">    :LastChange: 2011/04/13 Anett Seeland (anett.seeland@dfki.de)        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TimeSeriesSinkNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sort_string</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">merge</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimeSeriesSinkNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">sort_string</span><span class="o">=</span><span class="n">sort_string</span><span class="p">,</span>
+                                      <span class="n">merge</span> <span class="o">=</span> <span class="n">merge</span><span class="p">,</span>
+                                      <span class="c"># This will be created lazily</span>
+                                      <span class="n">time_series_collection</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">max_num_stored_objects</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span> 
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset the state of the object to the clean state it had after its</span>
+<span class="sd">        initialization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># We have to create a temporary reference since we remove </span>
+        <span class="c"># the self.permanent_state reference in the next step by overwriting</span>
+        <span class="c"># self.__dict__</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span>
+        <span class="c"># TODO: just a hack to get it working quickly...</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s">&quot;time_series_collection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span> <span class="o">=</span> <span class="n">tmp</span>
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="c"># Though this node is not really trainable, it returns true in order</span>
+        <span class="c"># to get trained. The reason is that during this training phase, </span>
+        <span class="c"># it stores all time windows along with their class label</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode._get_train_set"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode._get_train_set">[docs]</a>    <span class="k">def</span> <span class="nf">_get_train_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data that can be used for training &quot;&quot;&quot;</span>
+        <span class="c"># We take data that is provided by the input node for training</span>
+        <span class="c"># NOTE: This might involve training of the preceding nodes</span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
+        
+        <span class="c"># Add the data provided by the input node for testing to the</span>
+        <span class="c"># training set</span>
+        <span class="c"># NOTE: This node is not really learning but creating a labeled set</span>
+        <span class="c">#       of time windows. Because of that it must take all</span>
+        <span class="c">#       data for training (even when use_test_data is False) </span>
+        <span class="n">train_set</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">train_set</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">train_set</span>
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="TimeSeriesSinkNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="n">data</span>
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.process_current_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.process_current_split">[docs]</a>    <span class="k">def</span> <span class="nf">process_current_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Compute the results of this sink node for the current split of the data</span>
+<span class="sd">        into train and test data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c"># Compute the time series for the data used for training</span>
+        <span class="k">for</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="bp">False</span><span class="p">):</span>
+            <span class="c"># Do lazy initialization of the class </span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">=</span> \
+                            <span class="n">TimeSeriesDataset</span><span class="p">(</span><span class="n">sort_string</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_num_stored_objects</span><span class="p">:</span>
+                <span class="c"># Add sample</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">time_series</span><span class="p">,</span>
+                                                       <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="p">,</span>
+                                                       <span class="n">train</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+                                                       <span class="n">split</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span>
+                                                       <span class="n">run</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+            
+        <span class="c"># Compute the time series for the data used for testing</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
+            <span class="c"># Do lazy initialization of the class </span>
+            <span class="c"># (maybe there were no training examples)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">=</span> \
+                            <span class="n">TimeSeriesDataset</span><span class="p">(</span><span class="n">sort_string</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_num_stored_objects</span><span class="p">:</span>
+                <span class="c"># Add sample</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">time_series</span><span class="p">,</span>
+                                                   <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="p">,</span>
+                                                   <span class="n">train</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                                                   <span class="n">split</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span>
+                                                   <span class="n">run</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.merge_time_series"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.merge_time_series">[docs]</a>    <span class="k">def</span> <span class="nf">merge_time_series</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_collection</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Merges all timeseries of the input_collection to one big timeseries &quot;&quot;&quot;</span>
+        <span class="c"># Retriev the time series from the input_collection</span>
+        <span class="n">input_timeseries</span> <span class="o">=</span> <span class="n">input_collection</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="s">&#39;test&#39;</span><span class="p">)</span>
+        <span class="c"># Get the data from the first timeseries</span>
+        <span class="n">output_data</span> <span class="o">=</span> <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="c"># Change the endtime of the first timeseries to the one of the last</span>
+        <span class="c"># timeseries inside the input_collection</span>
+        <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">end_time</span> <span class="o">=</span> <span class="n">input_timeseries</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">end_time</span>
+        <span class="c"># For all the remaining timeseries</span>
+        <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="c"># Concatenate the data...</span>
+            <span class="n">output_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">output_data</span><span class="p">,</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_data</span><span class="p">()))</span>
+            <span class="c"># ... and add the marker to the first timeseries</span>
+            <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">:</span>
+                    <span class="k">if</span><span class="p">(</span><span class="ow">not</span> <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">k</span><span class="p">)):</span>
+                        <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">time</span> <span class="ow">in</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">[</span><span class="n">k</span><span class="p">]:</span>
+                        <span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">time</span><span class="o">+</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span><span class="o">+</span><span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
+        <span class="c"># Use the meta information from the first timeseries e.g. marker start/end_time</span>
+        <span class="c"># and create a new timeseries with the concatenated data</span>
+        <span class="n">merged_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">input_timeseries</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span><span class="n">output_data</span><span class="p">)</span>
+        <span class="c"># Change the name of the merged_time_series</span>
+        <span class="n">merged_time_series</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">, length </span><span class="si">%d</span><span class="s"> ms, </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">merged_time_series</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> \
+                                                            <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">merged_time_series</span><span class="p">)</span><span class="o">*</span><span class="mf">1000.0</span><span class="p">)</span><span class="o">/</span><span class="n">merged_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>\
+                                                            <span class="n">merged_time_series</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        
+        <span class="k">return</span> <span class="n">merged_time_series</span>
+
+        </div>
+<div class="viewcode-block" id="TimeSeriesSinkNode.get_result_dataset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.time_series_sink.html#pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode.get_result_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">get_result_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the result &quot;&quot;&quot;</span>
+        <span class="c"># Merges all timeseries inside the collection if merge flag is set to true</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge</span><span class="p">:</span>
+            <span class="n">merged_time_series</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">merge_time_series</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span> <span class="o">=</span> \
+                      <span class="n">TimeSeriesDataset</span><span class="p">(</span><span class="n">sort_string</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">merged_time_series</span><span class="p">,</span>
+                                                 <span class="n">label</span> <span class="o">=</span> <span class="s">&#39;Window&#39;</span><span class="p">,</span>
+                                                 <span class="n">train</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series_collection</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Time_Series_Sink&quot;</span><span class="p">:</span> <span class="n">TimeSeriesSinkNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

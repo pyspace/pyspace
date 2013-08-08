@@ -1,0 +1,573 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.utils.data.test_data_generation &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.utils.data.test_data_generation</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Data generation facilities to test algorithms or node chains e.g. in unittests &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
+<span class="kn">import</span> <span class="nn">scipy</span>
+<span class="kn">import</span> <span class="nn">abc</span>
+
+
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+
+<span class="c">###################################################################</span>
+
+<div class="viewcode-block" id="DataGenerator"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator">[docs]</a><span class="k">class</span> <span class="nc">DataGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Abstract base class for data generation for different test data patterns</span>
+<span class="sd">    </span>
+<span class="sd">        To implement an arbitrary data generation class, </span>
+<span class="sd">        subclass from this class</span>
+<span class="sd">        and override the method generate() .</span>
+<span class="sd">        This can be sine waves, different types of noise, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DataGenerator.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span>
+        </div>
+<div class="viewcode-block" id="DataGenerator.set_sampling_frequency"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.set_sampling_frequency">[docs]</a>    <span class="k">def</span> <span class="nf">set_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span>
+        </div>
+<div class="viewcode-block" id="DataGenerator.get_sampling_frequency"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.get_sampling_frequency">[docs]</a>    <span class="k">def</span> <span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span>
+    </div>
+    <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">get_sampling_frequency</span><span class="p">,</span> <span class="n">set_sampling_frequency</span><span class="p">)</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span>
+    
+<div class="viewcode-block" id="DataGenerator.__call__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Helper function that returns, how often it was called&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__getattribute__</span><span class="p">(</span><span class="s">&quot;index&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="n">temp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">temp</span>
+    </div>
+<div class="viewcode-block" id="DataGenerator.next_channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.next_channel">[docs]</a>    <span class="k">def</span> <span class="nf">next_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Goes to the next channel&quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+    </div>
+    <span class="nd">@abc.abstractmethod</span>
+<div class="viewcode-block" id="DataGenerator.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.DataGenerator.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+
+<span class="c"># several different test data generation functions</span></div></div>
+<div class="viewcode-block" id="Zero"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Zero">[docs]</a><span class="k">class</span> <span class="nc">Zero</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Helper function for data generation that simply returns zero&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Zero.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Zero.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Zero</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Zero.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Zero.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+
+</div></div>
+<div class="viewcode-block" id="One"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.One">[docs]</a><span class="k">class</span> <span class="nc">One</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Helper function for data generation that simply returns one&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="One.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.One.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">One</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="One.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.One.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mf">1.0</span>
+
+</div></div>
+<div class="viewcode-block" id="Constant"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Constant">[docs]</a><span class="k">class</span> <span class="nc">Constant</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Helper function for data generation that simply returns one&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Constant.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Constant.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Constant</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Constant.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Constant.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+
+</div></div>
+<div class="viewcode-block" id="Counter"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Counter">[docs]</a><span class="k">class</span> <span class="nc">Counter</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Counts the number of calls and returns the value&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Counter.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Counter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">start</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Counter</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Counter.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Counter.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span>
+
+</div></div>
+<div class="viewcode-block" id="Channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Channel">[docs]</a><span class="k">class</span> <span class="nc">Channel</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generated the number of the actual channel&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Channel.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Channel.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">num_channels</span><span class="p">,</span>
+                 <span class="n">num_time_pts</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_channels</span> <span class="o">=</span> <span class="n">num_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_time_pts</span> <span class="o">=</span> <span class="n">num_time_pts</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">Channel</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="Channel.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Channel.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_time_pts</span>
+    
+    </div></div>
+<div class="viewcode-block" id="TimePoint"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TimePoint">[docs]</a><span class="k">class</span> <span class="nc">TimePoint</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generated the index of the actual time point&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="TimePoint.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TimePoint.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">num_channels</span><span class="p">,</span>
+                 <span class="n">num_time_pts</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_channels</span> <span class="o">=</span> <span class="n">num_channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_time_pts</span> <span class="o">=</span> <span class="n">num_time_pts</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimePoint</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="TimePoint.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TimePoint.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_channels</span>
+
+</div></div>
+<div class="viewcode-block" id="Triangle"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Triangle">[docs]</a><span class="k">class</span> <span class="nc">Triangle</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a triangle with a given width and height</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+<div class="viewcode-block" id="Triangle.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Triangle.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">width</span><span class="p">,</span><span class="n">height</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">(</span><span class="n">height</span><span class="p">)</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">Triangle</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Triangle.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Triangle.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">buffer</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">buffer</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="o">/</span><span class="mf">2.</span><span class="p">:</span>
+            <span class="nb">buffer</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">buffer</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span> <span class="o">-</span> <span class="nb">buffer</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">width</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">height</span> <span class="o">*</span> <span class="nb">buffer</span>
+
+    </div></div>
+<div class="viewcode-block" id="GaussianNoise"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.GaussianNoise">[docs]</a><span class="k">class</span> <span class="nc">GaussianNoise</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates normal distributed noise&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="GaussianNoise.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.GaussianNoise.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mean</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">std</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                 <span class="n">seed</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">mean</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">(</span><span class="n">mean</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">double</span><span class="p">(</span><span class="n">std</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">seed</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
+            
+        <span class="nb">super</span><span class="p">(</span><span class="n">GaussianNoise</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="GaussianNoise.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.GaussianNoise.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">scipy</span><span class="o">.</span><span class="n">randn</span><span class="p">()</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">std</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean</span>
+    
+    </div></div>
+<div class="viewcode-block" id="Sine"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Sine">[docs]</a><span class="k">class</span> <span class="nc">Sine</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a sine wave &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Sine.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Sine.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span><span class="n">frequency</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="n">amplitude</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="o">=</span> <span class="n">phase</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="n">amplitude</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Sine</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                           <span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Sine.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Sine.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="ChannelDependentSine"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentSine">[docs]</a><span class="k">class</span> <span class="nc">ChannelDependentSine</span><span class="p">(</span><span class="n">Sine</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a sine wave with channel scaled frequency&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ChannelDependentSine.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentSine.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ChannelDependentSine</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="ChannelDependentSine.next_channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentSine.next_channel">[docs]</a>    <span class="k">def</span> <span class="nf">next_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Goes to the next channel&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span>
+
+</div></div>
+<div class="viewcode-block" id="Cosine"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Cosine">[docs]</a><span class="k">class</span> <span class="nc">Cosine</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a cosine wave &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Cosine.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Cosine.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span><span class="n">frequency</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="n">amplitude</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phase</span> <span class="o">=</span> <span class="n">phase</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">=</span> <span class="n">amplitude</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Cosine</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                      <span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Cosine.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Cosine.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">phase</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">amplitude</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="ChannelDependentCosine"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentCosine">[docs]</a><span class="k">class</span> <span class="nc">ChannelDependentCosine</span><span class="p">(</span><span class="n">Sine</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a cosine wave with channel scaled frequency&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="ChannelDependentCosine.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentCosine.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ChannelDependentCosine</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="ChannelDependentCosine.next_channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentCosine.next_channel">[docs]</a>    <span class="k">def</span> <span class="nf">next_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Goes to the next channel&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span>
+
+</div></div>
+<div class="viewcode-block" id="Delta"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Delta">[docs]</a><span class="k">class</span> <span class="nc">Delta</span><span class="p">(</span><span class="n">Sine</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a delta impulse, i.e. 1 if t==-k, 0 else &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Delta.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Delta.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="n">k</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Delta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Delta.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Delta.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+</div></div>
+<div class="viewcode-block" id="ChannelDependentDelta"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentDelta">[docs]</a><span class="k">class</span> <span class="nc">ChannelDependentDelta</span><span class="p">(</span><span class="n">Delta</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generates a sine wave with channel scaled frequency&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ChannelDependentDelta.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentDelta.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ChannelDependentDelta</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ChannelDependentDelta.next_channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentDelta.next_channel">[docs]</a>    <span class="k">def</span> <span class="nf">next_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Goes to the next channel&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">-=</span> <span class="mi">2</span> <span class="c"># to have difference between channels and</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="ChannelDependentDelta.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.ChannelDependentDelta.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_index</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+
+</div></div>
+<div class="viewcode-block" id="Combiner"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Combiner">[docs]</a><span class="k">class</span> <span class="nc">Combiner</span><span class="p">(</span><span class="n">DataGenerator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Combines several generators&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Combiner.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Combiner.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">generator_list</span><span class="o">=</span><span class="p">[],</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator_list</span> <span class="o">=</span> <span class="n">generator_list</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Combiner</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Combiner.add_generator"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Combiner.add_generator">[docs]</a>    <span class="k">def</span> <span class="nf">add_generator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">generator</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">generator</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="Combiner.set_sampling_frequency"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Combiner.set_sampling_frequency">[docs]</a>    <span class="k">def</span> <span class="nf">set_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span>
+        <span class="k">for</span> <span class="n">gen</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator_list</span><span class="p">:</span>
+            <span class="n">gen</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span>
+        </div>
+<div class="viewcode-block" id="Combiner.get_sampling_frequency"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Combiner.get_sampling_frequency">[docs]</a>    <span class="k">def</span> <span class="nf">get_sampling_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sampling_frequency</span>
+    </div>
+    <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">get_sampling_frequency</span><span class="p">,</span> <span class="n">set_sampling_frequency</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Adder"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Adder">[docs]</a><span class="k">class</span> <span class="nc">Adder</span><span class="p">(</span><span class="n">Combiner</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Combines several signal by adding them together&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Adder.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Adder.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">generator_list</span><span class="o">=</span><span class="p">[],</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Adder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">generator_list</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                </div>
+<div class="viewcode-block" id="Adder.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Adder.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">datum</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">generator</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator_list</span><span class="p">:</span>
+            <span class="n">datum</span> <span class="o">+=</span> <span class="n">generator</span><span class="p">()</span>
+            
+        <span class="k">return</span> <span class="n">datum</span>
+
+</div></div>
+<div class="viewcode-block" id="Multiplier"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Multiplier">[docs]</a><span class="k">class</span> <span class="nc">Multiplier</span><span class="p">(</span><span class="n">Combiner</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Combines several signal by adding them together&quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="Multiplier.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Multiplier.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">generator_list</span><span class="o">=</span><span class="p">[],</span><span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Multiplier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">generator_list</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                </div>
+<div class="viewcode-block" id="Multiplier.generate"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.Multiplier.generate">[docs]</a>    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">datum</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">generator</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator_list</span><span class="p">:</span>
+            <span class="n">datum</span> <span class="o">*=</span> <span class="n">generator</span><span class="p">()</span>
+            
+        <span class="k">return</span> <span class="n">datum</span>
+
+</div></div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator">[docs]</a><span class="k">class</span> <span class="nc">TestTimeSeriesGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Helper class to generate time series objects e.g. by DataGenerator classes</span>
+<span class="sd">    </span>
+<span class="sd">    .. todo:: Documentation is wrong.</span>
+<span class="sd">    .. todo:: Fix dependencies and function names.</span>
+<span class="sd">              Why no inheritance from DataGenerator?</span>
+<span class="sd">              Why use of generate_test_data instead of generate?</span>
+<span class="sd">    &quot;&quot;&quot;</span>  
+    
+<div class="viewcode-block" id="TestTimeSeriesGenerator.init"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.init">[docs]</a>    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator.generate_test_data"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.generate_test_data">[docs]</a>    <span class="k">def</span> <span class="nf">generate_test_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">channels</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> 
+                           <span class="n">time_points</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> 
+                           <span class="n">function</span><span class="o">=</span><span class="n">Sine</span><span class="p">(</span><span class="n">phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">frequency</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span> <span class="n">amplitude</span><span class="o">=</span><span class="mf">1.</span><span class="p">),</span>
+                           <span class="n">sampling_frequency</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+                           <span class="n">channel_order</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                           <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                           <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A method which generates a signal for testing, with</span>
+<span class="sd">        the specified number of &quot;channels&quot; which are all generated using</span>
+<span class="sd">        the given function.</span>
+<span class="sd">        </span>
+<span class="sd">        **Keyword arguments**</span>
+
+<span class="sd">            :channels: number of channels</span>
+<span class="sd">            :time_points: number of time points</span>
+<span class="sd">            :function: the function used for sample generation</span>
+<span class="sd">            :sampling_frequency: the frequency which is used for sampling,</span>
+<span class="sd">                                 e.g. the signal corresponds to a time frame of</span>
+<span class="sd">                                 time_points/sampling frequency</span>
+<span class="sd">            :channel_names: the names of the channels (alternative to the</span>
+<span class="sd">                            channels parameter, if not None, it also specifies</span>
+<span class="sd">                            the number of channels)</span>
+<span class="sd">            :channel_order: the channel values are computed first, use False</span>
+<span class="sd">                            for first computation of the row values</span>
+<span class="sd">            :dtype: data type of the array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+       
+        <span class="k">if</span> <span class="n">channel_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">!=</span> <span class="n">channels</span><span class="p">:</span>
+                <span class="n">channels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Ambiguous number of channels in TestTimeSeriesGenerator&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[(</span><span class="s">&quot;test_channel_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channels</span><span class="p">)]</span>
+       
+        <span class="c">#Generate an empty ndarray</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">time_points</span><span class="p">,</span> <span class="n">channels</span><span class="p">),</span><span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">channel_order</span><span class="p">:</span>
+            <span class="c">#Compute the values for all channels</span>
+            <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">channels</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">time_points</span><span class="p">):</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">function</span><span class="p">()</span>
+                <span class="n">function</span><span class="o">.</span><span class="n">next_channel</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">time_points</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">channels</span><span class="p">):</span>
+                    <span class="n">data</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">function</span><span class="p">()</span>
+                
+        <span class="c">#Generate a time series build out of the data</span>
+        <span class="n">test_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_array</span> <span class="o">=</span> <span class="n">data</span><span class="p">,</span> 
+                               <span class="n">channel_names</span> <span class="o">=</span> <span class="n">channel_names</span><span class="p">,</span>
+                               <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span><span class="p">,</span>
+                               <span class="n">start_time</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                               <span class="n">end_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">time_points</span><span class="p">)</span> <span class="o">/</span> <span class="n">sampling_frequency</span> <span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">test_data</span>
+    
+    </div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator.generate_test_data_simple"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.generate_test_data_simple">[docs]</a>    <span class="k">def</span> <span class="nf">generate_test_data_simple</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                  <span class="n">channels</span><span class="p">,</span> 
+                                  <span class="n">time_points</span><span class="p">,</span> 
+                                  <span class="n">function</span><span class="p">,</span> 
+                                  <span class="n">sampling_frequency</span><span class="p">,</span> 
+                                  <span class="n">initial_phase</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A method which generates a signal by using function for testing, with</span>
+<span class="sd">        the specified number of &quot;channels&quot; which are all generated using</span>
+<span class="sd">        the given function.</span>
+<span class="sd">        </span>
+<span class="sd">        **Keyword arguments**</span>
+
+<span class="sd">            :channels:  number of channels</span>
+<span class="sd">            :time_points: number of time points</span>
+<span class="sd">            :function: the function used for sample generation</span>
+<span class="sd">            :sampling_frequency: the frequency which is used for sampling,</span>
+<span class="sd">                                 e.g. the signal corresponds to a time frame</span>
+<span class="sd">                                 of time_points/sampling frequency</span>
+<span class="sd">          </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+       
+        <span class="c">#Generate an empty ndarray</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">time_points</span><span class="p">,</span> <span class="n">channels</span><span class="p">))</span>
+        
+        <span class="c">#Compute the values for all channels</span>
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channels</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">time_points</span><span class="p">):</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="n">time_index</span> <span class="o">/</span> <span class="n">sampling_frequency</span> <span class="o">+</span> <span class="n">initial_phase</span><span class="p">)</span>
+                
+        <span class="c">#Generate a time series build out of the data</span>
+        <span class="n">test_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span>
+            <span class="n">input_array</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="p">[(</span><span class="s">&quot;test_channel_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channels</span><span class="p">)],</span>
+            <span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+            <span class="n">start_time</span><span class="o">=</span><span class="n">initial_phase</span><span class="p">,</span>
+            <span class="n">end_time</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">time_points</span><span class="p">)</span> <span class="o">/</span> <span class="n">sampling_frequency</span> <span class="o">+</span> <span class="n">initial_phase</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">test_data</span>
+    </div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator.add_to_test_data_single_channel"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.add_to_test_data_single_channel">[docs]</a>    <span class="k">def</span> <span class="nf">add_to_test_data_single_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">,</span> <span class="n">function</span><span class="p">):</span>
+        
+        <span class="p">(</span><span class="n">num_time_points</span><span class="p">,</span><span class="n">num_channels</span><span class="p">)</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">shape</span>
+        
+        <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        
+        <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_time_points</span><span class="p">):</span>
+            <span class="n">time_series</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span> <span class="n">time_index</span><span class="o">/</span><span class="n">sampling_frequency</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator.add_to_test_data"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.add_to_test_data">[docs]</a>    <span class="k">def</span> <span class="nf">add_to_test_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_series</span><span class="p">,</span> <span class="n">function</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to add an additional signal generated by function to an existing time series</span>
+<span class="sd">        </span>
+<span class="sd">        **Keyword arguments**</span>
+
+<span class="sd">            :timeSeries: the time series object</span>
+<span class="sd">            :function: function to generate signal</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="p">(</span><span class="n">num_time_points</span><span class="p">,</span><span class="n">num_channels</span><span class="p">)</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">shape</span>
+            
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_channels</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_to_test_data_single_channel</span><span class="p">(</span><span class="n">time_series</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">,</span> <span class="n">function</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="TestTimeSeriesGenerator.generate_normalized_test_data"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.utils.data.test_data_generation.html#pySPACE.tests.utils.data.test_data_generation.TestTimeSeriesGenerator.generate_normalized_test_data">[docs]</a>    <span class="k">def</span> <span class="nf">generate_normalized_test_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                                      <span class="n">channels</span><span class="p">,</span> 
+                                      <span class="n">time_points</span><span class="p">,</span> 
+                                      <span class="n">function</span><span class="p">,</span> 
+                                      <span class="n">sampling_frequency</span><span class="p">,</span> 
+                                      <span class="n">initial_phase</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        A method which generates a normalized (mu = 0, sigma =1) signal for testing, with</span>
+<span class="sd">        the specified number of &quot;channels&quot; which are all generated using the given function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+       
+        <span class="c">#Generate an empty ndarray</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">time_points</span><span class="p">,</span> <span class="n">channels</span><span class="p">))</span>
+        
+        <span class="c">#Compute the values for all channels</span>
+        <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channels</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">time_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">time_points</span><span class="p">):</span>
+                <span class="n">data</span><span class="p">[</span><span class="n">time_index</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">function</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="n">channel_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">time_index</span> <span class="o">/</span> <span class="n">sampling_frequency</span> <span class="o">+</span> <span class="n">initial_phase</span><span class="p">))</span>
+            <span class="n">current_channel</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span>
+            <span class="n">current_channel</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_channel</span> <span class="o">-</span> <span class="n">pylab</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">current_channel</span><span class="p">))</span><span class="o">/</span><span class="n">pylab</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">current_channel</span><span class="p">)</span>
+            <span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_channel</span>
+            
+        <span class="c">#Generate a time series build out of the data</span>
+        <span class="n">test_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_array</span> <span class="o">=</span> <span class="n">data</span><span class="p">,</span> 
+                               <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[(</span><span class="s">&quot;test_channel_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">channels</span><span class="p">)],</span>
+                               <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">sampling_frequency</span><span class="p">,</span>
+                               <span class="n">start_time</span> <span class="o">=</span> <span class="n">initial_phase</span><span class="p">,</span>
+                               <span class="n">end_time</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">time_points</span><span class="p">)</span> <span class="o">/</span> <span class="n">sampling_frequency</span> <span class="o">+</span> <span class="n">initial_phase</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">test_data</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

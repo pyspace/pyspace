@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Process EEG data with the Live Environment &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Setup and build the eegmanager" href="tutorial_work_with_the_eegserver.html" />
+    <link rel="prev" title="Process EEG data (only) from within a Python session" href="tutorial_node_chain.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_work_with_the_eegserver.html" title="Setup and build the eegmanager"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain.html" title="Process EEG data (only) from within a Python session"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Process EEG data with the Live Environment</a><ul>
+<li><a class="reference internal" href="#preparation">Preparation</a></li>
+<li><a class="reference internal" href="#execute-the-test-for-pyspace-live">Execute the Test for pySPACE-live</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial_node_chain.html"
+                        title="previous chapter">Process EEG data (only) from within a Python session</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial_work_with_the_eegserver.html"
+                        title="next chapter">Setup and build the eegmanager</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/tutorial_node_chain_online.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="process-eeg-data-with-the-live-environment">
+<span id="tutorial-node-chain-online"></span><h1>Process EEG data with the Live Environment<a class="headerlink" href="#process-eeg-data-with-the-live-environment" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we will learn how to use the live-environment to
+train the node chains on the data streamed from an external EEG-Server and
+classify new instances based on the trained node chains.</p>
+<div class="section" id="preparation">
+<h2>Preparation<a class="headerlink" href="#preparation" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>Before we start we have to look more closely to the content and the structure of
+the example parameter file for the live environment.</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">data_files</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">eeg_data_file_train</span><span class="p-Indicator">:</span> 
+    <span class="l-Scalar-Plain">eeg_data_file_test</span><span class="p-Indicator">:</span> 
+
+<span class="l-Scalar-Plain">potentials</span><span class="p-Indicator">:</span>
+
+    <span class="p-Indicator">-</span> <span class="l-Scalar-Plain">flow_id</span><span class="p-Indicator">:</span> <span class="s">&quot;SineWave&quot;</span>
+      <span class="l-Scalar-Plain">stream</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
+      <span class="l-Scalar-Plain">positive_event</span><span class="p-Indicator">:</span> <span class="s">&quot;Target&quot;</span>
+      <span class="l-Scalar-Plain">positive_prediction</span><span class="p-Indicator">:</span> <span class="s">&quot;PerceivedTarget&quot;</span>
+      <span class="l-Scalar-Plain">negative_event</span><span class="p-Indicator">:</span> <span class="s">&quot;Standard&quot;</span>
+      <span class="l-Scalar-Plain">negative_prediction</span><span class="p-Indicator">:</span> <span class="s">&quot;MissedTarget&quot;</span>
+      <span class="l-Scalar-Plain">stream_prewindowing_flow</span><span class="p-Indicator">:</span> <span class="s">&quot;node_chains/online_sinewave_prewindowing.yaml&quot;</span>
+      <span class="l-Scalar-Plain">stream_postprocess_flow</span><span class="p-Indicator">:</span> <span class="s">&quot;node_chains/online_sinewave_postprocessing.yaml&quot;</span>
+      <span class="l-Scalar-Plain">threshold_adaptation_flow</span><span class="p-Indicator">:</span> <span class="s">&quot;node_chains/online_threshold_adaptation_flow.yaml&quot;</span>
+      <span class="l-Scalar-Plain">windower_spec_path_prediction</span><span class="p-Indicator">:</span> <span class="s">&quot;online_sinewave_window_spec.yaml&quot;</span>
+      <span class="l-Scalar-Plain">windower_spec_path_train</span><span class="p-Indicator">:</span> <span class="s">&quot;online_sinewave_window_spec.yaml&quot;</span>
+      <span class="l-Scalar-Plain">windower_spec_path_stream</span><span class="p-Indicator">:</span> <span class="s">&quot;stream_window_spec_block_1000.yaml&quot;</span>
+      <span class="l-Scalar-Plain">ignore_num_first_examples</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">10</span>
+      <span class="l-Scalar-Plain">confusion_matrix</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
+
+<span class="l-Scalar-Plain">eeg_server</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">eeg_server_offline_predict_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;localhost&quot;</span>
+    <span class="l-Scalar-Plain">eeg_server_predict_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;10.250.3.112&quot;</span>
+    <span class="l-Scalar-Plain">eeg_server_train_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;localhost&quot;</span>
+    <span class="l-Scalar-Plain">eeg_server_prewindow_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;10.250.3.112&quot;</span>
+    <span class="l-Scalar-Plain">eeg_server_eeg_port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">51244</span>
+    
+<span class="l-Scalar-Plain">live_server</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">live_server_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;localhost&quot;</span>
+    <span class="l-Scalar-Plain">live_xmlrpc_port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">16254</span>
+
+<span class="l-Scalar-Plain">mars</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">mars_ip</span><span class="p-Indicator">:</span> <span class="s">&quot;192.168.100.46&quot;</span>
+    <span class="l-Scalar-Plain">mars_port</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">8080</span>
+            
+<span class="l-Scalar-Plain">flow_persistency_directory</span><span class="p-Indicator">:</span> <span class="s">&quot;./flow_storage&quot;</span>
+<span class="l-Scalar-Plain">prewindowed_data_directory</span><span class="p-Indicator">:</span> <span class="s">&quot;./prewindowed_data_storage&quot;</span>
+
+<span class="l-Scalar-Plain">record</span><span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">subject</span><span class="p-Indicator">:</span> <span class="s">&quot;NJ89&quot;</span>
+    <span class="l-Scalar-Plain">experiment</span><span class="p-Indicator">:</span> <span class="s">&quot;sine-wave-test&quot;</span>
+</pre></div>
+</div>
+<ul>
+<li><dl class="first docutils">
+<dt>data_files</dt>
+<dd><p class="first last">This fileds can be left empty for testing purposes.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>potentials</dt>
+<dd><p class="first last">This field describes every flow which is executed during the live processing.
+In this example there is only one flow called <em>SineWave</em>. It uses a dataset which
+is encoded in the raw-eeg format and is located in the default storage directory.
+Specific node-chains for the processing of the data are referenced for the
+different processing steps (e.g. prewindowing, postprocessing).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>eeg_server</dt>
+<dd><p class="first last">Here you can fill in the parameters for a online recording/processing session.
+The setup of the online streaming is described in the
+tutorial <a class="reference internal" href="tutorial_work_with_the_eegserver.html#tutorial-work-with-the-eegserver"><em>Setup and build the eegmanager</em></a>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>live_server</dt>
+<dd><p class="first last">???</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>mars</dt>
+<dd><p class="first last">???</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>flow_persistency_directory</dt>
+<dd><p class="first last">The directory, in which the pickled flows are stored.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>prewindowed_data_directory</dt>
+<dd><p class="first last">The directory where the data after the prewindowing step is stored.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>record</dt>
+<dd><p class="first last">When using pySPACE-live the data which is processed also gets recorded in
+the raw-eeg format (.eeg/.vhdr/.vmrk) for later reference or analysis. The
+field <em>subject</em> is meant for any subject related identification. The
+<em>experiment</em> field is there to describe the experiment. Both fileds are
+used to create the filename of the resulting raw-data files.
+The data is saved to the <em>storage</em> directory which is specified in
+your spec-file.</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>For purposes, other than testing the pySPACE-live environment with artificial
+data, please feel free to adapt it to your need (e.g. fill in more potentials or
+node-chains).</p>
+</div></blockquote>
+</div>
+<div class="section" id="execute-the-test-for-pyspace-live">
+<h2>Execute the Test for pySPACE-live<a class="headerlink" href="#execute-the-test-for-pyspace-live" title="Permalink to this headline">¶</a></h2>
+<blockquote>
+<div><p>To make sure, everything is well defined and configured, we execute
+the unit-test for the pySPACE-live environment.
+In order to do that navigate to the folder</p>
+<div class="highlight-bash"><div class="highlight"><pre><span class="nb">cd</span> <span class="k">$(</span>pyspace<span class="k">)</span>/pySPACE/tests/system_tests/live
+</pre></div>
+</div>
+<p>In there you will find <em>test_live.py</em>
+Execute the test by invoking the following command:</p>
+<div class="highlight-bash"><div class="highlight"><pre>python test_live.py --param example_param_file.yaml --conf &lt;your-config&gt;.yaml
+</pre></div>
+</div>
+<p>After that you will see the output of the different steps which
+are preformed in pySPACE-live.</p>
+</div></blockquote>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_work_with_the_eegserver.html" title="Setup and build the eegmanager"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain.html" title="Process EEG data (only) from within a Python session"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

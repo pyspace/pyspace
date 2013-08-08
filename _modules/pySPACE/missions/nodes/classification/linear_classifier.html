@@ -1,0 +1,473 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.classification.linear_classifier &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.classification.linear_classifier</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Implement standard linear classifiers &quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="c"># the output is a prediction vector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">mdp</span>
+    <span class="kn">from</span> <span class="nn">mdp.nodes</span> <span class="kn">import</span> <span class="n">FDANode</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="NaiveBayesClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">NaiveBayesClassifierNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; NaiveBayes Classifier Algorithm&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="NaiveBayesClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NaiveBayesClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span> <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span> <span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="p">[],</span><span class="n">var</span><span class="o">=</span><span class="p">[],</span> <span class="n">ap</span> <span class="o">=</span> <span class="p">[]</span> <span class="p">)</span>
+</div>
+<div class="viewcode-block" id="NaiveBayesClassifierNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="NaiveBayesClassifierNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="NaiveBayesClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+        <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">d</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">d</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ap</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="p">)</span>
+
+        <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="NaiveBayesClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector x&quot;&quot;&quot;</span>
+        
+        <span class="n">res</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ap</span><span class="p">)</span> <span class="p">);</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ap</span><span class="p">):</span>
+            <span class="n">fac</span> <span class="o">=</span>  <span class="mf">1.0</span><span class="o">/</span> <span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="n">term</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span> <span class="o">-</span> <span class="mf">0.5</span><span class="o">*</span> <span class="p">(</span> <span class="p">(</span> <span class="n">data</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">var</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="p">)</span> <span class="p">)</span> <span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">fac</span><span class="o">*</span><span class="n">term</span>
+            <span class="n">res</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">ap</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span><span class="o">.</span><span class="n">prod</span><span class="p">()</span>
+        
+        <span class="n">classifications</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">argmax</span><span class="p">();</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="n">classifications</span><span class="p">],</span> <span class="n">prediction</span> <span class="o">=</span><span class="n">classifications</span>   <span class="p">,</span> <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="NaiveBayesClassifierNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.NaiveBayesClassifierNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collect data and labels &quot;&quot;&quot;</span>
+
+        <span class="c"># Remember the labels</span>
+        <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="p">)</span> 
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">],</span><span class="n">data</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="FDAClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">FDAClassifierNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Classify with Fisher&#39;s linear discriminant analysis</span>
+<span class="sd">    </span>
+<span class="sd">    .. note:: Wrapper around the MDP FDA node</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of the two classes.</span>
+<span class="sd">            This is important, when you want that the prediction</span>
+<span class="sd">            value is negative for the first class and</span>
+<span class="sd">            positive for the other one.</span>
+<span class="sd">            Otherwise this variable is set by adding the labels,</span>
+<span class="sd">            when they first occur.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : FDA_Classifier</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/08/26</span>
+<span class="sd">    :Last change: 2010/08/13 by Mario Krell</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FDAClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FDAClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">positive_class</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">negative_class</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">MDPflow</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">data</span><span class="o">=</span><span class="p">[])</span></div>
+<div class="viewcode-block" id="FDAClassifierNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="FDAClassifierNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="FDAClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">fda_range</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector x&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">positive_class</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># The FDA_Classifier_Node does not provide a mapping</span>
+            <span class="c"># from its continuous output to a class label</span>
+            <span class="c"># In order to do that, we test the class means and see </span>
+            <span class="c"># whether the yield in positive or negative results</span>
+            <span class="n">label_0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">classifier_result</span> <span class="o">=</span> \
+                 <span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">means</span><span class="p">[</span><span class="n">label_0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">classifier_result</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">positive_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">negative_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">positive_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">negative_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">f_projection</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">fda_range</span><span class="p">)</span>
+        
+        <span class="n">classifications</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">f_projection</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">positive_class</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">negative_class</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="n">classifications</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">prediction</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">f_projection</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]),</span> <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="FDAClassifierNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Collect data for later training &quot;&quot;&quot;</span>
+        <span class="c"># Remember the labels</span>
+        <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="n">class_label</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="FDAClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.FDAClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Delegate training to superclass method &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span><span class="o">=</span><span class="n">mdp</span><span class="o">.</span><span class="n">Flow</span><span class="p">([</span><span class="n">FDANode</span><span class="p">()])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">MDPflow</span><span class="o">.</span><span class="n">train</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">])</span>
+</div></div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">BayesianLinearDiscriminantAnalysisClassifierNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Classify with the bayesian linear discriminant analysis</span>
+<span class="sd">    </span>
+<span class="sd">    A detailed description can be found in:</span>
+<span class="sd">    </span>
+<span class="sd">    Ulrich Hoffmann et al.</span>
+<span class="sd">    &quot;An efficient P300-based brain-computer interface for disabled subjects&quot;, </span>
+<span class="sd">    Journal of Neuroscience Methods, Volume 167, Issue 1,</span>
+<span class="sd">    </span>
+<span class="sd">    Bishop, 2006 C.M. Bishop, &quot;Pattern recognition and machine learning&quot;, </span>
+<span class="sd">    Springer (2006)</span>
+<span class="sd">    </span>
+<span class="sd">    MacKay, 1992 D.J.C. MacKay, &quot;Bayesian interpolation&quot;, </span>
+<span class="sd">    Neural Comput 4 (3) (1992) pp. 415-447</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of the two classes.</span>
+<span class="sd">            This is important, when you want that the prediction</span>
+<span class="sd">            value is negative for the first class and</span>
+<span class="sd">            positive for the other one.</span>
+<span class="sd">            Otherwise this variable is set by adding the labels,</span>
+<span class="sd">            when they first occur.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : BLDA_Classifier</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">    :Created: 2011/07/25</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BayesianLinearDiscriminantAnalysisClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span>\
+                                                <span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Train node on given example *data* for class *label*.</span>
+<span class="sd">        </span>
+<span class="sd">            In this method, all data items and labels are buffered </span>
+<span class="sd">            for batch training in a matrices. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+            
+        <span class="c"># construct list of all labels</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        
+        <span class="c"># map label to [-1,1], assuming that &quot;target label&quot; </span>
+        <span class="c"># is at position 0, and standards at position 1,</span>
+        <span class="c"># skip all other labels</span>
+        <span class="n">label_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>    
+        <span class="k">if</span> <span class="n">label_index</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">label_index</span><span class="o">=</span><span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">label_index</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">label_index</span><span class="o">=-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+            
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">label_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">label_index</span><span class="p">))</span>
+
+                </div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Perform the actual model building by performing bayesian regression&quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        
+        <span class="c"># compute regression targets from class labels (to do lda via regression)</span>
+        <span class="n">n_posexamples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">());</span>
+        <span class="n">n_negexamples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">());</span>
+        <span class="n">n_examples</span>    <span class="o">=</span> <span class="n">n_posexamples</span> <span class="o">+</span> <span class="n">n_negexamples</span><span class="p">;</span>
+        
+        <span class="n">p_ratio</span> <span class="o">=</span> <span class="n">n_examples</span><span class="o">/</span><span class="n">n_posexamples</span><span class="p">;</span>
+        <span class="n">n_ratio</span> <span class="o">=</span> <span class="o">-</span><span class="n">n_examples</span><span class="o">/</span><span class="n">n_negexamples</span><span class="p">;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">==</span><span class="mf">1.</span><span class="p">,</span><span class="n">p_ratio</span><span class="p">,</span><span class="n">n_ratio</span><span class="p">)</span>
+        
+        <span class="c"># dimension of feature vectors</span>
+        <span class="n">n_features</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="c"># add feature that is constantly one (bias term)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+        
+        <span class="c"># initialize variables for fast iterative estimation of alpha and beta</span>
+        <span class="n">d_beta</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">;</span>                <span class="c"># (initial) diff. between new and old beta  </span>
+        <span class="n">d_alpha</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">;</span>               <span class="c"># (initial) diff. between new and old alpha </span>
+        <span class="n">alpha</span>    <span class="o">=</span> <span class="mi">25</span><span class="p">;</span>                     <span class="c"># (initial) inverse variance of prior distribution</span>
+        <span class="n">biasalpha</span> <span class="o">=</span> <span class="mf">0.00000001</span><span class="p">;</span>            <span class="c"># (initial) inverse variance of prior for bias term</span>
+        <span class="n">beta</span>     <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>                      <span class="c"># (initial) inverse variance around targets</span>
+        <span class="n">stopeps</span>  <span class="o">=</span> <span class="mf">0.0001</span><span class="p">;</span>                 <span class="c"># desired precision for alpha and beta</span>
+        <span class="n">i</span>        <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>                      <span class="c"># keeps track of number of iterations</span>
+        <span class="n">maxit</span>    <span class="o">=</span> <span class="mi">500</span><span class="p">;</span>                    <span class="c"># maximal number of iterations </span>
+        
+        <span class="c"># needed for fast estimation of alpha and beta</span>
+        <span class="p">[</span><span class="n">d</span><span class="p">,</span><span class="n">v</span><span class="p">]</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">()))</span>
+        
+        <span class="n">vx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">vxy</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">vx</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">transpose</span><span class="p">());</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">n_features</span><span class="p">,</span><span class="mi">1</span><span class="p">));</span>
+        
+        <span class="c">#print vxy.shape</span>
+        <span class="c">#print e.shape</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">d</span><span class="p">,(</span><span class="n">d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="mi">1</span><span class="p">))</span>
+        <span class="c">#print d.shape</span>
+        
+        <span class="c"># estimate alpha and beta iteratively</span>
+        <span class="k">while</span> <span class="p">((</span><span class="n">d_alpha</span> <span class="o">&gt;</span> <span class="n">stopeps</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">d_beta</span> <span class="o">&gt;</span> <span class="n">stopeps</span><span class="p">))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxit</span><span class="p">):</span>
+            <span class="n">alphaold</span> <span class="o">=</span> <span class="n">alpha</span>
+            <span class="n">betaold</span>  <span class="o">=</span> <span class="n">beta</span>
+
+            <span class="n">beta_d_alpha_e_inv</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="n">beta</span><span class="o">*</span><span class="n">d</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">alpha</span><span class="o">*</span><span class="n">e</span><span class="p">,</span><span class="n">biasalpha</span><span class="p">)))</span>
+            
+            <span class="n">beta_d_alpha_e_vxy</span> <span class="o">=</span> <span class="n">beta_d_alpha_e_inv</span> <span class="o">*</span> <span class="n">vxy</span>
+                       
+            <span class="n">m</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">beta</span><span class="o">*</span><span class="n">v</span><span class="p">,</span><span class="n">beta_d_alpha_e_vxy</span><span class="p">)</span>
+                    
+            <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">-</span><span class="n">err</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">err</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">alpha_e</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">alpha</span><span class="o">*</span><span class="n">e</span><span class="p">,</span><span class="n">biasalpha</span><span class="p">))</span>
+            <span class="c">#print alpha_e.shape</span>
+            
+            <span class="n">beta_d</span> <span class="o">=</span> <span class="p">(</span><span class="n">beta</span><span class="o">*</span><span class="n">d</span><span class="p">)</span>
+            <span class="c">#beta_d = beta_d.reshape((n_features+1,1))</span>
+            <span class="c">#print beta_d.shape</span>
+            
+            <span class="n">alpha_e_beta_d</span> <span class="o">=</span> <span class="n">alpha_e</span> <span class="o">+</span> <span class="n">beta_d</span>
+            <span class="c">#print alpha_e_beta_d.shape </span>
+                        
+            <span class="n">beta_d_alpha_e_inv</span> <span class="o">=</span> <span class="mf">1.</span><span class="o">/</span><span class="p">(</span><span class="n">beta_d</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">alpha</span><span class="o">*</span><span class="n">e</span><span class="p">,</span><span class="n">biasalpha</span><span class="p">)))</span>
+
+            <span class="c">#print beta_d_alpha_e_inv.shape</span>
+
+            
+            <span class="n">gamma</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">((</span><span class="n">beta</span><span class="o">*</span><span class="n">d</span><span class="p">)</span><span class="o">*</span><span class="n">beta_d_alpha_e_inv</span><span class="p">)</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="n">gamma</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">beta</span>  <span class="o">=</span> <span class="p">(</span><span class="n">n_examples</span> <span class="o">-</span> <span class="n">gamma</span><span class="p">)</span><span class="o">/</span><span class="n">err</span>
+            <span class="c">#if b.verbose</span>
+            <span class="c">#    fprintf(&#39;Iteration %i: alpha = %f, beta = %f\n&#39;,i,alpha,beta);</span>
+        
+            <span class="n">d_alpha</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">alpha</span><span class="o">-</span><span class="n">alphaold</span><span class="p">);</span>
+            <span class="n">d_beta</span>  <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">beta</span><span class="o">-</span><span class="n">betaold</span><span class="p">);</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+        
+        
+        <span class="c"># process results of estimation </span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">maxit</span><span class="p">:</span>
+            <span class="c"># compute the log evidence</span>
+            <span class="c"># this can be used for simple model selection tasks</span>
+            <span class="c"># (see MacKays paper)</span>
+            <span class="n">beta_d_alpha_e</span> <span class="o">=</span> <span class="n">beta</span><span class="o">*</span><span class="n">d</span><span class="o">+</span><span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">alpha</span><span class="o">*</span><span class="n">e</span><span class="p">,</span><span class="n">biasalpha</span><span class="p">))</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">evidence</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_features</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="n">n_examples</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">beta</span><span class="p">)</span> <span class="o">-</span> \
+                        <span class="p">(</span><span class="n">beta</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">err</span> <span class="o">-</span> <span class="p">(</span><span class="n">alpha</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span><span class="n">m</span><span class="p">)</span> <span class="o">-</span> \
+                        <span class="mf">0.5</span><span class="o">*</span><span class="nb">sum</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">beta_d_alpha_e</span><span class="p">))</span> <span class="o">-</span> <span class="p">(</span><span class="n">n_examples</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">pi</span><span class="p">);</span>
+                        
+            <span class="c">#print beta_d_alpha_e.shape</span>
+            <span class="c">#print v.shape</span>
+            
+            <span class="c"># store alpha, beta, the posterior mean and the posterior precision-</span>
+            <span class="c"># matrix in class attributes</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b_alpha</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b_beta</span>  <span class="o">=</span> <span class="n">beta</span><span class="p">;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b_w</span>     <span class="o">=</span> <span class="n">m</span><span class="p">;</span>
+            <span class="n">beta_d_alpha_e</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diagflat</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">beta_d_alpha_e</span><span class="p">)</span>
+            
+            <span class="n">b_p</span>     <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="n">beta_d_alpha_e</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b_p</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">b_p</span><span class="p">,</span><span class="n">v</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+        
+        <span class="k">else</span><span class="p">:</span>
+        
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No convergence of Baye&#39;s fitting&quot;</span><span class="p">)</span>
+
+    </div>
+<div class="viewcode-block" id="BayesianLinearDiscriminantAnalysisClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.linear_classifier.html#pySPACE.missions.nodes.classification.linear_classifier.BayesianLinearDiscriminantAnalysisClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector x&quot;&quot;&quot;</span>
+
+        <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">None</span>
+        
+        <span class="c"># add feature that is constantly one (bias term)</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="mi">1</span><span class="p">)))</span>
+        
+        <span class="c"># compute mean of predictive distributions</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b_w</span><span class="o">.</span><span class="n">transpose</span><span class="p">(),</span><span class="n">data</span><span class="p">));</span>
+        
+        <span class="k">if</span> <span class="n">m</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="n">predicted_class</span><span class="p">,</span> 
+                                <span class="n">prediction</span> <span class="o">=</span> <span class="n">m</span><span class="p">,</span> 
+                                <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;FDA_Classifier&quot;</span><span class="p">:</span> <span class="n">FDAClassifierNode</span><span class="p">,</span>
+                <span class="s">&quot;BLDA_Classifier&quot;</span><span class="p">:</span> <span class="n">BayesianLinearDiscriminantAnalysisClassifierNode</span><span class="p">,</span>
+                <span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

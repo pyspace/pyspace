@@ -1,0 +1,170 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.backends.mpi_runner &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.backends.mpi_runner</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Simple helper script that unpickles and executes a processes using mpi</span>
+
+<span class="sd">If a process finishes successfully an empty file with filename </span>
+<span class="sd">&quot;processname_Finished&quot; will be created, otherwise a file with filename </span>
+<span class="sd">&quot;processname_Crashed&quot; will be created. The file &quot;processname_Crashed&quot;</span>
+<span class="sd">will contain the reason why the process crashed.</span>
+
+<span class="sd">.. todo:: check import statement</span>
+<span class="sd"> </span>
+<span class="sd">:Author: Yohannes Kassahun (kassahun@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2011/01/11</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c"># This import does not work for mac because there is no MPI in mpi4py</span>
+    <span class="kn">from</span> <span class="nn">mpi4py</span> <span class="kn">import</span> <span class="n">MPI</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_runner.html#pySPACE.environments.backends.mpi_runner.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="n">size</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Get_size</span><span class="p">()</span>
+    <span class="n">rank</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">COMM_WORLD</span><span class="o">.</span><span class="n">Get_rank</span><span class="p">()</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">MPI</span><span class="o">.</span><span class="n">Get_processor_name</span><span class="p">()</span>
+    <span class="c">#sys.stdout.write(</span>
+    <span class="c">#  &quot;Starting process %d of %d on %s.\n&quot;</span>
+    <span class="c">#   % (rank, size, name))</span>
+    <span class="c"># Get the file name of the process to run</span>
+    <span class="n">proc_file_name</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="n">rank</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c"># # Extract the pySPACE directory and append root directory to PYTHONPATH</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+    <span class="c"># We need to import pySPACE since the processes are independent of</span>
+    <span class="c"># the main program</span>
+    <span class="c"># TODO: Check comment!</span>
+    <span class="k">try</span><span class="p">:</span> <span class="c"># process runs normally</span>
+        <span class="c">#logging.info(&quot;Unpickling process %s&quot; % proc_file_name)</span>
+        <span class="n">proc_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">proc_file_name</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+        <span class="c"># Openmpi does not like methods which use fork() or system(), so we should</span>
+        <span class="c"># change the implementation of the mpi_runner.py to avoid the warning</span>
+        <span class="c"># message. This happens in the method pickle.load().</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">proc_file</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c">#logging.info(&quot;Starting process on node %s&quot; % socket.gethostname())</span>
+        <span class="n">proc</span><span class="p">()</span>
+        <span class="n">proc_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">proc_file_name</span><span class="o">+</span><span class="s">&quot;_Finished&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c">#sys.stdout.write(</span>
+        <span class="c">#  &quot;Finishing process %d of %d on %s.\n&quot;</span>
+        <span class="c">#  % (rank, size, name))</span>
+    <span class="k">except</span> <span class="ne">IOError</span> <span class="k">as</span> <span class="p">(</span><span class="n">errno</span><span class="p">,</span> <span class="n">strerror</span><span class="p">):</span> <span class="c">#process crashes</span>
+        <span class="n">proc_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">proc_file_name</span><span class="o">+</span><span class="s">&quot;_Crashed&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Process was running on : </span><span class="si">%s</span><span class="s"> </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;I/O error({0}): {1}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">errno</span><span class="p">,</span> <span class="n">strerror</span><span class="p">))</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span> <span class="c">#process crashes</span>
+        <span class="n">proc_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">proc_file_name</span><span class="o">+</span><span class="s">&quot;_Crashed&quot;</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Process was running on : </span><span class="si">%s</span><span class="s"> </span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Reason for crash: </span><span class="si">%s</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+        <span class="n">proc_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    </div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

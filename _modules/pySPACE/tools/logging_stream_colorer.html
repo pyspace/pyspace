@@ -1,0 +1,188 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tools.logging_stream_colorer &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tools.logging_stream_colorer</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; This module contains a class to change the color of the logger output.</span>
+
+<span class="sd">It has to be used with the logger class.</span>
+
+<span class="sd">Example of usage:</span>
+
+<span class="sd">.. code-block:: python</span>
+
+<span class="sd">    # Custom logger class with multiple destinations</span>
+<span class="sd">    class ColoredLogger(logging.Logger):</span>
+<span class="sd">        FORMAT = &quot;[$BOLD%(name)-20s$RESET][%(levelname)-18s]  %(message)s ($BOLD%(filename)s$RESET:%(lineno)d)&quot;</span>
+<span class="sd">        COLOR_FORMAT = formatter_message(FORMAT, True)</span>
+<span class="sd">        </span>
+<span class="sd">        def __init__(self, name):</span>
+<span class="sd">            logging.Logger.__init__(self, name, logging.DEBUG)</span>
+<span class="sd">    </span>
+<span class="sd">            color_formatter = ColoredFormatter(self.COLOR_FORMAT)</span>
+<span class="sd">    </span>
+<span class="sd">            console = logging.StreamHandler()</span>
+<span class="sd">            console.setFormatter(color_formatter)</span>
+<span class="sd">    </span>
+<span class="sd">            self.addHandler(console)</span>
+<span class="sd">            return</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    logging.setLoggerClass(ColoredLogger)</span>
+
+
+<span class="sd">Adopted version of http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored .</span>
+<span class="sd">This is distributed under creative commons: http://creativecommons.org/licenses/by-sa/3.0/</span>
+
+<span class="sd">:Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)</span>
+<span class="sd">:Created: 2011/03/22</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="c"># These are the supported colors</span>
+<div class="viewcode-block" id="COLORS"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.COLORS">[docs]</a><span class="k">class</span> <span class="nc">COLORS</span><span class="p">:</span>
+    <span class="n">BLACK</span><span class="p">,</span> <span class="n">RED</span><span class="p">,</span> <span class="n">GREEN</span><span class="p">,</span> <span class="n">YELLOW</span><span class="p">,</span> <span class="n">BLUE</span><span class="p">,</span> <span class="n">MAGENTA</span><span class="p">,</span> <span class="n">CYAN</span><span class="p">,</span> <span class="n">WHITE</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+
+
+<span class="c"># The background is set with 40 plus the number of the color, and the foreground with 30</span>
+
+<span class="c"># These are the sequences needed to get colored output</span></div>
+<span class="n">RESET_SEQ</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\033</span><span class="s">[0m&quot;</span>
+<span class="n">COLOR_SEQ</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\033</span><span class="s">[1;</span><span class="si">%d</span><span class="s">m&quot;</span>
+<span class="n">BOLD_SEQ</span> <span class="o">=</span> <span class="s">&quot;</span><span class="se">\033</span><span class="s">[1m&quot;</span>
+
+<span class="n">LEVEL_COLOR</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&#39;WARNING&#39;</span><span class="p">:</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">YELLOW</span><span class="p">,</span>
+    <span class="s">&#39;INFO&#39;</span><span class="p">:</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">GREEN</span><span class="p">,</span>
+    <span class="s">&#39;DEBUG&#39;</span><span class="p">:</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">WHITE</span><span class="p">,</span>
+    <span class="s">&#39;CRITICAL&#39;</span><span class="p">:</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">YELLOW</span><span class="p">,</span>
+    <span class="s">&#39;ERROR&#39;</span><span class="p">:</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">RED</span>
+<span class="p">}</span>
+
+<div class="viewcode-block" id="formatter_message"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.formatter_message">[docs]</a><span class="k">def</span> <span class="nf">formatter_message</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">use_color</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">use_color</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;$RESET&quot;</span><span class="p">,</span> <span class="n">RESET_SEQ</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;$BOLD&quot;</span><span class="p">,</span> <span class="n">BOLD_SEQ</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;$RESET&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;$BOLD&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">message</span>
+</div>
+<div class="viewcode-block" id="ColoredLevelFormatter"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColoredLevelFormatter">[docs]</a><span class="k">class</span> <span class="nc">ColoredLevelFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">):</span>
+    
+<div class="viewcode-block" id="ColoredLevelFormatter.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColoredLevelFormatter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">use_color</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_color</span> <span class="o">=</span> <span class="n">use_color</span>
+</div>
+<div class="viewcode-block" id="ColoredLevelFormatter.format"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColoredLevelFormatter.format">[docs]</a>    <span class="k">def</span> <span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="n">levelname</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">levelname</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_color</span> <span class="ow">and</span> <span class="n">levelname</span> <span class="ow">in</span> <span class="n">LEVEL_COLOR</span><span class="p">:</span>
+            <span class="n">levelname_color</span> <span class="o">=</span> <span class="n">COLOR_SEQ</span> <span class="o">%</span> <span class="p">(</span><span class="mi">30</span> <span class="o">+</span> <span class="n">LEVEL_COLOR</span><span class="p">[</span><span class="n">levelname</span><span class="p">])</span> <span class="o">+</span> <span class="n">levelname</span> <span class="o">+</span> <span class="n">RESET_SEQ</span>
+            <span class="n">record</span><span class="o">.</span><span class="n">levelname</span> <span class="o">=</span> <span class="n">levelname_color</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span>
+    
+    </div></div>
+<div class="viewcode-block" id="ColorFormatter"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColorFormatter">[docs]</a><span class="k">class</span> <span class="nc">ColorFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">):</span>
+    
+<div class="viewcode-block" id="ColorFormatter.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColorFormatter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">color</span> <span class="o">=</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">WHITE</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color</span> <span class="o">=</span> <span class="n">color</span>
+</div>
+<div class="viewcode-block" id="ColorFormatter.format"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.logging_stream_colorer.html#pySPACE.tools.logging_stream_colorer.ColorFormatter.format">[docs]</a>    <span class="k">def</span> <span class="nf">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">record</span><span class="o">.</span><span class="n">msg</span>
+        <span class="n">msg_color</span> <span class="o">=</span> <span class="n">COLOR_SEQ</span> <span class="o">%</span> <span class="p">(</span><span class="mi">30</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">color</span><span class="p">)</span> <span class="o">+</span> <span class="n">msg</span> <span class="o">+</span> <span class="n">RESET_SEQ</span>
+        <span class="n">record</span><span class="o">.</span><span class="n">msg</span> <span class="o">=</span> <span class="n">msg_color</span>
+        <span class="k">return</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

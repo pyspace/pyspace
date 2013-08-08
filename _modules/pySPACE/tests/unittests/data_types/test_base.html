@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.unittests.data_types.test_base &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.unittests.data_types.test_base</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Unit test for BaseData type</span>
+
+<span class="sd">    This unit test creates TimeSeries objects and FeatureVector,</span>
+<span class="sd">    tries to change and inherit meta information and runs separate</span>
+<span class="sd">    tests for key, tag, specs and inheritance.</span>
+<span class="sd"> </span>
+<span class="sd">    .. todo::  test pickling?</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Sirko Straube (sirko.straube@dfki.de), David Feess</span>
+<span class="sd">    :Last Revision: 2012/04/02</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="c"># The root of the code</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+         
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+<span class="kn">import</span> <span class="nn">unittest</span><span class="o">,</span> <span class="nn">numpy</span>
+
+
+<div class="viewcode-block" id="BaseDataTestCase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase">[docs]</a><span class="k">class</span> <span class="nc">BaseDataTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Test BaseData data type&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="BaseDataTestCase.setUp"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create some example data &quot;&quot;&quot;</span>
+        <span class="c"># Create some TimeSeries:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x1</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">,</span>
+                        <span class="n">marker_name</span><span class="o">=</span><span class="s">&#39;S4&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&#39;Name_text ending with Standard&#39;</span><span class="p">,</span>
+                        <span class="n">start_time</span><span class="o">=</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">end_time</span><span class="o">=</span><span class="mf">1004.0</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;2&#39;</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="o">.</span><span class="n">generate_meta</span><span class="p">()</span> <span class="c">#automatically generate key and tag</span>
+                        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">,</span>
+                        <span class="n">marker_name</span><span class="o">=</span><span class="s">&#39;S4&#39;</span><span class="p">,</span> <span class="n">start_time</span><span class="o">=</span><span class="mf">2000.0</span><span class="p">,</span> <span class="n">end_time</span><span class="o">=</span><span class="mf">2004.0</span><span class="p">,</span> 
+                        <span class="n">name</span><span class="o">=</span><span class="s">&#39;Name_text ending with Standard&#39;</span><span class="p">)</span>
+        
+        <span class="c">#manually generate key and tag</span>
+        <span class="kn">import</span> <span class="nn">uuid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2_key</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x2_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="o">=</span><span class="s">&#39;Tag of x2&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;2&#39;</span><span class="p">}</span>
+                         
+        <span class="bp">self</span><span class="o">.</span><span class="n">x3</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">,</span>
+                        <span class="n">marker_name</span><span class="o">=</span><span class="s">&#39;S4&#39;</span><span class="p">,</span> <span class="n">start_time</span><span class="o">=</span><span class="mf">3000.0</span><span class="p">,</span> <span class="n">end_time</span><span class="o">=</span><span class="mf">3004.0</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x3</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;2&#39;</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x3</span><span class="o">.</span><span class="n">generate_meta</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x4</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">,</span><span class="n">marker_name</span><span class="o">=</span><span class="s">&#39;S4&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x4</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;2&#39;</span><span class="p">}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x5</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">inherit_meta_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;21&#39;</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">generate_meta</span><span class="p">()</span>
+        <span class="c">#safe information</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">key</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">inherit_meta_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">some_nice_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;guido&#39;</span><span class="p">:</span> <span class="mi">4127</span><span class="p">,</span> <span class="s">&#39;irv&#39;</span><span class="p">:</span> <span class="mi">4127</span><span class="p">,</span> <span class="s">&#39;jack&#39;</span><span class="p">:</span> <span class="mi">4098</span><span class="p">}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">some_nice_dict</span><span class="p">)</span>
+        
+        <span class="c"># Create some FeatureVectors:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f1</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">])</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">f1</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;NiceParam&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;LessNiceParam&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">f2</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="n">tag</span> <span class="o">=</span> <span class="s">&#39;Tag of f2&#39;</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">f2</span><span class="o">.</span><span class="n">specs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;NiceParam&#39;</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span><span class="s">&#39;LessNiceParam&#39;</span><span class="p">:</span><span class="mi">2</span><span class="p">}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">f3</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">inherit_meta_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="p">)</span>
+        </div>
+<div class="viewcode-block" id="BaseDataTestCase.testTag"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase.testTag">[docs]</a>    <span class="k">def</span> <span class="nf">testTag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test tag behavior&quot;&quot;&quot;</span>
+        <span class="c"># Generate from Meta Data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+            <span class="s">&#39;Epoch Start: 1000ms; End: 1004ms; Class: Standard&#39;</span><span class="p">)</span>
+        <span class="c"># Tag passed, use that!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="s">&#39;Tag of x2&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f2</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="s">&#39;Tag of f2&#39;</span><span class="p">)</span>            
+        <span class="c"># No tag and only partial meta passed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x3</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span>
+            <span class="s">&#39;Epoch Start: 3000ms; End: 3004ms; Class: na&#39;</span><span class="p">)</span>
+        <span class="c"># No Tag and no meta passed, Tag remains None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x4</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f1</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        
+    </div>
+<div class="viewcode-block" id="BaseDataTestCase.testKey"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase.testKey">[docs]</a>    <span class="k">def</span> <span class="nf">testKey</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test key behavior&quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">uuid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="o">.</span><span class="n">key</span><span class="p">),</span><span class="n">uuid</span><span class="o">.</span><span class="n">UUID</span><span class="p">)</span>
+        <span class="c"># If Key passed, use that!</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2_key</span><span class="p">)</span>
+        
+    </div>
+<div class="viewcode-block" id="BaseDataTestCase.testInheritAndAddStuff"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase.testInheritAndAddStuff">[docs]</a>    <span class="k">def</span> <span class="nf">testInheritAndAddStuff</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;test inheritance of meta data from other objects&quot;&quot;&quot;</span>
+        <span class="c"># Inherit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        
+        <span class="c">#Inherit</span>
+        
+        <span class="c">#suppress warning of BaseData type and cast data back to numpy</span>
+        <span class="n">hist_x6</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">data_x5</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        
+        <span class="c"># history</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">((</span><span class="n">hist_x6</span><span class="o">==</span><span class="n">data_x5</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">key</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;node_specs&#39;</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">some_nice_dict</span><span class="p">)</span>
+        
+        <span class="n">hist_f3</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">((</span><span class="n">hist_f3</span><span class="o">==</span><span class="n">data_x5</span><span class="p">)</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span><span class="bp">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">key</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        
+        <span class="c">#if key (and tag) were already set, these original values</span>
+        <span class="c">#have to be kept</span>
+        <span class="c"># </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x6_key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">inherit_meta_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">f3</span><span class="p">)</span> <span class="c">#should not change tag and key</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x6_key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="o">.</span><span class="n">tag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span>
+        
+        <span class="c">#testing multiple histories</span>
+        <span class="n">x7</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="s">&#39;c&#39;</span><span class="p">,</span><span class="s">&#39;d&#39;</span><span class="p">,</span><span class="s">&#39;e&#39;</span><span class="p">,</span><span class="s">&#39;f&#39;</span><span class="p">],</span> <span class="mi">12</span><span class="p">,</span><span class="n">marker_name</span><span class="o">=</span><span class="s">&#39;S4&#39;</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x3</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x4</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x6</span><span class="p">)</span>
+        <span class="n">x7</span><span class="o">.</span><span class="n">add_to_history</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">x7</span><span class="o">.</span><span class="n">history</span><span class="p">),</span><span class="mi">7</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">x7</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">key</span><span class="p">,</span><span class="n">x7</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">x7</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">.</span><span class="n">history</span><span class="p">,[])</span>        
+    </div>
+<div class="viewcode-block" id="BaseDataTestCase.testSpecs"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.tests.unittests.data_types.test_base.html#pySPACE.tests.unittests.data_types.test_base.BaseDataTestCase.testSpecs">[docs]</a>    <span class="k">def</span> <span class="nf">testSpecs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test specs behavior&quot;&quot;&quot;</span>
+        <span class="c"># so far, there&#39;s not much going on with specs...</span>
+        <span class="c"># same problem as in testkey</span>
+        <span class="c"># timeseries doesn&#39;t set spec</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x1</span><span class="o">.</span><span class="n">specs</span><span class="p">,</span> 
+                         <span class="p">{</span><span class="s">&#39;Nice_Parameter&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s">&#39;Less_Nice_Param&#39;</span><span class="p">:</span> <span class="s">&#39;2&#39;</span><span class="p">})</span>
+        <span class="c"># Inherit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x5</span><span class="o">.</span><span class="n">specs</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">x2</span><span class="o">.</span><span class="n">specs</span><span class="p">)</span>    
+    </div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="s">&#39;test_base_data&#39;</span><span class="p">)</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

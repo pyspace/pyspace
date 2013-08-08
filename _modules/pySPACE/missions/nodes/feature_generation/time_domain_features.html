@@ -1,0 +1,635 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_generation.time_domain_features &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_generation.time_domain_features</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Extract features in time domain like simple amplitudes, signal differentiation or polynomial fit &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<div class="viewcode-block" id="TimeDomainFeaturesNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainFeaturesNode">[docs]</a><span class="k">class</span> <span class="nc">TimeDomainFeaturesNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use the samples of the time series as features</span>
+<span class="sd">    </span>
+<span class="sd">    This node uses the values of the channels at certain points of time</span>
+<span class="sd">    within the window directly as features.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :datapoints:</span>
+<span class="sd">            The indices of the data points that are used as features. If None,</span>
+<span class="sd">            all data points are used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+
+<span class="sd">        :absolute:</span>
+<span class="sd">            If True, the absolute value of each amplitude value is used.</span>
+<span class="sd">            Recommended for classification using only the EMG signal.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Time_Domain_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                datapoints : [-4,-3,-2,-1] # means last 4 samples</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/08/26</span>
+<span class="sd">    :Revised: 2009/07/16</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TimeDomainFeaturesNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainFeaturesNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">datapoints</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="n">absolute</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimeDomainFeaturesNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datapoints</span><span class="o">=</span><span class="n">datapoints</span><span class="p">,</span>
+                                      <span class="n">absolute</span><span class="o">=</span><span class="n">absolute</span><span class="p">,</span>
+                                      <span class="n">feature_names</span><span class="o">=</span><span class="p">[])</span>
+</div>
+<div class="viewcode-block" id="TimeDomainFeaturesNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainFeaturesNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the TD features from the given data x &quot;&quot;&quot;</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c"># Mapping from data point index to relative time to onset</span>
+        <span class="k">def</span> <span class="nf">indexToTime</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span><span class="o">/</span> <span class="mf">1000.0</span> \
+                            <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span> 
+        <span class="c"># We project onto the data points that should be used as features</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">,:]</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">absolute</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">fabs</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">T</span>
+        <span class="c"># Use all remaining values as features</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="c"># If not already done, we determine the name of the features</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;TD_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> 
+                                                    <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span>
+                                                     <span class="n">indexToTime</span><span class="p">(</span><span class="n">index</span><span class="p">)))</span>
+        <span class="c"># Create and return the feature vector</span>
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+            <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">feature_vector</span>
+</div></div>
+<div class="viewcode-block" id="CustomChannelWiseFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.CustomChannelWiseFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">CustomChannelWiseFeatureNode</span><span class="p">(</span><span class="n">TimeDomainFeaturesNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use the result of a transformation of the time series as features.</span>
+<span class="sd">    </span>
+<span class="sd">    This node applies a given transformation to the data of each individual</span>
+<span class="sd">    data channel. The result is consequently used as features.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :feature_function:</span>
+<span class="sd">            A string that defines the transformation of the univariate time</span>
+<span class="sd">            series. This string will be evaluated in a</span>
+<span class="sd">            ``eval(&#39;lambda x:&#39; + feature_function)``</span>
+<span class="sd">            statement. Therefore, ``&#39;x&#39;`` has to be used as placeholder for the</span>
+<span class="sd">            input data. The output has to be array-like, dimensions do not</span>
+<span class="sd">            matter. Note that numpy can directly be used. To use other external</span>
+<span class="sd">            libraries, use, e.g., the following syntax:</span>
+<span class="sd">            ``&quot;__import__(&#39;statsmodels.tsa.api&#39;).tsa.api.AR(x).fit(maxlag=3).params[1:]&quot;``</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Note**</span>
+<span class="sd">    </span>
+<span class="sd">        The *datapoints* parameter provided by the TimeDomainFeaturesNode can</span>
+<span class="sd">        also be used here. The *absolute* parameter, however, is not supported.</span>
+<span class="sd">        If the absolute value shall be computed, this can be done in the</span>
+<span class="sd">        *feature_function*.</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Custom_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                feature_function : &quot;numpy.dot(x,x)&quot;</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: David Feess (david.feess@dfki.de)</span>
+<span class="sd">    :Created: 2012/07/29</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="CustomChannelWiseFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.CustomChannelWiseFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_function</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CustomChannelWiseFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="s">&#39;absolute&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Custom_Features does not support &#39;absolute&#39;!&quot;</span><span class="p">)</span>
+        
+        <span class="c">### Place to define abbreviations. The feature_function strings are</span>
+        <span class="c">### matched with some patterns (using regexp) and then replaced by the</span>
+        <span class="c">### actual string that describes the functions. Add your stuff here!</span>
+        <span class="kn">import</span> <span class="nn">re</span>
+        <span class="c"># check if an abbreviation is used:</span>
+        <span class="c"># AR[p]:</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;AR\[([1-9])+\]&quot;</span><span class="p">,</span><span class="n">feature_function</span><span class="p">)</span><span class="o">!=</span><span class="bp">None</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">feature_function</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;AR[]&#39;</span><span class="p">)</span>
+            <span class="n">feature_function</span> <span class="o">=</span> <span class="s">&quot;__import__(&#39;statsmodels.tsa.api&#39;).tsa.api.AR(x).fit(maxlag=&quot;</span><span class="o">+</span><span class="n">p</span><span class="o">+</span><span class="s">&quot;).params[1:]&quot;</span>        
+        <span class="c"># ARMA[p,q]: (note that ARMA is extremely slow)</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;ARMA\[([1-9])+,([1-9])+\]&quot;</span><span class="p">,</span><span class="n">feature_function</span><span class="p">)</span><span class="o">!=</span><span class="bp">None</span><span class="p">:</span>
+            <span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="n">q</span><span class="p">)</span> <span class="o">=</span> <span class="n">feature_function</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;ARMA[]&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+            <span class="n">feature_function</span> <span class="o">=</span> <span class="s">&quot;__import__(&#39;statsmodels.tsa.api&#39;).tsa.api.ARMA(x).fit(order=(&quot;</span><span class="o">+</span><span class="n">p</span><span class="o">+</span><span class="s">&quot;,&quot;</span><span class="o">+</span><span class="n">q</span><span class="o">+</span><span class="s">&quot;)).params[1:]&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">feature_function</span> <span class="o">=</span> <span class="n">feature_function</span><span class="p">,</span> <span class="c">#str</span>
+                                      <span class="n">feat_func</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="c"># the actual function</span>
+        </div>
+<div class="viewcode-block" id="CustomChannelWiseFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.CustomChannelWiseFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the TD features from the given data x &quot;&quot;&quot;</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c"># We project onto the data points that should be used as features</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">,:]</span>
+        
+        <span class="c"># generate feat_func from string representation if not done yet</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feat_func</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feat_func</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s">&quot;lambda x: numpy.atleast_1d(&quot;</span> <span class="o">+</span> 
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">feature_function</span> <span class="o">+</span> 
+                                                                <span class="s">&quot;).flatten()&quot;</span><span class="p">)</span>
+        
+        <span class="c"># initialize 2D array for transformation results</span>
+        <span class="n">nr_feats_per_channel</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feat_func</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nr_feats_per_channel</span><span class="p">,</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="c"># eval fet_func for each channel</span>
+        <span class="k">for</span> <span class="n">curr_chan</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">res</span><span class="p">[:,</span><span class="n">curr_chan</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feat_func</span><span class="p">(</span><span class="n">y</span><span class="p">[:,</span><span class="n">curr_chan</span><span class="p">])</span>
+            <span class="k">except</span><span class="p">:</span> <span class="c"># pass zeros as features</span>
+                <span class="n">res</span><span class="p">[:,</span><span class="n">curr_chan</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">res</span><span class="p">[:,</span><span class="n">curr_chan</span><span class="p">])</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Feature Function failed or delivered wrong &quot;</span> <span class="o">+</span>
+                              <span class="s">&quot;dimensions for channel </span><span class="si">%s</span><span class="s"> in window: </span><span class="si">%s</span><span class="s">. &quot;</span> 
+                               <span class="o">%</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">curr_chan</span><span class="p">],</span><span class="n">x</span><span class="o">.</span><span class="n">tag</span><span class="p">)</span> <span class="o">+</span> 
+                               <span class="s">&quot;Wrote zeros in the feature vector instead.&quot;</span><span class="p">)</span>
+                
+        
+        <span class="c"># flatten, such that feats from one channel stay grouped together</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="s">&#39;F&#39;</span><span class="p">)</span> 
+        
+        <span class="c"># Feature names</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_feats_per_channel</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;CustomFeature1_</span><span class="si">%s</span><span class="s">_</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> 
+                                                            <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+        
+        <span class="c"># Create and return the feature vector</span>
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+            <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">feature_vector</span>
+        
+    
+<span class="c"># TODO: These two nodes need memory optimization ...</span></div></div>
+<div class="viewcode-block" id="TimeDomainDifferenceFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainDifferenceFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">TimeDomainDifferenceFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use differences between channels and/or times as features.</span>
+<span class="sd">    </span>
+<span class="sd">    This node uses differences between channels (Inter_Channel) at the same</span>
+<span class="sd">    time and between different times (Intra_Channel) on the same channel as</span>
+<span class="sd">    features.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :datapoints:</span>
+<span class="sd">            The indices of the data points that are used. If None, all </span>
+<span class="sd">            data points are used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*Optional, default: None*)</span>
+<span class="sd">        </span>
+<span class="sd">        :moving_window_length:</span>
+<span class="sd">            If this parameter is greater than one, then not the data point x[i]</span>
+<span class="sd">            is used but the average of the k=*moving_window_length* elements</span>
+<span class="sd">            around x[i], i.e. avg([x[i-k/2],...,x[i+k/2]).</span>
+<span class="sd">            </span>
+<span class="sd">            (*Optional, default: 1*)</span>
+<span class="sd">            </span>
+<span class="sd">    **Known issues** </span>
+<span class="sd">        In the current version this produces to much data, even just for one</span>
+<span class="sd">        choice.</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Time_Domain_Difference_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                datapoints : None</span>
+<span class="sd">                moving_window_length : 1</span>
+<span class="sd">                </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2008/08/26</span>
+<span class="sd">    :Revised: 2009/07/16</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="TimeDomainDifferenceFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainDifferenceFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">datapoints</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">moving_window_length</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimeDomainDifferenceFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+       
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datapoints</span> <span class="o">=</span> <span class="n">datapoints</span><span class="p">,</span>
+                            <span class="n">moving_window_length</span> <span class="o">=</span> <span class="n">moving_window_length</span><span class="p">,</span>
+                                   <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[])</span> <span class="c">#bug: should be feature_names</span>
+</div>
+<div class="viewcode-block" id="TimeDomainDifferenceFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.TimeDomainDifferenceFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract the TD features from the given data x</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#TODO: Shorten maybe this code</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> 
+        <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c">#From each selected channel we extract the specified datapoints</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">:</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">datapoint</span> <span class="o">-</span> \
+               <span class="bp">self</span><span class="o">.</span><span class="n">moving_window_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datapoint</span> <span class="o">+</span> \
+               <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">moving_window_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)))</span>
+       
+        <span class="n">channel_features</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">index_range</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+                <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">number</span><span class="p">)]</span> <span class="o">=</span> \
+                                  <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">index_range</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">])</span>
+       
+        <span class="c"># Mapping from datapoint index to relative time to onset</span>
+        <span class="k">def</span> <span class="nf">indexToTime</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span><span class="o">/</span> <span class="mf">1000.0</span> \
+                           <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span>
+
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">channel2</span><span class="p">,</span> <span class="n">number2</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">channel1</span> <span class="o">==</span> <span class="n">channel2</span> <span class="ow">and</span> <span class="n">number1</span> <span class="o">&gt;</span> <span class="n">number2</span><span class="p">:</span>
+                    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span><span class="p">)]</span> <span class="o">-</span> \
+                                        <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel2</span><span class="p">,</span> <span class="n">number2</span><span class="p">)])</span>
+                <span class="k">elif</span> <span class="n">number1</span> <span class="o">==</span> <span class="n">number2</span> <span class="ow">and</span> <span class="n">channel1</span> <span class="o">!=</span> <span class="n">channel2</span><span class="p">:</span>
+                    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span><span class="p">)]</span> <span class="o">-</span> \
+                                        <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel2</span><span class="p">,</span> <span class="n">number2</span><span class="p">)])</span>
+                   
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="k">for</span> <span class="n">channel2</span><span class="p">,</span> <span class="n">number2</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">channel1</span> <span class="o">==</span> <span class="n">channel2</span> <span class="ow">and</span> <span class="n">number1</span> <span class="o">&gt;</span> <span class="n">number2</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> \
+                            <span class="s">&quot;TDIntraChannel_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">channel1</span><span class="p">,</span>
+                                  <span class="n">indexToTime</span><span class="p">(</span><span class="n">number1</span><span class="p">),</span> <span class="n">indexToTime</span><span class="p">(</span><span class="n">number2</span><span class="p">)))</span>
+                    <span class="k">elif</span> <span class="n">number1</span> <span class="o">==</span> <span class="n">number2</span> <span class="ow">and</span> <span class="n">channel1</span> <span class="o">!=</span> <span class="n">channel2</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> \
+                            <span class="s">&quot;TDInterChannel_</span><span class="si">%s</span><span class="s">-</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">channel1</span><span class="p">,</span>
+                                              <span class="n">channel2</span><span class="p">,</span> <span class="n">indexToTime</span><span class="p">(</span><span class="n">number1</span><span class="p">)))</span>
+    
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+       
+        <span class="k">return</span> <span class="n">feature_vector</span>
+</div></div>
+<div class="viewcode-block" id="SimpleDifferentiationFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.SimpleDifferentiationFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">SimpleDifferentiationFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use differences between successive times on the same channel.</span>
+<span class="sd">    </span>
+<span class="sd">    This node uses differences between successive times on the same channel</span>
+<span class="sd">    of the time series as features to simulate differentiation.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :datapoints:</span>
+<span class="sd">            The indices of the data points that are used. If None, all </span>
+<span class="sd">            data points are used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*Optional, default: None*)</span>
+<span class="sd">        </span>
+<span class="sd">        :moving_window_length:</span>
+<span class="sd">            If this parameter is greater than one, then not the data point x[i]</span>
+<span class="sd">            is used but the average of the k=*moving_window_length* elements</span>
+<span class="sd">            around x[i], i.e. avg([x[i-k/2],...,x[i+k/2]).</span>
+<span class="sd">            </span>
+<span class="sd">            (*Optional, default: 1*)</span>
+<span class="sd">            </span>
+<span class="sd">    **Known Issues**</span>
+<span class="sd">        .. todo:: new node with same result as a new time series</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Derivative_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                datapoints : None</span>
+<span class="sd">                moving_window_length = 1</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># Simple copy of the TimeDifferenceFeatureNode with slight change at the</span>
+    <span class="c"># end. More complex would be a short time regression between more than two</span>
+    <span class="c"># points. Yet the possiblity to make it a &quot;real&quot; differentiation is in </span>
+    <span class="c"># comment.</span>
+<div class="viewcode-block" id="SimpleDifferentiationFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.SimpleDifferentiationFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                <span class="n">datapoints</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">moving_window_length</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> 
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SimpleDifferentiationFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">datapoints</span> <span class="o">=</span> <span class="n">datapoints</span><span class="p">,</span>
+                            <span class="n">moving_window_length</span> <span class="o">=</span> <span class="n">moving_window_length</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="SimpleDifferentiationFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.SimpleDifferentiationFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract the TD features from the given data x</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="c"># From each selected channel we extract the specified data points</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">datapoint</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datapoints</span><span class="p">:</span>
+            <span class="n">indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">datapoint</span> <span class="o">-</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">moving_window_length</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span> <span class="nb">min</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">datapoint</span> <span class="o">+</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">moving_window_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)))</span>
+       
+        <span class="n">channel_features</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">number</span><span class="p">,</span> <span class="n">index_range</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">indices</span><span class="p">):</span>
+                <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">number</span><span class="p">)]</span> <span class="o">=</span> \
+                                  <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="n">index_range</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">])</span>
+       
+        <span class="c"># Mapping from datapoint index to relative time to onset</span>
+        <span class="k">def</span> <span class="nf">indexToTime</span><span class="p">(</span><span class="n">index</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span><span class="o">/</span> <span class="mf">1000.0</span> \
+                                         <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span>
+
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+            <span class="c"># intuitive derivative quotient</span>
+            <span class="n">number2</span> <span class="o">=</span> <span class="n">number1</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number2</span><span class="p">)</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number2</span><span class="p">)]</span> <span class="o">-</span> \
+                    <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number1</span><span class="p">)])</span><span class="c">#*sampling_frequency</span>
+                <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Df2_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> 
+                                             <span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">indexToTime</span><span class="p">(</span><span class="n">number1</span><span class="p">)))</span>
+            <span class="c"># Method taken frome http://www.holoborodko.com/pavel/?page_id=245</span>
+            <span class="c"># f&#39;(x)=\\frac{2(f(x+h)-f(x-h))-(f(x+2h)-f(x-2h))}{8h}</span>
+            <span class="c"># Further smoothing functions are available, but seemingly not </span>
+            <span class="c"># necessary, because we have already a smoothing of the signal</span>
+            <span class="c"># when doing the subsampling.</span>
+            <span class="n">number3</span> <span class="o">=</span> <span class="n">number1</span> <span class="o">+</span> <span class="mi">4</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="n">number1</span> <span class="o">+</span> <span class="mi">2</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number3</span><span class="p">)</span> <span class="ow">in</span>  <span class="n">channel_features</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
+                <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>\
+                 <span class="o">-</span> <span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number</span><span class="o">-</span><span class="mi">1</span><span class="p">)])</span> <span class="o">-</span> \
+                 <span class="p">(</span><span class="n">channel_features</span><span class="p">[(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">number</span><span class="o">+</span><span class="mi">2</span><span class="p">)]</span> <span class="o">-</span> <span class="n">channel_features</span><span class="p">[(</span>\
+                 <span class="n">channel1</span><span class="p">,</span> <span class="n">number</span><span class="o">-</span><span class="mi">2</span><span class="p">)]))</span><span class="c">#*8*sampling_frequency</span>
+                <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Df5_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> 
+                                              <span class="p">(</span><span class="n">channel1</span><span class="p">,</span> <span class="n">indexToTime</span><span class="p">(</span><span class="n">number</span><span class="p">)))</span>
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">feature_names</span><span class="p">)</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">channel_features</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">feature_vector</span>
+</div></div>
+<div class="viewcode-block" id="LocalStraightLineFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.LocalStraightLineFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">LocalStraightLineFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Fit straight lines to channel segments and uses coefficients as features.</span>
+<span class="sd">    </span>
+<span class="sd">    Fit first order polynomials (straight lines) to subsegments of the </span>
+<span class="sd">    channels and use the learned coefficients as features.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :segment_width:</span>
+<span class="sd">            The width of the segments (in milliseconds) to which straight lines </span>
+<span class="sd">            are fitted. </span>
+<span class="sd">            </span>
+<span class="sd">            .. note:: segment_width is rounded such that it becomes a multiple</span>
+<span class="sd">                      of the sampling interval.</span>
+
+<span class="sd">        :stepsize:</span>
+<span class="sd">            The time (in milliseconds) the segments are shifted. Extracted </span>
+<span class="sd">            segments are [0, segment_width], [stepsize, segment_width+stepsize],</span>
+<span class="sd">            [2*stepsize, segment_width+2*stepsize], ...</span>
+<span class="sd">             </span>
+<span class="sd">            .. note:: stepsize is rounded such that it becomes a multiple</span>
+<span class="sd">                      of the sampling interval.</span>
+<span class="sd">           </span>
+<span class="sd">        :coefficients_used:</span>
+<span class="sd">            List of the coefficients of the straight line that are actually used </span>
+<span class="sd">            as features. The offset of the straight line is the coefficient 0 and</span>
+<span class="sd">            the slope is coefficient 1. Per default, both are used as features. </span>
+
+<span class="sd">            (*optional, default: [0, 1]*)</span>
+<span class="sd">           </span>
+<span class="sd">         </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Local_Straightline_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                  segment_width : 400</span>
+<span class="sd">                  stepsize : 200</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2011/01/04</span>
+<span class="sd">    :Refactored: 2012/01/18</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="LocalStraightLineFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.LocalStraightLineFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">segment_width</span><span class="p">,</span> <span class="n">stepsize</span><span class="p">,</span> <span class="n">coefficients_used</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LocalStraightLineFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">coefficients_used</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span> <span class="ow">and</span> \
+                    <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">coefficients_used</span><span class="p">)</span><span class="o">.</span><span class="n">difference</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> \
+                        <span class="s">&quot;Only the coefficients 0 (offset) and 1 (slope) are &quot;</span> \
+                        <span class="s">&quot;supported!&quot;</span>
+        
+        <span class="c"># Externally, coefficient 0 denotes the offset and coefficient 1</span>
+        <span class="c"># denotes the slope. polyfit handles this the other way around.</span>
+        <span class="n">coefficients_used</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">coefficients_used</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">segment_width</span> <span class="o">=</span> <span class="n">segment_width</span><span class="p">,</span>
+                                      <span class="n">stepsize</span> <span class="o">=</span> <span class="n">stepsize</span><span class="p">,</span>
+                                      <span class="n">coefficients_used</span> <span class="o">=</span> <span class="n">coefficients_used</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="LocalStraightLineFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.time_domain_features.html#pySPACE.missions.nodes.feature_generation.time_domain_features.LocalStraightLineFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># Convert window_width and step size from milliseconds to data points</span>
+        <span class="n">segment_width</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">segment_width</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">segment_width</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">segment_width</span><span class="p">))</span>
+        
+        <span class="n">stepsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stepsize</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">stepsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">stepsize</span><span class="p">))</span>
+        
+        <span class="n">sample_width</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mi">1000</span> <span class="o">/</span> <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span>
+        
+        <span class="c"># The subwindows of the time series to which a straight line is fitted</span>
+        <span class="n">num_windows</span> <span class="o">=</span> \
+            <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">((</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">segment_width</span><span class="p">)</span> <span class="o">/</span> <span class="n">stepsize</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">windows</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">segment_width</span><span class="p">,</span> <span class="n">num_windows</span><span class="p">))</span>
+        
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">channel_index</span><span class="p">,</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># Start of segment (index)</span>
+            <span class="k">while</span> <span class="n">start</span> <span class="o">+</span> <span class="n">segment_width</span> <span class="o">&lt;=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="c"># Compute and round start and end of segment</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">segment_width</span>
+                
+                <span class="c"># calculate sub-windows</span>
+                <span class="n">windows</span><span class="p">[:,</span> <span class="n">counter</span><span class="p">]</span> <span class="o">=</span> \
+                                    <span class="n">data_array</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">,</span> <span class="n">channel_index</span><span class="p">]</span>
+                
+                <span class="c">#coefficients_used is inverted (see __init__)</span>
+                <span class="c">#feature name consists of start and end time</span>
+                <span class="k">if</span> <span class="mi">0</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefficients_used</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;LSFSlope_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> \
+                                            <span class="o">%</span> <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> 
+                                               <span class="nb">float</span><span class="p">(</span><span class="n">start</span> <span class="o">*</span> <span class="n">sample_width</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">,</span>
+                                               <span class="nb">float</span><span class="p">(</span><span class="n">end</span> <span class="o">*</span> <span class="n">sample_width</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">))</span>
+                <span class="k">if</span> <span class="mi">1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">coefficients_used</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;LSFOffset_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.3f</span><span class="s">sec_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> \
+                                            <span class="o">%</span> <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> 
+                                               <span class="nb">float</span><span class="p">(</span><span class="n">start</span> <span class="o">*</span> <span class="n">sample_width</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">,</span>
+                                               <span class="nb">float</span><span class="p">(</span><span class="n">end</span> <span class="o">*</span> <span class="n">sample_width</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">))</span>
+
+                <span class="c"># Move to next segment</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">stepsize</span>
+                <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">assert</span> <span class="n">counter</span> <span class="o">==</span> <span class="n">windows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="c"># Compute the local straight line features</span>
+        <span class="n">coeffs</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">polyfit</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">windows</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">coeffs</span> <span class="o">=</span>  <span class="n">coeffs</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">coefficients_used</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="s">&#39;F&#39;</span><span class="p">)</span> 
+
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+            <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">coeffs</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+                          <span class="n">feature_names</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">feature_vector</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Time_Domain_Features&quot;</span><span class="p">:</span> <span class="n">TimeDomainFeaturesNode</span><span class="p">,</span>
+                <span class="s">&quot;TDF&quot;</span><span class="p">:</span> <span class="n">TimeDomainFeaturesNode</span><span class="p">,</span>
+                <span class="s">&quot;Time_Domain_Difference_Features&quot;</span><span class="p">:</span> <span class="n">TimeDomainDifferenceFeatureNode</span><span class="p">,</span>
+                <span class="s">&quot;Derivative_Features&quot;</span><span class="p">:</span> <span class="n">SimpleDifferentiationFeatureNode</span><span class="p">,</span>
+                <span class="s">&quot;Local_Straightline_Features&quot;</span> <span class="p">:</span> <span class="n">LocalStraightLineFeatureNode</span><span class="p">,</span>
+                <span class="s">&quot;Custom_Features&quot;</span><span class="p">:</span> <span class="n">CustomChannelWiseFeatureNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

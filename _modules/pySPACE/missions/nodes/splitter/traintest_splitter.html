@@ -1,0 +1,280 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.splitter.traintest_splitter &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.splitter.traintest_splitter</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Split data into one training and one test data set with restriction like randomization or fixed percentages &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">random</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
+
+<div class="viewcode-block" id="TrainTestSplitterNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode">[docs]</a><span class="k">class</span> <span class="nc">TrainTestSplitterNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Split data into one training and one test data set with a fixed ratio</span>
+<span class="sd">    </span>
+<span class="sd">    The relative</span>
+<span class="sd">    size of the two sets is controlled via the parameter train_ratio.</span>
+
+<span class="sd">    .. warning:: the class ratio is not retained</span>
+
+<span class="sd">    .. todo::</span>
+<span class="sd">        introduce stratified parameter as in CV_Splitter</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">     :train_ratio:</span>
+<span class="sd">         The ratio of the overall available data that is assigned to the </span>
+<span class="sd">         training set. The remaining data (1-train_ratio) is used for testing.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: 0.5*)</span>
+<span class="sd">         </span>
+<span class="sd">     :num_train_instances:</span>
+<span class="sd">         Instead of specifying a train_ratio, this option allows to specify the</span>
+<span class="sd">         absolute number of training instances of class *class_label* that </span>
+<span class="sd">         should be in the training set. All instances that occur until </span>
+<span class="sd">         *num_train_instances* are found are used for training. The remaining</span>
+<span class="sd">         data are used for testing.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">     :class_label:</span>
+<span class="sd">         If *num_train_instances*-option is used, this string determines the</span>
+<span class="sd">         class of which training examples are count.</span>
+<span class="sd">     </span>
+<span class="sd">     :random:</span>
+<span class="sd">         If *False*, the order of the data is retained. I.e. the train_ratio</span>
+<span class="sd">         instances are used for training and the remaining as test data. If </span>
+<span class="sd">         *True*, the two sets are sampled randomly from the data without</span>
+<span class="sd">         taking into consideration the data&#39;s order.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: True*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : TrainTestSplitter</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                  train_ratio : 0.7</span>
+<span class="sd">                  random : False</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/03/08 (Documentation, old node)</span>
+<span class="sd">    :LastChange: 2011/11/14 (Documentation) Anett Seeland</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="TrainTestSplitterNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_ratio</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">num_train_instances</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="s">&#39;Target&#39;</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TrainTestSplitterNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="ow">not</span><span class="p">(</span><span class="n">random</span> <span class="ow">and</span> <span class="n">reverse</span><span class="p">)),</span><span class="s">&quot;Reverse ordering makes no sense when randomization is active!&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">train_ratio</span><span class="o">=</span><span class="n">train_ratio</span><span class="p">,</span>
+                                      <span class="n">random</span><span class="o">=</span><span class="n">random</span><span class="p">,</span>
+                                      <span class="n">num_train_instances</span><span class="o">=</span><span class="n">num_train_instances</span><span class="p">,</span>
+                                      <span class="n">class_label</span><span class="o">=</span><span class="n">class_label</span><span class="p">,</span>
+                                      <span class="n">reverse</span><span class="o">=</span><span class="n">reverse</span><span class="p">,</span>
+                                      <span class="n">train_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">test_data</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="TrainTestSplitterNode.is_split_node"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.is_split_node">[docs]</a>    <span class="k">def</span> <span class="nf">is_split_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this is a split node. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="TrainTestSplitterNode.use_next_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.use_next_split">[docs]</a>    <span class="k">def</span> <span class="nf">use_next_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Use the next split of the data into training and test data.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns True if more splits are available, otherwise False.</span>
+<span class="sd">        </span>
+<span class="sd">        This method is useful for benchmarking</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    </div>
+<div class="viewcode-block" id="TrainTestSplitterNode.train_sweep"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.train_sweep">[docs]</a>    <span class="k">def</span> <span class="nf">train_sweep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Performs the actual training of the node.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: Split nodes cannot be trained</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Split nodes cannot be trained&quot;</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="TrainTestSplitterNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data for training of subsequent nodes</span>
+
+<span class="sd">        .. todo:: to document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Create split lazily when required</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_split</span><span class="p">()</span>
+
+        <span class="c"># Create training data generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> \
+                <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">instance</span> <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+    </div>
+<div class="viewcode-block" id="TrainTestSplitterNode.request_data_for_testing"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode.request_data_for_testing">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_testing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns the data for testing of subsequent nodes</span>
+
+<span class="sd">        .. todo:: to document</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Create split lazily when required</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_split</span><span class="p">()</span>
+        
+        <span class="c"># Create test data generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> \
+                <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">instance</span> <span class="k">for</span> <span class="n">instance</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="TrainTestSplitterNode._create_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode._create_split">[docs]</a>    <span class="k">def</span> <span class="nf">_create_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create the split of the data into training and test data. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Splitting data into train and test data&quot;</span><span class="p">)</span>
+        <span class="n">train_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span> <span class="o">=</span> <span class="bp">False</span><span class="p">))</span>
+
+        <span class="c"># If there is already a  non-empty training set,</span>
+        <span class="c"># it means that we are not  the first split node in the node chain.</span>
+        <span class="k">if</span>  <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No iterated splitting of data sets allowed</span><span class="se">\n</span><span class="s"> &quot;</span>
+                            <span class="s">&quot;(Calling a splitter on a  data set that is already &quot;</span>
+                            <span class="s">&quot;split)&quot;</span><span class="p">)</span>
+
+        <span class="c"># Create generator instead of loading all data</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span> <span class="ow">and</span> <span class="ow">not</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">input_generator</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">input_generator</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span> <span class="o">=</span> <span class="n">input_generator</span>
+            <span class="k">return</span>
+
+        <span class="c"># Gather all test data</span>
+        <span class="n">test_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
+        
+        <span class="c"># Remember all the data and store it in memory</span>
+        <span class="c"># TODO: This might cause problems for large dataset</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">train_data</span> <span class="o">+</span> <span class="n">test_data</span>
+        <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c"># Randomize order if randomization is not switched of</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span><span class="o">!=</span><span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span> \
+                  <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">class_label</span><span class="p">])</span><span class="o">==</span><span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span><span class="p">:</span>
+                <span class="n">train_end</span> <span class="o">=</span> <span class="n">data_size</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+                    <span class="c"># print &quot;Label: &quot;, label, &quot;Zeitpunkt: &quot;, window.start_time</span>
+                    <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_label</span><span class="p">:</span>
+                        <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">counter</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span><span class="p">:</span>
+                        <span class="n">train_end</span> <span class="o">=</span> <span class="n">index</span><span class="o">+</span><span class="mi">1</span>
+                        <span class="k">break</span>
+                <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_train_instances</span><span class="o">==</span><span class="n">counter</span><span class="p">),</span> \
+                            <span class="s">&quot;Too many instances to select.&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># Split data into train and test data according train_ratio</span>
+            <span class="n">train_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">data_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_ratio</span><span class="p">))</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">train_end</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_data</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="n">train_end</span><span class="p">:]</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

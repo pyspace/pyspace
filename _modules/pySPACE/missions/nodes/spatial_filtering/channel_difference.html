@@ -1,0 +1,181 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.spatial_filtering.channel_difference &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.spatial_filtering.channel_difference</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Build the difference of channels based on different criteria &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+
+<div class="viewcode-block" id="HemisphereDifferenceNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_difference.html#pySPACE.missions.nodes.spatial_filtering.channel_difference.HemisphereDifferenceNode">[docs]</a><span class="k">class</span> <span class="nc">HemisphereDifferenceNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Build new EEG channels using the difference between left and right hemisphere of the brain</span>
+<span class="sd">    </span>
+<span class="sd">    The new channel names correspond to the difference.</span>
+<span class="sd">    Channels in the middle area are totally ignored.</span>
+<span class="sd">    Up to the standard 128 channels can be used.</span>
+<span class="sd">    If some channels do not exist, they are ignored.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : HemisphereDifference</span>
+
+<span class="sd">    :Author: Mario Krell (Mario.Krell@dfki.de)</span>
+<span class="sd">    :Created: 2009/12/15</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="HemisphereDifferenceNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_difference.html#pySPACE.missions.nodes.spatial_filtering.channel_difference.HemisphereDifferenceNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HemisphereDifferenceNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c"># This is the dictionary giving the corresponding right channels to the</span>
+        <span class="c"># keys representing the channels of the left hemisphere.</span>
+        <span class="c"># The dictionary can be used with up to 128 electrodes.</span>
+        <span class="n">dual</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">Fp1</span><span class="o">=</span><span class="s">&quot;Fp2&quot;</span><span class="p">,</span> 
+        <span class="n">AFp1</span><span class="o">=</span><span class="s">&quot;AFp2&quot;</span><span class="p">,</span> 
+        <span class="n">AF7</span><span class="o">=</span><span class="s">&quot;AF8&quot;</span><span class="p">,</span> <span class="n">AF3</span><span class="o">=</span><span class="s">&quot;AF4&quot;</span><span class="p">,</span>
+        <span class="n">F9</span><span class="o">=</span><span class="s">&quot;F10&quot;</span><span class="p">,</span> <span class="n">AFF1h</span><span class="o">=</span><span class="s">&quot;AFF2h&quot;</span><span class="p">,</span> <span class="n">AFF5h</span><span class="o">=</span><span class="s">&quot;AFF6h&quot;</span><span class="p">,</span>
+        <span class="n">F7</span><span class="o">=</span><span class="s">&quot;F8&quot;</span><span class="p">,</span> <span class="n">F5</span><span class="o">=</span><span class="s">&quot;F6&quot;</span><span class="p">,</span> <span class="n">F3</span><span class="o">=</span><span class="s">&quot;F4&quot;</span><span class="p">,</span> <span class="n">F1</span><span class="o">=</span><span class="s">&quot;F2&quot;</span><span class="p">,</span> 
+        <span class="n">FFT9h</span><span class="o">=</span><span class="s">&quot;FFT10h&quot;</span><span class="p">,</span> <span class="n">FFT7h</span><span class="o">=</span><span class="s">&quot;FFT8h&quot;</span><span class="p">,</span> <span class="n">FFC5h</span><span class="o">=</span><span class="s">&quot;FFC6h&quot;</span><span class="p">,</span> <span class="n">FFC3h</span><span class="o">=</span><span class="s">&quot;FFC4h&quot;</span><span class="p">,</span> <span class="n">FFC1h</span><span class="o">=</span><span class="s">&quot;FFC2h&quot;</span><span class="p">,</span> 
+        <span class="n">FT9</span><span class="o">=</span><span class="s">&quot;FT10&quot;</span><span class="p">,</span> <span class="n">FT7</span><span class="o">=</span><span class="s">&quot;FT8&quot;</span><span class="p">,</span>         <span class="n">FC5</span><span class="o">=</span><span class="s">&quot;FC6&quot;</span><span class="p">,</span> <span class="n">FC3</span><span class="o">=</span><span class="s">&quot;FC4&quot;</span><span class="p">,</span> <span class="n">FT1</span><span class="o">=</span><span class="s">&quot;FC2&quot;</span><span class="p">,</span> 
+        <span class="n">FTT9h</span><span class="o">=</span><span class="s">&quot;FTT10h&quot;</span><span class="p">,</span> <span class="n">FTT7h</span><span class="o">=</span><span class="s">&quot;FTT8h&quot;</span><span class="p">,</span> <span class="n">FCC5h</span><span class="o">=</span><span class="s">&quot;FCC6h&quot;</span><span class="p">,</span> <span class="n">FCC3h</span><span class="o">=</span><span class="s">&quot;FCC4h&quot;</span><span class="p">,</span> <span class="n">FTT1h</span><span class="o">=</span><span class="s">&quot;FCC2h&quot;</span><span class="p">,</span> 
+        <span class="n">T7</span><span class="o">=</span><span class="s">&quot;T8&quot;</span><span class="p">,</span>                       <span class="n">C5</span><span class="o">=</span><span class="s">&quot;C6&quot;</span><span class="p">,</span> <span class="n">C3</span><span class="o">=</span><span class="s">&quot;C4&quot;</span><span class="p">,</span> <span class="n">C1</span><span class="o">=</span><span class="s">&quot;C2&quot;</span><span class="p">,</span>
+        <span class="n">TTP7h</span><span class="o">=</span><span class="s">&quot;TTP7h&quot;</span><span class="p">,</span>                 <span class="n">CCP5h</span><span class="o">=</span><span class="s">&quot;CCP6h&quot;</span><span class="p">,</span> <span class="n">CCP3h</span><span class="o">=</span><span class="s">&quot;CCP4h&quot;</span><span class="p">,</span> <span class="n">CCP1h</span><span class="o">=</span><span class="s">&quot;CCP2h&quot;</span><span class="p">,</span>
+        <span class="n">TP9</span><span class="o">=</span><span class="s">&quot;TP10&quot;</span><span class="p">,</span> <span class="n">TP7</span><span class="o">=</span><span class="s">&quot;TP8&quot;</span><span class="p">,</span>         <span class="n">CP5</span><span class="o">=</span><span class="s">&quot;CP6&quot;</span><span class="p">,</span> <span class="n">CP3</span><span class="o">=</span><span class="s">&quot;CP4&quot;</span><span class="p">,</span> <span class="n">CP1</span><span class="o">=</span><span class="s">&quot;CP2&quot;</span><span class="p">,</span>
+        <span class="n">TPP9h</span><span class="o">=</span><span class="s">&quot;TPP10h&quot;</span><span class="p">,</span> <span class="n">TPP7h</span><span class="o">=</span><span class="s">&quot;TPP8h&quot;</span><span class="p">,</span> <span class="n">CPP5h</span><span class="o">=</span><span class="s">&quot;CPP6h&quot;</span><span class="p">,</span> <span class="n">CPP3h</span><span class="o">=</span><span class="s">&quot;CPP4h&quot;</span><span class="p">,</span> <span class="n">CPP1h</span><span class="o">=</span><span class="s">&quot;CPP2h&quot;</span><span class="p">,</span> 
+        <span class="n">P9</span><span class="o">=</span><span class="s">&quot;P10&quot;</span><span class="p">,</span>
+        <span class="n">P7</span><span class="o">=</span><span class="s">&quot;P8&quot;</span><span class="p">,</span> <span class="n">P5</span><span class="o">=</span><span class="s">&quot;P6&quot;</span><span class="p">,</span> <span class="n">P3</span><span class="o">=</span><span class="s">&quot;P4&quot;</span><span class="p">,</span> <span class="n">P1</span><span class="o">=</span><span class="s">&quot;P2&quot;</span><span class="p">,</span>
+        <span class="n">PPO9h</span><span class="o">=</span><span class="s">&quot;PPO10h&quot;</span><span class="p">,</span> <span class="n">PPO5h</span><span class="o">=</span><span class="s">&quot;PPO6h&quot;</span><span class="p">,</span> <span class="n">PPO1h</span><span class="o">=</span><span class="s">&quot;PPO2h&quot;</span><span class="p">,</span>
+        <span class="n">PO7</span><span class="o">=</span><span class="s">&quot;PO8&quot;</span><span class="p">,</span> <span class="n">PO3</span><span class="o">=</span><span class="s">&quot;PO4&quot;</span><span class="p">,</span>
+        <span class="n">POO9h</span><span class="o">=</span><span class="s">&quot;POO10h&quot;</span><span class="p">,</span> <span class="n">POO1</span><span class="o">=</span><span class="s">&quot;POO2&quot;</span><span class="p">,</span>
+        <span class="n">O1</span><span class="o">=</span><span class="s">&quot;O2&quot;</span><span class="p">,</span>
+        <span class="n">I1</span><span class="o">=</span><span class="s">&quot;I2&quot;</span><span class="p">,</span> <span class="n">OL1h</span><span class="o">=</span><span class="s">&quot;OL2h&quot;</span>
+        <span class="p">)</span>
+        <span class="n">dual_list</span> <span class="o">=</span> <span class="n">dual</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">dual</span> <span class="o">=</span> <span class="n">dual</span><span class="p">,</span> <span class="n">dual_list</span> <span class="o">=</span> <span class="n">dual_list</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="HemisphereDifferenceNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_difference.html#pySPACE.missions.nodes.spatial_filtering.channel_difference.HemisphereDifferenceNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># Determine the new list of channel_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">channel_name</span><span class="o">+</span><span class="s">&quot;-&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">dual</span><span class="p">[</span><span class="n">channel_name</span><span class="p">]</span> <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_list</span>
+                                                 <span class="k">if</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual</span><span class="p">[</span><span class="n">channel_name</span><span class="p">]</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">]</span>
+        <span class="c"># Initialize the new array</span>
+        <span class="n">difference_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">)))</span>
+        <span class="n">current_index</span> <span class="o">=</span> <span class="mi">0</span>
+        
+        <span class="c"># Do the same check as in the determination of the channel names...</span>
+        <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual</span><span class="p">[</span><span class="n">channel_name</span><span class="p">]</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+                <span class="n">first_channel_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                <span class="n">second_channel_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual</span><span class="p">[</span><span class="n">channel_name</span><span class="p">])</span>
+                <span class="c"># ...and build the difference of the corresponding channels.</span>
+                <span class="n">difference_data</span><span class="p">[:,</span><span class="n">current_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[:,</span><span class="n">first_channel_index</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[:,</span><span class="n">second_channel_index</span><span class="p">]</span>
+                <span class="n">current_index</span> <span class="o">+=</span><span class="mi">1</span>
+        <span class="c"># Create new TimeSeries object        </span>
+        <span class="n">difference_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">difference_data</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">,</span>
+                                           <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                           <span class="n">data</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                                           <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">difference_time_series</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Hemisphere_Difference&quot;</span><span class="p">:</span> <span class="n">HemisphereDifferenceNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

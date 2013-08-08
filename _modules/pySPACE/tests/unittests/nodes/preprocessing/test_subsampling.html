@@ -1,0 +1,319 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.unittests.nodes.preprocessing.test_subsampling &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../../index.html">
+              <img class="logo" src="../../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.unittests.nodes.preprocessing.test_subsampling</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Unittests which test subsampling nodes</span>
+
+<span class="sd">.. todo:: Implement tests for FftResamplingNode</span>
+
+<span class="sd">:Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">:Created: 2008/08/22</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;TestLogger&quot;</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="c"># The root of the code</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c"># configure logger</span>
+    <span class="c"># (TestLogger is not configured, since if main is called,</span>
+    <span class="c"># we have a single test)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+    <span class="n">loggingFileHandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s">&quot;unittest_log.txt&quot;</span><span class="p">)</span>
+    <span class="n">loggingStreamHandler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">()</span>
+    <span class="n">loggingStreamHandler</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s"> - </span><span class="si">%(levelname)s</span><span class="s"> - </span><span class="si">%(pathname)s</span><span class="s">:</span><span class="si">%(lineno)d</span><span class="s"> - </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">)</span>
+    <span class="n">loggingFileHandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="n">loggingStreamHandler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandler</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandler</span><span class="p">)</span>
+
+    <span class="c"># load tests</span>
+    <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="s">&#39;test_subsampling&#39;</span><span class="p">)</span>
+
+    <span class="c"># run tests</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.preprocessing</span> <span class="kn">import</span> <span class="n">subsampling</span>
+<span class="kn">import</span> <span class="nn">pySPACE.tests.utils.data.test_data_generation</span> <span class="kn">as</span> <span class="nn">test_data_generation</span>
+
+<span class="n">time_series_generator</span> <span class="o">=</span> <span class="n">test_data_generation</span><span class="o">.</span><span class="n">TestTimeSeriesGenerator</span><span class="p">()</span>
+
+<div class="viewcode-block" id="SubsamplingTestCase"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.SubsamplingTestCase">[docs]</a><span class="k">class</span> <span class="nc">SubsamplingTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Test for SubsamplingNode &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SubsamplingTestCase.setUp"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.SubsamplingTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">=</span> <span class="mi">1000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freq</span> <span class="o">=</span> <span class="mf">1000.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="n">test_data_generation</span><span class="o">.</span><span class="n">Counter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span> <span class="o">=</span> \
+            <span class="n">time_series_generator</span><span class="o">.</span><span class="n">generate_test_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">time_points</span><span class="p">,</span>
+                                                     <span class="n">counter</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">freq</span><span class="p">,</span>
+                                                     <span class="n">channel_order</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="SubsamplingTestCase.test_subsampling"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.SubsamplingTestCase.test_subsampling">[docs]</a>    <span class="k">def</span> <span class="nf">test_subsampling</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">target_frequency</span> <span class="o">=</span> <span class="mf">10.0</span>
+
+        <span class="n">subsampling_node</span> <span class="o">=</span> <span class="n">subsampling</span><span class="o">.</span><span class="n">SubsamplingNode</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="n">target_frequency</span><span class="p">)</span>
+
+        <span class="n">subsampled_time_series</span> <span class="o">=</span> <span class="n">subsampling_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">*</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span> <span class="n">target_frequency</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">*</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">freq</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">id</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">))</span> <span class="c"># The object should be different!</span>
+
+        <span class="c">##TODO: What is a sensible test for the frequency content criteria??</span>
+
+</div></div>
+<div class="viewcode-block" id="DecimationNodeTestCase"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase">[docs]</a><span class="k">class</span> <span class="nc">DecimationNodeTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Test for the DecimationFIRNode &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DecimationNodeTestCase.setUp"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">=</span> <span class="mi">5000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_frequency</span> <span class="o">=</span> <span class="mf">5000.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="mi">64</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="n">test_data_generation</span><span class="o">.</span><span class="n">Counter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span> <span class="o">=</span> \
+            <span class="n">time_series_generator</span><span class="o">.</span><span class="n">generate_test_data</span><span class="p">(</span><span class="n">channels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span>
+                                                    <span class="n">time_points</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span><span class="p">,</span>
+                                                    <span class="n">function</span><span class="o">=</span><span class="n">counter</span><span class="p">,</span>
+                                                    <span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">source_frequency</span><span class="p">,</span>
+                                                    <span class="n">channel_order</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="mf">25.0</span>
+</div>
+<div class="viewcode-block" id="DecimationNodeTestCase.tearDown"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.tearDown">[docs]</a>    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_node</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="c"># a helper method that performs various tests on given subsampling nodes</span></div>
+<div class="viewcode-block" id="DecimationNodeTestCase.perform_simple_tests"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.perform_simple_tests">[docs]</a>    <span class="k">def</span> <span class="nf">perform_simple_tests</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_to_test</span><span class="p">,</span>
+                            <span class="n">time_series</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="n">source_frequency</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="n">target_frequency</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                            <span class="n">time_points</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">time_series</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">time_series</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">source_frequency</span><span class="p">:</span>
+            <span class="n">source_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_frequency</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">target_frequency</span><span class="p">:</span>
+            <span class="n">target_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">time_points</span><span class="p">:</span>
+            <span class="n">time_points</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_points</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">data2</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c"># first filtering, the node is initialized in this step</span>
+        <span class="n">subsampled_time_series</span> <span class="o">=</span> <span class="n">node_to_test</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+        <span class="n">subsampled_time_series</span> <span class="o">=</span> <span class="n">node_to_test</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">clock</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="s">&quot;time for subsampling: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">))</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="s">&quot;time series shape: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">time_series</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="s">&quot;subsampled_time_series.shape&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">time_points</span> <span class="o">*</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">time_points</span> <span class="o">*</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span> <span class="n">target_frequency</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">),</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">time_points</span> <span class="o">*</span> <span class="n">target_frequency</span> <span class="o">/</span> <span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="n">time_series</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">id</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">))</span> <span class="c"># The object should be different!</span>
+
+</div>
+<div class="viewcode-block" id="DecimationNodeTestCase.test_decimation"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.test_decimation">[docs]</a>    <span class="k">def</span> <span class="nf">test_decimation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">node_to_test</span> <span class="o">=</span> <span class="n">subsampling</span><span class="o">.</span><span class="n">DecimationIIRNode</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">perform_simple_tests</span><span class="p">(</span><span class="n">node_to_test</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DecimationNodeTestCase.test_decimation_fir"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.test_decimation_fir">[docs]</a>    <span class="k">def</span> <span class="nf">test_decimation_fir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">node_to_test</span> <span class="o">=</span> <span class="n">subsampling</span><span class="o">.</span><span class="n">DecimationFIRNode</span><span class="p">(</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">perform_simple_tests</span><span class="p">(</span><span class="n">node_to_test</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DecimationNodeTestCase.perform_compare_tests"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DecimationNodeTestCase.perform_compare_tests">[docs]</a>    <span class="k">def</span> <span class="nf">perform_compare_tests</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">standard_node</span><span class="p">,</span><span class="n">testee_node</span><span class="p">):</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">data2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="c"># initialize &amp; set custom kernel</span>
+        <span class="n">subsampled_time_series</span> <span class="o">=</span> <span class="n">standard_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="c"># execute node</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">subsampled_time_series</span> <span class="o">=</span> <span class="n">standard_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="c">#logger.log(logging.INFO, &quot;time for subsampling: &quot; + str(stop-start))</span>
+
+        <span class="c"># create a reference node with custom kernel</span>
+        <span class="n">subsampled_time_series2</span> <span class="o">=</span> <span class="n">testee_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span>
+
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">subsampled_time_series2</span> <span class="o">=</span> <span class="n">testee_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data2</span><span class="p">)</span>
+        <span class="n">stop</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="s">&quot;time for subsampling: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assert_</span><span class="p">(</span><span class="nb">id</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">id</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">))</span> <span class="c"># The object should be different!</span>
+
+        <span class="n">numpy</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+        <span class="c">#print subsampled_time_series</span>
+        <span class="c">#print &quot;*&quot;*50</span>
+        <span class="c">#print subsampled_time_series2</span>
+        <span class="c">#print &quot;*&quot;*50</span>
+        <span class="c">#print subsampled_time_series-subsampled_time_series2</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="p">,</span><span class="n">subsampled_time_series2</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">subsampled_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">)</span>
+
+
+
+</div></div>
+<div class="viewcode-block" id="DownsamplingNodeTestCase"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DownsamplingNodeTestCase">[docs]</a><span class="k">class</span> <span class="nc">DownsamplingNodeTestCase</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Test for the downsampling node &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DownsamplingNodeTestCase.setUp"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DownsamplingNodeTestCase.setUp">[docs]</a>    <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_points</span> <span class="o">=</span> <span class="mi">5000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">freq</span> <span class="o">=</span> <span class="mf">5000.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="n">test_data_generation</span><span class="o">.</span><span class="n">Counter</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_series</span> <span class="o">=</span> <span class="n">time_series_generator</span><span class="o">.</span><span class="n">generate_test_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span><span class="p">,</span><span class="n">function</span><span class="o">=</span><span class="n">counter</span><span class="p">,</span><span class="n">sampling_frequency</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">freq</span><span class="p">,</span><span class="n">channel_order</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span> <span class="o">=</span> <span class="mi">25</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">freq</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">node</span> <span class="o">=</span> <span class="n">subsampling</span><span class="o">.</span><span class="n">DownsamplingNode</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DownsamplingNodeTestCase.tearDown"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DownsamplingNodeTestCase.tearDown">[docs]</a>    <span class="k">def</span> <span class="nf">tearDown</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filter_node</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="DownsamplingNodeTestCase.testSimpleDownsampling"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.html#pySPACE.tests.unittests.nodes.preprocessing.test_subsampling.DownsamplingNodeTestCase.testSimpleDownsampling">[docs]</a>    <span class="k">def</span> <span class="nf">testSimpleDownsampling</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">new_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">time_points</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">downsampling_factor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">new_data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">target_frequency</span><span class="p">)</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

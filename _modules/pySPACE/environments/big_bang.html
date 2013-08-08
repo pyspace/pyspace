@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.environments.big_bang &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.environments.big_bang</h1><div class="highlight"><pre>
+<span class="c"># -*- coding: UTF-8 -*</span>
+<span class="sd">&quot;&quot;&quot; Load the global configuration file</span>
+
+<span class="sd">:Author: Timo Duchrow (timo.duchrow@dfki.de)</span>
+<span class="sd">:Created: 2009/02/20</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">os.path</span> <span class="kn">import</span> <span class="n">expanduser</span>
+<span class="n">home</span> <span class="o">=</span> <span class="n">expanduser</span><span class="p">(</span><span class="s">&quot;~&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Configuration"><a class="viewcode-back" href="../../../api/generated/pySPACE.environments.big_bang.html#pySPACE.environments.big_bang.Configuration">[docs]</a><span class="k">class</span> <span class="nc">Configuration</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A global configuration class &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Configuration.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.environments.big_bang.html#pySPACE.environments.big_bang.Configuration.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parent_dir</span><span class="p">,</span> <span class="n">conf_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Setting of the default paths</span>
+
+<span class="sd">        The files are searched in &#39;PYSPACE_CONF_DIR&#39;, if it is specified.</span>
+<span class="sd">        Otherwise it is searched for in the pySPACEcenter in the user directory.</span>
+
+<span class="sd">        **Parameters**</span>
+<span class="sd">        </span>
+<span class="sd">            :parent_dir:  the directory the pySPACE/ tree resides in</span>
+<span class="sd">            :conf_dir: an alternative configuration directory</span>
+<span class="sd">            </span>
+<span class="sd">                       (*optional, default: &#39;home_dir/pySPACEcenter&#39;*)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Set parent_dir (and root for convenience)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span> <span class="o">=</span> <span class="n">parent_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s">&quot;pySPACE&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">root_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s">&quot;pySPACE&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">examples_conf_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span><span class="p">,</span><span class="s">&quot;docs&quot;</span><span class="p">,</span><span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="s">&quot;conf&quot;</span><span class="p">)</span>
+        
+        <span class="c"># Set configuration directory or default</span>
+        <span class="k">if</span> <span class="n">conf_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">conf_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s">&quot;pySPACEcenter&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conf_dir</span> <span class="o">=</span> <span class="n">conf_dir</span>
+
+        <span class="c"># Set other defaults</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">examples_storage</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s">&quot;docs&quot;</span><span class="p">,</span><span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="s">&quot;storage&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">storage</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s">&quot;pySPACEcenter&quot;</span><span class="p">,</span><span class="s">&quot;storage&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">examples_spec_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span><span class="p">,</span> <span class="s">&quot;docs&quot;</span><span class="p">,</span><span class="s">&quot;examples&quot;</span><span class="p">,</span> <span class="s">&quot;specs&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spec_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s">&quot;pySPACEcenter&quot;</span><span class="p">,</span><span class="s">&quot;specs&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">root_dir</span><span class="p">,</span> <span class="s">&quot;log&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend_com</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">external_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+
+</div>
+    <span class="n">first_call_epilog</span> <span class="o">=</span>\
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Welcome to pySPACE</span>
+<span class="sd">    ------------------</span>
+
+<span class="sd">    This seems to be the first time, you are using pySPACE.</span>
+
+<span class="sd">    For detailed documentation on pySPACE refer to the online documentation at</span>
+<span class="sd">    https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/index.html,</span>
+<span class="sd">    the __init__ file in the pySPACE folder, or the index.rst in the docs folder.</span>
+
+<span class="sd">    If you have already used the setup.py or another installation program all</span>
+<span class="sd">    relevant files should be found in the folder `pySPACEcenter` in your home</span>
+<span class="sd">    directory. Otherwise it will be searched for in your `PYSPACE_CONF_DIR`.</span>
+
+<span class="sd">    The main configuration is specified in the &lt;config.yaml&gt;. Please have a look</span>
+<span class="sd">    at it and the therein specified environment parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="Configuration.load_configuration"><a class="viewcode-back" href="../../../api/generated/pySPACE.environments.big_bang.html#pySPACE.environments.big_bang.Configuration.load_configuration">[docs]</a>    <span class="k">def</span> <span class="nf">load_configuration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conf_file_name</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load a configuration from the specified :ref:`YAML&lt;yaml&gt;` configuration file.</span>
+<span class="sd">        </span>
+<span class="sd">        Overwrites default directories and path with directories set</span>
+<span class="sd">        in the specified YAML file.</span>
+<span class="sd">        </span>
+<span class="sd">        **Parameters**</span>
+<span class="sd">        </span>
+<span class="sd">            :conf_file_name: the name of the conf file that lies in the &#39;conf_dir&#39;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">conf_file_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">conf_file_name</span> <span class="o">=</span> <span class="s">&#39;config.yaml&#39;</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;No configuration file given in </span><span class="si">%s</span><span class="s">. Defaulting to </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span>
+                         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">conf_dir</span><span class="p">,</span><span class="n">conf_file_name</span><span class="p">))</span>
+
+        <span class="n">conf_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">conf_dir</span><span class="p">,</span> <span class="n">conf_file_name</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conf_file_name</span> <span class="o">=</span> <span class="n">conf_file_name</span>    <span class="c"># store for later reference</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Configuration file: </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="n">conf_file_name</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;--&gt; Using configuration file: </span><span class="se">\n\t\t</span><span class="s"> </span><span class="si">%s</span><span class="s">.&quot;</span><span class="o">%</span><span class="n">conf_file_name</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">python_path</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conf_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">conf_file_name</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">conf</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">conf_file</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">conf</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">isspace</span><span class="p">()):</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="s">&#39;~&#39;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+                        <span class="n">v</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+            <span class="n">conf_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="c"># check for first call</span>
+            <span class="k">if</span> <span class="s">&quot;first_call&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_call</span><span class="p">:</span>
+                <span class="n">conf_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">conf_file_name</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">conf_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                <span class="n">conf_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;first_call : True&quot;</span><span class="p">):</span>
+                        <span class="n">lines</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_call_epilog</span>
+                        <span class="n">conf_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">conf_file_name</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+                        <span class="n">conf_file</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+                        <span class="n">conf_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="k">break</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+            <span class="n">msg</span> <span class="o">=</span> <span class="s">&quot;Unable to open configuration file &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">conf_file_name</span><span class="p">)</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot; Put it to the pySPACEcenter folder or change &quot;</span>
+            <span class="n">msg</span> <span class="o">+=</span> <span class="s">&quot;the &#39;PYSPACE_CONF_DIR&#39; parameter in your shell.&quot;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">,</span> <span class="n">_</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Your configuration file  is empty. Please check the installation documentation! Using defaults.&quot;</span><span class="p">)</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;--&gt; Using Python: </span><span class="se">\n\t\t</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">)</span>
+        <span class="c"># Setup python path as specified</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">python_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="s">&#39;~&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">new_python_path</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">)</span>
+            <span class="n">python_path_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">new_python_path</span><span class="p">)</span>
+            <span class="n">unique_sys_path</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">python_path_set</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">python_path_set</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span>
+            <span class="n">new_python_path</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">unique_sys_path</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">new_python_path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="o">=</span><span class="p">[]</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;--&gt; Prepending to your PYTHONPATH: </span><span class="se">\n\t\t</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">python_path</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_nodes</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;--&gt; Using external nodes: </span><span class="se">\n\t\t</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                  <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_nodes</span><span class="p">))</span>
+
+        <span class="c"># Append root directory to PYTHONPATH anew</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parent_dir</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s">&quot;resources_dir&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="s">&quot;storage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="s">&quot;resources_dir&quot;</span><span class="p">]</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Change config parameter &#39;resources_dir&#39; to &#39;storage&#39;.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+        </div>
+<div class="viewcode-block" id="Configuration.__str__"><a class="viewcode-back" href="../../../api/generated/pySPACE.environments.big_bang.html#pySPACE.environments.big_bang.Configuration.__str__">[docs]</a>    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">)</span>
+        
+  </div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

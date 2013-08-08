@@ -1,0 +1,385 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.classification.discriminant_analysis_classifier &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.classification.discriminant_analysis_classifier</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Discriminant analysis type classifiers &quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+
+<div class="viewcode-block" id="DiscriminantAnalysisClassifierBase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.DiscriminantAnalysisClassifierBase">[docs]</a><span class="k">class</span> <span class="nc">DiscriminantAnalysisClassifierBase</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Template for discriminant analysis type classifier nodes</span>
+<span class="sd">    </span>
+<span class="sd">    This class has the is_trainable method and so on. Also a generic training</span>
+<span class="sd">    method, which simply collects all training data, exists here.</span>
+<span class="sd">    A classifier that inherits from here should implement stop_training and</span>
+<span class="sd">    execute.   </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :class_labels:</span>
+<span class="sd">            Determines the order of the two classes.</span>
+<span class="sd">            This is important, when you want that the prediction</span>
+<span class="sd">            value is negative for the first class and</span>
+<span class="sd">            positive for the other one.</span>
+<span class="sd">            Otherwise this variable is set by adding the labels,</span>
+<span class="sd">            when they first occur.</span>
+<span class="sd">        </span>
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">        :prior_probability:</span>
+<span class="sd">            The prior probability for any given sample to belong to either class.</span>
+<span class="sd">            Pass a list with two entries in the same order as in class_labels. The</span>
+<span class="sd">            values in prior_probability don&#39;t have to be actual probabilities, i.e.,</span>
+<span class="sd">            they don&#39;t have to add up to 1: [1,3] is equivalent to [.25,.75].</span>
+<span class="sd">            Note that this parameter is in some sense inverse to the SVM weights: </span>
+<span class="sd">            The underrepresented class will typically get assigned a higher SVM</span>
+<span class="sd">            weight but the smaller prior probability.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: [1.,1.]*)</span>
+<span class="sd">        </span>
+<span class="sd">    :Author: David Feess (David.Feess@dfki.de)</span>
+<span class="sd">    :Created: 2012/05/30</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="DiscriminantAnalysisClassifierBase.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.DiscriminantAnalysisClassifierBase.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prior_probability</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1.</span><span class="p">,</span><span class="mf">1.</span><span class="p">],</span>
+                 <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DiscriminantAnalysisClassifierBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">classes</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
+                                      <span class="n">prior_probability</span> <span class="o">=</span> <span class="n">prior_probability</span><span class="p">,</span>
+                                      <span class="n">x</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># training data</span>
+                                      <span class="n">y</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span> <span class="c"># training labels</span>
+        </div>
+<div class="viewcode-block" id="DiscriminantAnalysisClassifierBase.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.DiscriminantAnalysisClassifierBase.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="DiscriminantAnalysisClassifierBase.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.DiscriminantAnalysisClassifierBase.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="DiscriminantAnalysisClassifierBase._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.DiscriminantAnalysisClassifierBase._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Train node on given example *data* for class *label*.</span>
+<span class="sd">        </span>
+<span class="sd">            In this method, all data items and labels are buffered </span>
+<span class="sd">            in a matrix for batch training. </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># construct list of all labels</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Please give the expected classes to the classifier!&quot;</span>
+                <span class="o">+</span><span class="s">&quot; </span><span class="si">%s</span><span class="s"> unknown. &quot;</span><span class="o">%</span><span class="n">label</span> <span class="o">+</span><span class="s">&quot;Therefore define the variable &quot;</span>
+                <span class="o">+</span><span class="s">&quot;&#39;class_labels&#39; in your spec file, where you use your &quot;</span>
+                <span class="o">+</span><span class="s">&quot;classifier. For further info look at the node documentation.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        
+        <span class="c"># map label to [-1,1], assuming that &quot;target label&quot;</span>
+        <span class="c"># is at position 0 and standards at position 1; skip all other labels</span>
+        <span class="n">label_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">label_index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">label_index</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">label_index</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">label_index</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="c"># initialize data variables</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">label_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c"># stack data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">label_index</span><span class="p">))</span>
+</div></div>
+<div class="viewcode-block" id="LinearDiscriminantAnalysisClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.LinearDiscriminantAnalysisClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">LinearDiscriminantAnalysisClassifierNode</span><span class="p">(</span><span class="n">DiscriminantAnalysisClassifierBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Classify by linear discriminant analysis</span>
+
+<span class="sd">    A detailed description can be found in:</span>
+<span class="sd">    [1] Bishop, 2006 C.M. Bishop, &quot;Pattern recognition and machine learning&quot;, </span>
+<span class="sd">    Springer (2006), 4.1.3-4.1.5</span>
+<span class="sd">    </span>
+<span class="sd">    Implementation strategies originate from</span>
+<span class="sd">    [2] Schloegl et al., Adaptive Methods in BCI Research - An Introductory</span>
+<span class="sd">    Tutorial. Brain-Computer Interfaces (2010) pp. 331</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        See description of :class:`~DiscriminantAnalysisClassifierBase`</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : LDA</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">                prior_probability : [1,6]</span>
+
+<span class="sd">    :Author: David Feess (David.Feess@dfki.de)</span>
+<span class="sd">    :Created: 2012/05/29</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LinearDiscriminantAnalysisClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.LinearDiscriminantAnalysisClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LinearDiscriminantAnalysisClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span>\
+                                                <span class="p">(</span><span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
+                                                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">iECM</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># inv extended cov matrix</span>
+                                      <span class="n">mu_m1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># class specific means</span>
+                                      <span class="n">mu_p1</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span> <span class="c">#,</span>
+<span class="c">#                                      bw=None) # classification vector </span>
+
+</div>
+<div class="viewcode-block" id="LinearDiscriminantAnalysisClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.LinearDiscriminantAnalysisClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Perform the actual model building &quot;&quot;&quot;</span>
+        <span class="c"># this calculations strongly follow [2]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">T</span> <span class="c"># samples x channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">T</span>
+        <span class="c"># stack a row of ones to the data; (samples + 1) x channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]),</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="c"># claculate extended cov matrix and pseudo inverse</span>
+        <span class="c"># ECM has entries [a,b;c,D] with a = NrSamples, b.T=c=data mean, D=cov</span>
+        <span class="n">ECM</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c"># eq. 16 in [2]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iECM</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">ECM</span><span class="o">/</span><span class="n">ECM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="c"># calculate class-specific means</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_m1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span><span class="o">==-</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_p1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span><span class="o">==</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c">### analytically equivalent but more elegant: use of w and b. ###</span>
+        <span class="c">## calculate w and b (eqs. 40f in [2])</span>
+        <span class="c"># w = numpy.dot((mu_p1 - mu_m1), self.iECM[1:,1:]) # delta_mu*inv(cov)</span>
+        <span class="c"># b = -numpy.dot(ECM[1:,0],w.T) # -mu_x*w.T</span>
+        <span class="c">## stack b and w to a joint model parameter </span>
+        <span class="c"># self.bw = numpy.hstack((b,w))</span>
+        <span class="c">## and then in execute: prediciton is [b,w]*[1,x].T (eq. 39 in [2])</span>
+        <span class="c"># m = float(numpy.dot(self.bw,data))</span>
+    </div>
+<div class="viewcode-block" id="LinearDiscriminantAnalysisClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.LinearDiscriminantAnalysisClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector &quot;&quot;&quot;</span>
+        <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># add feature that is constantly one (bias term)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">]),</span><span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        
+        <span class="c"># offset due to prior probabilities</span>
+        <span class="n">prior_shift</span> <span class="o">=</span>  <span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_probability</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span> \
+                                 <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_probability</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="c"># prediciton is [0,delta mu]*iECM*[1,x] (eq. 45 in [2])</span>
+        <span class="c"># (this is eqivalent to [b,w]*[1,x].T (eq. 39))</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span> 
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">mu_p1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_m1</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">iECM</span><span class="p">),</span>
+                    <span class="n">data</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">prior_shift</span>
+                    
+        <span class="k">if</span> <span class="n">m</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="n">predicted_class</span><span class="p">,</span> 
+                                <span class="n">prediction</span> <span class="o">=</span> <span class="n">m</span><span class="p">,</span> 
+                                <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysisClassifierNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.QuadraticDiscriminantAnalysisClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">QuadraticDiscriminantAnalysisClassifierNode</span><span class="p">(</span><span class="n">DiscriminantAnalysisClassifierBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Classify by quadratic discriminant analysis</span>
+<span class="sd">    </span>
+<span class="sd">    Performs a QDA classification (basically evaluates the log of a</span>
+<span class="sd">    likelihood ratio test).</span>
+<span class="sd">    </span>
+<span class="sd">    Implementation originates from</span>
+<span class="sd">    [1] Schloegl et al., Adaptive Methods in BCI Research - An Introductory</span>
+<span class="sd">    Tutorial. Brain-Computer Interfaces (2010) pp. 331</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        See description of DiscriminantAnalysisClassifierBase</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : QDA</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                class_labels : [&quot;Target&quot;,&quot;Standard&quot;]</span>
+<span class="sd">                prior_probability : [1,6]</span>
+
+<span class="sd">    :Author: David Feess (David.Feess@dfki.de)</span>
+<span class="sd">    :Created: 2012/05/29</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysisClassifierNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.QuadraticDiscriminantAnalysisClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[],</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">QuadraticDiscriminantAnalysisClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span>\
+                                                <span class="p">(</span><span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
+                                                 <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">ECM_p1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># class +1 ext cov matrix</span>
+                                      <span class="n">ECM_m1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># class -1 ECM</span>
+                                      <span class="n">iECM_p1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># class +1 inv ext cov matrix</span>
+                                      <span class="n">iECM_m1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># class -1 iECM</span>
+                                      <span class="n">logdetCM_p1</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c"># logdet of cov</span>
+                                      <span class="n">logdetCM_m1</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    </div>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysisClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.QuadraticDiscriminantAnalysisClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Perform the actual model building &quot;&quot;&quot;</span>
+        <span class="c"># this calculations strongly follow [1]</span>
+        <span class="c"># stack a row of ones to the data; (samples + 1) x channels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[:,</span><span class="mi">0</span><span class="p">]),</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="o">.</span><span class="n">T</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="o">.</span><span class="n">T</span>
+        <span class="c"># data for each class individually:</span>
+        <span class="n">x_p1</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span><span class="o">==</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">x_m1</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span><span class="o">==-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="c"># calculate extended cov matrix and pseudo inverse for each class</span>
+        <span class="c"># ECM has entries [a,b;c,D] with a = NrSamples, b.T=c=data mean, D=cov</span>
+        <span class="c"># the logdet terms are needed for the classification function</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ECM_p1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x_p1</span><span class="p">,</span> <span class="n">x_p1</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c"># eq. 16 in [1]</span>
+        <span class="c"># the paper does not really use the inverse but the scaled inverse</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iECM_p1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_p1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_p1</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logdet_p1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdet_from_ECM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_p1</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">ECM_m1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">x_m1</span><span class="p">,</span> <span class="n">x_m1</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="c"># eq. 16 in [1]</span>
+        <span class="c"># the paper does not really use the inverse but the scaled inverse</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iECM_m1</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_m1</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_m1</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logdet_m1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdet_from_ECM</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ECM_m1</span><span class="p">)</span>
+        
+    </div>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysisClassifierNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.QuadraticDiscriminantAnalysisClassifierNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector &quot;&quot;&quot;</span>
+        <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># add feature that is constantly one (bias term)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">1</span><span class="p">]),</span><span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">))</span><span class="o">.</span><span class="n">T</span>
+        <span class="c"># The QDA evaluation currently uses the wikipedia formula, because</span>
+        <span class="c"># I didn&#39;t find a textbook that has it -.-</span>
+        <span class="c"># Basically, we perform a likelihood ratio test. the likelihood for </span>
+        <span class="c"># class j is</span>
+        <span class="c"># (2*pi*det(Sgima_j))^(-1/2) * exp(-1/2 xF_jx.T) where</span>
+        <span class="c"># F_j = (x-mu_j) *        iSigma_j       * (x-mu_j).T</span>
+        <span class="c">#     =    [1,x] * {iECM_j - [1,0; 0,0]} * [1,x].T)</span>
+        <span class="c"># we use the log of the likelihood ratio, which boils down to:</span>
+        <span class="c"># {xFx+log(det(Sigma))}_i - {xFx+log(det(Sigma))}_j</span>
+        <span class="n">c</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iECM_p1</span><span class="p">);</span> <span class="n">c</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span><span class="o">=</span><span class="mi">1</span> <span class="c"># c:=[1,0; 0,0]</span>
+        <span class="c"># xFx terms:</span>
+        <span class="n">xFx_p1</span> <span class="o">=</span>  <span class="nb">float</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iECM_p1</span><span class="o">-</span><span class="n">c</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span>
+        <span class="n">xFx_m1</span> <span class="o">=</span>  <span class="nb">float</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iECM_m1</span><span class="o">-</span><span class="n">c</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span>
+        
+        <span class="c"># offset due to prior probabilities</span>
+        <span class="n">prior_shift</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_probability</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">/</span> \
+                                    <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prior_probability</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="n">D</span> <span class="o">=</span> <span class="p">(</span><span class="n">xFx_p1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdet_p1</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="n">xFx_m1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">logdet_m1</span><span class="p">)</span> <span class="o">+</span> <span class="n">prior_shift</span>
+        <span class="k">if</span> <span class="n">D</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">predicted_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span> <span class="o">=</span> <span class="n">predicted_class</span><span class="p">,</span> 
+                                <span class="n">prediction</span> <span class="o">=</span> <span class="n">D</span><span class="p">,</span> 
+                                <span class="n">predictor</span> <span class="o">=</span> <span class="bp">self</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="QuadraticDiscriminantAnalysisClassifierNode.logdet_from_ECM"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.discriminant_analysis_classifier.html#pySPACE.missions.nodes.classification.discriminant_analysis_classifier.QuadraticDiscriminantAnalysisClassifierNode.logdet_from_ECM">[docs]</a>    <span class="k">def</span> <span class="nf">logdet_from_ECM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ECM</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Compute logdet of cov matrix from extended cov matrix (ECM) &quot;&quot;&quot;</span>
+        <span class="c"># This has to be done for both classes in trainng</span>
+        <span class="c"># first extract cov matric from extended cov matrix:</span>
+        <span class="n">Sigma</span> <span class="o">=</span> <span class="n">ECM</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span><span class="mi">1</span><span class="p">:]</span><span class="o">/</span><span class="n">ECM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> \
+                                <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">ECM</span><span class="p">[:,</span><span class="mi">1</span><span class="p">]</span><span class="o">/</span><span class="n">ECM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">],</span> <span class="n">ECM</span><span class="p">[</span><span class="mi">1</span><span class="p">,:]</span><span class="o">/</span><span class="n">ECM</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">slogdet</span><span class="p">(</span><span class="n">Sigma</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;QDA&quot;</span><span class="p">:</span> <span class="n">QuadraticDiscriminantAnalysisClassifierNode</span><span class="p">,</span>
+                <span class="s">&quot;LDA&quot;</span><span class="p">:</span> <span class="n">LinearDiscriminantAnalysisClassifierNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

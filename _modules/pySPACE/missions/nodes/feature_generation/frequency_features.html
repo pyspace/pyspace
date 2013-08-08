@@ -1,0 +1,327 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_generation.frequency_features &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_generation.frequency_features</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Extract frequency properties like band powers</span>
+
+<span class="sd">:Known issues:</span>
+<span class="sd">    No unit tests!</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">mlab</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<div class="viewcode-block" id="STFTFeaturesNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.STFTFeaturesNode">[docs]</a><span class="k">class</span> <span class="nc">STFTFeaturesNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Extract features based on the Short-term Fourier Transform</span>
+<span class="sd">    </span>
+<span class="sd">    This node converts the signal into the frequency domain using the</span>
+<span class="sd">    Short-term Fourier transform. The power of certain cells of the STFT</span>
+<span class="sd">    (i.e. the power in a frequency band in a certain time interval) are</span>
+<span class="sd">    returned as features.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :frequency_band:</span>
+<span class="sd">            The frequency band which is used to extract features from the</span>
+<span class="sd">            spectrogram. If this parameter is not specified (None), the</span>
+<span class="sd">            complete frequency range (-inf,+inf) is used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">            </span>
+<span class="sd">        :frequency_resolution:</span>
+<span class="sd">            The desired frequency resolution of the spectrogram, i.e. the</span>
+<span class="sd">            smallest distance between two frequencies being distinguishable.</span>
+<span class="sd">            Increasing the frequency resolution decreases the time resolution.</span>
+<span class="sd">            .. note:: *frequency_resolution* &lt;&lt; sampling_frequency</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : STFT_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                frequency_band : [0.4,3.5]</span>
+<span class="sd">                frequency_resolution : 1.0</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/03/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="STFTFeaturesNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.STFTFeaturesNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency_band</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">frequency_resolution</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">STFTFeaturesNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">frequency_band</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">min_frequency</span><span class="p">,</span> <span class="n">max_frequency</span> <span class="o">=</span> <span class="n">frequency_band</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">min_frequency</span><span class="p">,</span> <span class="n">max_frequency</span> <span class="o">=</span> <span class="p">(</span><span class="o">-</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span> 
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">min_frequency</span> <span class="o">=</span> <span class="n">min_frequency</span><span class="p">,</span>
+                                      <span class="n">max_frequency</span> <span class="o">=</span> <span class="n">max_frequency</span><span class="p">,</span>
+                               <span class="n">frequency_resolution</span> <span class="o">=</span> <span class="n">frequency_resolution</span><span class="p">)</span> 
+                               
+        <span class="k">assert</span> <span class="p">(</span><span class="n">frequency_resolution</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">),</span> \
+                <span class="s">&quot;*frequency_resolution* is a required parameter! It can&#39;t &quot;</span> \
+                <span class="s">&quot;be None.&quot;</span>
+</div>
+<div class="viewcode-block" id="STFTFeaturesNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.STFTFeaturesNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the Fourier features from the given data x &quot;&quot;&quot;</span>
+        <span class="c"># Lazy computation of NFFT (mlab documentation: The number of data</span>
+        <span class="c"># points used in each block for the FFT. Must be even; a power 2 is</span>
+        <span class="c"># most efficient. The default value is 256.) and noverlap</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;NFFT&quot;</span><span class="p">):</span>
+            <span class="c"># Compute NFFT to obtain the desired frequency resolution </span>
+            <span class="c"># (if possible)</span>
+            <span class="c"># self.NFFT has to be even</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">/</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">frequency_resolution</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># Number of points of overlap between blocks.</span>
+               
+        <span class="c"># For each channel, we compute the STFT</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+           
+            <span class="p">(</span><span class="n">Pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span> <span class="o">=</span> <span class="n">mlab</span><span class="o">.</span><span class="n">specgram</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">],</span>
+                                               <span class="n">Fs</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                               <span class="n">NFFT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span><span class="p">,</span>
+                                               <span class="n">noverlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span><span class="p">)</span>
+
+            <span class="c"># TODO: This would be more efficient without the explicit loop</span>
+            <span class="k">for</span> <span class="n">index1</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">freqs</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_frequency</span> <span class="o">&lt;=</span> <span class="n">freq</span> <span class="o">&lt;=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">max_frequency</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">for</span> <span class="n">index2</span><span class="p">,</span> <span class="nb">bin</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">bins</span><span class="p">):</span>
+                    <span class="c"># Convert to decibels and append as feature</span>
+                    <span class="n">features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">10</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">Pxx</span><span class="p">[</span><span class="n">index1</span><span class="p">,</span> <span class="n">index2</span><span class="p">]))</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;STFT_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.2f</span><span class="s">Hz_</span><span class="si">%.3f</span><span class="s">sec&quot;</span> <span class="o">%</span> 
+                                                <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="nb">bin</span><span class="p">))</span>
+        
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">feature_names</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">feature_vector</span>
+        </div></div>
+<div class="viewcode-block" id="FrequencyBandFeatureNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.FrequencyBandFeatureNode">[docs]</a><span class="k">class</span> <span class="nc">FrequencyBandFeatureNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Extract features based on the Frequency-band power</span>
+<span class="sd">    </span>
+<span class="sd">    This node computes the power contained in certain frequency bands. For</span>
+<span class="sd">    this, the STFT is used to compute a spectrogram and the power of the cells</span>
+<span class="sd">    within the specified frequency band are summed to obtain the power of the</span>
+<span class="sd">    frequency band in the respective time bin. Different criteria can be given</span>
+<span class="sd">    to specify how features are derived from the change of band power over</span>
+<span class="sd">    time.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :frequency_bands:</span>
+<span class="sd">            A list of tuple. The frequency bands whose band power is used as</span>
+<span class="sd">            feature.</span>
+<span class="sd">            </span>
+<span class="sd">        :criterion:</span>
+<span class="sd">            An criterion that specifies how the change of band power over time</span>
+<span class="sd">            is used to create a feature: One of the following Strings is</span>
+<span class="sd">            valid:</span>
+<span class="sd">            </span>
+<span class="sd">            * &quot;max&quot; - returns the maximum power in the band over time</span>
+<span class="sd">            * &quot;min&quot; - returns the minimum power in the band over time</span>
+<span class="sd">            * &quot;median&quot; - returns the median power in the band over time</span>
+<span class="sd">            * &quot;max_change&quot; - returns the maximum minus the minimum power in</span>
+<span class="sd">                             the band over time</span>
+<span class="sd">            * &quot;all&quot; - returns all powers in the band over time as single</span>
+<span class="sd">                      features</span>
+<span class="sd">                      </span>
+<span class="sd">            (*Optional, default: &quot;max&quot;*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : Frequency_Band_Features</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                frequency_bands: [(7.0, 10.0), (13.0,26.0)]</span>
+<span class="sd">                criterion : &quot;all&quot;</span>
+<span class="sd">                </span>
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/03/09</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="FrequencyBandFeatureNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.FrequencyBandFeatureNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency_bands</span><span class="p">,</span> <span class="n">criterion</span> <span class="o">=</span> <span class="s">&quot;max&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FrequencyBandFeatureNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="n">allowed_criteria</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;max&quot;</span><span class="p">,</span> <span class="s">&quot;min&quot;</span><span class="p">,</span> <span class="s">&quot;median&quot;</span><span class="p">,</span> <span class="s">&quot;max_change&quot;</span><span class="p">,</span> <span class="s">&quot;all&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">criterion</span> <span class="ow">in</span> <span class="n">allowed_criteria</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Invalid criterion </span><span class="si">%s</span><span class="s">. Please use one of </span><span class="si">%s</span><span class="s">&quot;</span> \
+                            <span class="o">%</span> <span class="p">(</span><span class="n">criterion</span><span class="p">,</span> <span class="n">allowed_criteria</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">frequency_bands</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">frequency_bands</span><span class="p">),</span>
+                                      <span class="n">criterion</span> <span class="o">=</span> <span class="n">criterion</span><span class="p">)</span> 
+</div>
+<div class="viewcode-block" id="FrequencyBandFeatureNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_generation.frequency_features.html#pySPACE.missions.nodes.feature_generation.frequency_features.FrequencyBandFeatureNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Extract the Fourier features from the given data x &quot;&quot;&quot;</span>
+        <span class="c"># Lazily set NFFT and noverlap</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;NFFT&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span> <span class="o">=</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">//</span> <span class="mi">4</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span> <span class="o">*</span> <span class="mi">9</span> <span class="o">//</span> <span class="mi">10</span>
+            
+        <span class="c"># For each channel, we compute the band power in the specified</span>
+        <span class="c"># frequency bands</span>
+        <span class="n">features</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+            <span class="c"># Compute spectrogram</span>
+            <span class="p">(</span><span class="n">Pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span> <span class="o">=</span> <span class="n">mlab</span><span class="o">.</span><span class="n">specgram</span><span class="p">(</span><span class="n">x</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">],</span>
+                                               <span class="n">Fs</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                               <span class="n">NFFT</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span><span class="p">,</span>
+                                               <span class="n">noverlap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">min_frequency</span><span class="p">,</span> <span class="n">max_frequency</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency_bands</span><span class="p">:</span>
+                <span class="c"># Just to make sure....</span>
+                <span class="n">min_frequency</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">min_frequency</span><span class="p">)</span>
+                <span class="n">max_frequency</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">max_frequency</span><span class="p">)</span>
+    
+                <span class="c"># Compute band powers in the specified frequency range for all</span>
+                <span class="c"># bins</span>
+                <span class="n">selected_freqs</span> <span class="o">=</span> <span class="n">Pxx</span><span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">((</span><span class="n">freqs</span> <span class="o">&gt;=</span> <span class="n">min_frequency</span><span class="p">)</span>
+                                                <span class="o">&amp;</span> <span class="p">(</span><span class="n">freqs</span> <span class="o">&lt;=</span> <span class="n">max_frequency</span><span class="p">))]</span>
+                <span class="n">band_powers</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">selected_freqs</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                                                          
+                <span class="c"># Compute the corresponding feature based on the criterion</span>
+                <span class="c"># that was specified</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s">&quot;max&quot;</span><span class="p">:</span>
+                    <span class="n">channel_features</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">band_powers</span><span class="p">))]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s">&quot;min&quot;</span><span class="p">:</span>
+                    <span class="n">channel_features</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">band_powers</span><span class="p">))]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s">&quot;median&quot;</span><span class="p">:</span>
+                    <span class="n">channel_features</span> <span class="o">=</span> \
+                           <span class="p">[</span><span class="mi">10</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">band_powers</span><span class="p">))]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s">&quot;max_change&quot;</span><span class="p">:</span>
+                    <span class="n">channel_features</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">((</span><span class="nb">max</span><span class="p">(</span><span class="n">band_powers</span><span class="p">)</span><span class="o">-</span> \
+                                                           <span class="nb">min</span><span class="p">(</span><span class="n">band_powers</span><span class="p">)))]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">==</span> <span class="s">&quot;all&quot;</span><span class="p">:</span>
+                    <span class="n">channel_features</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">band_powers</span><span class="p">)</span>
+    
+                <span class="c"># Append the feature</span>
+                <span class="n">features</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">channel_features</span><span class="p">)</span>
+                <span class="c"># Determine feature names</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span> <span class="o">!=</span> <span class="s">&quot;all&quot;</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;BP_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.2f</span><span class="s">Hz_</span><span class="si">%.2f</span><span class="s">Hz_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> 
+                                         <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">min_frequency</span><span class="p">,</span>
+                                          <span class="n">max_frequency</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">feature_names</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="s">&quot;BP_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.2f</span><span class="s">Hz_</span><span class="si">%.2f</span><span class="s">Hz_</span><span class="si">%s</span><span class="s">_</span><span class="si">%.2f</span><span class="s">sec&quot;</span> <span class="o">%</span> 
+                                         <span class="p">(</span><span class="n">channel_name</span><span class="p">,</span> <span class="n">min_frequency</span><span class="p">,</span>
+                                          <span class="n">max_frequency</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion</span><span class="p">,</span>
+                                          <span class="nb">bin</span><span class="p">)</span> <span class="k">for</span> <span class="nb">bin</span> <span class="ow">in</span> <span class="n">bins</span><span class="p">)</span>
+        
+        <span class="n">feature_vector</span> <span class="o">=</span> \
+         <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">features</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span>
+         <span class="n">feature_names</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">feature_vector</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;STFT_Features&quot;</span><span class="p">:</span> <span class="n">STFTFeaturesNode</span><span class="p">,</span>
+                <span class="s">&quot;Frequency_Band_Features&quot;</span><span class="p">:</span><span class="n">FrequencyBandFeatureNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

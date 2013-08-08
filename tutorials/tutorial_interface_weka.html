@@ -1,0 +1,380 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Feature Selection, Classification using WEKA &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF" href="tutorial_interface_to_mmlf.html" />
+    <link rel="prev" title="Processing Benchmark Data - A First Usage Example" href="first_operation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_interface_to_mmlf.html" title="Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="first_operation.html" title="Processing Benchmark Data - A First Usage Example"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Feature Selection, Classification using WEKA</a><ul>
+<li><a class="reference internal" href="#feature-selection-with-weka">Feature Selection with WEKA</a></li>
+<li><a class="reference internal" href="#classification-with-weka">Classification with WEKA</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="first_operation.html"
+                        title="previous chapter">Processing Benchmark Data - A First Usage Example</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial_interface_to_mmlf.html"
+                        title="next chapter">Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/tutorial_interface_weka.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="feature-selection-classification-using-weka">
+<span id="tutorial-interface-weka"></span><h1>Feature Selection, Classification using WEKA<a class="headerlink" href="#feature-selection-classification-using-weka" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial you will see how the software is working together
+with the popular data mining tool WEKA (see <a class="reference external" href="http://www.cs.waikato.ac.nz/ml/weka/">http://www.cs.waikato.ac.nz/ml/weka/</a>).
+WEKA contains a lot of methods for data pre-processing
+e.g. filtering and for classification.
+They can be used within the framework through specific operation types:
+Weka Filter Operation and Weka Classification Operation respectively.
+The tutorial consists of two parts.
+In the first section you will see how a feature selection is performed
+and in the second section how a classification is performed using WEKA with pySPACE.
+Since you should have WEKA when you&#8217;re doing this tutorial,
+we will use as example-files the data that comes with WEKA.</p>
+<div class="section" id="feature-selection-with-weka">
+<h2>Feature Selection with WEKA<a class="headerlink" href="#feature-selection-with-weka" title="Permalink to this headline">¶</a></h2>
+<p>A feature selection is a Weka Filter Operation in pySPACE.
+The main characteristics of this operation type is the transformation
+of one FeaturesVectorDataset summary into another.
+More precisely WEKA will apply a filter to all arff-files
+(for more information about arff file format see <a class="reference external" href="http://www.cs.waikato.ac.nz/~ml/weka/arff.html">http://www.cs.waikato.ac.nz/~ml/weka/arff.html</a>)
+in the summary. In the case of a feature selection the goal is
+to reduce the number of attributes.</p>
+<p>First we have to provide the data that we want to use in the experiment in
+<a class="reference internal" href="../directories/resources_dir.html#storage"><em>The Data Directory (storage)</em></a>. To get a probable evaluation of the feature selection method
+it is strongly recommended to divide the amount of data into training and test set.
+We use here the <em>segment-challenge</em> data set to train the feature selector
+and the <em>segment-test</em> data set for testing.
+In order that the datasets will be found correctly, <a class="reference internal" href="../directories/resources_dir.html#storage"><em>The Data Directory (storage)</em></a>
+should look something like this:</p>
+<div class="highlight-guess"><div class="highlight"><pre><span class="n">storage</span>
+        <span class="o">/</span><span class="n">tutorial_data</span>
+                <span class="o">/</span><span class="p">{</span><span class="n">arff_tutorial_dataset</span><span class="p">}</span>
+                        <span class="o">/</span><span class="n">metadata</span><span class="p">.</span><span class="n">yaml</span>
+                        <span class="o">/</span><span class="n">data_run0</span>
+                                <span class="n">features_sp0_test</span><span class="p">.</span><span class="n">arff</span>
+                                <span class="n">features_sp0_train</span><span class="p">.</span><span class="n">arff</span>
+</pre></div>
+</div>
+<p>where the <em>metadata.yaml</em> might be</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">feature_vector</span>
+<span class="l-Scalar-Plain">author</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Max Mustermann</span>
+<span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="s">&#39;2009_4_5&#39;</span>
+<span class="l-Scalar-Plain">classes_names</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">brickface</span><span class="p-Indicator">,</span><span class="nv">sky</span><span class="p-Indicator">,</span><span class="nv">foliage</span><span class="p-Indicator">,</span><span class="nv">cement</span><span class="p-Indicator">,</span><span class="nv">window</span><span class="p-Indicator">,</span><span class="nv">path</span><span class="p-Indicator">,</span><span class="nv">grass</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">feature_names</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">region-centroid-col</span><span class="p-Indicator">,</span> <span class="nv">region-centroid-row</span><span class="p-Indicator">,</span> <span class="nv">region-pixel-count</span><span class="p-Indicator">,</span>
+<span class="nv">short-line-density-5</span><span class="p-Indicator">,</span> <span class="nv">short-line-density-2</span><span class="p-Indicator">,</span> <span class="nv">vedge-mean</span><span class="p-Indicator">,</span> <span class="nv">vegde-sd</span><span class="p-Indicator">,</span> <span class="nv">hedge-mean</span><span class="p-Indicator">,</span>
+<span class="nv">hedge-sd</span><span class="p-Indicator">,</span> <span class="nv">intensity-mean</span><span class="p-Indicator">,</span> <span class="nv">rawred-mean</span><span class="p-Indicator">,</span> <span class="nv">rawblue-mean</span><span class="p-Indicator">,</span> <span class="nv">rawgreen-mean</span><span class="p-Indicator">,</span> <span class="nv">exred-mean</span><span class="p-Indicator">,</span>
+<span class="nv">exblue-mean</span><span class="p-Indicator">,</span> <span class="nv">exgreen-mean</span><span class="p-Indicator">,</span> <span class="nv">value-mean</span><span class="p-Indicator">,</span> <span class="nv">saturation-mean</span><span class="p-Indicator">,</span> <span class="nv">hue-mean</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">num_features</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">19</span>
+<span class="l-Scalar-Plain">runs</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">1</span>
+<span class="l-Scalar-Plain">splits</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">1</span>
+<span class="l-Scalar-Plain">storage_format</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">arff</span><span class="p-Indicator">,</span> <span class="nv">numeric</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">data_pattern</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">data_run/features_sp_tt.arff</span>
+<span class="l-Scalar-Plain">train_test</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">true</span>
+</pre></div>
+</div>
+<p>and <em>features_sp0_train.arff</em> is the renamed segment-challenge.arff file
+from WEKA and <em>features_sp0_test.arff</em> the renamed segment-test.arff file
+respectively. Additionally to the renaming you have to change the relation name
+from both arff files to the name of your collection, e.g. &#8220;{arff_tutorial_collection}&#8221;.</p>
+<p>The second step is to specify the operation.
+In the subdirectory <em>operation</em> of <a class="reference internal" href="../directories/specs_dir.html#specs-dir"><em>The Specs Directory</em></a> you&#8217;ll find the subdir <em>weka_filtering</em>.
+Here you can store your operation spec file or just modify the example one:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="c1"># An example of a WekaFilter-Operation specification file. The specified</span>
+<span class="c1"># input is the value of the entry with the key &quot;input_path&quot;. The weka</span>
+<span class="c1"># template is one of the available templates stored in specs/operations/weka_templates/,</span>
+<span class="c1"># here for example &quot;feature_selection&quot;.</span>
+
+<span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">weka_filter</span>
+
+<span class="l-Scalar-Plain">input_path</span><span class="p-Indicator">:</span> <span class="s">&quot;tutorial_data&quot;</span>
+
+<span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">feature_selection</span>
+
+<span class="c1"># Parameters to specify the feature selection can be set here.</span>
+<span class="c1"># &quot;feature_selector&quot; specifies the evaluation method and &quot;ranker&quot;</span>
+<span class="c1"># the search method of the feature selection. &quot;num_retained_features&quot; is the </span>
+<span class="c1"># number of attributes that will be kept after the filtering and reflects</span>
+<span class="c1"># to the reduction of attributes.</span>
+<span class="c1"># Note that &#39;chi_squared&#39; or &#39;ranker&#39; are abbreviation which must be defined</span>
+<span class="c1"># in abbreviations.yaml and correspond to specific weka classes.</span>
+<span class="l-Scalar-Plain">parameter_ranges</span><span class="p-Indicator">:</span>
+    <span class="c1"># e.g. chi_squared, info_gain, gain_ratio, relief, CFS</span>
+    <span class="l-Scalar-Plain">feature_selector</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&#39;chi_squared&#39;</span><span class="p-Indicator">,</span><span class="s">&#39;info_gain&#39;</span><span class="p-Indicator">,</span><span class="s">&#39;gain_ratio&#39;</span><span class="p-Indicator">,</span><span class="s">&#39;relief&#39;</span><span class="p-Indicator">]</span> 
+    <span class="l-Scalar-Plain">ranker</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&#39;ranker&#39;</span><span class="p-Indicator">]</span> <span class="c1"># e.g. ranker, greedy_stepwise, best_firstn</span>
+    <span class="l-Scalar-Plain">num_retained_features</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">10</span><span class="p-Indicator">]</span> <span class="c1"># -1 means all features are retained</span>
+
+<span class="c1"># &quot;hide_parameters&quot; means, that this parameters will not be mapped to </span>
+<span class="c1"># the directory names in the result structure {parameter_name/parameter-value}.</span>
+<span class="c1"># This is suggestive e.g. when only one parameter value is used.</span>
+<span class="l-Scalar-Plain">hide_parameters</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&#39;ranker&#39;</span><span class="p-Indicator">,</span><span class="s">&#39;num_retained_features&#39;</span><span class="p-Indicator">]</span>
+</pre></div>
+</div>
+<p>Third, start e.g. by invoking:</p>
+<div class="highlight-python"><pre>python launch.py --mcore --configuration your_configuration_file.yaml --operation examples/weka_feature_selection.yaml</pre>
+</div>
+<p>How to configure <cite>your_configuration_file.yaml</cite> please look in section <a class="reference internal" href="../getting_started.html#getting-started"><em>Getting started</em></a>.
+Important here is especially the correct WEKA class path.</p>
+<p>Now four processes, one for each feature selector, are executed and
+and the results are stored in four result directories.
+In each result directory you&#8217;ll find, beside the new <em>metadata.yaml</em>
+for further processing, again the two arff files which now contain only <strong>ten</strong> attributes.
+In addition there is a <em>score.txt</em> file for every split that shows the rating
+of features for the specific feature selector.
+So you might check which attributes the different evaluators chose.
+To make later analysis easier there are also the input <em>metadata.yaml</em>,
+the <em>operation spec file</em> and the used <em>template</em> to start WEKA stored.</p>
+</div>
+<div class="section" id="classification-with-weka">
+<h2>Classification with WEKA<a class="headerlink" href="#classification-with-weka" title="Permalink to this headline">¶</a></h2>
+<p>The Weka Classification Operation is used to train and test a classifier with WEKA.
+The operation needs a FeatureVectorDataset summary as input
+and produces a Weka PerformanceResultSummary as output,
+which is immediately transformed to the software format.</p>
+<p>The first step, again, is to provide the data for this operation.
+This might be very easy since we can use the same data as for the feature selection.</p>
+<p>As second step the operation spec file has to be specified.
+The designated location for it is the subdirectory <em>weka_classification</em>
+in the <em>operation</em> directory of <a class="reference internal" href="../directories/specs_dir.html#specs-dir"><em>The Specs Directory</em></a>.
+Here an example of this file:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="c1"># An example of a WekaClassification-Operation specification file.</span>
+<span class="c1"># The specified input is the value of the entry with the key</span>
+<span class="c1"># &quot;input_path&quot;, the weka template is &quot;classification&quot;. The available</span>
+<span class="c1"># templates are stored in specs/operations/weka_templates/.</span>
+
+<span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">weka_classification</span>
+<span class="l-Scalar-Plain">input_path</span><span class="p-Indicator">:</span> <span class="s">&quot;tutorial_data&quot;</span>
+<span class="l-Scalar-Plain">template</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">classification</span>
+
+<span class="c1"># The specific classifiers to be used within the operation can be specified </span>
+<span class="c1"># using the keyword &quot;parameter_settings&quot;. The example below would compare four </span>
+<span class="c1"># different parametrizations of a linear svm (complexity either 0.1 or 1.0 and </span>
+<span class="c1"># weight for class 2 either 1.0 or 2.0). Note that &#39;libsvm_lin&#39; is an </span>
+<span class="c1"># abbreviation which must be defined in abbreviations.yaml.</span>
+<span class="c1"># parameter_settings:</span>
+<span class="c1">#     -</span>
+<span class="c1">#         classifier: &#39;libsvm_lin&#39;</span>
+<span class="c1">#         # &quot;ir_class_index&quot;: index of the class performance metrics are</span>
+<span class="c1">#         # calculated for; index begins with 1</span>
+<span class="c1">#         ir_class_index: 1</span>
+<span class="c1">#         complexity: 0.1</span>
+<span class="c1">#         w0: 1.0</span>
+<span class="c1">#         w1: 1.0</span>
+<span class="c1">#     -</span>
+<span class="c1">#         classifier: &#39;libsvm_lin&#39;</span>
+<span class="c1">#         ir_class_index: 1</span>
+<span class="c1">#         complexity: 1.0</span>
+<span class="c1">#         w0: 1.0</span>
+<span class="c1">#         w1: 1.0</span>
+<span class="c1">#     -</span>
+<span class="c1">#         classifier: &#39;libsvm_lin&#39;</span>
+<span class="c1">#         ir_class_index: 1</span>
+<span class="c1">#         complexity: 0.1</span>
+<span class="c1">#         w0: 1.0</span>
+<span class="c1">#         w1: 2.0</span>
+<span class="c1">#     -</span>
+<span class="c1">#         classifier: &#39;libsvm_lin&#39;</span>
+<span class="c1">#         ir_class_index: 1</span>
+<span class="c1">#         complexity: 1.0</span>
+<span class="c1">#         w0: 1.0</span>
+<span class="c1">#         w1: 2.0</span>
+
+<span class="c1"># Alternatively to specific parameter settings one could also specify ranges for </span>
+<span class="c1"># each parameter. This is indicated by the usage of &quot;parameter_ranges&quot; instead of</span>
+<span class="c1"># &quot;parameter_settings&quot;. *parameter_ranges* are automatically converted  into</span>
+<span class="c1"># *parameter_settings* by creating the crossproduct of all parameter ranges. The</span>
+<span class="c1"># parameter_ranges in the comment below</span>
+<span class="c1"># result in the same parameter_setting as the one given above.</span>
+<span class="c1">#</span>
+<span class="c1"># parameter_ranges :</span>
+<span class="c1">#     complexity : [0.1, 1.0]</span>
+<span class="c1">#     w0 : [1.0]</span>
+<span class="c1">#     w1 : [1.0, 2.0 ]</span>
+<span class="c1">#     ir_class_index: [1]</span>
+<span class="c1">#     classifier: [&#39;libsvm_lin&#39;]</span>
+<span class="l-Scalar-Plain">parameter_ranges</span> <span class="p-Indicator">:</span>
+    <span class="l-Scalar-Plain">complexity</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">0.1</span><span class="p-Indicator">,</span> <span class="nv">0.5</span><span class="p-Indicator">,</span> <span class="nv">1.0</span><span class="p-Indicator">,</span> <span class="nv">5.0</span><span class="p-Indicator">,</span> <span class="nv">10.0</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">w0</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">1.0</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">w1</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">1.0</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">ir_class_index</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">1</span><span class="p-Indicator">]</span>
+    <span class="l-Scalar-Plain">classifier</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&#39;libsvm_lin&#39;</span><span class="p-Indicator">]</span>
+</pre></div>
+</div>
+<p>By using this spec file for the operation the Libsvm, a classifier
+that not directly comes with WEKA, is applied.
+You can get it on <a class="reference external" href="http://www.csie.ntu.edu.tw/~cjlin/libsvm/">http://www.csie.ntu.edu.tw/~cjlin/libsvm/</a>.
+As parameter only the complexity of the linear Libsvm will be changed.
+The weights for the classes will be by default 1 for all classes
+so you can ignore this parameters.
+WEKA is calculating the performance metrics like precision and recall
+with respect to the first class, here <em>brickface</em>. Finally start</p>
+<div class="highlight-python"><pre>python launch.py --mcore --configuration your_configuration_file.yaml --operation examples/weka_classification_operation.yaml</pre>
+</div>
+<p>and consider to add the libsvm.jar path
+in <em>your_configuration_file.yaml</em> to the WEKA class paths.</p>
+<p>In the <em>operation_result</em> directory you&#8217;ll find,
+beside the new <em>metadata.yaml</em>, a <em>results.csv</em> file
+where all classification results are stored.
+You might want to visualize the results.
+Therefore another Operation is used: the Analysis Operation.</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">analysis</span>
+
+<span class="l-Scalar-Plain">input_path</span><span class="p-Indicator">:</span> <span class="s">&quot;tutorial_data&quot;</span>
+
+<span class="c1"># here interested parameters are specified; e.g. &quot;__Dataset__&quot;,</span>
+<span class="c1"># &quot;__NUM_RETAINED_FEATURES__&quot;, &quot;__SELF_DEFINED_PARAMETER__&quot;, &quot;Kernel_Type&quot;, </span>
+<span class="c1"># &quot;Complexity&quot;, &quot;Kernel_Exponent&quot;, &quot;Kernel_Gamma&quot;, &quot;Kernel_Offset&quot;, </span>
+<span class="c1"># &quot;Kernel_Weight&quot;, &quot;Key_Scheme_options&quot;, &quot;Key_Scheme&quot;</span>
+<span class="c1"># The parameter names have to be those from the results.csv file.</span>
+<span class="l-Scalar-Plain">parameters</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&quot;__Complexity__&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;__Template__&quot;</span><span class="p-Indicator">]</span>
+
+<span class="c1"># here the metrics which the evaluation is based on are specified, e.g. </span>
+<span class="c1"># &quot;False_positive_rate&quot;, &quot;False_negative_rate&quot;, &quot;Percent_correct&quot;, &quot;F_measure&quot;,</span>
+<span class="c1"># &quot;Area_under_ROC&quot;, &quot;IR_recall&quot;, &quot;IR_precision&quot;</span>
+<span class="l-Scalar-Plain">metrics</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="s">&quot;F_measure&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;False_positive_rate&quot;</span><span class="p-Indicator">,</span> <span class="s">&quot;False_negative_rate&quot;</span><span class="p-Indicator">]</span>
+</pre></div>
+</div>
+<p>In this example the <em>DATAFLOW</em> parameter refers to the feature selector that was used.</p>
+<p>You can now start another operation like the Weka Filter Operation
+or the Weka Classification Operation before,
+or you do all together in an operation chain.
+The spec file for this chain might look like:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">input_path</span> <span class="p-Indicator">:</span> <span class="s">&quot;tutorial_data&quot;</span>
+
+<span class="l-Scalar-Plain">operations</span><span class="p-Indicator">:</span>
+   <span class="p-Indicator">-</span>
+       <span class="l-Scalar-Plain">examples/weka_feature_selection.yaml</span>
+   <span class="p-Indicator">-</span>
+       <span class="l-Scalar-Plain">examples/weka_classification_operation.yaml</span>
+   <span class="p-Indicator">-</span>
+       <span class="l-Scalar-Plain">examples/weka_analysis.yaml</span>
+</pre></div>
+</div>
+<p>and you can start it with the command:</p>
+<div class="highlight-python"><pre>python launch.py --mcore --configuration your_configuration_file.yaml --operation_chain examples/weka.yaml</pre>
+</div>
+<p>Two of the graphics from the result directory you can see here:</p>
+<img alt="../_images/chi_squared_F_measure_Complexity.png" src="../_images/chi_squared_F_measure_Complexity.png" style="width: 500px;" />
+<img alt="../_images/relief_F_measure_Complexity.png" src="../_images/relief_F_measure_Complexity.png" style="width: 500px;" />
+<p>The first graphic refers to the chi-squared feature selector
+and the second to the relief feature selector.
+It is shown that with different feature sets
+the optimal complexity parameter of the SVM might change.
+In addition in this case the relief feature selector chooses attributes
+that result in a higher performance for the <em>brickface</em> class.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_interface_to_mmlf.html" title="Empirical Evaluations in Reinforcement Learning with pySPACE and MMLF"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="first_operation.html" title="Processing Benchmark Data - A First Usage Example"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

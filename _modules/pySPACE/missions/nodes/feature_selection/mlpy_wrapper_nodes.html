@@ -1,0 +1,359 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Use feature selection methods implemented in MLPY &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper">[docs]</a><span class="k">class</span> <span class="nc">MLPYFeatureSelectionWrapper</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Wrapper node that allows to use MLPY algorithms</span>
+<span class="sd">    </span>
+<span class="sd">    This module contains a node that wraps the feature selection</span>
+<span class="sd">    algorithms contained in the MLPY package (https://mlpy.fbk.eu/)</span>
+<span class="sd">    </span>
+<span class="sd">    MLPY provides several feature weighting methods that are wrappers around</span>
+<span class="sd">    classifier, e.g.:</span>
+<span class="sd">    </span>
+<span class="sd">      * Support Vector Machines (SVMs)</span>
+<span class="sd">      * Spectral Regression Discriminant Analysis (SRDA)</span>
+<span class="sd">      * Fisher Discriminant Analysis (FDA)</span>
+<span class="sd">      * Penalized Discriminant Analysis (PDA)</span>
+<span class="sd">      * Diagonal Linear Discriminant Analysis (DLDA)</span>
+<span class="sd">    </span>
+<span class="sd">    Furthermore, MLPY has also some filter-like feature weighting methods:</span>
+<span class="sd">      </span>
+<span class="sd">      * Iterative Relief (I-RELIEF)</span>
+<span class="sd">      * Discrete Wavelet Transform (DWT)</span>
+<span class="sd">    </span>
+<span class="sd">    Based on these feature weighting algorithms, the ranking method contained</span>
+<span class="sd">    in MLPY can be used to create a ranking of the utility of different features.</span>
+<span class="sd">    The following ranking algorithms can be used by MLPY:</span>
+<span class="sd">      </span>
+<span class="sd">      * Recursive Feature Elimination (rfe, onerfe, erfe, bisrfe, sqrtrfe)</span>
+<span class="sd">      * Recursive Forward Selection (rfs) </span>
+<span class="sd">    </span>
+<span class="sd">    The wrapper node expects as argument</span>
+<span class="sd">      </span>
+<span class="sd">      * how many of the features it should retain</span>
+<span class="sd">      * which feature weighting method it should use</span>
+<span class="sd">      * which feature ranking method it should use</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">      :num_retained_features: </span>
+<span class="sd">            The number of features that should be retained by the node. This</span>
+<span class="sd">            information must be specified if selected_features_path is not </span>
+<span class="sd">            specified.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">         </span>
+<span class="sd">      :ranking_method: </span>
+<span class="sd">          A string that specifies the feature elimination method used </span>
+<span class="sd">          internally by MLPY&#39;s feature ranking method. Can be &#39;rfe&#39;, &#39;onerfe&#39;,</span>
+<span class="sd">          &#39;erfe&#39;, &#39;bisrfe&#39;, &#39;sqrtrfe&#39;, or &#39;rfs&#39;</span>
+<span class="sd">          </span>
+<span class="sd">          (*optional, default: None*)</span>
+<span class="sd">          </span>
+<span class="sd">      :weighting_method: </span>
+<span class="sd">          An object instance that provides an weights(x,y) method that </span>
+<span class="sd">          takes as input:</span>
+<span class="sd">          </span>
+<span class="sd">             * x : training data (#sample x #feature) 2D numpy array float</span>
+<span class="sd">             * y : classes       (two classes, -1 and 1)</span>
+<span class="sd">             </span>
+<span class="sd">          and returns a float in [0,1]. This float is the weight of the </span>
+<span class="sd">          respective feature. A set of classes that can be used are contained in </span>
+<span class="sd">          MLPY, for instance mlpy.svm.</span>
+<span class="sd">          </span>
+<span class="sd">          (*optional, default: None*)</span>
+<span class="sd">                </span>
+<span class="sd">      :selected_features_path: </span>
+<span class="sd">            An absolute path from which the selected features are loaded. If </span>
+<span class="sd">            not specified, these features are learned from the training data.</span>
+<span class="sd">            In this case, num_retained_features must be specified.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : RandomFeatureSelection</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                  num_retained_features : 100</span>
+<span class="sd">                  ranking_method : &quot;bisrfe&quot;</span>
+<span class="sd">                  weighting_method: &quot;eval(__import__(&#39;mlpy&#39;).svm)&quot;</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/02/03</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_retained_features</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ranking_method</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">weighting_method</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">selected_features_path</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> 
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c"># Must be set before constructor of superclass is set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="p">(</span><span class="n">selected_features_path</span> <span class="o">==</span> <span class="bp">None</span><span class="p">)</span>      
+    
+        <span class="nb">super</span><span class="p">(</span><span class="n">MLPYFeatureSelectionWrapper</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="c"># Load patterns from file if requested</span>
+        <span class="k">if</span> <span class="n">selected_features_path</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">features_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">selected_features_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">features_file</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">num_retained_features</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">num_retained_features</span><span class="p">:</span>
+                    <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">retained_feature_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">num_retained_features</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">num_retained_features</span><span class="p">:</span>
+                    <span class="kn">import</span> <span class="nn">warnings</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Only </span><span class="si">%s</span><span class="s"> features available, cannot retain &quot;</span>
+                                  <span class="s">&quot;</span><span class="si">%s</span><span class="s"> features!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">retained_feature_indices</span><span class="p">),</span>
+                                                    <span class="n">num_retained_features</span><span class="p">))</span>
+            <span class="n">features_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+              <span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">retained_feature_indices</span><span class="p">,</span>
+              <span class="n">ranking_method</span> <span class="o">=</span> <span class="n">ranking_method</span><span class="p">,</span>
+              <span class="n">weighting_method</span> <span class="o">=</span> <span class="n">weighting_method</span><span class="p">,</span>
+              <span class="n">num_retained_features</span> <span class="o">=</span> <span class="n">num_retained_features</span><span class="p">,</span>  
+              <span class="n">training_data</span> <span class="o">=</span> <span class="p">[],</span>
+              <span class="n">training_labels</span> <span class="o">=</span> <span class="p">[],</span>
+              <span class="n">feature_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
+                </div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
+    </div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the given data point along with its class label </span>
+<span class="sd">        to the training set</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">FeatureVector</span><span class="p">))</span>
+        
+        <span class="c"># Gather feature vectors and labels in two lists</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">training_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
+               
+    </div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Called automatically at the end of training</span>
+<span class="sd">        </span>
+<span class="sd">        Computes a ranking of features and stores</span>
+<span class="sd">        a list of the indices of those feature that should be retained        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Lazy import of mlpy (not available on all platforms/machines ?</span>
+        <span class="kn">import</span> <span class="nn">mlpy</span>
+        
+        <span class="c"># Check that we have exactly two different classes</span>
+        <span class="n">occuring_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_labels</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">occuring_labels</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="c"># Randomly map the class labels to -1 and 1</span>
+        <span class="c"># MLPY cannot deal with other kind of labels</span>
+        <span class="n">label_enumeration</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">occuring_labels</span><span class="p">,</span> <span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]))</span>
+        
+        <span class="c"># Create two dimensional array containing the </span>
+        <span class="c"># respective feature vectors </span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="p">)</span>
+        <span class="c"># Create an one dimensional array containing the class labels</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">label_enumeration</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_labels</span><span class="p">])</span>
+        
+        <span class="c"># Instantiate feature weighter and ranker  </span>
+        <span class="n">feature_weighter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weighting_method</span><span class="p">()</span>
+        <span class="n">feature_ranking</span> <span class="o">=</span> <span class="n">mlpy</span><span class="o">.</span><span class="n">ranking</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ranking_method</span><span class="p">)</span>
+        
+        <span class="c"># Compute the ranks of features</span>
+        <span class="c"># For instance, rank = [2,3,1,0] would mean that the feature with</span>
+        <span class="c"># index 2 is the most distinctive while the feature with index 0 is</span>
+        <span class="c"># the worst.</span>
+        <span class="n">ranks</span> <span class="o">=</span> <span class="n">feature_ranking</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">labels</span><span class="p">,</span> <span class="n">feature_weighter</span><span class="p">)</span>
+        
+        <span class="c"># The indices of the features that sill be retained</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span> <span class="o">=</span> <span class="n">ranks</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">num_retained_features</span><span class="p">]</span> 
+        
+    </div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_vector</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">        Projects the feature vector *features* onto the subspace of features</span>
+<span class="sd">        that should be retained        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Project the features onto the selected subspace</span>
+        <span class="n">proj_features</span> <span class="o">=</span> <span class="n">feature_vector</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">]</span>
+        <span class="c"># Update the feature_names list</span>
+        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> 
+                                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">]</span>
+        <span class="c"># Create feature vector instance</span>
+        <span class="n">projected_feature_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">proj_features</span><span class="p">,</span>
+                                                 <span class="n">feature_names</span><span class="p">)</span> 
+    
+        <span class="k">return</span> <span class="n">projected_feature_vector</span>
+    </div>
+<div class="viewcode-block" id="MLPYFeatureSelectionWrapper.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.html#pySPACE.missions.nodes.feature_selection.mlpy_wrapper_nodes.MLPYFeatureSelectionWrapper.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+        <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            
+            <span class="c"># This node only stores the order of the selected features&#39; indices</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;selected_features&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;wb&quot;</span><span class="p">)</span>
+            <span class="c"># TODO: Use HDF format?</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_feature_indices</span><span class="p">,</span> 
+                                            <span class="n">protocol</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            
+            <span class="c"># Store feature names</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;feature_names_sp</span><span class="si">%s</span><span class="s">.txt&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>  <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;MLPY_FS_Wrapper&quot;</span><span class="p">:</span> <span class="n">MLPYFeatureSelectionWrapper</span><span class="p">}</span>
+
+<span class="c"># script to test and compare the performance speed of different feature selection methods</span>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">timeit</span>
+
+    <span class="n">s</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">    import numpy</span>
+<span class="s">    import random</span>
+<span class="s">    import mlpy</span>
+
+<span class="s">    num_features = </span><span class="si">%s</span><span class="s"></span>
+<span class="s">    num_observations = </span><span class="si">%s</span><span class="s"></span>
+
+<span class="s">    x = numpy.random.normal(size = (num_observations, num_features))</span>
+<span class="s">    y = numpy.array([random.choice([-1,1]) for i in range(num_observations)])     # class labels</span>
+
+<span class="s">    myrank = mlpy.Ranking(method=</span><span class="si">%s</span><span class="s">)     # initialize ranking class</span>
+
+<span class="s">    # Feature Ranking</span>
+<span class="s">    w = mlpy.</span><span class="si">%s</span><span class="s">()                   # initialize irelief class</span>
+
+<span class="s">    myrank.compute(x, y, w)     # compute feature ranking</span>
+<span class="s">    &quot;&quot;&quot;</span>
+    <span class="n">num_features</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">num_observations</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="n">elim_method</span> <span class="o">=</span> <span class="s">&quot;rfe&quot;</span>
+    <span class="n">weight_method</span> <span class="o">=</span> <span class="s">&quot;pda&quot;</span>
+    <span class="k">for</span> <span class="n">weight_method</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;Svm&quot;</span><span class="p">,</span> <span class="s">&quot;Srda&quot;</span><span class="p">,</span> <span class="s">&quot;Fda&quot;</span><span class="p">,</span> <span class="s">&quot;Pda&quot;</span><span class="p">,</span> <span class="s">&quot;Dwt&quot;</span><span class="p">,</span> <span class="s">&quot;Dlda&quot;</span><span class="p">,</span> <span class="s">&quot;Irelief&quot;</span><span class="p">]:</span>
+    <span class="c">#for elim_method in [&quot;onerfe&quot;, &quot;rfe&quot;, &quot;bisrfe&quot;, &quot;sqrtrfe&quot;, &quot;erfe&quot;, &quot;rfs&quot;]:</span>
+    <span class="c">#for num_features in [10, 30,50,70,100, 1000]:</span>
+    <span class="c">#for num_observations in [10, 30,50,70,100, 1000]:</span>
+        <span class="n">s_inst</span> <span class="o">=</span> <span class="n">s</span> <span class="o">%</span> <span class="p">(</span><span class="n">num_features</span><span class="p">,</span> <span class="n">num_observations</span><span class="p">,</span> <span class="n">elim_method</span><span class="p">,</span> <span class="n">weight_method</span><span class="p">)</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> -&gt; </span><span class="si">%s</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="p">((</span><span class="n">num_features</span><span class="p">,</span> <span class="n">num_observations</span><span class="p">,</span> <span class="n">elim_method</span><span class="p">,</span> <span class="n">weight_method</span><span class="p">),</span>
+            <span class="n">timeit</span><span class="o">.</span><span class="n">Timer</span><span class="p">(</span><span class="n">s_inst</span><span class="p">)</span><span class="o">.</span><span class="n">timeit</span><span class="p">(</span><span class="mi">25</span><span class="p">))</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,193 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.run_unittests &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.run_unittests</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Runs all unit tests that can be found in the subdirectory</span>
+
+
+<span class="sd">**Option**</span>
+<span class="sd">    :-ep: -- Enable parallelization</span>
+
+<span class="sd">.. todo:: Write automatic script to turn of parallelization. The one that is used now manually turns of each test cases.</span>
+
+<span class="sd">:Author: Hendrik Woehrle (hendrik.woehrle@dfki.de) (extended by Titiruck Nuntapramote)</span>
+<span class="sd">:Created: 2010/07/21</span>
+<span class="sd">:Last revision: 2010/05/10</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">glob</span>
+
+<span class="n">enable</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="viewcode-block" id="add_tests_to_suite"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.add_tests_to_suite">[docs]</a><span class="k">def</span> <span class="nf">add_tests_to_suite</span><span class="p">(</span><span class="n">suite</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Method to add tests to a given test suite.</span>
+
+<span class="sd">    This node plots certain information about the time series objects</span>
+<span class="sd">    in the electrode configuration space depending on the parameters that are</span>
+<span class="sd">    given to its constructor:</span>
+
+<span class="sd">    **Arguments**</span>
+<span class="sd">        :suite: -- The test suite, to which the tests are added.</span>
+<span class="sd">        :dir: -- The directory which contains the files</span>
+<span class="sd">        :files: -- List of files</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#logger = logging.getLogger(&#39;TestLogger&#39;)</span>
+    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+        <span class="c"># add python all files, if they start with test_</span>
+        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;test_.*\.py$&quot;</span><span class="p">,</span><span class="nb">file</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">dir</span><span class="o">+</span><span class="s">&#39;/&#39;</span><span class="o">+</span><span class="nb">file</span><span class="p">)</span> <span class="p">:</span>
+            <span class="c"># figure out module name</span>
+            <span class="n">moduleName</span> <span class="o">=</span> <span class="nb">dir</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;\.\/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">moduleName</span><span class="p">):</span>
+                <span class="n">moduleName</span> <span class="o">+=</span> <span class="s">&quot;.&quot;</span>
+            <span class="n">moduleName</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">enable</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">moduleName</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
+                <span class="k">print</span> <span class="n">moduleName</span>
+                <span class="n">tempSuite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="n">moduleName</span><span class="p">)</span>
+                <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span><span class="n">tempSuite</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">moduleName</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="c">#for enable/disable parallel</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_filtering&#39;</span> <span class="ow">and</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_normalization&#39;</span> <span class="ow">and</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_subsampling&#39;</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="n">moduleName</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
+                    <span class="n">tempSuite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="n">moduleName</span><span class="p">)</span>
+                    <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span><span class="n">tempSuite</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">print</span> <span class="n">moduleName</span> <span class="o">+</span> <span class="s">&quot;   --disable&quot;</span>
+</div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+       <span class="n">arg</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+       <span class="k">if</span> <span class="n">arg</span> <span class="o">==</span> <span class="s">&#39;-ep&#39;</span><span class="p">:</span>
+           <span class="n">enable</span> <span class="o">=</span> <span class="bp">True</span>
+       <span class="k">else</span><span class="p">:</span>
+           <span class="k">print</span> <span class="s">&quot;usage: run_tests.py [-ep](enable parallelization)&quot;</span>
+           <span class="nb">exit</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;usage: run_tests.py [-ep](enable parallelization)&quot;</span>
+        <span class="nb">exit</span><span class="p">()</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">pySPACE</span>
+    <span class="n">import_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">__file__</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">pardir</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">import_path</span> <span class="o">==</span> <span class="n">pyspace_path</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">warnings</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Check your python path! &quot;</span><span class="o">+</span>
+                      <span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39; is the expected pySPACE path,&quot;</span><span class="o">%</span><span class="n">pyspace_path</span><span class="o">+</span>
+                      <span class="s">&quot; but &#39;</span><span class="si">%s</span><span class="s">&#39; is used.&quot;</span><span class="o">%</span><span class="n">import_path</span><span class="p">)</span>
+
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;TestLogger&#39;</span><span class="p">)</span>
+
+    <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestSuite</span><span class="p">()</span>
+    <span class="c"># collect all tests in subdirectory tree</span>
+    <span class="n">tree_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+    <span class="c"># NOTE: For this command, tree path must end with the directory separator</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">tree_path</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s">&#39;unittests&#39;</span><span class="p">,</span> <span class="n">add_tests_to_suite</span><span class="p">,</span> <span class="n">suite</span><span class="p">)</span>
+
+    <span class="c"># finally, run the collected tests</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

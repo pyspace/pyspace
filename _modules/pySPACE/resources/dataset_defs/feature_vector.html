@@ -1,0 +1,668 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.resources.dataset_defs.feature_vector &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.resources.dataset_defs.feature_vector</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Load and store data sets containing :mod:`Feature Vectors&lt;pySPACE.resources.data_types.feature_vector&gt;`</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">pwd</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+
+<div class="viewcode-block" id="FeatureVectorDataset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset">[docs]</a><span class="k">class</span> <span class="nc">FeatureVectorDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Feature vector dataset class</span>
+<span class="sd">    </span>
+<span class="sd">    This class is most importantly</span>
+<span class="sd">    for loading and storing</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`</span>
+<span class="sd">    to the file system.</span>
+<span class="sd">    You can load it using a :mod:`~pySPACE.missions.nodes.source.feature_vector_source` node.</span>
+<span class="sd">    It can be saved, using a :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink` node</span>
+<span class="sd">    in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`</span>
+<span class="sd">    </span>
+<span class="sd">    The constructor expects the argument *dataset_md* that</span>
+<span class="sd">    contains a dictionary with all the meta data.</span>
+<span class="sd">    It is normally loaded from the metadata.yaml file.</span>
+<span class="sd">    </span>
+<span class="sd">    It is able to load csv-Files, arff-files and pickle files,</span>
+<span class="sd">    where one file is always responsible for one training or test set.</span>
+<span class="sd">    The name conventions are the same as for</span>
+<span class="sd">    :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDatasets`.</span>
+<span class="sd">    It is important that a metadata.yaml file exists, giving all</span>
+<span class="sd">    the relevant information of the data set,</span>
+<span class="sd">    especially the storage format, which can be</span>
+<span class="sd">    *pickle*, *arff*, *csv* or *csvUnnamed*.</span>
+<span class="sd">    The last format is only for loading data without heading,</span>
+<span class="sd">    and with the labels being not in the last column.</span>
+<span class="sd">    </span>
+<span class="sd">    **pickle-files**</span>
+<span class="sd">    </span>
+<span class="sd">    See :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDatasets`</span>
+<span class="sd">    name conventions in the tutorial.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **arff-files**</span>
+<span class="sd">    </span>
+<span class="sd">    http://weka.wikispaces.com/ARFF</span>
+<span class="sd">    </span>
+<span class="sd">    This format was introduced to connect pySPACE with weka.</span>
+<span class="sd">    So when using weka, you need to choose this file format as the parameter</span>
+<span class="sd">    storage format in the preprocessing operation&#39;s spec file.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **CSV (comma separated values)**</span>
+<span class="sd">    </span>
+<span class="sd">    These are tables in a simple text format.</span>
+<span class="sd">    Therefore each column is separated with a comma and each row with a new line.</span>
+<span class="sd">    Normally the first line gives the feature names and one row is giving</span>
+<span class="sd">    the class labels. Therefore several parameters need to be specified in</span>
+<span class="sd">    the metadata.yaml file.</span>
+<span class="sd">    </span>
+<span class="sd">    If no collection meta data is available for the input data, </span>
+<span class="sd">    the &#39;metadata.yaml&#39; file can be generated with</span>
+<span class="sd">    :mod:`~pySPACE.run.scripts.md_creator`.</span>
+<span class="sd">    Please consider also some important parameters, described in the </span>
+<span class="sd">    get_data function.</span>
+<span class="sd">    </span>
+<span class="sd">    Preferably the labels are in the last column. This corresponds to</span>
+<span class="sd">    *label_column* being -1 in the metadata.yaml file.</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :dataset_md: dictionary containing meta data for the collection</span>
+<span class="sd">                        to be loaded</span>
+
+<span class="sd">        The following  3 Parameters contain standard information</span>
+<span class="sd">        for a feature vector data set. </span>
+<span class="sd">        Normally they are not yet needed (used), because a dataset_md</span>
+<span class="sd">        is given and real data is loaded,</span>
+<span class="sd">        and so this information could be loaded from the data.</span>
+<span class="sd">        Nevertheless these are important entries, which should be found</span>
+<span class="sd">        in each dataset_md, giving information about the data set.</span>
+
+<span class="sd">        :classes_names: list of the used class labels</span>
+<span class="sd">        </span>
+<span class="sd">        :feature_names: list of the feature names</span>
+<span class="sd">        </span>
+<span class="sd">        :num_features: number of the given features</span>
+<span class="sd">    </span>
+<span class="sd">    .. todo:: Better integration and documentation of the data_pattern variable, </span>
+<span class="sd">              e.g. when reading arff files.</span>
+<span class="sd">    </span>
+<span class="sd">    **Special CSV Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :label_column:</span>
+<span class="sd">            Column containing the labels </span>
+<span class="sd">            </span>
+<span class="sd">            Normally this column looses its heading.</span>
+<span class="sd">            when saving the csv file, the default, -1, is used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*recommended, default: -1*)</span>
+<span class="sd">        </span>
+<span class="sd">        :ignored_columns:</span>
+<span class="sd">            List of numbers containing the numbers of irrelevant columns,</span>
+<span class="sd">            e.g., `[1,2,8,42]`</span>
+
+<span class="sd">            After the data is loaded, this parameter becomes obsolete.</span>
+<span class="sd">            </span>
+<span class="sd">            .. todo:: Enable and document eval syntax</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">        </span>
+<span class="sd">        :ignored_rows:</span>
+<span class="sd">            Replace row in description of &#39;ignored_columns&#39;</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: []*)</span>
+<span class="sd">        </span>
+<span class="sd">        :delimiter:</span>
+<span class="sd">            Symbol which separates the csv entries</span>
+<span class="sd">            </span>
+<span class="sd">            Typically `,` is used or the tabulator `\t`.</span>
+<span class="sd">            When storing, `,` is used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*recommended, default: &#39;,&#39;*)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="FeatureVectorDataset.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">classes_names</span><span class="o">=</span><span class="p">[],</span> <span class="n">feature_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">num_features</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read out the data from the given collection</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo:: test data pattern usage on old data</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: main loading concept copied from time series collection</span>
+<span class="sd">                  check needed if code can be sent to upper class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span><span class="o">=</span><span class="n">dataset_md</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;feature_names&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;feature_names&quot;</span><span class="p">:</span><span class="n">feature_names</span><span class="p">})</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;classes_names&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;classes_names&quot;</span><span class="p">:</span><span class="n">classes_names</span><span class="p">})</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;num_features&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;num_features&quot;</span><span class="p">:</span><span class="n">num_features</span><span class="p">})</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset_md</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="c">#data has to be loaded</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Loading feature vectors from input collection.&quot;</span><span class="p">)</span>
+            <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;dataset_directory&quot;</span><span class="p">]</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;storage_format&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c"># mainly code copy from time series data set defs</span>
+            <span class="k">if</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;data_pattern&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;train_test&quot;</span><span class="p">]</span> \
+                   <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;splits&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> \
+                   <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="p">:</span>
+                <span class="c"># The collection consists only of a single set of data, for</span>
+                <span class="c"># one run, one splitting, and only test data</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_run&quot;</span><span class="p">,</span> <span class="s">&quot;_run0&quot;</span><span class="p">)</span> \
+                                                     <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_sp&quot;</span><span class="p">,</span><span class="s">&quot;_sp0&quot;</span><span class="p">)</span> \
+                                                     <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_tt&quot;</span><span class="p">,</span><span class="s">&quot;_test&quot;</span><span class="p">)</span>
+                <span class="c"># File that contains the time series objects</span>
+                <span class="n">fv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+                
+                <span class="c"># Actual data will be loaded lazily</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">fv_file</span>
+            <span class="k">elif</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;data_pattern&quot;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">run_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">split_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;splits&quot;</span><span class="p">]):</span>
+                        <span class="k">for</span> <span class="n">train_test</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;train&quot;</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">]:</span>
+                            <span class="c"># The collection consists only of a single set of data, for</span>
+                            <span class="c"># one run, one splitting, and only test data</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_run&quot;</span><span class="p">,</span> <span class="s">&quot;_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">run_nr</span><span class="p">)</span> \
+                                                                 <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_sp&quot;</span><span class="p">,</span><span class="s">&quot;_sp</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">split_nr</span><span class="p">)</span> \
+                                                                 <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_tt&quot;</span><span class="p">,</span><span class="s">&quot;_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">train_test</span><span class="p">)</span>
+                            <span class="c"># File that contains the time series objects</span>
+                            <span class="n">fv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+                            <span class="c"># Actual data will be loaded lazily</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">fv_file</span>
+            <span class="k">elif</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;file_name&quot;</span><span class="p">):</span>
+                <span class="n">fv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">fv_file</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span>
+                <span class="c">##TODO: What should we do? - Raise Error, because data is not defined?</span>
+                <span class="c">#raise NotImplementedError()</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c">#dataset_md == None # called when storing or initialize empty collection</span>
+            <span class="c"># We create a new, empty collection</span>
+            <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="FeatureVectorDataset.add_sample"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.add_sample">[docs]</a>    <span class="k">def</span> <span class="nf">add_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add a sample to this collection</span>
+<span class="sd">        </span>
+<span class="sd">        Adds the sample *sample* along with its class label *label*</span>
+<span class="sd">        to this collection.</span>
+<span class="sd">        </span>
+<span class="sd">        **Parameters**</span>
+<span class="sd">        </span>
+<span class="sd">            :sample: The respective data sample</span>
+<span class="sd">            :label:  The label of the data sample</span>
+<span class="sd">            :train:  If *train*, this sample has already been used for training</span>
+<span class="sd">            :split:  The number of the split this sample belongs to. \</span>
+<span class="sd">                       </span>
+<span class="sd">                     (*optional, default: 0*)</span>
+<span class="sd">                       </span>
+<span class="sd">            :run:    The run number this sample belongs to</span>
+<span class="sd">          </span>
+<span class="sd">                     (*optional, default: 0*)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;num_features&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;num_features&quot;</span><span class="p">:</span> <span class="n">sample</span><span class="o">.</span><span class="n">size</span><span class="p">})</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">sample</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;num_features&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;num_features&quot;</span><span class="p">:</span> <span class="n">sample</span><span class="o">.</span><span class="n">size</span><span class="p">})</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Mismatching feature number: </span><span class="si">%i</span><span class="s"> given but </span><span class="si">%i</span><span class="s"> occured.&quot;</span>
+                          <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;num_features&quot;</span><span class="p">],</span> <span class="n">sample</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Remember all class labels since these will be stored in the arff file</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;classes_names&quot;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;classes_names&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;classes_names&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">label</span><span class="p">]})</span>
+        <span class="c"># Delegate to super class</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span>
+                                                     <span class="n">train</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FeatureVectorDataset.dump"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.dump">[docs]</a>    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_path</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Dumps this collection into a file.</span>
+<span class="sd">        </span>
+<span class="sd">        Dumps (i.e. pickle) this collection object into a bz2 compressed file.</span>
+<span class="sd">        In contrast to *store* this method stores the whole collection</span>
+<span class="sd">        in a file. No meta data are stored in a YAML file etc.</span>
+<span class="sd">        </span>
+<span class="sd">        The method expects the following parameters:</span>
+<span class="sd">         * *result_path* The path to the directory in which the pickle \</span>
+<span class="sd">                         file will be written.</span>
+<span class="sd">         * *name* The name of the pickle file</span>
+<span class="sd">         </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Remove the feature names from the feature vectors since this leads to</span>
+        <span class="c"># unnecessary large sizes on the disk</span>
+        <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
+        
+        <span class="c"># Delegate to super class</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FeatureVectorDataset.get_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">):</span> <span class="c"># feature_file, storage_format):</span>
+        <span class="sd">&quot;&quot;&quot; Loads the data from the feature file of the current input collection </span>
+<span class="sd">        depending on the storage_format.</span>
+<span class="sd">        Separates the actual vectors from the names and returns both as lists.</span>
+<span class="sd">        </span>
+<span class="sd">        The method expects the following</span>
+<span class="sd">        </span>
+<span class="sd">        **Parameters**</span>
+<span class="sd">        </span>
+<span class="sd">            :feature_file:      the file of feature vectors to be loaded</span>
+<span class="sd">            :storage_format:    One of the first components in</span>
+<span class="sd">                                [&#39;arff&#39;, &#39;real&#39;], [&#39;csv&#39;, &#39;real&#39;], </span>
+<span class="sd">                                [&#39;csvUnnamed&#39;, &#39;real&#39;] or .</span>
+<span class="sd">                                Format in which the feature_file was saved.</span>
+<span class="sd">                                Information need to be present in meta data.</span>
+<span class="sd">        </span>
+<span class="sd">        For arff and pickle files documentation see to the class description</span>
+<span class="sd">        (docstring). Pickle format files do not need any special </span>
+<span class="sd">        loading because they</span>
+<span class="sd">        already have the perfect format.</span>
+<span class="sd">        </span>
+<span class="sd">        **CSV**</span>
+<span class="sd">        </span>
+<span class="sd">        If no collection meta data is available for the input data, </span>
+<span class="sd">        the &#39;metadata.yaml&#39; file can be generated with</span>
+<span class="sd">        :mod:`pySPACE.run.node_chain_scripts.md_creator`.</span>
+<span class="sd">        </span>
+<span class="sd">        If you created the csv file with pySPACE, you automatically have the</span>
+<span class="sd">        standard *csv* format with the feature names in the first row</span>
+<span class="sd">        and the labels in the last column.</span>
+<span class="sd">        </span>
+<span class="sd">        If you have a csv tabular without headings,</span>
+<span class="sd">        you have the *csvUnnamed* format,</span>
+<span class="sd">        and in your &#39;label_column&#39; column, specified in your spec file,</span>
+<span class="sd">        the labels can be found.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: main loading concept copied from time series collection</span>
+<span class="sd">          check needed if code can be sent to upper class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">## init ##</span>
+        <span class="n">classes_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;classes_names&#39;</span><span class="p">]</span>
+        <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;storage_format&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c"># todo: automatical loading of csv?</span>
+        <span class="n">delimiter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;delimiter&quot;</span><span class="p">,</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Wrong delimiter (&#39;</span><span class="si">%s</span><span class="s">&#39;) given. Using default &#39;,&#39;.&quot;</span> <span class="o">%</span>
+                      <span class="n">delimiter</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+            <span class="n">delimiter</span> <span class="o">=</span> <span class="s">&#39;,&#39;</span>
+
+        <span class="c"># Do lazy loading of the fv objects.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="nb">basestring</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Lazy loading of </span><span class="si">%s</span><span class="s"> feature vectors from input &quot;</span>
+                      <span class="s">&quot;collection for run </span><span class="si">%s</span><span class="s">, split </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_test</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> 
+                                                            <span class="n">split_nr</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span><span class="p">:</span>
+                <span class="c"># Load the data from a pickled file</span>
+                <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;feature_names&quot;</span><span class="p">:</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span>
+                                       <span class="s">&quot;len_line&quot;</span><span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)})</span>
+            <span class="k">elif</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;arff&quot;</span><span class="p">:</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="c"># load file</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)])</span>
+                <span class="n">data_set</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="c"># Read the arff file completely ##</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s">&#39;@attribute class&#39;</span> <span class="ow">in</span> <span class="n">line</span> \
+                            <span class="ow">or</span> <span class="s">&#39;@relation&#39;</span> <span class="ow">in</span> <span class="n">line</span> \
+                            <span class="ow">or</span> <span class="s">&#39;@data&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                        <span class="k">pass</span>
+                    <span class="k">elif</span> <span class="s">&#39;@attribute&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                        <span class="n">name_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                        <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name_line</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span> 
+                        <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">))</span>
+                <span class="c"># the label is expected to be at the end </span>
+                <span class="c"># of each line in the data.</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                    <span class="n">vector</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">label</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n\r</span><span class="s"> &#39;</span><span class="p">)</span>  <span class="c"># --&gt; label is string</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classes_names</span><span class="p">:</span>
+                        <span class="n">classes_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                    <span class="n">sample</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">([</span><span class="n">vector</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">feature_names</span><span class="o">=</span><span class="n">names</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> 
+                                    <span class="n">train</span><span class="o">=</span><span class="n">train_test</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split_nr</span><span class="p">,</span> 
+                                    <span class="n">run</span><span class="o">=</span><span class="n">run_nr</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;feature_names&quot;</span><span class="p">:</span> <span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span>
+                       <span class="s">&quot;len_line&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">),</span>
+                       <span class="s">&quot;classes_names&quot;</span><span class="p">:</span> <span class="n">classes_names</span><span class="p">})</span>
+            <span class="k">elif</span> <span class="s">&quot;csv&quot;</span> <span class="ow">in</span> <span class="n">s_format</span><span class="p">:</span> <span class="c"># csv or csv unnamed</span>
+                <span class="c"># load file</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)])</span>
+                <span class="n">data_set</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="c"># getting rid of all unwanted rows</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;ignored_rows&#39;</span><span class="p">):</span>
+                    <span class="n">ignored_rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;ignored_rows&#39;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">ignored_rows</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Wrong format: Ignored rows included!&quot;</span><span class="p">)</span>
+                        <span class="n">ignored_rows</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">remove_list</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ignored_rows</span><span class="p">:</span>
+                        <span class="n">remove_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_set</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">remove_list</span><span class="p">:</span>
+                        <span class="n">data_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+                <span class="c"># get len_line and delete heading</span>
+                <span class="n">feature_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;feature_names&quot;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;csv&quot;</span><span class="p">:</span>
+                    <span class="n">names</span> <span class="o">=</span> <span class="n">data_set</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;,</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+                    <span class="n">data_set</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">len_line</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_set</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">))</span>
+
+                <span class="c"># get and prepare label column numbers (len_line needed)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">label_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;label_column&#39;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">label_column</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="c"># map column numbers to indices by subtracting -1</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">label_column</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+                    <span class="n">label_columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">label_column</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">label_column</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                    <span class="n">label_columns</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">l</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">label_column</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">label_columns</span><span class="p">)):</span>
+                    <span class="c"># map to positive value and undo previous offset</span>
+                    <span class="k">if</span> <span class="n">label_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">label_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">label_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="n">len_line</span><span class="o">+</span><span class="mi">1</span>
+                    <span class="k">if</span> <span class="n">label_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">label_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">+</span> <span class="n">len_line</span>
+                <span class="c"># very important sorting for index shifts</span>
+                <span class="n">label_columns</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                <span class="c"># calculate unwanted columns</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;ignored_columns&#39;</span><span class="p">):</span>
+                    <span class="n">ignored_columns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;ignored_columns&#39;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">ignored_columns</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Wrong format: Ignored columns included!&quot;</span><span class="p">)</span>
+                        <span class="n">ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">new_ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ignored_columns</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="n">len_line</span>
+                        <span class="k">for</span> <span class="n">label_column</span> <span class="ow">in</span> <span class="n">label_columns</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">label_column</span><span class="p">:</span>
+                                <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span>
+                        <span class="n">new_ignored_columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="c"># get all relevant feature_names</span>
+                <span class="k">if</span> <span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;csv&quot;</span><span class="p">:</span>
+                        <span class="c"># delete blanks and inverted commas </span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">names</span><span class="p">)):</span>
+                            <span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39; &quot;&#39;</span><span class="p">)</span>
+                            <span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot; &#39;&quot;</span><span class="p">)</span>
+                        <span class="n">feature_names</span> <span class="o">=</span> <span class="n">names</span>
+                    <span class="k">else</span><span class="p">:</span> <span class="c">#s_format==&quot;csv_unnamed&quot;</span>
+                        <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;feature_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span>
+                                         <span class="nb">range</span><span class="p">(</span><span class="n">len_line</span><span class="p">)]</span>
+                    <span class="c"># switch label names to the end</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span> <span class="c"># reduce index, after previous labels were deleted</span>
+                    <span class="k">for</span> <span class="n">label_column</span> <span class="ow">in</span> <span class="n">label_columns</span><span class="p">:</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature_names</span><span class="p">[</span><span class="n">label_column</span><span class="o">-</span><span class="n">i</span><span class="p">])</span>
+                            <span class="k">del</span> <span class="n">feature_names</span><span class="p">[</span><span class="n">label_column</span><span class="o">-</span><span class="n">i</span><span class="p">]</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                            <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="p">)</span>
+                    <span class="c"># create new feature names</span>
+                    <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
+                        <span class="n">feature_names</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span><span class="o">+</span><span class="mi">1</span> <span class="ow">in</span> <span class="n">new_ignored_columns</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">label_columns</span><span class="p">:</span>
+                        <span class="n">feature_names</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="c"># read the data line by line</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">delimiter</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Line without delimiter:</span><span class="se">\n</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+                        <span class="k">continue</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+                    <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n\r</span><span class="s">&#39;</span><span class="p">)</span>
+                    <span class="n">label</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">for</span> <span class="n">label_column</span> <span class="ow">in</span> <span class="n">label_columns</span><span class="p">:</span>
+                        <span class="n">label</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">label_column</span><span class="o">-</span><span class="n">i</span><span class="p">))</span>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39; &quot;&#39;</span><span class="p">)</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot; &#39;&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">classes_names</span><span class="p">:</span>
+                        <span class="n">classes_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                    <span class="c"># create new line without the ignored columns</span>
+                    <span class="n">vector</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span><span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span>
+                              <span class="n">index</span><span class="o">+</span><span class="mi">1</span> <span class="ow">in</span> <span class="n">new_ignored_columns</span><span class="p">]</span>
+                    <span class="n">sample</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">([</span><span class="n">vector</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">),</span> <span class="n">feature_names</span><span class="o">=</span><span class="n">feature_names</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">label</span> <span class="o">=</span> <span class="n">label</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> 
+                                    <span class="n">train</span><span class="o">=</span><span class="n">train_test</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split_nr</span><span class="p">,</span> 
+                                    <span class="n">run</span><span class="o">=</span><span class="n">run_nr</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;feature_names&quot;</span><span class="p">:</span> <span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span>
+                       <span class="s">&quot;num_features&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">),</span>
+                       <span class="s">&quot;classes_names&quot;</span><span class="p">:</span> <span class="n">classes_names</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="FeatureVectorDataset.store"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">s_format</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;pickle&quot;</span><span class="p">,</span> <span class="s">&quot;real&quot;</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot; Stores this collection in the directory *result_dir*.</span>
+<span class="sd">        </span>
+<span class="sd">        In contrast to *dump* this method stores the collection</span>
+<span class="sd">        not in a single file but as a whole directory structure with meta</span>
+<span class="sd">        information etc. The data sets are stored separately for each run, </span>
+<span class="sd">        split, train/test combination.</span>
+<span class="sd">        </span>
+<span class="sd">        The method expects the following parameters:</span>
+<span class="sd">          * *result_dir* The directory in which the collection will be stored</span>
+<span class="sd">          * *name* The prefix of the file names in which the individual \</span>
+<span class="sd">                   data sets are stored. The actual file names are determined \</span>
+<span class="sd">                   by appending suffixes that encode run, split, train/test \</span>
+<span class="sd">                   information. Defaults to &quot;features&quot;.</span>
+<span class="sd">          * *format* A list with information about the format in which the </span>
+<span class="sd">                    actual data sets should be stored. The first entry specifies</span>
+<span class="sd">                    the file format. If it is &quot;arff&quot; the second entry specifies the</span>
+<span class="sd">                    attribute format. </span>
+<span class="sd">                    </span>
+<span class="sd">                    Examples: [&quot;arff&quot;, &quot;real&quot;], [&quot;arff&quot;, &quot;{0,1}&quot;]</span>
+<span class="sd">                    </span>
+<span class="sd">                    .. todo:: Someone could implement the format [&quot;fasta&quot;] for sax features</span>
+<span class="sd">                    </span>
+<span class="sd">                    To store the data in comma separated values, use [&quot;csv&quot;, &quot;real&quot;].</span>
+<span class="sd">                    </span>
+<span class="sd">                    (*optional, default: [&quot;pickle&quot;, &quot;real&quot;]*)</span>
+
+<span class="sd">        .. todo:: Adapt storing of csv file to external library instead of</span>
+<span class="sd">                  doing it manually.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;features&quot;</span>
+        <span class="c"># Update the meta data</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">author</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;type&quot;</span><span class="p">:</span> <span class="s">&quot;feature_vector&quot;</span><span class="p">,</span>
+                               <span class="s">&quot;storage_format&quot;</span><span class="p">:</span> <span class="n">s_format</span><span class="p">,</span>
+                               <span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+                               <span class="s">&quot;data_pattern&quot;</span><span class="p">:</span> <span class="s">&quot;data_run&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> 
+                                                 <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&quot;_sp_tt.&quot;</span> <span class="o">+</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+        
+        <span class="c"># Iterate through splits and runs in this dataset</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">feature_vectors</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c"># Construct result directory</span>
+            <span class="n">result_path</span> <span class="o">=</span> <span class="n">result_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;data&quot;</span> \
+                            <span class="o">+</span> <span class="s">&quot;_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">result_path</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">result_path</span><span class="p">)</span>
+                
+            <span class="n">key_str</span> <span class="o">=</span> <span class="s">&quot;_sp</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="c"># Store data depending on the desired format</span>
+            <span class="k">if</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span><span class="p">:</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> 
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&quot;.pickle&quot;</span><span class="p">),</span>
+                                   <span class="s">&quot;w&quot;</span><span class="p">)</span>
+         
+                <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">feature_vectors</span><span class="p">,</span> <span class="n">result_file</span><span class="p">,</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;arff&quot;</span><span class="p">:</span> <span class="c"># Write as ARFF</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> 
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&quot;.arff&quot;</span><span class="p">),</span><span class="s">&quot;w&quot;</span><span class="p">)</span>
+                <span class="c"># Create the arff file header</span>
+                <span class="n">relation_name</span> <span class="o">=</span> <span class="n">result_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;@relation &quot;</span><span class="si">%s</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">relation_name</span><span class="p">)</span>
+                <span class="c"># Write the type of all features</span>
+                <span class="k">for</span> <span class="n">feature_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;feature_names&quot;</span><span class="p">]:</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;@attribute </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">feature_name</span><span class="p">,</span>  <span class="n">s_format</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="n">classString</span> <span class="o">=</span> <span class="s">&quot;&quot;</span> <span class="o">+</span> <span class="s">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;classes_names&quot;</span><span class="p">]))</span> <span class="o">+</span> <span class="s">&quot;&quot;</span>
+
+                <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;@attribute class {</span><span class="si">%s</span><span class="s">}</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">classString</span><span class="p">)</span>
+                
+                <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;@data</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+                <span class="c"># Write all given training data into the ARFF file</span>
+                <span class="n">fv</span> <span class="o">=</span> <span class="n">feature_vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">string_</span><span class="p">):</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">,&quot;</span>
+                <span class="k">elif</span> <span class="n">numpy</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%f</span><span class="s">,&quot;</span>
+                <span class="k">elif</span> <span class="n">numpy</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s">,&quot;</span>
+                <span class="k">for</span> <span class="n">features</span><span class="p">,</span> <span class="n">class_name</span> <span class="ow">in</span> <span class="n">feature_vectors</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">features</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">feature_format</span> <span class="o">%</span> <span class="n">feature</span><span class="p">)</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">class_name</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;csv&quot;</span><span class="p">:</span> <span class="c"># Write as Comma Separated Value</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> 
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&quot;.csv&quot;</span><span class="p">),</span><span class="s">&quot;w&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">feature_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;feature_names&quot;</span><span class="p">]:</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">,&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">feature_name</span><span class="p">))</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+                <span class="n">fv</span> <span class="o">=</span> <span class="n">feature_vectors</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">floating</span><span class="p">):</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%f</span><span class="s">,&quot;</span>
+                <span class="k">elif</span> <span class="n">numpy</span><span class="o">.</span><span class="n">issubdtype</span><span class="p">(</span><span class="n">fv</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">integer</span><span class="p">):</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s">,&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">feature_format</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">,&quot;</span>
+                <span class="k">for</span> <span class="n">features</span><span class="p">,</span> <span class="n">class_name</span> <span class="ow">in</span> <span class="n">feature_vectors</span><span class="p">:</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">features</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">f</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                        <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">feature_format</span> <span class="o">%</span> <span class="n">feature</span><span class="p">)</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">class_name</span><span class="p">))</span>
+            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+        <span class="c">#Store meta data</span>
+        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

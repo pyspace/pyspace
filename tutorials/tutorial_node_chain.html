@@ -1,0 +1,325 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Process EEG data (only) from within a Python session &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Process EEG data with the Live Environment" href="tutorial_node_chain_online.html" />
+    <link rel="prev" title="Process EEG data - Usage of node chains" href="tutorial_node_chain_operation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain_online.html" title="Process EEG data with the Live Environment"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain_operation.html" title="Process EEG data - Usage of node chains"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Process EEG data (only) from within a Python session</a><ul>
+<li><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li><a class="reference internal" href="#data-inspection">Data Inspection</a></li>
+<li><a class="reference internal" href="#the-first-node-chain">The First Node Chain</a></li>
+<li><a class="reference internal" href="#running-the-nodechain">Running the NodeChain</a></li>
+<li><a class="reference internal" href="#curious-on-what-you-have-done">Curious on what you have done?</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial_node_chain_operation.html"
+                        title="previous chapter">Process EEG data - Usage of node chains</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial_node_chain_online.html"
+                        title="next chapter">Process EEG data with the Live Environment</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/tutorial_node_chain.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="process-eeg-data-only-from-within-a-python-session">
+<span id="tutorial-node-chain"></span><h1>Process EEG data (only) from within a Python session<a class="headerlink" href="#process-eeg-data-only-from-within-a-python-session" title="Permalink to this headline">¶</a></h1>
+<p>In this tutorial we will learn how to use pySPACE from within a Python shell
+without explicitly using the whole functionality of pySPACE.
+Here, we get the &#8220;data pieces&#8221; from a pySPACE data generator with which we
+perform the specified node chain and get the results.
+Therefore, it has to be underlined that we still have to use a bit
+<a class="reference internal" href="../api/generated/pySPACE.resources.html#module-pySPACE.resources" title="pySPACE.resources"><tt class="xref py py-mod docutils literal"><span class="pre">resources</span></tt></a> to provide the node chain with the correct data.</p>
+<div class="section" id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Permalink to this headline">¶</a></h2>
+<p>Before we start, some prerequisites have to be fulfilled:</p>
+<blockquote>
+<div><ol class="arabic">
+<li><p class="first">Download and install pySPACE as it is described
+<a class="reference internal" href="tutorial_installation.html#t-install"><em>here</em></a>.</p>
+</li>
+<li><p class="first">The example data can be found in the storage of the pySPACEcenter under eeg_examples.
+There you will find the Folder &#8220;test_data/Set1&#8221;. The node_chain and the windower file
+needed in this tutorial are located in the specs folder of the pySPACEcenter. These
+are two .yaml files named <em>example_tutorial_eeg_only.yaml</em> and <em>windower/example_tutorial_eeg_only_window.yaml</em></p>
+</li>
+<li><p class="first">To make things easier, your PYTHONPATH variable should contain the path to
+pySPACE. E.g. consider your framework folder to be in
+&#8220;/home/user/software/&#8221;: You can
+either change your .bash_profile by adding:</p>
+<div class="highlight-python"><pre>export PYTHONPATH=/home/user/software/:$PYTHONPATH</pre>
+</div>
+<p>or by starting your Python session (or script) with:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;/home/user/software/&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</div></blockquote>
+</div>
+<div class="section" id="data-inspection">
+<h2>Data Inspection<a class="headerlink" href="#data-inspection" title="Permalink to this headline">¶</a></h2>
+<p>The first step in every investigation is of course to get some knowledge about
+the data you are investigating. The test data is in the <em>Set1</em> folder, stored in
+a binary .eeg file. It consists of 32-channels which all &#8220;measured&#8221; a sinusoid
+signal and you have two markers &#8220;R 32&#8221; and &#8220;R 64&#8221; in the data. Using an
+eeg-Fileviewer, the data looks like this:</p>
+<div class="figure align-center" style="width: 800px">
+<img alt="../_images/example_data_sinus.png" src="../_images/example_data_sinus.png" style="width: 800px;" />
+<p class="caption">Test data: shown is the progress over time (time between dashed lines equals
+1 second) including the channel names as they would occur in a real EEG
+experiment. Markers are illustrated at the bottom. They label important events.</p>
+</div>
+<p>Three other files exist in the data folder: The files ending with .vhdr and .vmrk
+directly belong to the .eeg file specifying additional information. In contrast to
+the actual data, they are not in a binary format, so you can open them with a
+text editor if you are curious.
+The vhdr-file contains general additional information and the vmrk file contains
+name and time point of the markers you see above.</p>
+<p>The last file, named <em>metadata.yaml</em> is mandatory for loading data.
+It contains some general information (to get an idea of what you can
+specify in the metadata.yaml see <a class="reference internal" href="../overview.html#datasets"><em>here</em></a>). The format of the file
+is <a class="reference external" href="http://www.yaml.org">YAML</a>, which was developed as a human readable
+(i.e. in text format) data format. The YAML format is widely used in the software.
+For the moment, you do not need to care about the <em>metadata.yaml</em>, but its
+presence already indicates how the data will be loaded: with the help of pySPACE.
+More details on YAML can be found <a class="reference internal" href="yaml.html#yaml"><em>here</em></a>.</p>
+<p>Now let us look at the node chain and how to start it:</p>
+</div>
+<div class="section" id="the-first-node-chain">
+<h2>The First Node Chain<a class="headerlink" href="#the-first-node-chain" title="Permalink to this headline">¶</a></h2>
+<p>As introduced above, the files are located after installation in the specs folder of
+your pySPACEcenter. Relevant are the two YAML files: <em>example_tutorial_eeg_only.yaml</em>
+contains the processing sequence for the data
+and <em>windower/example_tutorial_eeg_only_window.yaml</em> contains
+some information how the data should be cut relative to the markers and how this
+data should be labeled. This file is only necessary here, because we are dealing
+with raw EEG data, which -as a first step- has to be windowed. You can open and look at
+it, the definitions are more or less self explaining (you can find a bit more
+information on windowing in the general:ref:<cite>node chain tutorial&lt;tutorial_node_chain_operation&gt;</cite>).</p>
+<p>Now let us look at the processing sequence. If you open <em>example_tutorial_eeg_only.yaml</em> you
+will see the following:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="p-Indicator">-</span> 
+    <span class="l-Scalar-Plain">node</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Offline_EEG_Source</span>
+    <span class="l-Scalar-Plain">parameters</span> <span class="p-Indicator">:</span> 
+        <span class="l-Scalar-Plain">windower_spec_file</span> <span class="p-Indicator">:</span> <span class="s">&quot;/Users/sstraube/pySPACEcenter/specs/node_chains/windower/example_tutorial_eeg_only_window_spec.yaml&quot;</span>
+        <span class="l-Scalar-Plain">local_window_conf</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">True</span>
+<span class="p-Indicator">-</span>
+    <span class="l-Scalar-Plain">node</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Detrending</span>
+    <span class="l-Scalar-Plain">parameters</span><span class="p-Indicator">:</span>
+        <span class="l-Scalar-Plain">subset</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">eval(range(100,201))</span>
+<span class="p-Indicator">-</span> 
+    <span class="l-Scalar-Plain">node</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Decimation</span>
+    <span class="l-Scalar-Plain">parameters</span> <span class="p-Indicator">:</span> 
+        <span class="l-Scalar-Plain">target_frequency</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">100.0</span>
+        <span class="l-Scalar-Plain">comp_type</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">normal</span>
+<span class="p-Indicator">-</span>
+    <span class="l-Scalar-Plain">node</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">FFT_Band_Pass_Filter</span>
+    <span class="l-Scalar-Plain">parameters</span> <span class="p-Indicator">:</span> 
+        <span class="l-Scalar-Plain">pass_band</span> <span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">0.0</span><span class="p-Indicator">,</span> <span class="nv">10.0</span><span class="p-Indicator">]</span>
+<span class="p-Indicator">-</span>   
+    <span class="l-Scalar-Plain">node</span> <span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Time_Series_Sink</span>
+</pre></div>
+</div>
+<p>This is the node chain that defines how the data is treated. In every node, the data is
+processed and passed to the next node, until finished (for more information on available nodes
+see <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.html#module-pySPACE.missions.nodes" title="pySPACE.missions.nodes"><tt class="xref py py-mod docutils literal"><span class="pre">node</span> <span class="pre">documentation</span></tt></a>).
+Here, e.g., the data is  detrended, its
+sampling frequency decimated and finally bandpass-filtered between 0 Hz and 10 Hz.
+The <em>Source</em> and <em>Sink</em> nodes deal with loading and saving of the data.
+By convention, when using launch in the run environment, every node chain should <strong>start with a source
+node</strong> and <strong>end with a sink node</strong>.</p>
+<p>The path given here is just an example. Therefore,
+before executing, you should adjust the path of the windowing spec file according to your own.</p>
+</div>
+<div class="section" id="running-the-nodechain">
+<h2>Running the NodeChain<a class="headerlink" href="#running-the-nodechain" title="Permalink to this headline">¶</a></h2>
+<p>Now let us import the software and run the node chain!
+You can do the following either in a Python session
+or by writing and executing a script.</p>
+<p>As a first step, we import everything that is necessary:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChainFactory</span>
+<span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">BenchmarkNodeChain</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+</pre></div>
+</div>
+<p>The YAML file is converted to an executable NodeChain with the NodeChainFactory.
+The BenchmarkNodeChain
+was written to execute <strong>offline data</strong>
+and the <a class="reference internal" href="../api/generated/pySPACE.resources.html#module-pySPACE.resources" title="pySPACE.resources"><tt class="xref py py-mod docutils literal"><span class="pre">resources</span></tt></a> package is used to collect
+the necessary information concerning the underlying data,
+i.e. the so called <em>dataset</em>.</p>
+<p>Second, we define necessary directories and location of the NodeChain
+(please adjust the paths accordingly):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">node_chain</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/specs/node_chains/example_tutorial_eeg_only.yaml&#39;</span>
+<span class="n">data_dir</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/storage/eeg_examples/test_data/Set1/&#39;</span>
+<span class="n">store_dir</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/storage/myresults/&#39;</span>
+</pre></div>
+</div>
+<p>The <em>store_dir</em> specifies where the data should be stored to disk. As a next step,
+we have to read the text from the YAML file:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">pyspacespecfile</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">node_chain</span><span class="p">)</span>
+<span class="n">pyspacespec</span><span class="o">=</span><span class="n">pyspacespecfile</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="n">pyspacespecfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Now a valid node chain is created with the given specifications.
+The necessary functions
+for execution are defined by the class in the module
+<tt class="xref py py-mod docutils literal"><span class="pre">node_chains</span></tt> (in this case <em>BenchmarkNodeChain</em>).
+Here, you might get a warning which you can ignore.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">my_flow</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">Flow_Class</span><span class="o">=</span><span class="n">BenchmarkNodeChain</span><span class="p">,</span> <span class="n">flow_spec</span><span class="o">=</span><span class="n">pyspacespec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>As introduced above, the data is loaded with the help of <a class="reference internal" href="../api/generated/pySPACE.resources.html#module-pySPACE.resources" title="pySPACE.resources"><tt class="xref py py-mod docutils literal"><span class="pre">resources</span></tt></a>
+and the corresponding <em>metadata.yaml</em> file. This is done in the next step:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">input_dataset</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">data_dir</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now the data is processed and the result is stored in the variable <em>result</em>,
+which has a data type that is defined in pySPACE and comes with its own store method.
+By calling this method, the data is stored to disk in the appropriate data format:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">result</span> <span class="o">=</span> <span class="n">my_flow</span><span class="o">.</span><span class="n">benchmark</span><span class="p">(</span><span class="n">input_collection</span> <span class="o">=</span> <span class="n">input_dataset</span><span class="p">,</span> <span class="n">persistency_directory</span> <span class="o">=</span> <span class="n">store_dir</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">result</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>In principle, you can use more than one set (=run) for your evaluation, but again you have to
+specify how to deal with these, e.g., how to deal with the numbering. As you already may
+have guessed, this is been shaded for the user when using the software. Thus, you should
+not worry about the argument <em>run=1</em> for now.</p>
+</div>
+<div class="section" id="curious-on-what-you-have-done">
+<h2>Curious on what you have done?<a class="headerlink" href="#curious-on-what-you-have-done" title="Permalink to this headline">¶</a></h2>
+<p>Since you&#8217;ve seen already in the spec file how the data is processed, the answer might be a
+little bit disappointing: besides that it is windowed, the data is nearly the same.
+Nevertheless you can play around a bit with the stored data to get an idea of how
+it is generally stored as long as it is a <em>TimeSeries</em>.
+To do this, you can start with the following code in your <em>store_dir</em> and go on as you like...</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">pylab</span> <span class="kn">as</span> <span class="nn">pl</span>
+
+<span class="n">data</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;time_series_sp0_test.pickle&#39;</span><span class="p">)</span>
+<span class="n">first_elem</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="k">print</span> <span class="n">first_elem</span><span class="o">.</span><span class="n">tag</span>
+<span class="k">print</span> <span class="n">first_elem</span><span class="o">.</span><span class="n">channel_names</span>
+
+<span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">first_elem</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span> <span class="c">#plot data of first electrode</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain_online.html" title="Process EEG data with the Live Environment"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_node_chain_operation.html" title="Process EEG data - Usage of node chains"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,900 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.visualization.time_series_vis &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.visualization.time_series_vis</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Visualize data in time-amplitude or time-frequency representations</span>
+
+<span class="sd">This module contains nodes that can be used to visualize</span>
+<span class="sd">the data as time series. All these nodes use the functionality</span>
+<span class="sd">of the VisualizationBaseNode.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pylab</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c">#import itertools</span>
+<span class="c">#from collections import defaultdict</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">mlab</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="c">#import logging</span>
+<span class="c">#from pySPACE.tools.memoize_generator import MemoizeGenerator</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.visualization.base</span> <span class="kn">import</span> <span class="n">VisualizationBase</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.stream</span> <span class="kn">import</span> <span class="n">StreamDataset</span>
+
+
+<span class="c">#delete me after conversion to vis supernode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+
+<div class="viewcode-block" id="TimeSeriesPlotNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode">[docs]</a><span class="k">class</span> <span class="nc">TimeSeriesPlotNode</span><span class="p">(</span><span class="n">VisualizationBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A node that allows to monitor the processing of time series</span>
+<span class="sd">    </span>
+<span class="sd">    This node plots the time series data either in one column for all channels</span>
+<span class="sd">    or for a single selected channel. The node inherits the</span>
+<span class="sd">    functionality of the VisualisationBase.</span>
+<span class="sd">    </span>
+<span class="sd">    See documentation of :mod:`VisualisationBase &lt;pySPACE.missions.nodes.visualization.base&gt;` </span>
+<span class="sd">    to view basic functionality.</span>
+<span class="sd">    If not specified differently using the parameters below, the data is plotted</span>
+<span class="sd">    in one matrix for each class (using pylab.matshow).</span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">      :channel_names:</span>
+<span class="sd">        If one channel_name is given, only information about</span>
+<span class="sd">        this channel is plotted. If more channels are specified,</span>
+<span class="sd">        they are plotted separately in one subplot </span>
+<span class="sd">        (forces separate_channels to True).</span>
+<span class="sd">        </span>
+<span class="sd">        (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">      :separate_channels:</span>
+<span class="sd">        Each channel gets a separate subplot (amplitude vs time),</span>
+<span class="sd">        either arranged in rows and columns or arranged according to</span>
+<span class="sd">        position on the head (see parameter physiological_arrangement in base class).</span>
+<span class="sd">        (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">      :class_difference:</span>
+<span class="sd">        If this is True, the created plot shows the difference between the two classes.</span>
+<span class="sd">        This option only works if 2 classes are present at the same time!</span>
+<span class="sd">        (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">    .. image:: ../../graphics/time_series_plot.png</span>
+<span class="sd">        :width: 1024   </span>
+<span class="sd">        </span>
+<span class="sd">    **Exemplary Call**</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - </span>
+<span class="sd">            node : Time_Series_Source</span>
+<span class="sd">        -</span>
+<span class="sd">             node : Time_Series_Plot</span>
+<span class="sd">             parameters :</span>
+<span class="sd">                  averaging : True</span>
+<span class="sd">                  online : True</span>
+<span class="sd">                  separate_channels: True</span>
+<span class="sd">        - </span>
+<span class="sd">             node: Nil_Sink</span>
+<span class="sd">                    </span>
+<span class="sd">    :Author: Sirko Straube (sirko.straube@dfki.de)</span>
+<span class="sd">    :Date of Last Revision: 2012/12/21                            </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="TimeSeriesPlotNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">separate_channels</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">class_difference</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>       
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimeSeriesPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c">#if the user specified more than one channel</span>
+        <span class="k">if</span> <span class="n">channel_names</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">separate_channels</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">channel_names</span><span class="o">=</span><span class="n">channel_names</span><span class="p">,</span>
+                                      <span class="n">separate_channels</span> <span class="o">=</span> <span class="n">separate_channels</span><span class="p">,</span>
+                                      <span class="n">min_value</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                                      <span class="n">max_value</span> <span class="o">=</span> <span class="o">-</span><span class="n">pylab</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                                      <span class="n">class_difference</span><span class="o">=</span><span class="n">class_difference</span><span class="p">)</span>       
+                    </div>
+<div class="viewcode-block" id="TimeSeriesPlotNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reset the state of the object to the clean state it had after its</span>
+<span class="sd">        initialization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TimeSeriesPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="TimeSeriesPlotNode._plotValues"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode._plotValues">[docs]</a>    <span class="k">def</span> <span class="nf">_plotValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">values</span><span class="p">,</span>            <span class="c">#dict  TimeSeries values</span>
+                    <span class="n">plot_label</span><span class="p">,</span>        <span class="c">#str   Plot-Label</span>
+                    <span class="n">fig_num</span><span class="p">,</span>           <span class="c">#int   Figure-number for classify plots</span>
+                                       <span class="c">#      1: average,</span>
+                                       <span class="c">#      2: single trial,</span>
+                                       <span class="c">#      3: average accumulating</span>
+                    <span class="n">store_dir</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>  <span class="c">#str   Directory to store the plots</span>
+                    <span class="n">counter</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>        <span class="c">#int   Plotcounter for all trials</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_difference</span><span class="p">:</span>
+            <span class="c">#we have to compute the difference</span>
+            <span class="n">list_of_classes</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="n">num_of_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">num_of_classes</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span> 
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;TimeSeriesPlot:: Difference plots only possible for two classes  Plotting ignored!&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="n">data1</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">list_of_classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="n">data2</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">list_of_classes</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+
+            <span class="c">#construct new TimeSeries with differences</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">data1</span> <span class="o">-</span> <span class="n">data2</span><span class="p">,</span> 
+                              <span class="n">channel_names</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="n">list_of_classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">,</span> 
+                              <span class="n">sampling_frequency</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="n">list_of_classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span>
+            <span class="c">#overwrite old incoming values</span>
+            <span class="n">values</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">difference</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">list_of_classes</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">num_of_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">)</span>
+             
+        <span class="c">#computing time points to show</span>
+        <span class="n">num_tpoints</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">all_tpoints</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span>
+                                   <span class="n">num_tpoints</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1000</span><span class="o">/</span><span class="n">sampling_frequency</span><span class="p">),</span>
+                                   <span class="mi">1000</span> <span class="o">/</span> <span class="n">sampling_frequency</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">timeshift</span>    
+
+        <span class="n">pylab</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span>  <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>  <span class="c"># the left side of the subplots of the figure</span>
+                      <span class="n">right</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>    <span class="c"># the right side of the subplots of the figure</span>
+                      <span class="n">bottom</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c"># the bottom of the subplots of the figure</span>
+                      <span class="n">top</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>      <span class="c"># the top of the subplots of the figure</span>
+                      <span class="n">wspace</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>   <span class="c"># the amount of width reserved for blank space between subplots</span>
+                      <span class="n">hspace</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>   <span class="c"># the amount of height reserved for white space between subplots                          </span>
+                      <span class="p">)</span>
+
+        <span class="n">f</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig_num</span><span class="p">,</span> <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">13</span><span class="p">))</span>
+        <span class="c">#assure that figure is displayed with an interactive backend</span>
+        <span class="k">if</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_backend</span><span class="p">()</span> <span class="ow">in</span> <span class="n">pylab</span><span class="o">.</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">interactive_bk</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+        <span class="c">#plot all channels separately in one figure</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">separate_channels</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plot_all_channels_separated</span><span class="p">(</span><span class="n">all_tpoints</span><span class="p">,</span> <span class="n">values</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">):</span>
+           
+                <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+                
+                <span class="n">axis</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_of_classes</span><span class="p">,</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+                
+                <span class="c">#plot just 1 channel</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">assert</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">),</span>\
+                            <span class="s">&quot;TimeSeriesPlot::Channel requested for plotting is not available in data&quot;</span>
+                    <span class="n">channel_index</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>                     
+                    <span class="c"># Update minimal and maximal value</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> 
+                                         <span class="nb">min</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">,</span> 
+                                         <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+                    
+                    <span class="n">title</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> <span class="n">class_label</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">all_tpoints</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">])</span>
+    
+                <span class="c">#plot all channels as matrix    </span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_plot_all_channels</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">all_tpoints</span><span class="p">,</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+                    <span class="n">title</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+                
+                <span class="n">title</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="mi">24</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+                          
+        
+        <span class="c"># Draw or store the figure</span>
+        <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">current_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+            <span class="k">if</span> <span class="n">current_split</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span>\
+            <span class="n">plot_label</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)):</span> <span class="c">#more than one split and first call</span>
+                <span class="n">plot_label</span> <span class="o">=</span> <span class="n">plot_label</span> <span class="o">+</span> <span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)</span>
+                
+            <span class="n">f_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plot_label</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s">&quot;.png&quot;</span><span class="p">)</span>         
+              </div>
+<div class="viewcode-block" id="TimeSeriesPlotNode._plot_all_channels"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode._plot_all_channels">[docs]</a>    <span class="k">def</span> <span class="nf">_plot_all_channels</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">tpoints</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">):</span>
+            
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_difference</span><span class="p">:</span>
+            <span class="c"># Normalize the data to be plotted so that all values are </span>
+            <span class="c"># between 0 and 1. This is useful since the same color </span>
+            <span class="c"># in the two plots corresponds to the same value </span>
+            <span class="n">min_value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+            <span class="n">max_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">ravel</span><span class="p">())</span>
+        
+            <span class="n">plot_values</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span> <span class="o">-</span> <span class="n">min_value</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">max_value</span> <span class="o">-</span> <span class="n">min_value</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">plot_values</span><span class="o">=</span><span class="n">data</span>
+            
+        <span class="n">im</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">matshow</span><span class="p">(</span><span class="n">plot_values</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">fignum</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">aspect</span> <span class="o">=</span> <span class="mf">4.0</span><span class="p">)</span>
+
+        <span class="n">ax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+        <span class="c">#ax.set_xticks(pylab.linspace(0.0, plot_values.shape[0], 20))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="s">&quot;</span><span class="si">%.2f</span><span class="s">&quot;</span> <span class="o">%</span><span class="n">s</span><span class="p">,</span><span class="n">tpoints</span><span class="p">))</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_xticklabels</span><span class="p">()</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">setp</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=-</span><span class="mi">45</span><span class="p">)</span>
+        
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">plot_values</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;time (ms)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;channels&quot;</span><span class="p">)</span>
+        <span class="c">#pylab.colorbar(im)      </span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>   
+    </div>
+<div class="viewcode-block" id="TimeSeriesPlotNode._plot_all_channels_separated"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.TimeSeriesPlotNode._plot_all_channels_separated">[docs]</a>    <span class="k">def</span> <span class="nf">_plot_all_channels_separated</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tpoints</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>          
+        <span class="sd">&quot;&quot;&quot; This function generates time series plot separated for each channel</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="c">#def _generate_time_series_plot(self, label, data):</span>
+        <span class="n">f</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">gcf</span><span class="p">()</span>
+        
+        <span class="c"># in case of [phys_arrangement], write the figure title only once</span>
+        <span class="c"># and large in the upper left corner of the plot. this fails whenever</span>
+        <span class="c"># there are no more channels in that area, as the plot gets cropped</span>
+<span class="c">#        if self.physiological_arrangement:</span>
+<span class="c">#            h, l = pylab.gca().get_legend_handles_labels()</span>
+<span class="c">#            prop = pylab.matplotlib.font_manager.FontProperties(size=&#39;xx-large&#39;)</span>
+<span class="c">#            f.legend(h, l, prop=prop, loc=1)</span>
+<span class="c">#            text_x = .4</span>
+<span class="c">#            text_y = .4</span>
+<span class="c">#    </span>
+<span class="c">#            #if self.shrink_plots: text_y = 1.2</span>
+<span class="c">#            f.text(text_x, text_y, &#39;Channel-wise time series\n&#39; +</span>
+<span class="c">#                       samples_per_condition_string,</span>
+<span class="c">#                       ha=&#39;center&#39;, color=&#39;black&#39;, size=32)</span>
+     
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+           
+            <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span>
+
+            <span class="n">line_color</span> <span class="o">=</span> <span class="s">&#39;bgrcmyk&#39;</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+            
+            <span class="n">number_of_channels</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span>
+            
+            <span class="c"># Compute number of rows and cols for subplot-arrangement:</span>
+            <span class="c"># use 8 as upper limit for cols and compute rows accordingly</span>
+            <span class="k">if</span> <span class="n">number_of_channels</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">:</span> 
+                <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="n">number_of_channels</span>
+            <span class="k">else</span><span class="p">:</span> 
+                <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="mi">8</span>
+            <span class="n">nr_of_rows</span> <span class="o">=</span> <span class="p">(</span><span class="n">number_of_channels</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span>
+            
+            <span class="c"># Set canvas size in inches. These values turned out fine, depending</span>
+            <span class="c"># on [physiological_arrangement]</span>
+            <span class="c">#if not self.physiological_arrangement:</span>
+            <span class="c">#    f.set_size_inches((5 * nr_of_cols,  3 * nr_of_rows))</span>
+            <span class="c">#else:</span>
+                <span class="c">#if not self.shrink_plots:</span>
+                <span class="c">#    figure.set_size_inches((3*11.7,  3*8.3))</span>
+            <span class="c">#    f.set_size_inches((4*11.7,  4*8.3))</span>
+            
+            
+            <span class="n">ec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMetadata</span><span class="p">(</span><span class="s">&quot;electrode_coordinates&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ec</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">ec</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">ec</span>
+            
+            <span class="n">ec_2d</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">project2d</span><span class="p">(</span><span class="n">ec</span><span class="p">)</span>
+
+            <span class="c"># plot everything channel-wise</span>
+            <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">number_of_channels</span><span class="p">):</span>
+                <span class="n">channel_name</span>  <span class="o">=</span> <span class="n">channel_names</span><span class="p">[</span><span class="n">channel_index</span><span class="p">]</span>
+                <span class="n">skip_plot</span><span class="o">=</span><span class="bp">False</span>
+                
+                <span class="c">#skip_plot?</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">and</span> <span class="p">(</span><span class="n">channel_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+                    <span class="n">skip_plot</span><span class="o">=</span><span class="bp">True</span>
+                        
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_plot</span><span class="p">:</span>                   
+                    <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">nr_of_rows</span><span class="p">,</span> <span class="n">nr_of_cols</span><span class="p">,</span> <span class="n">channel_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                
+                    <span class="c"># actual plotting of the data. This can always be done</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">tpoints</span><span class="p">,</span> <span class="n">data</span><span class="p">[:,</span> <span class="n">channel_index</span><span class="p">],</span>
+                               <span class="n">color</span><span class="o">=</span><span class="n">line_color</span><span class="p">)</span>
+                    <span class="n">channel_name</span>  <span class="o">=</span> <span class="n">channel_names</span><span class="p">[</span><span class="n">channel_index</span><span class="p">]</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+    
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+                        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">ec_2d</span><span class="p">[</span><span class="n">channel_name</span><span class="p">]</span>
+                        <span class="n">w</span> <span class="o">=</span> <span class="o">.</span><span class="mo">05</span>
+                        <span class="n">h</span> <span class="o">=</span> <span class="o">.</span><span class="mo">045</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_position</span><span class="p">([(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">])</span>
+                        
+            <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>        
+        
+        </div></div>
+<div class="viewcode-block" id="SpectrumPlotNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.SpectrumPlotNode">[docs]</a><span class="k">class</span> <span class="nc">SpectrumPlotNode</span><span class="p">(</span><span class="n">VisualizationBase</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Construct spectrogram of the data using FFT</span>
+<span class="sd">    </span>
+<span class="sd">    This node uses the data for a power-spectral density (psd) computation</span>
+<span class="sd">    plotted as time-frequency representation. The core function here is specgram </span>
+<span class="sd">    from matplotlib.mlab. The node inherits the</span>
+<span class="sd">    functionality of the VisualisationBase.</span>
+<span class="sd">    </span>
+<span class="sd">    See documentation of :mod:`VisualisationBase &lt;pySPACE.missions.nodes.visualization.base&gt;` </span>
+<span class="sd">    to view basic functionality.</span>
+<span class="sd">    </span>
+<span class="sd">    If not specified differently using the parameters below, all channels</span>
+<span class="sd">    are plotted in physiological arrangement separately for each class.</span>
+<span class="sd">    </span>
+<span class="sd">    .. note::</span>
+<span class="sd">        If you average data, then the spectrogram is always computed on</span>
+<span class="sd">        the average. Currently, the averaging of the power values is not</span>
+<span class="sd">        implemented. </span>
+<span class="sd">        </span>
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">      :channel_names:</span>
+<span class="sd">        All classes are plotted directly in one figure, </span>
+<span class="sd">        if only one channel_name is specified (e.g., &#39;Pz&#39;).</span>
+<span class="sd">        If more channels are specified, you get a plot of all channels</span>
+<span class="sd">        for one class, i.e. for two classes two plots are returned.</span>
+<span class="sd">        The default is that all channels are displayed which the user can</span>
+<span class="sd">        explicitly specify using the keyword &#39;all&#39;.</span>
+<span class="sd">        </span>
+<span class="sd">        (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">      :colorbar:</span>
+<span class="sd">        Determine if the colorbar should be displayed.</span>
+<span class="sd">        Currently, the colorbar is switched off when parameter </span>
+<span class="sd">        physiological_arrangement is True.</span>
+<span class="sd">        </span>
+<span class="sd">        (*optional, default: False*)</span>
+<span class="sd">        </span>
+<span class="sd">      :NFFT:</span>
+<span class="sd">        The number of data points used in each block </span>
+<span class="sd">        for the FFT. Must be even; a power 2 is most efficient.</span>
+<span class="sd">        </span>
+<span class="sd">        (*optional, default: 128*)</span>
+<span class="sd">      </span>
+<span class="sd">      :noverlap:</span>
+<span class="sd">        The number of points of overlap between blocks of the FFT.</span>
+<span class="sd">        </span>
+<span class="sd">        (*optional, default: 0*)</span>
+<span class="sd">        </span>
+<span class="sd">    **Exemplary Calls**</span>
+<span class="sd">    A simple exemplary flow could be:</span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - </span>
+<span class="sd">            node : Time_Series_Source</span>
+<span class="sd">        -</span>
+<span class="sd">            node : Spectrum_Plot</span>
+<span class="sd">             parameters :</span>
+<span class="sd">                  averaging : True</span>
+<span class="sd">                  online : True</span>
+<span class="sd">        - </span>
+<span class="sd">             node: Nil_Sink</span>
+<span class="sd">                    </span>
+<span class="sd">    :Author: Sirko Straube (sirko.straube@dfki.de)</span>
+<span class="sd">    :Date of Last Revision: 2013/01/18                            </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="SpectrumPlotNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.SpectrumPlotNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> 
+                 <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">colorbar</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> 
+                 <span class="n">NFFT</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> 
+                 <span class="n">noverlap</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SpectrumPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">channel_names</span><span class="o">==</span><span class="s">&#39;all&#39;</span><span class="p">:</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="p">[</span><span class="n">channel_names</span><span class="p">]</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">channel_names</span><span class="o">=</span><span class="n">channel_names</span><span class="p">,</span> 
+                                      <span class="n">colorbar</span><span class="o">=</span><span class="n">colorbar</span><span class="p">,</span>
+                                      <span class="n">NFFT</span><span class="o">=</span><span class="n">NFFT</span><span class="p">,</span>
+                                      <span class="n">noverlap</span><span class="o">=</span><span class="n">noverlap</span><span class="p">,</span>
+                                      <span class="n">min_value</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                                      <span class="n">max_value</span> <span class="o">=</span> <span class="o">-</span><span class="n">pylab</span><span class="o">.</span><span class="n">inf</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SpectrumPlotNode._plotValues"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.SpectrumPlotNode._plotValues">[docs]</a>    <span class="k">def</span> <span class="nf">_plotValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                    <span class="n">values</span><span class="p">,</span>            <span class="c">#dict  TimeSeries values</span>
+                    <span class="n">plot_label</span><span class="p">,</span>        <span class="c">#str   Plot-Label</span>
+                    <span class="n">fig_num</span><span class="p">,</span>           <span class="c">#int   Figure-number for classify plots</span>
+                                       <span class="c">#      1: average,</span>
+                                       <span class="c">#      2: single trial,</span>
+                                       <span class="c">#      3: average accumulating</span>
+                    <span class="n">store_dir</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>  <span class="c">#str   Directory to store the plots</span>
+                    <span class="n">counter</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>        <span class="c">#int   Plotcounter for all trialsdef plot_values</span>
+                   
+        <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">sampling_frequency</span>
+        <span class="n">list_of_classes</span> <span class="o">=</span> <span class="n">values</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">num_of_classes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">)</span>
+             
+        <span class="c">#computing time points to show</span>
+        <span class="c">#num_tpoints = values.values()[0].shape[0]</span>
+
+        <span class="n">pylab</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span>  <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>  <span class="c"># the left side of the subplots of the figure</span>
+                      <span class="n">right</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>    <span class="c"># the right side of the subplots of the figure</span>
+                      <span class="n">bottom</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span>   <span class="c"># the bottom of the subplots of the figure</span>
+                      <span class="n">top</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span>      <span class="c"># the top of the subplots of the figure</span>
+                      <span class="n">wspace</span> <span class="o">=</span> <span class="mf">0.15</span><span class="p">,</span>   <span class="c"># the amount of width reserved for blank space between subplots</span>
+                      <span class="n">hspace</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>   <span class="c"># the amount of height reserved for white space between subplots                          </span>
+                      <span class="p">)</span>
+
+        <span class="c">#plot all channels separately in one figure</span>
+        <span class="c">#plot just 1 channel</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">!=</span> <span class="bp">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            
+            <span class="n">f</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig_num</span><span class="p">,</span> <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">13</span><span class="p">))</span>
+
+            <span class="c">#assure that figure is displayed with an interactive backend</span>
+            <span class="k">if</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_backend</span><span class="p">()</span> <span class="ow">in</span> <span class="n">pylab</span><span class="o">.</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">interactive_bk</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">):</span>
+                
+                <span class="k">assert</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">),</span>\
+                    <span class="s">&quot;SpectrumPlot::Channel requested for plotting is not available in data&quot;</span>
+                       
+                <span class="n">channel_index</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>  
+                
+                <span class="c">#operations like splicing only on view of object</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>                
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_of_classes</span><span class="p">,</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">title</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39; &#39;</span> <span class="o">+</span> <span class="n">class_label</span><span class="p">)</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">_plot_spectrum</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span><span class="n">channel_index</span><span class="p">],</span> <span class="n">sampling_frequency</span><span class="p">)</span>
+                
+            <span class="c"># Draw or store the figure</span>
+            <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">current_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                <span class="k">if</span> <span class="n">current_split</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span>\
+                <span class="n">plot_label</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)):</span> <span class="c">#more than one split and first call</span>
+                    <span class="n">plot_label</span> <span class="o">=</span> <span class="n">plot_label</span> <span class="o">+</span> <span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)</span>
+                    
+                <span class="n">f_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plot_label</span><span class="p">)</span>
+
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s">&quot;.png&quot;</span><span class="p">)</span>                                      
+
+        <span class="c">#plot more than one channel in one figure for each label</span>
+        <span class="k">else</span><span class="p">:</span>
+            
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">class_label</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">list_of_classes</span><span class="p">):</span> 
+                <span class="n">title</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span> <span class="c">#this means all channels are plotted</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">=</span><span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span>
+                
+                <span class="n">f</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">fig_num</span><span class="p">,</span> <span class="n">figsize</span> <span class="o">=</span> <span class="p">(</span><span class="mi">18</span><span class="p">,</span><span class="mi">13</span><span class="p">))</span>
+                
+                <span class="c">#assure that figure is displayed with an interactive backend</span>
+                <span class="k">if</span> <span class="n">pylab</span><span class="o">.</span><span class="n">get_backend</span><span class="p">()</span> <span class="ow">in</span> <span class="n">pylab</span><span class="o">.</span><span class="n">matplotlib</span><span class="o">.</span><span class="n">backends</span><span class="o">.</span><span class="n">interactive_bk</span><span class="p">:</span>
+                    <span class="n">f</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                
+                <span class="n">number_of_channels</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+                <span class="c"># Compute number of rows and cols for subplot-arrangement:</span>
+                <span class="c"># use 8 as upper limit for cols and compute rows accordingly</span>
+                <span class="k">if</span> <span class="n">number_of_channels</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">:</span> 
+                    <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="n">number_of_channels</span>
+                <span class="k">else</span><span class="p">:</span> 
+                    <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="mi">8</span>
+                    <span class="n">nr_of_rows</span> <span class="o">=</span> <span class="p">(</span><span class="n">number_of_channels</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span>
+                    
+                <span class="n">data</span> <span class="o">=</span> <span class="n">values</span><span class="p">[</span><span class="n">class_label</span><span class="p">]</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+                
+                
+                <span class="n">ec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMetadata</span><span class="p">(</span><span class="s">&quot;electrode_coordinates&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">ec</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">ec</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">ec</span>
+                
+                <span class="n">ec_2d</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">project2d</span><span class="p">(</span><span class="n">ec</span><span class="p">)</span>
+                
+                <span class="c"># plot everything channel-wise</span>
+                <span class="k">for</span> <span class="n">channel_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">number_of_channels</span><span class="p">):</span>
+                    <span class="n">channel_name</span>  <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">channel_index</span><span class="p">]</span>
+
+                    <span class="n">f</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">nr_of_rows</span><span class="p">,</span> <span class="n">nr_of_cols</span><span class="p">,</span> <span class="n">channel_index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                    
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+                    
+                    <span class="c"># actual plotting of the data</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_plot_spectrum</span><span class="p">(</span><span class="n">data</span><span class="p">[:,</span><span class="n">channel_index</span><span class="p">],</span> <span class="n">sampling_frequency</span><span class="p">)</span>
+                        
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+                        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">ec_2d</span><span class="p">[</span><span class="n">channel_name</span><span class="p">]</span>
+                        <span class="n">w</span> <span class="o">=</span> <span class="o">.</span><span class="mo">05</span>
+                        <span class="n">h</span> <span class="o">=</span> <span class="o">.</span><span class="mo">045</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_position</span><span class="p">([(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">])</span>
+                        
+                <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+                
+                <span class="c"># Draw or store the figure</span>
+                <span class="k">if</span> <span class="n">store_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">current_split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                    <span class="k">if</span> <span class="n">current_split</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span>\
+                    <span class="n">plot_label</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)):</span> <span class="c">#more than one split and first call</span>
+                        <span class="n">plot_label</span> <span class="o">=</span> <span class="n">plot_label</span> <span class="o">+</span> <span class="s">&#39;_split_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_split</span><span class="p">)</span>
+                        
+                    <span class="n">f_name</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">store_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">plot_label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;_&#39;</span> <span class="o">+</span> <span class="n">class_label</span>
+    
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s">&quot;.png&quot;</span><span class="p">)</span> 
+        
+ <span class="c">#       title.set_fontsize(24)</span>
+ <span class="c">#       pylab.draw()      </span>
+        </div>
+<div class="viewcode-block" id="SpectrumPlotNode._plot_spectrum"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.SpectrumPlotNode._plot_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">_plot_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">sampling_frequency</span><span class="p">):</span>
+        <span class="p">(</span><span class="n">Pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span> <span class="o">=</span> <span class="n">mlab</span><span class="o">.</span><span class="n">specgram</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+                                           <span class="n">Fs</span><span class="o">=</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                                           <span class="n">NFFT</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">NFFT</span><span class="p">,</span>
+                                           <span class="n">noverlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">noverlap</span><span class="p">)</span>
+                    
+        <span class="k">if</span> <span class="n">numpy</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">Pxx</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;SpectrumPlot::Instance has power 0 in a frequency band, skipping...&quot;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c"># Update minimal and maximal value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">Pxx</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">Pxx</span><span class="o">.</span><span class="n">flatten</span><span class="p">()))</span>
+        
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">flipud</span><span class="p">(</span><span class="n">Pxx</span><span class="p">)</span>
+        <span class="n">extent</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">amax</span><span class="p">(</span><span class="n">bins</span><span class="p">),</span> <span class="n">freqs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">freqs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="n">extent</span><span class="o">=</span><span class="n">extent</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span>
+                     <span class="n">vmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s">&#39;auto&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;Time(s)&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;Frequency(Hz)&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">colorbar</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="p">(</span><span class="n">Pxx</span><span class="p">,</span> <span class="n">freqs</span><span class="p">,</span> <span class="n">bins</span><span class="p">)</span>
+                 
+</div></div>
+<div class="viewcode-block" id="ScatterPlotNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode">[docs]</a><span class="k">class</span> <span class="nc">ScatterPlotNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a scatter plot of the given channels for the given point in time</span>
+<span class="sd">    </span>
+<span class="sd">    This node creates scatter_plot of the values of all vs. all specified </span>
+<span class="sd">    channels for the given point in time (plot_ms).</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">     * *plot_ms* : The point of time, for which the scatter plots are drawn. </span>
+<span class="sd">                   For instance, if plot_ms = 200, all the values of the </span>
+<span class="sd">                   selected channels are collected that were measured</span>
+<span class="sd">                   200ms after the window start and the scatter plots for </span>
+<span class="sd">                   these values are drawn</span>
+<span class="sd">     * *channels* : If channels is  not None, only scatter plots for</span>
+<span class="sd">                    these specified channels are plotted. If channels is not</span>
+<span class="sd">                    specified, scatter plots for the first 7 available </span>
+<span class="sd">                    channels are drawn. </span>
+<span class="sd">     </span>
+<span class="sd">    .. note:: The maximal number of channels has to be less than 8 since</span>
+<span class="sd">                more than a 7*7 matrix of plots is hard to get plotted</span>
+<span class="sd">                into one window. </span>
+
+<span class="sd">    .. image:: ../../graphics/scatter_plot.png</span>
+<span class="sd">        :width: 1024</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">figure_number</span> <span class="o">=</span> <span class="mi">0</span>
+<div class="viewcode-block" id="ScatterPlotNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot_ms</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ScatterPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+                  <span class="n">plot_ms</span> <span class="o">=</span> <span class="n">plot_ms</span><span class="p">,</span>
+                  <span class="n">channels</span> <span class="o">=</span> <span class="n">channels</span><span class="p">,</span>
+                  <span class="c"># An attribute that stores the number of channels</span>
+                  <span class="n">number_of_channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="c"># Set lazily</span>
+                  <span class="c"># A set of colors that can be used to distinguish different classes</span>
+                  <span class="n">colors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&quot;r&quot;</span><span class="p">,</span> <span class="s">&quot;b&quot;</span><span class="p">]),</span>
+                  <span class="c"># A mapping from class label to its color in the plot</span>
+                  <span class="n">class_colors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">())</span>        
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">figure_number</span> <span class="o">=</span> <span class="n">ScatterPlotNode</span><span class="o">.</span><span class="n">figure_number</span> 
+        <span class="n">ScatterPlotNode</span><span class="o">.</span><span class="n">figure_number</span> <span class="o">+=</span> <span class="mi">1</span>      
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+        <span class="n">figure</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure_number</span><span class="p">,</span>
+                              <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span> <span class="mf">0.99</span><span class="p">,</span>
+                               <span class="n">wspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ScatterPlotNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="c"># Though this node is not really trainable, it returns true in order</span>
+        <span class="c"># to get trained. The reason is that during this training phase, </span>
+        <span class="c"># it visualizes all samChannel_Visples that are passed as arguments</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="ScatterPlotNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="ScatterPlotNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This node is not really trained but uses the labeled examples  to</span>
+<span class="sd">        generate a scatter plot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Determine the number of channels if not yet done</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># If no channels are specified -&gt; use the first seven</span>
+            <span class="c"># For more than 7*7 subplot, plotting is too slow</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">7</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">[:</span><span class="mi">7</span><span class="p">]</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_ms</span> \
+                                    <span class="o">/</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">data</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
+        
+        <span class="c"># Determine color of this class if not yet done</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> 
+        
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ioff</span><span class="p">()</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">figure_number</span><span class="p">)</span>
+        <span class="c"># For all pairs of channels</span>
+        <span class="c">#for ch1 in range(self.number_of_channels):</span>
+        <span class="c">#    for ch2 in range(self.number_of_channels):</span>
+        <span class="k">for</span> <span class="n">index1</span><span class="p">,</span> <span class="n">channel_name1</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">index2</span><span class="p">,</span> <span class="n">channel_name2</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">):</span>
+                <span class="n">channel_index1</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name1</span><span class="p">)</span>
+                <span class="n">channel_index2</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name2</span><span class="p">)</span>
+                <span class="c"># Determine the relevant scatter plot</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">,</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">,</span>
+                              <span class="n">index1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">+</span> <span class="n">index2</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                
+                <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">,</span> 
+                           <span class="s">&quot;</span><span class="si">%s</span><span class="s"> vs. </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">channel_name1</span><span class="p">,</span> <span class="n">channel_name2</span><span class="p">),</span>
+                           <span class="n">horizontalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span>
+                           <span class="n">verticalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span>
+                           <span class="n">transform</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="n">index1</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> \
+                    <span class="ow">and</span> <span class="n">index2</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">:</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+                <span class="c"># Plot the point projected on the respective subspace</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_index</span><span class="p">,</span> <span class="n">channel_index1</span><span class="p">]],</span>
+                           <span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_index</span><span class="p">,</span> <span class="n">channel_index2</span><span class="p">]],</span>
+                           <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;o&quot;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="ScatterPlotNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">pass</span>
+        </div>
+<div class="viewcode-block" id="ScatterPlotNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.ScatterPlotNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="n">data</span>
+    
+   </div></div>
+<div class="viewcode-block" id="HistogramPlotNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode">[docs]</a><span class="k">class</span> <span class="nc">HistogramPlotNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Creates a histogram of the given channels for the given point in time   </span>
+<span class="sd">   </span>
+<span class="sd">    This node creates histograms of the values of all specified channels for </span>
+<span class="sd">    the given point in time (plot_ms). The value range is restricted to the </span>
+<span class="sd">    specified value_range, values outside of this range are not plotted.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters:</span>
+<span class="sd">     * *plot_ms* : The point of time, for which the histograms are drawn. </span>
+<span class="sd">                   For instance, if plot_ms = 200, all the values of the </span>
+<span class="sd">                   selected channels are collected that were measured</span>
+<span class="sd">                   200ms after the window start and the histograms for these</span>
+<span class="sd">                   values are drawn</span>
+<span class="sd">     * *value_range* : A pair (tuple) that specifies the range of</span>
+<span class="sd">                       values that are plotted in the histogram. Values</span>
+<span class="sd">                       outside this range are not drawn.     </span>
+<span class="sd">     * *channels* : If channels is  not None, only histograms for</span>
+<span class="sd">                    these specified channels are plotted. If channels is not</span>
+<span class="sd">                    specified, histograms for all available channels</span>
+<span class="sd">                    are plotted.</span>
+<span class="sd">                    </span>
+<span class="sd">    .. image:: ../../graphics/histogram.png</span>
+<span class="sd">        :width: 1024</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="HistogramPlotNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">plot_ms</span><span class="p">,</span> <span class="n">value_range</span><span class="p">,</span> <span class="n">channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">HistogramPlotNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+                  <span class="n">plot_ms</span> <span class="o">=</span> <span class="n">plot_ms</span><span class="p">,</span>
+                  <span class="n">value_range</span> <span class="o">=</span> <span class="n">value_range</span><span class="p">,</span> 
+                  <span class="n">channels</span> <span class="o">=</span> <span class="n">channels</span><span class="p">,</span>
+                  <span class="c"># An attribute that stores the number of channels</span>
+                  <span class="n">number_of_channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="c"># Set lazily</span>
+                  <span class="c"># A mapping from class  label to samples for this class</span>
+                  <span class="n">class_samples</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
+                  <span class="c"># A set of colors that can be used to distinguish different classes</span>
+                  <span class="n">colors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&quot;r&quot;</span><span class="p">,</span> <span class="s">&quot;b&quot;</span><span class="p">]))</span>
+    </div>
+<div class="viewcode-block" id="HistogramPlotNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="c"># Though this node is not really trainable, it returns true in order</span>
+        <span class="c"># to get trained. The reason is that during this training phase, </span>
+        <span class="c"># it visualizes all samples that are passed as arguments</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    </div>
+<div class="viewcode-block" id="HistogramPlotNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="HistogramPlotNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This node is not really trained but uses the labeled examples  to</span>
+<span class="sd">        generate a histogram</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c">#Determine the number of channels if not yet done</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># If no channels are specified -&gt; plot all</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+                
+            <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">plot_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_ms</span> \
+                                    <span class="o">/</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">data</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
+            <span class="c"># Intialize Plotting            </span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span>
+                                   <span class="n">right</span><span class="o">=</span><span class="mf">0.97</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span> <span class="mf">0.97</span><span class="p">,</span>
+                                   <span class="n">wspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
+            
+            <span class="c"># Set title of subplots</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">ioff</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">):</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)),</span>
+                              <span class="mi">2</span><span class="p">,</span>
+                              <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">channel_name</span><span class="p">,</span>
+                           <span class="n">horizontalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span>
+                           <span class="n">verticalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span>
+                           <span class="n">transform</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+            
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_samples</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">)]</span>
+        
+        <span class="n">plot_column</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_index</span><span class="p">,</span> <span class="p">:]</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">channel_name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channels</span><span class="p">):</span>
+            <span class="n">channel_index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel_name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">plot_column</span><span class="p">[</span><span class="n">channel_index</span><span class="p">])</span>
+                </div>
+<div class="viewcode-block" id="HistogramPlotNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ioff</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">class_label</span><span class="p">,</span> <span class="n">class_samples</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_samples</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="n">color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">channel_samples</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">class_samples</span><span class="p">):</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)),</span>
+                              <span class="mi">2</span><span class="p">,</span>
+                              <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">channel_samples</span><span class="p">,</span> <span class="n">bins</span> <span class="o">=</span> <span class="mi">25</span><span class="p">,</span> <span class="n">fc</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> 
+                           <span class="n">histtype</span> <span class="o">=</span> <span class="s">&#39;stepfilled&#39;</span><span class="p">,</span> <span class="n">normed</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+                           <span class="nb">range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value_range</span><span class="p">,</span>
+                           <span class="n">label</span> <span class="o">=</span> <span class="n">class_label</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">):</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">subplot</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">)),</span>
+                          <span class="mi">2</span><span class="p">,</span>
+                          <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>      
+            <span class="n">pylab</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">ion</span><span class="p">()</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+        </div>
+<div class="viewcode-block" id="HistogramPlotNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.time_series_vis.html#pySPACE.missions.nodes.visualization.time_series_vis.HistogramPlotNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="c"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="n">data</span>
+
+</div></div>
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Time_Series_Plot&quot;</span><span class="p">:</span> <span class="n">TimeSeriesPlotNode</span><span class="p">,</span>
+                <span class="s">&quot;Spectrum_Plot&quot;</span><span class="p">:</span> <span class="n">SpectrumPlotNode</span><span class="p">,</span>
+                <span class="s">&quot;Scatter_Plot&quot;</span><span class="p">:</span> <span class="n">ScatterPlotNode</span><span class="p">,</span>
+                <span class="s">&quot;Histogram_Plot&quot;</span><span class="p">:</span> <span class="n">HistogramPlotNode</span><span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

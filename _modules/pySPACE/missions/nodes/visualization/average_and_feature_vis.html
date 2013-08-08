@@ -1,0 +1,979 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.visualization.average_and_feature_vis &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.missions.nodes.visualization.average_and_feature_vis</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot; Visualize average of :mod:`time series &lt;pySPACE.resources.data_types.time_series&gt;` and time domain features</span>
+
+<span class="sd">Additional features can be added to the visualization.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">pylab</span>
+<span class="kn">import</span> <span class="nn">matplotlib.font_manager</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">colors</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.stream</span> <span class="kn">import</span> <span class="n">StreamDataset</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
+
+
+<div class="viewcode-block" id="convert_feature_vector_to_time_series"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.convert_feature_vector_to_time_series">[docs]</a><span class="k">def</span> <span class="nf">convert_feature_vector_to_time_series</span><span class="p">(</span><span class="n">feature_vector</span><span class="p">,</span> <span class="n">sample_data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Parse the feature name and reconstruct a time series object holding the equivalent data </span>
+<span class="sd">    </span>
+<span class="sd">    In a feature vector object, a feature is determined by the feature</span>
+<span class="sd">    name and the feature value. When dealing with time domain features, the</span>
+<span class="sd">    feature name is a concatenation of the (pseudo-) channel</span>
+<span class="sd">    name and the time within an epoch in seconds. A typical feature name</span>
+<span class="sd">    reads, e.g., &quot;TD_F7_0.960sec&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        
+    <span class="c"># channel name is what comes after the first underscore</span>
+    <span class="n">feat_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">chnames</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                          <span class="k">for</span> <span class="n">chnames</span> <span class="ow">in</span>
+                          <span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+    <span class="c"># time is what comes after the second underscore</span>
+    <span class="n">feat_times</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="nb">float</span><span class="p">((</span><span class="n">chnames</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">])[:</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+                      <span class="o">*</span> <span class="n">sample_data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span>
+                     <span class="k">for</span> <span class="n">chnames</span> <span class="ow">in</span> <span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+    
+    <span class="c"># generate new time series object based on the exemplary &quot;sample_data&quot;</span>
+    <span class="c"># all filled with zeros instead of data</span>
+    <span class="n">new_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">sample_data</span><span class="o">.</span><span class="n">shape</span><span class="p">),</span>
+                          <span class="n">channel_names</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">,</span>
+                          <span class="n">sampling_frequency</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                          <span class="n">start_time</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
+                          <span class="n">end_time</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span>
+                          <span class="n">name</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                          <span class="n">marker_name</span><span class="o">=</span><span class="n">sample_data</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span>
+                          
+    <span class="c"># try to find the correct place (channel name and time)</span>
+    <span class="c"># to insert the feature values</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">feature_vector</span><span class="p">)):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">new_data</span><span class="p">[</span><span class="n">feat_times</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                     <span class="n">new_data</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feat_channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">])]</span> <span class="o">=</span> \
+                <span class="n">feature_vector</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n\n</span><span class="s">FeatureVis can&#39;t find equivalent to Feature &quot;</span><span class="o">+</span>
+                          <span class="n">feature_vector</span><span class="o">.</span><span class="n">feature_names</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> 
+                          <span class="s">&quot; in the time series.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">new_data</span>
+
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode">[docs]</a><span class="k">class</span> <span class="nc">AverageFeatureVisNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Visualize time domain features in the context of average time series.</span>
+<span class="sd">    </span>
+<span class="sd">    This node is supposed to visualize features from any feature</span>
+<span class="sd">    selection algorithm in the context of the train. This data is some kind of</span>
+<span class="sd">    time series, either channelwise &quot;plain&quot; EEG time series or somehow</span>
+<span class="sd">    preprocessed data, e.g. the time series of CSP pseudo channels.</span>
+<span class="sd">        </span>
+<span class="sd">    The purpose is to investigate two main issues:</span>
+
+<span class="sd">    1. By comparing the mean time series of standard and target time windows,</span>
+<span class="sd">       is it understandable why certain features have been selected?</span>
+<span class="sd">    2. Comparing the time series from one set to the selected features from</span>
+<span class="sd">       some other set, are the main features robust? </span>
+<span class="sd">    </span>
+<span class="sd">    If no features are passed to this node, it will still visualize average</span>
+<span class="sd">    time series in any case. Only the time series that are labeled as training</span>
+<span class="sd">    data will be taken into account. The reason is that the primary aim of</span>
+<span class="sd">    this node is to visualize the features on the very data they were chosen</span>
+<span class="sd">    from, i.e., the training data. If instead all data is to be plotted (e.g.,</span>
+<span class="sd">    at the end of a preprocessing flow), one would in the worst case have to</span>
+<span class="sd">    run the node chain twice. In the extra run for the visualization, an</span>
+<span class="sd">    All_Train_Splitter would be used prior to this node.</span>
+<span class="sd">            </span>
+<span class="sd">    This is what this node will plot:</span>
+
+<span class="sd">    - In a position in the node chain where the current data object is a time</span>
+<span class="sd">      series, it will plot the average of all training samples if the</span>
+<span class="sd">      current time series.</span>
+<span class="sd">    - If the current object is not a time series, this node will go back in</span>
+<span class="sd">      the data object&#39;s history until it finds a time series. This time series</span>
+<span class="sd">      will then be used.</span>
+<span class="sd">    - If a path to a features.pickle is passed using the load_feature_path</span>
+<span class="sd">      variable, then this features will be used for plotting.</span>
+<span class="sd">    - If no load_feature_path is set, this node will check if the current data</span>
+<span class="sd">      object has a data.predictor.features entry. This will be the case if the</span>
+<span class="sd">      previous node has been a classifier. If so, these features will be used.</span>
+<span class="sd">    - If features are found in neither of the aforementioned two locations, no</span>
+<span class="sd">      features will be plotted. The average time series however will still be</span>
+<span class="sd">      plotted.</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">        :load_feature_path:</span>
+<span class="sd">            Path to the stored pickle file containing the selected features.</span>
+<span class="sd">            So far, LibSVM and 1-Norm SVM nodes can deliver this output.</span>
+<span class="sd">            Defaults to &#39;None&#39;, which implies that no features are plotted.</span>
+<span class="sd">            The average time series are plotted anyway.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">    </span>
+<span class="sd">        :error_type:</span>
+<span class="sd">            Selects which type of error is into the average time series plots:</span>
+<span class="sd">            </span>
+<span class="sd">                :None: No errors</span>
+<span class="sd">                :&#39;SampleStdDev&#39;: +- 1 Sample standard deviation.</span>
+<span class="sd">                    This is, under Gaussian assumptions, the area, in which 68% of the</span>
+<span class="sd">                    samples lie.</span>
+<span class="sd">                    </span>
+<span class="sd">                :&#39;StdError&#39;: +- 1 Standard error of the mean.</span>
+<span class="sd">                    This is the area in which, under Gaussian assumptions, the sample</span>
+<span class="sd">                    mean will end up in 68% of all cases.</span>
+<span class="sd">            </span>
+<span class="sd">            If multiples of this quantities are desired, simply use them as prefix</span>
+<span class="sd">            in the strings.</span>
+<span class="sd">            With Multiplier 2, the above percentages change to 95%</span>
+<span class="sd">            With Multiplier 3, the above percentages change to 99.7%</span>
+<span class="sd">            </span>
+<span class="sd">            Here are examples for valid entries:</span>
+<span class="sd">            &#39;2SampleStdDev&#39;, None, &#39;StdError&#39;, &#39;2StdError&#39;, &#39;1.7StdError&#39;</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: &#39;2StdError&#39;*)</span>
+<span class="sd">    </span>
+<span class="sd">    </span>
+<span class="sd">        :axflip:</span>
+<span class="sd">            If axflip is True, the y-axes of the averaged time series plots</span>
+<span class="sd">            are reversed. This makes the plots look the way to which psychologists</span>
+<span class="sd">            (and even some neuro scientists) are used.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">        :alternative_scaling:</span>
+<span class="sd">            If False, the values from the loaded feature file (i.e. the &quot;w&quot; in the</span>
+<span class="sd">            SVM notation) are directly used for both graphical feature</span>
+<span class="sd">            representation and rating of &quot;feature importance&quot;. If True, instead</span>
+<span class="sd">            the product of these values and the difference of the averaged time</span>
+<span class="sd">            domain feature values of both classes is used: importance(i) = w(i) *</span>
+<span class="sd">            (avg_target(i) - avg_standard(i)) On the one hand, using the feature</span>
+<span class="sd">            averages implicitly assumes normally distributed features. On the</span>
+<span class="sd">            other hand, this computation takes into account the fact that</span>
+<span class="sd">            different features have different value ranges. The eventual</span>
+<span class="sd">            classification with SVMs is done by evaluating the</span>
+<span class="sd">            sum_i{  w(i) * feature(i) }.</span>
+<span class="sd">            In that sense, the here defined importance measures the average</span>
+<span class="sd">            contribution of a certain feature to the classification function.</span>
+<span class="sd">            As such, and that&#39;s the essential point, it makes the values</span>
+<span class="sd">            comparable.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">        :physiological_arrangement:</span>
+<span class="sd">            If False all time series plots are arranged in a matrix of plots. If</span>
+<span class="sd">            set to True, the plots are arranged according to the arrangement of</span>
+<span class="sd">            the electrodes on the scalp. Obviously, this only makes sense if the</span>
+<span class="sd">            investigated time series are not spatially filtered. CSP pseudo</span>
+<span class="sd">            channels, e.g., can&#39;t be arranged on the scalp.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">        :shrink_plots:</span>
+<span class="sd">            Defaults to False and is supposed to be set to True, whenever channels</span>
+<span class="sd">            from the 64 electrode cap are investigated jointly with electrodes</span>
+<span class="sd">            from 128 cap that do not appear on the 64 cap. Omits overlapping of</span>
+<span class="sd">            the plots in physiological arrangement.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">        :important_feature_thresh:</span>
+<span class="sd">            Gives a threshold below which features are not considered important.</span>
+<span class="sd">            Only important features will appear in the plots.</span>
+<span class="sd">            Defaults to 0, i.e. all non-zero features are important.</span>
+<span class="sd">            This parameter collides with  percentage_of_features; the stricter</span>
+<span class="sd">            restriction applies.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 0.0*)</span>
+<span class="sd">            </span>
+<span class="sd">        :percentage_of_features:</span>
+<span class="sd">            Define the percentage of features to be drawn in the plots.</span>
+<span class="sd">            Defaults to 100, i.e. all features are to be used.</span>
+<span class="sd">            This parameter collides with  important_feature_thresh; the stricter</span>
+<span class="sd">            restriction applies. Thus, even in the default case, most of the time</span>
+<span class="sd">            less than 100% of the features will be drawn due to the non-zero</span>
+<span class="sd">            condition of the important_feature_thresh parameter.</span>
+<span class="sd">            Note that the given percentage is in relation to the total number of</span>
+<span class="sd">            features; not in relation to the number of features a classifier has</span>
+<span class="sd">            used in some sense.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: 100*)</span>
+<span class="sd">            </span>
+<span class="sd">    </span>
+<span class="sd">        :emotiv:</span>
+<span class="sd">            Use the emotiv parameter if the data was acquired wit the emotiv EPOC</span>
+<span class="sd">            system. This will just change the position of text in the plots - it&#39;s</span>
+<span class="sd">            not visible otherwise.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">    **Known Issues**</span>
+<span class="sd">    </span>
+<span class="sd">    The title of physiologically arranged time series plots vanishes, if no</span>
+<span class="sd">    frontal channels are plotted, because the the plot gets trimmed and so</span>
+<span class="sd">    gets the title.</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - </span>
+<span class="sd">            node : AverageFeatureVis</span>
+<span class="sd">            parameters : </span>
+<span class="sd">                load_feature_path : &quot;/path/to/my/features.pickle&quot;</span>
+<span class="sd">                alternative_scaling : True</span>
+<span class="sd">                physiological_arrangement : True</span>
+<span class="sd">                axflip : True</span>
+<span class="sd">                shrink_plots : False</span>
+<span class="sd">                important_feature_thresh : 0.3</span>
+<span class="sd">                percentage_of_features : 20</span>
+<span class="sd">                error_type : &quot;2SampleStdDev&quot;</span>
+<span class="sd">                </span>
+<span class="sd">            </span>
+<span class="sd">    </span>
+<span class="sd">    :Author: David Feess (David.Feess@dfki.de)</span>
+<span class="sd">    :Created: 2010/02/10</span>
+<span class="sd">    :Reviewed: 2011/06/24</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="AverageFeatureVisNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">load_feature_path</span><span class="o">=</span><span class="s">&#39;None&#39;</span><span class="p">,</span>
+                 <span class="n">axflip</span><span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">alternative_scaling</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">physiological_arrangement</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">shrink_plots</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">important_feature_thresh</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">percentage_of_features</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                 <span class="n">emotiv</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">error_type</span><span class="o">=</span><span class="s">&#39;2StdError&#39;</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                 
+        <span class="c"># Must be set before constructor of superclass is set</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="bp">True</span>
+        
+        <span class="nb">super</span><span class="p">(</span><span class="n">AverageFeatureVisNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        
+        <span class="c"># try to read the file containing the feature information</span>
+        <span class="n">feature_vector</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">feature_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">load_feature_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">feature_vector</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">feature_file</span><span class="p">)</span>
+            <span class="n">feature_vector</span> <span class="o">=</span> <span class="n">feature_vector</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c">#[0]!!</span>
+            <span class="n">feature_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;FeatureVis: No feature file to load.&quot;</span><span class="o">+</span>\
+                  <span class="s">&quot; Will search in current data object.&quot;</span>
+                          
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+            <span class="n">alternative_scaling</span><span class="o">=</span><span class="n">alternative_scaling</span><span class="p">,</span>
+            <span class="n">physiological_arrangement</span><span class="o">=</span><span class="n">physiological_arrangement</span><span class="p">,</span>
+            <span class="n">feature_vector</span><span class="o">=</span><span class="n">feature_vector</span><span class="p">,</span>
+            <span class="n">important_feature_thresh</span><span class="o">=</span><span class="n">important_feature_thresh</span><span class="p">,</span>
+            <span class="n">percentage_of_features</span><span class="o">=</span><span class="n">percentage_of_features</span><span class="p">,</span>
+            <span class="n">shrink_plots</span><span class="o">=</span><span class="n">shrink_plots</span><span class="p">,</span>
+            <span class="n">max_feature_val</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>            
+            <span class="n">feature_time_series</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">number_of_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">samples_per_window</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">sample_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">own_colormap</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">error_type</span><span class="o">=</span><span class="n">error_type</span><span class="p">,</span>
+            <span class="n">mean_time_series</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">time_series_histo</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">error</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">mean_classification_target</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">samples_per_condition</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">normalizer</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">trainable</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trainable</span><span class="p">,</span>
+            <span class="n">corr_important_feats</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">corr_important_feat_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">labeled_corr_matrix</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">indexlist</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">ts_plot</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">histo_plot</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">corr_plot</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">feature_development_plot</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+            <span class="n">axflip</span><span class="o">=</span><span class="n">axflip</span><span class="p">,</span>
+            <span class="n">emotiv</span><span class="o">=</span><span class="n">emotiv</span>
+        <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Nothing to be done here &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">data</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode.get_last_timeseries_from_history"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode.get_last_timeseries_from_history">[docs]</a>    <span class="k">def</span> <span class="nf">get_last_timeseries_from_history</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">])</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">]</span>
+        <span class="k">raise</span> <span class="ne">LookupError</span><span class="p">(</span><span class="s">&#39;FeatureVis found no TimeSeries object to plot.&#39;</span> <span class="o">+</span>
+            <span class="s">&#39; Add &quot;keep_in_history : True&quot; to the last node that produces&#39;</span> <span class="o">+</span>
+            <span class="s">&#39; time series objects in your node chain!&#39;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the given data point along with its class label </span>
+<span class="sd">        to the training set, i.e. update &#39;mean&#39; time series and append to</span>
+<span class="sd">        the complete data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Check i</span>
+        <span class="c"># This is needed only once</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">==</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># if we have a prediction vector we are at a processing stage</span>
+            <span class="c"># after a classifier. The used features can than be found in</span>
+            <span class="c"># data.predictor.features.</span>
+            <span class="k">try</span><span class="p">:</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="o">.</span><span class="n">features</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="c">#[0]!!</span>
+                <span class="k">print</span> <span class="s">&quot;FeatureVis: Found Features in current data object.&quot;</span>
+            <span class="c"># If we find no data.predictor.features, simply go on without</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span> <span class="s">&quot;FeatureVis: Found no Features at all.&quot;</span>
+
+
+        <span class="c"># If the current object is no time series, get the last time series</span>
+        <span class="c"># from history. This will raise an exception if there is none.</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">!=</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_last_timeseries_from_history</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="c"># If this is the first data sample we obtain</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># Count the number of channels &amp; samples per window</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sample_data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
+            
+        <span class="c"># If we encounter this label for the first time</span>
+        <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c"># Create the class mean time series lazily</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># If label exists, just add data </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">data</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        
+        <span class="c"># Count the number of samples per class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                     <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Finish the training, i.e. for the time series plots: take the</span>
+<span class="sd">        accumulated time series and divide by the number of samples per</span>
+<span class="sd">        condition.</span>
+<span class="sd">        For the</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># Compute avg</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">])</span>
+ 
+            <span class="c"># Compute error of desired type - strip the numerals:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;0123456789.&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;SampleStdDev&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                     <span class="n">pylab</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">],</span><span class="mi">0</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&#39;0123456789.&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="s">&#39;StdError&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                     <span class="n">pylab</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">],</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span>\
+                     <span class="n">pylab</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">])[</span><span class="mi">0</span><span class="p">])</span>
+            
+                <span class="n">multiplier</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">nr</span> <span class="k">for</span> <span class="n">nr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span> 
+                                            <span class="k">if</span> <span class="p">(</span><span class="n">nr</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">or</span> <span class="n">nr</span> <span class="o">==</span> <span class="s">&quot;.&quot;</span><span class="p">)]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiplier</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            
+        <span class="c"># other plots only if features where passed</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_vector</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span> <span class="o">=</span> \
+                <span class="n">convert_feature_vector_to_time_series</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_vector</span><span class="p">,</span>
+                                                      <span class="bp">self</span><span class="o">.</span><span class="n">sample_data</span><span class="p">)</span>
+            
+            <span class="c"># in the alternative scaling space, the feature &quot;importance&quot; is</span>
+            <span class="c"># determined by the feature values</span>
+            <span class="c"># weighted by the expected difference in time series values </span>
+            <span class="c"># between the two classes (difference of avg std and avg target)</span>
+            <span class="c"># The standard P3 and LRP cases are handeled separately to make</span>
+            <span class="c"># sure that the sign of the difference is consistent</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alternative_scaling</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">all</span><span class="p">(</span>
+                    <span class="p">[</span><span class="bp">True</span> <span class="k">if</span> <span class="n">label_iter</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;Target&#39;</span><span class="p">,</span> <span class="s">&#39;Standard&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="bp">False</span>
+                               <span class="k">for</span> <span class="n">label_iter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()]):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="o">*=</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="s">&#39;Target&#39;</span><span class="p">]</span><span class="o">-</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="s">&#39;Standard&#39;</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="nb">all</span><span class="p">(</span>
+                    <span class="p">[</span><span class="bp">True</span> <span class="k">if</span> <span class="n">label_iter</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;LRP&#39;</span><span class="p">,</span> <span class="s">&#39;NoLRP&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="bp">False</span>
+                               <span class="k">for</span> <span class="n">label_iter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()]):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="o">*=</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="s">&#39;LRP&#39;</span><span class="p">]</span><span class="o">-</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="s">&#39;NoLRP&#39;</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="o">*=</span><span class="p">(</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span><span class="o">-</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">1</span><span class="p">]])</span>
+                    <span class="k">print</span> <span class="s">&quot;AverageFeatureVis (alternative_scaling): &quot;</span> <span class="o">+</span>\
+                      <span class="s">&quot;Present classes don&#39;t match the standards &quot;</span> <span class="o">+</span>\
+                      <span class="s">&quot;(Standard/Target or LRP/NoLRP). Used the difference &quot;</span><span class="o">+</span>\
+                      <span class="s">&quot;</span><span class="si">%s</span><span class="s"> - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span><span class="s">&quot; for computation &quot;</span><span class="o">+</span>\
+                       <span class="s">&quot;of the alternative scaling.&quot;</span>
+
+            
+            <span class="c"># greatest feature val that occures is used for the normalization</span>
+            <span class="c"># of the color-representation of the feature values</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">max_feature_val</span> <span class="o">=</span> \
+                <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">))</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span> <span class="o">=</span> <span class="n">colors</span><span class="o">.</span><span class="n">Normalize</span><span class="p">(</span><span class="n">vmin</span><span class="o">=-</span><span class="bp">self</span><span class="o">.</span><span class="n">max_feature_val</span><span class="p">,</span>
+                                               <span class="n">vmax</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_feature_val</span><span class="p">)</span>            
+            <span class="n">cdict</span><span class="o">=</span><span class="p">{</span>  <span class="s">&#39;red&#39;</span><span class="p">:[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)],</span>
+                   <span class="s">&#39;green&#39;</span><span class="p">:[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)],</span>
+                    <span class="s">&#39;blue&#39;</span><span class="p">:[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)]}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">own_colormap</span> <span class="o">=</span> \
+                <span class="n">colors</span><span class="o">.</span><span class="n">LinearSegmentedColormap</span><span class="p">(</span><span class="s">&#39;owncm&#39;</span><span class="p">,</span> <span class="n">cdict</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+            
+            <span class="c"># sort the features with descending importance</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="o">.</span><span class="n">nonzero</span><span class="p">())</span>
+            <span class="n">indexorder</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span>
+                             <span class="p">[</span><span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">)</span> <span class="o">&gt;</span> 
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">important_feature_thresh</span><span class="p">])</span><span class="o">.</span><span class="n">argsort</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">[</span><span class="n">indexorder</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="c">#reverse order</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">[</span>
+                <span class="p">:</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_vector</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">percentage_of_features</span><span class="o">/</span><span class="mi">100</span><span class="p">])</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">histo_plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_histo_plot</span><span class="p">()</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c"># try to generate a plot of the feature crosscorrelation</span>
+                <span class="c"># matrix. Might fail if the threshold is set such that no</span>
+                <span class="c"># features are left.</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">labeled_corr_matrix</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_labeled_correlation_matrix</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">corr_plot</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_get_corr_plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="p">[</span><span class="n">label</span><span class="p">],</span>
+                                            <span class="n">label</span><span class="p">)</span>
+
+                <span class="c"># if 2 class labels exist, also compute the difference in the</span>
+                <span class="c"># cross correlation between the classes.</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">corr_plot</span><span class="p">[</span><span class="s">&#39;Diff&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_corr_plot</span><span class="p">((</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span>
+                            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span>
+                      <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span>
+                            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">1</span><span class="p">]]),</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&#39; - &#39;</span> <span class="o">+</span> \
+                            <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">warnings</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n\n</span><span class="s">FeatureVis doesn&#39;t have enough important&quot;</span> <span class="o">+</span>
+                              <span class="s">&quot; features left for correlation plots...&quot;</span><span class="o">+</span>
+                              <span class="s">&quot; Check threshold.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+                              
+        <span class="c"># Compute avg time series plot anyway         </span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ts_plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_time_series_plot</span><span class="p">()</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Stores all generated plots in the given directory *result_dir* &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s">&quot;_</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_plot</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;timeseries_sp</span><span class="si">%s</span><span class="s">.pdf&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ts_plot</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                                     <span class="n">bbox_inches</span><span class="o">=</span><span class="s">&quot;tight&quot;</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">histo_plot</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;histo_sp</span><span class="si">%s</span><span class="s">.pdf&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">histo_plot</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                                        <span class="n">bbox_inches</span><span class="o">=</span><span class="s">&quot;tight&quot;</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labeled_corr_matrix</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Feature_Correlation_</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.txt&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span>
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">labeled_corr_matrix</span><span class="p">[</span><span class="n">label</span><span class="p">],</span> <span class="n">fmt</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span><span class="p">,</span>
+                              <span class="n">delimiter</span><span class="o">=</span><span class="s">&#39;  &#39;</span><span class="p">)</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Feature_Development_</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pdf&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span>
+                                                           <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">feature_development_plot</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+            
+            <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">corr_plot</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&#39;Feature_Correlation_</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pdf&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span>
+                                                            <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">corr_plot</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+            
+            <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s">&quot;all&quot;</span><span class="p">)</span>
+    
+    </div>
+<div class="viewcode-block" id="AverageFeatureVisNode._generate_labeled_correlation_matrix"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._generate_labeled_correlation_matrix">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_labeled_correlation_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Concatenates the feature names to the actual correlation matrices.</span>
+<span class="sd">            This is for better overview in stored txt files later on.&quot;&quot;&quot;</span>
+        <span class="n">labeled_corr_matrix</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="p">[</span><span class="n">label</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">labeled_corr_matrix</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">labeled_corr_matrix</span> <span class="o">=</span> <span class="p">[[(</span><span class="s">&#39;</span><span class="si">% .2f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">labeled_corr_matrix</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">labeled_corr_matrix</span><span class="p">,</span>
+                                    <span class="p">[[(</span><span class="s">&#39;</span><span class="si">% .2f</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">j</span><span class="p">)</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="p">]]))</span>
+        
+        <span class="n">labeled_corr_matrix</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span><span class="p">,</span>
+                                       <span class="n">labeled_corr_matrix</span><span class="p">]</span>
+        <span class="n">labeled_corr_matrix</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">pylab</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="s">&#39;          &#39;</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span><span class="p">)),</span>
+                                           <span class="n">labeled_corr_matrix</span><span class="p">))</span>
+        
+        <span class="k">return</span> <span class="n">labeled_corr_matrix</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._generate_time_series_plot"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._generate_time_series_plot">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_time_series_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This function generates the actual time series plot&quot;&quot;&quot;</span>
+        <span class="c"># This string will show up as text in the plot and looks something</span>
+        <span class="c"># like &quot;Target: 123; Standard:634&quot;</span>
+        <span class="n">samples_per_condition_string</span> <span class="o">=</span> \
+            <span class="s">&quot;;  &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="p">[</span><span class="n">label</span><span class="p">]))</span>
+                       <span class="o">%</span> <span class="n">label</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span>
+        
+        <span class="n">figTS</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        
+        <span class="c"># Compute number of rows and cols for subplot-arrangement:</span>
+        <span class="c"># use 8 as upper limit for cols and compute rows accordingly</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">:</span> <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="mi">8</span>
+        <span class="n">nr_of_rows</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span>
+        
+        <span class="c"># Set canvas size in inches. These values turned out fine, depending</span>
+        <span class="c"># on [physiological_arrengement] and [shrink_plots]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+            <span class="n">figTS</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">((</span><span class="mi">5</span> <span class="o">*</span> <span class="n">nr_of_cols</span><span class="p">,</span>  <span class="mi">3</span> <span class="o">*</span> <span class="n">nr_of_rows</span><span class="p">))</span>
+            <span class="n">ec_2d</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_plots</span><span class="p">:</span>
+                <span class="n">figTS</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">((</span><span class="mi">3</span><span class="o">*</span><span class="mf">11.7</span><span class="p">,</span>  <span class="mi">3</span><span class="o">*</span><span class="mf">8.3</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">figTS</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">((</span><span class="mi">4</span><span class="o">*</span><span class="mf">11.7</span><span class="p">,</span>  <span class="mi">4</span><span class="o">*</span><span class="mf">8.3</span><span class="p">))</span>
+                
+            <span class="n">ec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getMetadata</span><span class="p">(</span><span class="s">&quot;electrode_coordinates&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">ec</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">ec</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">ec</span>
+            <span class="n">ec_2d</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">project2d</span><span class="p">(</span><span class="n">ec</span><span class="p">)</span>
+                
+        <span class="c"># plot everything channel-wise</span>
+        <span class="k">for</span> <span class="n">i_chan</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">):</span>
+            <span class="n">figTS</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">nr_of_rows</span><span class="p">,</span> <span class="n">nr_of_cols</span><span class="p">,</span> <span class="n">i_chan</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+            
+            <span class="c"># actual plotting of the data. This can always be done</span>
+            <span class="k">for</span> <span class="n">tslabel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">tmp_plot</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="n">tslabel</span><span class="p">][:,</span> <span class="n">i_chan</span><span class="p">],</span>
+                           <span class="n">label</span><span class="o">=</span><span class="n">tslabel</span><span class="p">)</span>
+                <span class="n">cur_color</span> <span class="o">=</span> <span class="n">tmp_plot</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_color</span><span class="p">()</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_type</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span><span class="p">):</span>
+                        <span class="n">current_error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">error</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">]</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">bar</span><span class="p">(</span><span class="n">sample</span><span class="o">-.</span><span class="mi">35</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">current_error</span><span class="p">,</span> <span class="n">width</span><span class="o">=.</span><span class="mi">7</span><span class="p">,</span> 
+                         <span class="n">bottom</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="p">[</span><span class="n">tslabel</span><span class="p">][</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">]</span>
+                                                            <span class="o">-</span><span class="n">current_error</span><span class="p">,</span>
+                                      <span class="n">color</span><span class="o">=</span><span class="n">cur_color</span><span class="p">,</span> <span class="n">ec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">3</span><span class="p">)</span>
+                         
+            
+            <span class="c"># plotting of features; only if features present</span>
+            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
+                <span class="c"># plot those nice grey circles</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[:,</span> <span class="n">i_chan</span><span class="p">],</span>
+                           <span class="s">&#39;o&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;0.5&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&#39;Feature&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+                
+                <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="p">[</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">:</span>
+                        <span class="c"># write down value...</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> 
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">],</span>
+                                   <span class="s">&#39;</span><span class="si">%.2f</span><span class="s">&#39;</span> <span class="o">%</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">],</span>
+                                   <span class="n">ha</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span>
+                                   <span class="n">size</span><span class="o">=</span><span class="s">&#39;xx-small&#39;</span><span class="p">)</span>
+                        <span class="c"># ...compute the corresponding color-representation...</span>
+                        <span class="n">marker_color</span> <span class="o">=</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">own_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span><span class="p">(</span>\
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[</span><span class="n">sample</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">]))</span>
+                        <span class="c"># ...and draw vertical boxes at the feature&#39;s position</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="n">sample</span> <span class="o">-</span> <span class="o">.</span><span class="mi">25</span><span class="p">,</span> <span class="n">sample</span> <span class="o">+</span> <span class="o">.</span><span class="mi">25</span><span class="p">,</span>
+                                      <span class="n">color</span><span class="o">=</span><span class="n">marker_color</span><span class="p">,</span>
+                                      <span class="n">ec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=.</span><span class="mi">8</span><span class="p">)</span>
+                                      
+
+            <span class="c"># more format. and rearrangement in case of [phys_arrengement]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_format_subplots</span><span class="p">(</span><span class="s">&#39;mean time series&#39;</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">,</span>
+                                  <span class="n">samples_per_condition_string</span><span class="p">,</span> <span class="n">ec_2d</span><span class="p">)</span>
+            
+        <span class="c"># in case of [phys_arrengement], write the figure title only once</span>
+        <span class="c"># and large in the upper left corner of the plot. this fails whenever</span>
+        <span class="c"># there are no more channels in that area, as the plot gets cropped</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+            <span class="n">h</span><span class="p">,</span> <span class="n">l</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">get_legend_handles_labels</span><span class="p">()</span>
+            <span class="n">prop</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">font_manager</span><span class="o">.</span><span class="n">FontProperties</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="s">&#39;xx-large&#39;</span><span class="p">)</span>
+            <span class="n">figTS</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">prop</span><span class="o">=</span><span class="n">prop</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">emotiv</span><span class="p">:</span>
+                <span class="n">text_x</span> <span class="o">=</span> <span class="o">.</span><span class="mi">1</span>
+                <span class="n">text_y</span> <span class="o">=</span> <span class="o">.</span><span class="mi">92</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">text_x</span> <span class="o">=</span> <span class="o">.</span><span class="mi">4</span>
+                <span class="n">text_y</span> <span class="o">=</span> <span class="o">.</span><span class="mi">4</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_plots</span><span class="p">:</span> <span class="n">text_y</span> <span class="o">=</span> <span class="mf">1.2</span>
+            <span class="n">figTS</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">text_x</span><span class="p">,</span> <span class="n">text_y</span><span class="p">,</span> <span class="s">&#39;Channel-wise mean time series</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span>
+                       <span class="n">samples_per_condition_string</span><span class="p">,</span>
+                       <span class="n">ha</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">32</span><span class="p">)</span>
+            
+        
+        <span class="k">return</span> <span class="n">figTS</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._format_subplots"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._format_subplots">[docs]</a>    <span class="k">def</span> <span class="nf">_format_subplots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">i_chan</span><span class="p">,</span> <span class="n">samples_per_condition_string</span><span class="p">,</span> <span class="n">ec</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Some time series plot formatting. Mainly writes the channel names</span>
+<span class="sd">        into the axes, sets titles and rearranges the axes for </span>
+<span class="sd">        physiological_arrengement. Also flips axes if desired by setting</span>
+<span class="sd">        axflip = True &quot;&quot;&quot;</span>
+        <span class="c"># Plot zero line into every single subplot</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                   <span class="n">pylab</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span><span class="p">),</span> <span class="s">&#39;k--&#39;</span><span class="p">)</span>
+
+        <span class="c"># current axis limits:</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">xmin</span><span class="o">=</span><span class="mi">0</span> <span class="o">-</span> <span class="o">.</span><span class="mi">5</span><span class="p">,</span> <span class="n">xmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">samples_per_window</span> <span class="o">+</span> <span class="o">.</span><span class="mi">5</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">axflip</span><span class="p">:</span>
+            <span class="n">tempax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+            <span class="c"># reverse ylim</span>
+            <span class="n">tempax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">tempax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[::</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">physiological_arrangement</span><span class="p">:</span>
+            <span class="c"># every subplot gets a title</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s">&#39;Channel-wise &#39;</span> <span class="o">+</span> <span class="nb">type</span> <span class="o">+</span> <span class="s">&#39;  -  &#39;</span> <span class="o">+</span>
+                        <span class="n">samples_per_condition_string</span><span class="p">,</span>
+                        <span class="n">ha</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="s">&#39;x-small&#39;</span><span class="p">)</span>    
+            <span class="c"># and a small legend</span>
+            <span class="n">prop</span> <span class="o">=</span> <span class="n">matplotlib</span><span class="o">.</span><span class="n">font_manager</span><span class="o">.</span><span class="n">FontProperties</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="s">&#39;x-small&#39;</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">prop</span><span class="o">=</span><span class="n">prop</span><span class="p">)</span>
+            
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># do the physiological arrangement</span>
+            <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">ec</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i_chan</span><span class="p">]]</span>
+            <span class="n">w</span> <span class="o">=</span> <span class="o">.</span><span class="mo">07</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="o">.</span><span class="mo">065</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shrink_plots</span><span class="p">:</span>
+                <span class="n">w</span> <span class="o">*=</span> <span class="mf">1.2</span>
+                <span class="n">h</span> <span class="o">*=</span> <span class="mf">0.9</span>
+                <span class="n">x</span> <span class="o">*=</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span>
+                <span class="n">y</span> <span class="o">*=</span> <span class="mf">4.0</span><span class="o">/</span><span class="mf">3.0</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_position</span><span class="p">([(</span><span class="n">x</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="mi">110</span><span class="p">)</span> <span class="o">/</span> <span class="mi">220</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">])</span>
+                  
+        <span class="c"># get current axis limits...</span>
+        <span class="n">cal</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">axis</span><span class="p">()</span>
+        <span class="c"># ... and place channel name at a nice upper left position</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="o">.</span><span class="mi">85</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="o">.</span><span class="mi">15</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="o">.</span><span class="mi">8</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="o">.</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i_chan</span><span class="p">],</span> <span class="n">ha</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;black&#39;</span><span class="p">,</span>
+                    <span class="n">size</span><span class="o">=</span><span class="s">&#39;xx-large&#39;</span><span class="p">)</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._generate_histo_plot"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._generate_histo_plot">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_histo_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This function generates the actual histogram plot&quot;&quot;&quot;</span>
+        <span class="n">fighist</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        
+        <span class="n">nr_of_feats</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">)</span>
+        <span class="c"># again, number of subplot columns is 8 at most while</span>
+        <span class="c"># using as many rows as necessary</span>
+        <span class="k">if</span> <span class="n">nr_of_feats</span> <span class="o">&lt;=</span> <span class="mi">8</span><span class="p">:</span> <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="n">nr_of_feats</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">nr_of_cols</span> <span class="o">=</span> <span class="mi">8</span>
+        <span class="n">nr_of_rows</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="mi">8</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">fighist</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">((</span><span class="mi">5</span> <span class="o">*</span> <span class="n">nr_of_cols</span><span class="p">,</span>  <span class="mi">3</span> <span class="o">*</span> <span class="n">nr_of_rows</span><span class="p">))</span>
+
+        <span class="n">important_features</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="n">important_feature_names</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">([])</span>
+        <span class="n">itercount</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">feat_index</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">indexlist</span><span class="p">:</span>
+            <span class="c"># backgroundcolor for the feature importance text</span>
+            <span class="n">bg_color</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">own_colormap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">normalizer</span><span class="p">(</span>\
+                        <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">feat_index</span><span class="p">)]))</span>
+            <span class="n">fighist</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">nr_of_rows</span><span class="p">,</span> <span class="n">nr_of_cols</span><span class="p">,</span> <span class="n">itercount</span><span class="p">)</span>
+            <span class="n">itercount</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c"># plot the actual histogram</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">hist</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                        <span class="p">[:,</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">()],</span>
+                        <span class="n">bins</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">normed</span><span class="o">=</span><span class="bp">True</span> <span class="p">,</span> <span class="n">histtype</span><span class="o">=</span><span class="s">&#39;step&#39;</span><span class="p">)</span>
+            <span class="c"># write feature importance as fig.text</span>
+            <span class="n">cal</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">axis</span><span class="p">()</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">text</span><span class="p">((</span><span class="o">.</span><span class="mi">23</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="o">.</span><span class="mi">77</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+                       <span class="p">(</span><span class="o">.</span><span class="mi">8</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">+</span> <span class="o">.</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cal</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="s">&#39;</span><span class="si">%.2f</span><span class="s">&#39;</span> <span class="o">%</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">feature_time_series</span><span class="p">[</span><span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                       <span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;xx-large&#39;</span><span class="p">,</span>
+                       <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">fc</span><span class="o">=</span><span class="n">bg_color</span><span class="p">,</span> <span class="n">ec</span><span class="o">=</span><span class="n">bg_color</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">pad</span><span class="o">=</span><span class="mi">14</span><span class="p">))</span>
+            <span class="c"># Title uses feature name</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s">&#39;Channel </span><span class="si">%s</span><span class="s"> at </span><span class="si">%d</span><span class="s">ms&#39;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                         <span class="nb">float</span><span class="p">(</span><span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> 
+                         <span class="bp">self</span><span class="o">.</span><span class="n">sample_data</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">),</span>
+                        <span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;x-large&#39;</span><span class="p">)</span>
+            
+            <span class="c"># initialize, if no important features known yet</span>
+            <span class="k">if</span> <span class="n">important_features</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="o">==</span> <span class="p">[]:</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">][:,</span>
+                                    <span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span>
+            <span class="c"># stack current important feature with previous</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mean_time_series</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span>
+                        <span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">],</span>
+                         <span class="n">pylab</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time_series_histo</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                         <span class="p">[:,</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]])))</span>
+            <span class="c"># memorize feature name</span>
+            <span class="n">important_feature_names</span> <span class="o">=</span> \
+             <span class="n">pylab</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">important_feature_names</span><span class="p">,</span> \
+             <span class="p">[(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">[</span><span class="n">feat_index</span><span class="p">[</span><span class="mi">1</span><span class="p">]])</span><span class="o">.</span><span class="n">ljust</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">)</span>\
+             <span class="o">+</span> <span class="p">(</span><span class="s">&#39;</span><span class="si">%d</span><span class="s">ms&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">feat_index</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">/</span> \
+             <span class="bp">self</span><span class="o">.</span><span class="n">sample_data</span><span class="o">.</span><span class="n">sampling_frequency</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">))</span><span class="o">.</span><span class="n">rjust</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="s">&#39;_&#39;</span><span class="p">)])</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span> <span class="o">=</span> <span class="n">important_feature_names</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">important_features</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feats</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">pylab</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">])</span>
+        <span class="c"># Draw the &quot;feature development&quot; plots of the important features</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_generate_feature_development_plots</span><span class="p">(</span><span class="n">important_features</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fighist</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._generate_feature_development_plots"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._generate_feature_development_plots">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_feature_development_plots</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">important_features</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This function generates the actual histogram plot&quot;&quot;&quot;</span>
+        <span class="c"># Everything is done class-wise</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">important_features</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c"># Axis limits are determined by the global maxima</span>
+            <span class="p">(</span><span class="n">minVal</span><span class="p">,</span> <span class="n">maxVal</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                <span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>                                
+            <span class="n">nr_chans</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+                                
+            <span class="n">myFig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">myFig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">((</span><span class="mi">40</span><span class="p">,</span><span class="n">nr_chans</span><span class="p">))</span>
+            
+            <span class="k">for</span> <span class="n">i_chan</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr_chans</span><span class="p">):</span>
+                <span class="n">ax</span> <span class="o">=</span> <span class="n">myFig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">nr_chans</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">i_chan</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                
+                <span class="c"># cycle line colors</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">i_chan</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span> <span class="n">myCol</span> <span class="o">=</span> <span class="s">&#39;#000080&#39;</span>
+                <span class="k">else</span><span class="p">:</span> <span class="n">myCol</span> <span class="o">=</span> <span class="s">&#39;#003EFF&#39;</span>
+                <span class="c"># plot features and black zero-line</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">i_chan</span><span class="p">,:],</span><span class="n">color</span><span class="o">=</span><span class="n">myCol</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">i_chan</span><span class="p">,:])),</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">][</span><span class="n">i_chan</span><span class="p">,:])),</span>
+                    <span class="s">&#39;k--&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylim</span><span class="p">((</span><span class="n">minVal</span><span class="p">,</span><span class="n">maxVal</span><span class="p">))</span>
+                <span class="n">xmax</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="n">important_features</span><span class="p">[</span><span class="n">label</span><span class="p">])[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xlim</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span><span class="n">xmax</span><span class="p">))</span>
+                
+                <span class="c"># draw vertical dashed line every 20 epochs</span>
+                <span class="k">for</span> <span class="n">vertical_line_position</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">xmax</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">20</span><span class="p">):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">vertical_line_position</span><span class="p">,</span>
+                                  <span class="n">ymin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s">&#39;--&#39;</span><span class="p">)</span>
+                    
+                <span class="c"># write title above uppermost subplot</span>
+                <span class="k">if</span> <span class="n">i_chan</span><span class="o">+</span><span class="mi">1</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s">&#39;Feature development: Amplitudes of </span><span class="si">%s</span><span class="s"> Epochs&#39;</span>
+                                <span class="o">%</span> <span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">40</span><span class="p">)</span>
+                <span class="c"># adjust the axes, i.e. remove upper and right,</span>
+                <span class="c"># shift the left to avoid overlaps,</span>
+                <span class="c"># and lower axis only @ bottom subplot</span>
+                <span class="k">if</span> <span class="n">i_chan</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="n">nr_chans</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_spines</span><span class="p">(</span><span class="n">ax</span><span class="p">,[</span><span class="s">&#39;left&#39;</span><span class="p">],</span><span class="n">i_chan</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_adjust_spines</span><span class="p">(</span><span class="n">ax</span><span class="p">,[</span><span class="s">&#39;left&#39;</span><span class="p">,</span> <span class="s">&#39;bottom&#39;</span><span class="p">],</span><span class="n">i_chan</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&#39;Number of Epoch&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">36</span><span class="p">)</span>
+                <span class="c"># Write feature name next to the axis</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span><span class="p">[</span><span class="n">i_chan</span><span class="p">],</span>
+                             <span class="n">fontsize</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="s">&#39;horizontal&#39;</span><span class="p">)</span>
+            <span class="c"># remove whitespace between subplots etc.</span>
+            <span class="n">myFig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">bottom</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span><span class="n">left</span><span class="o">=</span><span class="mf">0.08</span><span class="p">,</span><span class="n">right</span><span class="o">=</span><span class="mf">0.97</span><span class="p">,</span>
+                                  <span class="n">top</span><span class="o">=</span><span class="mf">0.94</span><span class="p">,</span><span class="n">wspace</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span><span class="n">hspace</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">feature_development_plot</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">myFig</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._get_corr_plot"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._get_corr_plot">[docs]</a>    <span class="k">def</span> <span class="nf">_get_corr_plot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">corr_matrix</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Plot the current correlation matrix as filled contour plot</span>
+<span class="sd">            and return figure instance. &quot;&quot;&quot;</span>
+        <span class="n">figCorrelation</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">corr_matrix</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s">&#39;nearest&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">corr_matrix</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">))</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">corr_matrix</span><span class="p">)))</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_yticklabels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span><span class="p">,</span>
+                                    <span class="n">size</span><span class="o">=</span><span class="s">&#39;xx-small&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_xticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">corr_matrix</span><span class="p">)))</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_xticklabels</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">corr_important_feat_names</span><span class="p">,</span>
+                                    <span class="n">rotation</span><span class="o">=</span><span class="s">&#39;vertical&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="s">&#39;xx-small&#39;</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">figCorrelation</span>
+    
+
+<span class="c">#    def _get_electrode_coordinates(self, key):</span>
+<span class="c">#        &quot;&quot;&quot; Convert the polar coordinates of the electrode positions</span>
+<span class="c">#        to cartesian coordinates for the positioning of the physiologically</span>
+<span class="c">#        arranged plots. As the position specification also requires a height</span>
+<span class="c">#        and width, these values are also passed. Height and width are tuned</span>
+<span class="c">#        manually such that the resulting plots look nice. &quot;&quot;&quot;</span>
+<span class="c">#        # coordinate transformation</span>
+<span class="c">#        x = (self.ec[key][0] *</span>
+<span class="c">#             pylab.cos(self.ec[key][1] / 180 * pylab.pi) + 110) / 220</span>
+<span class="c">#        y = (self.ec[key][0] *</span>
+<span class="c">#             pylab.sin(self.ec[key][1] / 180 * pylab.pi) + 110) / 220</span>
+<span class="c">#        w = .07</span>
+<span class="c">#        h = .065</span>
+<span class="c">#        if self.shrink_plots:</span>
+<span class="c">#            w *= 1.2</span>
+<span class="c">#            h *= 0.9</span>
+<span class="c">#            x *= 4.0/3.0</span>
+<span class="c">#            y *= 4.0/3.0</span>
+<span class="c">#        </span>
+<span class="c">#        return [x, y, w, h]</span>
+    
+</div>
+<div class="viewcode-block" id="AverageFeatureVisNode._adjust_spines"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.average_and_feature_vis.html#pySPACE.missions.nodes.visualization.average_and_feature_vis.AverageFeatureVisNode._adjust_spines">[docs]</a>    <span class="k">def</span> <span class="nf">_adjust_spines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ax</span><span class="p">,</span><span class="n">spines</span><span class="p">,</span><span class="n">i_chan</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Essentially, removes most of the axes in the feature development</span>
+<span class="sd">        plots. Also produces the alternating shift of the left axes. &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">loc</span><span class="p">,</span> <span class="n">spine</span> <span class="ow">in</span> <span class="n">ax</span><span class="o">.</span><span class="n">spines</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">loc</span> <span class="ow">in</span> <span class="n">spines</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">((</span><span class="n">loc</span><span class="o">==</span><span class="s">&#39;left&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">mod</span><span class="p">(</span><span class="n">i_chan</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)):</span>
+                    <span class="n">spine</span><span class="o">.</span><span class="n">set_position</span><span class="p">((</span><span class="s">&#39;outward&#39;</span><span class="p">,</span><span class="mi">5</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">spine</span><span class="o">.</span><span class="n">set_position</span><span class="p">((</span><span class="s">&#39;outward&#39;</span><span class="p">,</span><span class="mi">30</span><span class="p">))</span> <span class="c"># outward by 10 points</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">spine</span><span class="o">.</span><span class="n">set_color</span><span class="p">(</span><span class="s">&#39;none&#39;</span><span class="p">)</span> <span class="c"># don&#39;t draw spine</span>
+                
+        <span class="n">ax</span><span class="o">.</span><span class="n">yaxis</span><span class="o">.</span><span class="n">set_ticks_position</span><span class="p">(</span><span class="s">&#39;left&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="s">&#39;bottom&#39;</span> <span class="ow">in</span> <span class="n">spines</span><span class="p">:</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_ticks_position</span><span class="p">(</span><span class="s">&#39;bottom&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">tick</span> <span class="ow">in</span> <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">get_major_ticks</span><span class="p">():</span>
+                <span class="n">tick</span><span class="o">.</span><span class="n">label1</span><span class="o">.</span><span class="n">set_fontsize</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_ticks</span><span class="p">([])</span> <span class="c"># no xaxis ticks</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Aug 08, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
