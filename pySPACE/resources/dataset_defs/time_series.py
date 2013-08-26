@@ -378,7 +378,14 @@ class TimeSeriesClient(AbstractStreamReader):
         self.callbacks.append(func)
 
     def connect(self):
-        self._initialize(self.backup_iter.next())
+        """connect and initialize client"""
+        try:
+            self._initialize(self.backup_iter.next())
+        except StopIteration:
+            # if a StopIteration is catched right here there
+            # is no data contained for the current modality (train/test)
+            # in this datastream.
+            pass
 
     def set_window_defs(self, window_definitions):
         index = self.nmarkertypes
