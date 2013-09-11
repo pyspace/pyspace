@@ -91,7 +91,11 @@ class StreamWindowingNode(BaseNode):
                 # Get training and test data (with labels)
                 train_data = \
                     list(self.input_node.request_data_for_training(use_test_data=use_test_data))
-                
+                # If training or test data is a empty list
+                if train_data == []:
+                    self.data_for_training=MemoizeGenerator((x for x in [].__iter__()), 
+                                                         caching = True)
+                    return self.data_for_training.fresh()
                 # create stream of 
                 self.window_stream(train_data)
 

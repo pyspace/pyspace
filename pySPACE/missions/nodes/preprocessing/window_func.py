@@ -101,7 +101,9 @@ class WindowFuncNode(BaseNode):
         
         # A window with only zeros does not make sense
         if len(self.window_not_equal_zero) == 0:
-            raise InvalidWindowException("The window does contain only zeros!")
+            raise InvalidWindowException("The window does contain only zeros!\n"+
+                "Function_str: %s\nn_samples: %d" % (self.window_function_str, 
+                                                     self.num_of_samples))
     
     def _execute(self, data):
         """ Apply the windowing to the given data and return the result """        

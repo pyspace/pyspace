@@ -288,11 +288,40 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
             # (i.e. an iterator that is immediately exhausted), since
             # this node does not provide any data that is explicitly
             # dedicated for training
-            return (x for x in [].__iter__())
+
+            # If we haven't read the data for testing yet
+            if self.data_for_training is None:
+
+                self._log("Start streaming.")
+
+                self.dataset.set_window_defs(
+                    window_definition=self.window_definition,
+                    nullmarker_stride_ms=self.nullmarker_stride_ms,
+                    no_overlap=self.no_overlap,
+                    data_consistency_check=self.data_consistency_check)
+
+                if self.dataset.meta_data["runs"] > 1:
+                    key = (self.run_number, self.current_split, "train")
+                else:
+                    key = (0, self.current_split, "train")
+
+                # Create a generator that emits the windows
+                train_data_generator = (
+                    (sample, label)
+                    for (sample, label) in self.dataset.get_data(*key))
+
+                self.data_for_training = \
+                    MemoizeGenerator(train_data_generator,
+                                     caching=self.caching)
+
+            # Return a fresh copy of the generator
+            return self.data_for_training.fresh()
         else:
             # Return the test data as there is no additional data that
             # was dedicated for training
             return self.request_data_for_testing()
+
+
 
     def request_data_for_testing(self):
         """
@@ -322,7 +351,9 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
                 (sample, label)
                 for (sample, label) in self.dataset.get_data(*key))
 
-            self.data_for_testing = MemoizeGenerator(test_data_generator)
+            self.data_for_testing = \
+                MemoizeGenerator(test_data_generator,
+                                 caching=self.caching)
 
         # Return a fresh copy of the generator
         return self.data_for_testing.fresh()

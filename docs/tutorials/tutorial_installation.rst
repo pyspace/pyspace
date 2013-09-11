@@ -13,14 +13,14 @@ of the University Bremen.
 
 The installation process consists of several steps:
 
-1. Download and install pySPACE itself
+1. :ref:`download` and install pySPACE itself
 2. Install the needed extra packages/modules
 3. Prepare the pySPACE user environment
 
 1. Downloading
 ^^^^^^^^^^^^^^^
-Step 1 is quite easy: download the software at
-`GitHub <https://github.com/pyspace>`_.
+
+Step 1 is quite easy: :ref:`download` the software.
 
 2. Extra packages
 ^^^^^^^^^^^^^^^^^^

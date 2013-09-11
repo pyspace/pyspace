@@ -59,6 +59,12 @@ Exemplary Call
     collection_constraints:
       # Combine only collections that have been created using the same parameterization
       - '"%(source_train_collection_name)s".strip("}{").split("}{")[1:] == "%(source_test_collection_name)s".strip("}{").split("}{")[1:]'
+      
+.. todo:: When applying a rewindowing on merged data and specifying an endmarker
+          in the windower spec file only data from the first set will be used.
+          Here a consistent marker handling in the merge should be implemented, 
+          e.g. delete middle start- and end-marker (S  8, S  9), to have one 
+          merged dataset with defined start and endpoint or add synthetical ones.
 """
 
 import os
