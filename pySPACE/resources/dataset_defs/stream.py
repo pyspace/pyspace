@@ -104,7 +104,12 @@ class StreamDataset(BaseDataset):
     EDF+D files may be integrated in a future release.
 
     In any case, the file suffix should be *edf*.
+    
+    .. warning:: Currently only one streaming dataset can be loaded
+        as testing data.
 
+    .. todo:: Implement loading of training and testing data.
+    
     **Parameters**
     
         :dataset_md:
@@ -404,8 +409,7 @@ class StreamDataset(BaseDataset):
 
     def get_data(self, run_nr, split_nr, train_test):
         if not (run_nr, split_nr, train_test) == (0, 0, "test"):
-            raise NotImplementedError(
-                "Currently only one streaming dataset can be loaded!")
+            return self.data[(run_nr, split_nr, train_test)]
         if self.meta_data.has_key('storage_format'):
             if "bp_eeg" in self.meta_data['storage_format']:
                 # remove ".eeg" suffix

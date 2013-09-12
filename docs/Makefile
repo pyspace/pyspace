@@ -46,7 +46,7 @@ html:
 	-rm -rf .build/*
 	-rm -rf api/generated/*
 	-rm -rf api/tests/*
-	@echo "generating API dpcumentation ..."
+	@echo "generating API documentation ..."
 	mkdir -p .build/html .build/doctrees
 	$(MODULEGEN)
 	$(PACKAGEGEN)

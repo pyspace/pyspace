@@ -851,6 +851,11 @@ class PerformanceResultSummary(BaseDataset):
         else:
             axes.set_ylabel("%s*%s+%s*%s" % tuple(y_key.split("#")))
 
+        # display nearly invisible lines in the back for better orientation
+        axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
+                        alpha=0.5)
+        axes.set_axisbelow(True)
+
         # Return figure name
         return "_".join([y_key, x_key])
 
@@ -1084,7 +1089,12 @@ class PerformanceResultSummary(BaseDataset):
             axes.set_ylabel(value_key.strip("_").replace("_", " "))
         else:
             axes.set_ylabel("%s*%s+%s*%s" % tuple(value_key.split("#")))
-            
+
+        # display nearly invisible lines in the back for better orientation
+        axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
+                        alpha=0.5)
+        axes.set_axisbelow(True)
+
         prop = matplotlib.font_manager.FontProperties(size='xx-small')
         if not nominal_key=="None":
             lg=axes.legend(prop=prop, loc=0,fancybox=True,title=nominal_key.strip("_"))
@@ -1131,7 +1141,12 @@ class PerformanceResultSummary(BaseDataset):
         matplotlib.pyplot.setp(axes.get_xticklabels(), rotation=-90)
         matplotlib.pyplot.setp(axes.get_xticklabels(), size='x-small')
         axes.set_xlabel(x_key.replace("_", " "))
-        
+
+        # display nearly invisible lines in the back for better orientation
+        axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
+                        alpha=0.5)
+        axes.set_axisbelow(True)
+
         if y_key.count("#") == 0:
             axes.set_ylabel(y_key.replace("_", " "))
         else:
@@ -1284,19 +1299,23 @@ class PerformanceResultSummary(BaseDataset):
             axes.set_ylabel(value_key.strip("_").replace("_", " "))
         else:
             axes.set_ylabel("%s*%s+%s*%s" % tuple(value_key.split("#")))
-        
+
+        # display nearly invisible lines in the back for better orientation
+        axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
+                        alpha=0.5)
+        axes.set_axisbelow(True)
+
         # Return figure name
         return "%s_%s_vs_%s" % (value_key, nominal_key1, nominal_key2)
-        
-    
+
     def plot_histogram(self, axes, metric, numeric_parameters, nominal_parameters,
                        average_runs = True):
         """ Plots a histogram of the values the given metric takes on in data
          
         Plots histogram for *metric* in which each parameter combination from 
-        *numeric_paramerters* and *nominal_parameters* corresponds
+        *numeric_parameters* and *nominal_parameters* corresponds
         to one value (if *average_runs* == True) or each run corresponds
-        to one value ((if *average_runs* == False).
+        to one value (if *average_runs* == False).
         The plot is written into *axes*.
         """
         if average_runs == False:
@@ -1319,7 +1338,7 @@ class PerformanceResultSummary(BaseDataset):
                                     for value in all_values.itervalues()]
         
         # Plot and store the histogram
-        axes.hist(metric_values, histtype='stepfilled', align = 'left')
+        axes.hist(metric_values, histtype='stepfilled', align='left')
         axes.set_ylim((0, pylab.ylim()[1]))
         axes.set_xlabel(metric if average_runs == False 
                         else "Mean %s" % metric)

@@ -1395,8 +1395,8 @@ class BaseNode(object):
             else:
                 self.output_dim = shape
         elif not (self.output_dim in [result.shape,result.shape[1]]):
-            error_str = "y has dimension %d, should be %d in node %s" % (result.shape,
-                                                              self.output_dim,
+            error_str = "y has dimension %d, should be %d in node %s" % (result.shape[1],
+                                                              self.output_dim[1],
                                                               self.__class__.__name__)
             raise Exception(error_str)
 

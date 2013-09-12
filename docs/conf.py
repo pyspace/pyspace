@@ -600,7 +600,8 @@ if len(node_list) > 0:
         cl += ".. autoclass:: %s\n    :no-members:\n\n" % node
 
     f.write(cl)
-    f.close()
+
+f.close()
 
 
 

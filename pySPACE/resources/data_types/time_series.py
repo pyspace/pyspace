@@ -4,6 +4,7 @@ import numpy
 import warnings
 from pySPACE.resources.data_types import base
 
+
 class TimeSeries(base.BaseData):
     """ Time Series object
     
@@ -67,8 +68,7 @@ class TimeSeries(base.BaseData):
         
         # Finally, we must return the newly created object:
         return obj
-        
-    
+
     def __array_finalize__(self, obj):
         super(TimeSeries, self).__array_finalize__(obj)
         if not obj is None and not type(obj)==numpy.ndarray:
@@ -86,7 +86,7 @@ class TimeSeries(base.BaseData):
             self.end_time = None
             self.name = None
             self.marker_name = None
-    
+
     def __reduce__(self):
         # Refer to 
         # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
@@ -110,8 +110,7 @@ class TimeSeries(base.BaseData):
         
         (self.channel_names, self.sampling_frequency, self.start_time, 
          self.end_time, self.name, self.marker_name) = own_state
-        
-    
+
     @staticmethod
     def _generate_tag(obj):
         """generate new tag based on time series attributes start_time,
@@ -146,18 +145,22 @@ class TimeSeries(base.BaseData):
     # names once per instance but only once per occurence. Instead we store a
     # unique hash once per instance  that allows to retrieve the channel names
     channel_names_dict = {}
+
     def get_channel_names(self):
         return TimeSeries.channel_names_dict[self.channel_names_hash]
+
     def set_channel_names(self, channel_names):
         self.channel_names_hash = hash(str(channel_names))
         if not TimeSeries.channel_names_dict.has_key(self.channel_names_hash):
             TimeSeries.channel_names_dict[self.channel_names_hash] = channel_names
+
     def del_channel_names(self):
         pass
-    channel_names = property(get_channel_names, set_channel_names, 
+
+    channel_names = property(get_channel_names, set_channel_names,
                              del_channel_names, 
                              "The channel_names property.")
-          
+
     @staticmethod
     def replace_data(old, data, **kwargs):
         """ Create a new time series with the given data but the old metadata.
@@ -178,7 +181,7 @@ class TimeSeries(base.BaseData):
         if "tag" in kwargs.keys():
             data.tag=kwargs["tag"]
         return data
-        
+
     def get_channel(self, channel_name):
         """ Return the values of the channel with name *channel_name* """
         channel_index = self.channel_names.index(channel_name)

@@ -619,7 +619,8 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
                                     "performance_dict":performance_dict,
                                     "iterations":self.iterations}]
         return best_parametrization, performance
-        
+
+
 class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
     """ Extension of the standard Pattern Search algorithm
     
@@ -760,7 +761,7 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
                                                         level = logging.WARNING)
         directions = [tuple(d) for d in directions]
         # delete duplicates
-        directions = set(directions)
+        directions = list(set(directions))
         
         max_bound = self.get_vector(max_bound) if max_bound != [] else inf*ones(dim)
         min_bound = self.get_vector(min_bound) if min_bound != [] else -inf*ones(dim)
@@ -770,7 +771,7 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
         # copy all params which will be changed during processing
         init_params = {"x_opt": x_opt, "directions": directions, 
                        "step_size": start_step_size}
-        self.set_permanent_attributes(x_opt = x_opt, 
+        self.set_permanent_attributes(x_opt = x_opt,
                                       directions = directions,
                                       step_size = start_step_size,
                                       stop_step_size = stop_step_size,
@@ -944,13 +945,14 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
             self.x_opt = self.get_vector(best_parametrization)
         else:
             # new scaling factor if we don't get an improvement
-            self.step_size=self.step_size*self.scaling_factor
+            self.step_size = self.step_size*self.scaling_factor
         # Search documentation - TODO: maybe only log relevant steps?
         self.search_history.append({"best_parameter": self.x_opt,
                                     "best_performance": self.f_max,
                                     "performance_dict": performance_dict,
                                     "step_size": old_step_size,
                                     "iterations": self.iterations})
+
 
 # Specify special node names
 _NODE_MAPPING = {"Grid_Search": GridSearchNode,

@@ -59,6 +59,19 @@ Exemplary Call
     collection_constraints:
       # Combine only collections that have been created using the same parameterization
       - '"%(source_train_collection_name)s".strip("}{").split("}{")[1:] == "%(source_test_collection_name)s".strip("}{").split("}{")[1:]'
+      
+.. todo::   When applying a rewindowing on merged time series data with the
+            :class:`~pySPACE.missions.nodes.source.time_series_source.TimeSeries2TimeSeriesSourceNode`
+            and specifying an endmarker in the windower spec file only data from
+            the first set might be used. Here, an additional marker handling
+            could be implemented, e.g., delete middle start- and end-marker
+            ('S  8', 'S  9'), to have one merged dataset with defined start
+            and endpoint or add synthetic ones.
+            Alternatively the :mod:`~pySPACE.missions.support.windower` could
+            be modified, e.g., to handle multiple start and end markers.
+            The marker information is stored in the `marker_name` variable
+            of the :class:`~pySPACE.resources.data_types.time_series.TimeSeries`
+            objects.
 """
 
 import os

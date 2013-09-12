@@ -151,10 +151,7 @@ class TimeSeriesDataset(BaseDataset):
                     self.data[(run_nr, split_nr, train_test)] = cPickle.load(f)
                     del sys.modules['abri_dp.types.time_series']
                 f.close()
-        if self.stream_mode:
-            if not (run_nr, split_nr, train_test) == (0, 0, "test"):
-                raise NotImplementedError(
-                    "Currently only one streaming dataset can be loaded!")
+        if self.stream_mode and not self.data[(run_nr, split_nr, train_test)] == []:
             # Create a connection to the TimeSeriesClient and return an iterator
             # that passes all received data through the windower.
             self.reader = TimeSeriesClient(self.data[(run_nr, split_nr, train_test)], blocksize=100)
@@ -241,10 +238,6 @@ class TimeSeriesDataset(BaseDataset):
         for key, time_series in self.data.iteritems():
             # load data, if necessary 
             # (due to the  lazy loading, the data might be not loaded already)
-            self.update_meta_data({
-                "channel_names": copy.deepcopy(time_series[0][0].channel_names),
-                "sampling_frequency": time_series[0][0].sampling_frequency
-            })
             if isinstance(time_series, basestring):
                 time_series = self.get_data(key[0], key[1], key[2])
             if self.sort_string is not None:
@@ -320,7 +313,10 @@ class TimeSeriesDataset(BaseDataset):
                 NotImplementedError("Using unavailable storage format:%s!"
                                     % s_format)
             result_file.close()
-        
+        self.update_meta_data({
+            "channel_names": copy.deepcopy(time_series[0][0].channel_names),
+            "sampling_frequency": time_series[0][0].sampling_frequency
+        })
         #Store meta data
         BaseDataset.store_meta_data(result_dir, self.meta_data)
 
@@ -378,7 +374,14 @@ class TimeSeriesClient(AbstractStreamReader):
         self.callbacks.append(func)
 
     def connect(self):
-        self._initialize(self.backup_iter.next())
+        """connect and initialize client"""
+        try:
+            self._initialize(self.backup_iter.next())
+        except StopIteration:
+            # if a StopIteration is catched right here there
+            # is no data contained for the current modality (train/test)
+            # in this datastream.
+            pass
 
     def set_window_defs(self, window_definitions):
         index = self.nmarkertypes

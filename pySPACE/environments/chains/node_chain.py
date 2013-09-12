@@ -891,6 +891,10 @@ class BenchmarkNodeChain(NodeChain):
                     result_collection = result
                 else:
                     result_collection.data.update(result.data)
+                # reset node chain for new training if another call of
+                # :func:`benchmark` is expected.
+                if not ind == len(runs) - 1:
+                    self.reset()
             self.clean_logging()
             return (self.id, result_collection)
         else:
