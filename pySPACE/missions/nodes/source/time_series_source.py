@@ -110,7 +110,7 @@ class TimeSeriesSourceNode(BaseNode):
         .. todo:: to document
         """
         # If we haven't read the data for testing yet
-        if self.data_for_testing == None:
+        if self.data_for_testing is None:
             self._log("Accessing input dataset's test time series windows.")
             # If the input dataset consists only of one single run,
             # we use this as input for all runs to be conducted (i.e. we
@@ -284,12 +284,7 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
         """
         self._log("Requesting train data...")
         if not use_test_data:
-            # Returns an iterator that iterates over an empty sequence
-            # (i.e. an iterator that is immediately exhausted), since
-            # this node does not provide any data that is explicitly
-            # dedicated for training
-
-            # If we haven't read the data for testing yet
+            # If we haven't read the data for training yet
             if self.data_for_training is None:
 
                 self._log("Start streaming.")
@@ -320,8 +315,6 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
             # Return the test data as there is no additional data that
             # was dedicated for training
             return self.request_data_for_testing()
-
-
 
     def request_data_for_testing(self):
         """

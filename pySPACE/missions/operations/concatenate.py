@@ -110,6 +110,12 @@ and session will be used for test:
 
 For the usage o the shuffle operation refer to :mod:`pySPACE.missions.operations.shuffle`.
 
+.. note::
+    Problems in connection with the
+    :class:`~pySPACE.missions.nodes.source.time_series_source.TimeSeries2TimeSeriesSourceNode`
+    can also occur as described in the
+    :mod:`~pySPACE.missions.operations.merge` module.
+
 :Author: Anett Seeland (anett.seeland@dfki.de)
 :Input: :mod:`pySPACE.pySPACE.resources.dataset_defs.time_series`
 """

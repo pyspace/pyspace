@@ -15,7 +15,7 @@ Git
 ====
 
 Git is a distributed version control system.
-For further instructions on using git you can use http://git-scm.com
+For further instructions on using Git refer to http://git-scm.com
 and http://github.com.
 
 In future we will use this space to present the pySPACE version control workflow

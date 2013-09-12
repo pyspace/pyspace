@@ -1307,8 +1307,7 @@ class PerformanceResultSummary(BaseDataset):
 
         # Return figure name
         return "%s_%s_vs_%s" % (value_key, nominal_key1, nominal_key2)
-        
-    
+
     def plot_histogram(self, axes, metric, numeric_parameters, nominal_parameters,
                        average_runs = True):
         """ Plots a histogram of the values the given metric takes on in data
@@ -1316,7 +1315,7 @@ class PerformanceResultSummary(BaseDataset):
         Plots histogram for *metric* in which each parameter combination from 
         *numeric_parameters* and *nominal_parameters* corresponds
         to one value (if *average_runs* == True) or each run corresponds
-        to one value ((if *average_runs* == False).
+        to one value (if *average_runs* == False).
         The plot is written into *axes*.
         """
         if average_runs == False:
@@ -1339,7 +1338,7 @@ class PerformanceResultSummary(BaseDataset):
                                     for value in all_values.itervalues()]
         
         # Plot and store the histogram
-        axes.hist(metric_values, histtype='stepfilled', align = 'left')
+        axes.hist(metric_values, histtype='stepfilled', align='left')
         axes.set_ylim((0, pylab.ylim()[1]))
         axes.set_xlabel(metric if average_runs == False 
                         else "Mean %s" % metric)
