@@ -88,7 +88,7 @@ epilog=\
 This is the script to launch pySPACE.
 
 For detailed documentation on pySPACE refer to the online documentation at
-https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/index.html,
+http://pyspace.github.io/pyspace/index.html,
 the __init__ file in the pySPACE folder, or the index.rst in the docs folder.
 
 This script shall start pySPACE in the standard benchmark flow.

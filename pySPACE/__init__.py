@@ -5,9 +5,9 @@ pySPACE API
 ===========
 
 Welcome to the main module of pySPACE, the Signal Processing And Classification Environment
-in Python. For a complete and up-to date documentation we internally refer to
-our `webserver <https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/index.html>`_ version
-and for external programmers, use the git project webpage.
+in Python. For a complete and up-to date documentation of the release,
+we refer to
+`our git project web page <http://pyspace.github.io/pyspace/index.html>`_.
 
 This module contains the basic imports for using pySPACE and sets the default
 configuration.

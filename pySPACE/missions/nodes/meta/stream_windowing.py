@@ -22,19 +22,20 @@ class StreamWindowingNode(BaseNode):
     Node that interprets a stream of incoming time series objects as
     a raw data stream.
     The markers stored in marker_name attribute are used as the markers
-    for a MarkerWindower.
+    for a :class:`~pySPACE.missions.support.windower.MarkerWindower`.
     This should done *before* any splitter, since all incoming windows
     are regarded as parts of a consecutive data stream.
 
     **Parameters**
 
      :windower_spec_file:
-         The window specification file for the MakerWindower.
+         The window specification file for the
+         :class:`~pySPACE.missions.support.windower.MarkerWindower`.
          Used for testing and training, if windower_spec_file_train
          is not specified. 
 
      :windower_spec_file_train:
-         A seperate window file for training only.
+         A separate window file for training only.
          If not specified, windower_spec_file is used for training
          and testing.
 

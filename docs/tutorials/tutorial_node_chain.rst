@@ -17,10 +17,12 @@ Before we start, some prerequisites have to be fulfilled:
 
  1. Download and install pySPACE as it is described
     :ref:`here<t_install>`.
- 2. The example data can be found in the storage of the pySPACEcenter under eeg_examples.
-    There you will find the Folder "test_data/Set1". The node_chain and the windower file 
-    needed in this tutorial are located in the specs folder of the pySPACEcenter. These
-    are two .yaml files named *example_tutorial_eeg_only.yaml* and *windower/example_tutorial_eeg_only_window.yaml*
+ 2. The example data can be found in the storage of the pySPACEcenter under
+    eeg_examples. There you will find the Folder "test_data/Set1".
+    The node_chain and the windower file needed in this tutorial are located
+    in the specs folder of the pySPACEcenter. These
+    are two .yaml files named *node_chains/example_tutorial_eeg_only.yaml*
+    and *node_chains/windower/example_tutorial_eeg_only_window_spec.yaml*
  3. To make things easier, your PYTHONPATH variable should contain the path to
     pySPACE. E.g. consider your framework folder to be in
     "/home/user/software/": You can
@@ -43,7 +45,9 @@ The first step in every investigation is of course to get some knowledge about
 the data you are investigating. The test data is in the *Set1* folder, stored in
 a binary .eeg file. It consists of 32-channels which all "measured" a sinusoid
 signal and you have two markers "R 32" and "R 64" in the data. Using an 
-eeg-Fileviewer, the data looks like this:
+EEG file viewer as integrated in BESA (BESA GmbH),
+BrainVision Analyzer 2 (Brain Products GmbH)
+or EEGLAB, the data looks like this:
 
 .. figure:: ../graphics/example_data_sinus.png
    :align: center
@@ -83,9 +87,11 @@ some information how the data should be cut relative to the markers and how this
 data should be labeled. This file is only necessary here, because we are dealing
 with raw EEG data, which -as a first step- has to be windowed. You can open and look at
 it, the definitions are more or less self explaining (you can find a bit more 
-information on windowing in the general:ref:`node chain tutorial<tutorial_node_chain_operation>`).
+information on windowing in the general
+:ref:`node chain tutorial<tutorial_node_chain_operation>`).
 
-Now let us look at the processing sequence. If you open *example_tutorial_eeg_only.yaml* you
+Now let us look at the processing sequence.
+If you open *example_tutorial_eeg_only.yaml* you
 will see the following:
 
 .. literalinclude:: ../examples/specs/node_chains/example_tutorial_eeg_only.yaml
@@ -131,7 +137,7 @@ Second, we define necessary directories and location of the NodeChain
 .. code-block:: python
     
     node_chain='/home/user/pySPACEcenter/specs/node_chains/example_tutorial_eeg_only.yaml'
-    data_dir='/home/user/pySPACEcenter/storage/eeg_examples/test_data/Set1/'
+    data_dir='/home/user/pySPACEcenter/examples/storage/eeg_examples/test_data/Set1/'
     store_dir='/home/user/pySPACEcenter/storage/myresults/'
 
 The *store_dir* specifies where the data should be stored to disk. As a next step,
@@ -188,13 +194,14 @@ To do this, you can start with the following code in your *store_dir* and go on 
     import cPickle
     import pylab as pl
     
-    data=cPickle.load('time_series_sp0_test.pickle')
+    data=cPickle.load(open('time_series_sp0_test.pickle'))
     first_elem=data[0][0]
     
     print first_elem.tag
     print first_elem.channel_names
     
     pl.plot(first_elem[:,0]) #plot data of first electrode
+    pl.show()
 
 .. todo:: From here, create second tutorial, which again loads data saved here, uses LibSVM and inspects results.csv
 .. todo:: Tutorial: explain GUI

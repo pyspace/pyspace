@@ -1,4 +1,6 @@
 """ Script for managing of eeg data streams
+
+Here the :class:`~pySPACE.missions.support.windower.MarkerWindower` is used.
 """
 
 import os

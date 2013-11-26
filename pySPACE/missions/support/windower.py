@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*
 
-""" Performs windowing of incoming EEG streams and produces instances of fixed
+""" Performs windowing of incoming stream and produces instances of fixed
 length for preprocessing and classification.
 
 The :class:`~pySPACE.missions.support.windower.SlidingWindower` class performs
@@ -11,14 +11,14 @@ windows according to definitions like the presence or non-presence of markers.
 Additionally, exclude conditions can be defined that exclude certain markers in
 proximity to extracted events.
 
-The :class:`~pySPACE.missions.support.windower.WindowFactory` Loads a windowing
-specification from a yaml file. The window-definitions are then stored in a
+The :class:`~pySPACE.missions.support.windower.WindowFactory` loads a windowing
+specification from a yaml file. The window definitions are then stored in a
 dictionary which is then used by one of the Windowers
 (:class:`~pySPACE.missions.support.windower.MarkerWindower`,
-:class:`~pySPACE.missions.support.windower.SlidingWindower` etc.) to cut a
+:class:`~pySPACE.missions.support.windower.SlidingWindower` etc.) to cut the
 incoming data stream.
 
-The Windower definition is is always application specific and can contain many
+The Windower definition is always application specific and can contain many
 keys/values. In order to construct your own windower definition see the short
 explanation in :class:`~pySPACE.missions.support.windower.MarkerWindower`.
 
@@ -26,15 +26,15 @@ Time is always measured in ms.
 If there are mistakes in time, this should be because of
 unknown block size or frequency.
 
-:Created by: Timo Duchrow
-:on: 2008-08-29.
-
 Additionally include conditions can be added to ensure the presence of certain 
 markers in a specific range. So 'or' conditions between the conditions are 
 reached by repeating the definitions of the marker with different exclude or 
 include definitions and 'and' conditions are simply reached by concatenation.
 Negation is now possible by switching to the other kind of condition.
-:modified by: Mario Krell
+
+:Author: Timo Duchrow
+:Created: 2008/08/29
+:modified: Mario Michael Krell (include and exclude defs)
 """
 
 __version__ = "$Revision: 451 $"
@@ -248,7 +248,7 @@ class MarkerWindower(Windower):
 
     A windowdef looks like:
 
-    .. code-block::yaml
+    .. code-block:: yaml
 
         startmarker : "S  8"
         endmarker : "S  9"
@@ -260,7 +260,6 @@ class MarkerWindower(Windower):
                  markername : "S 16"
                  startoffsetms : -1280
                  endoffsetms : 0
-                 jitter : 0
                  excludedefs : []
                  includedefs : [immediate response]
              null:
@@ -268,7 +267,6 @@ class MarkerWindower(Windower):
                  markername : "null"
                  startoffsetms : -1280
                  endoffsetms : 0
-                 jitter : 0
                  excludedefs : [all]
         exclude_defs:
               all:
@@ -285,13 +283,31 @@ class MarkerWindower(Windower):
 
         :startmarker:   name of the marker where at the earliest cutting begins
         :endmarker:     name of the marker where at the latest cutting ends
-        :skip_ranges:   not implemented. 'end' results in skipfirstms
+        :skip_ranges:   Not completely implemented!
+                        The 'end' component results in
+                        the parameter skipfirstms which tells
+                        the windower, which time points to skip
+                        at the beginning.
+
+                        .. todo:: Change parameterization or code.
+
         :window_def:    includes names of definitions of window cuts
         :classname:     name of the label given to the window, when cut
         :markername:    name of the marker being in the 'current block'
+
+                        .. note:: The ``null`` marker is a synthetic marker,
+                                  which is internally added to the stream
+                                  every *nullmarker_stride_ms* milliseconds.
+                                  Currently, this parameter has to be set
+                                  separately and is 1000ms by default.
+
         :startoffsetms: start of the window relative to the marker in the 'current block'
         :endoffsetms:   end of the window relative to the marker in the 'current block'
-        :jitter:        not implemented
+        :jitter:        Not implemented! Was intended to add an
+                        artificial jittering during the segmentation.
+
+                        .. todo:: Delete completely!
+
         :exclude_defs:  excludes each marker in markernames defined by the interval
                         '[-preexcludems, postexludems]' relative to the window
                         marker lying at zero
@@ -1057,7 +1073,7 @@ class WindowFactory(object):
         # EEG serve. Because of that, we use only the end of the first range
         # for specifying skipfirstms
         skipfirstms = window_specs['skip_ranges'][0]['end']
-        # An alternativ to skip milliseconds is to define a marker that
+        # An alternative to skip milliseconds is to define a marker that
         # labels the ranges to be skiped
         if window_specs.has_key('startmarker'):
             startmarker = window_specs['startmarker']
@@ -1076,7 +1092,7 @@ class WindowFactory(object):
             exclude_defs = []
             # For every marker:
             for marker_name in marker_names:
-                # Create a seperate ExcludeDef
+                # Create a separate ExcludeDef
                 exclude_defs.append(ExcludeDef(markername = marker_name,
                                                       **exclude_spec))
             excludes[exclude_name] = exclude_defs
@@ -1089,7 +1105,7 @@ class WindowFactory(object):
             include_defs = []
             # For every marker:
             for marker_name in marker_names:
-                # Create a seperate IncludeDef
+                # Create a separate IncludeDef
                 include_defs.append(IncludeDef(markername = marker_name,
                                                       **include_spec))
             includes[include_name] = include_defs

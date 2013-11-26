@@ -59,12 +59,13 @@ class Configuration(object):
     This seems to be the first time, you are using pySPACE.
 
     For detailed documentation on pySPACE refer to the online documentation at
-    https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/index.html,
+    http://pyspace.github.io/pyspace/index.html,
     the __init__ file in the pySPACE folder, or the index.rst in the docs folder.
 
     If you have already used the setup.py or another installation program all
-    relevant files should be found in the folder `pySPACEcenter` in your home
-    directory. Otherwise it will be searched for in your `PYSPACE_CONF_DIR`.
+    relevant configuration files should be found in the folder `pySPACEcenter`
+    in your home directory.
+    Otherwise it will be searched for in your `PYSPACE_CONF_DIR`.
 
     The main configuration is specified in the <config.yaml>. Please have a look
     at it and the therein specified environment parameters.
