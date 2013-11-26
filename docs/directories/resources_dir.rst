@@ -1,7 +1,7 @@
 .. _storage:
 
 The Data Directory (storage)
------------------------------------
+----------------------------
 
 The data (summaries and datasets, input and output) are stored in the
 ``storage``.
@@ -10,6 +10,11 @@ of the directory.
 Results of operation chains are stored in subdirectories of the directory
 "operation_chain_results", results of operations in subdirectories of  "operation_results".
 These subdirectories are named based on the execution time. 
+
+.. seealso::
+
+    * :ref:`data_handling`
+    * :ref:`conf`
 
 .. _operation_chain_spec_example:
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Simple Gui for loading and browsing :mod:`pySPACE.resources.dataset_defs.result`
+""" Simple Gui for loading and browsing :mod:`pySPACE.resources.dataset_defs.performance_result`
 
 For more documentation have a look at :ref:`tutorial_performance_results_analysis`!
 

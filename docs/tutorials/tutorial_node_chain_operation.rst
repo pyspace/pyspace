@@ -34,7 +34,8 @@ Another opportunity would be to use an *operation chain*.
 See :ref:`processing` for further information about this topic.
 
 Here is an example of the example_lrp_windower.yaml operation spec file 
-(placed in the examples/specs/operations, the designated directory for operations),
+(placed in ``docs/examples/specs/operations`` or in the your pySPACEcenter
+in the folder ``specs/operations``, the designated directory for operations),
 which we will use for the windowing:
 
 .. literalinclude:: ../examples/specs/operations/example_lrp_windower.yaml
@@ -59,16 +60,18 @@ That means, that we test all these different methods on the data.
 
 For further information about spec files see :ref:`specs_dir`.
 
+The part
+
 .. code-block:: yaml
 
     input_path: "eeg/LRP_Demo"
 
     runs : 1
 
-Specifies which dataset we want to use and that we want to do a single run.
+specifies which dataset we want to use and that we want to do a single run.
 
 You can find the specification in the file 
-docs/examples/specs/node_chains/examples/example_offline_windower.yaml, as stated above:
+``docs/examples/specs/node_chains/example_offline_windower.yaml``, as stated above:
 
 .. literalinclude:: ../examples/specs/node_chains/example_lrp_windower.yaml
     :language: yaml
@@ -89,13 +92,18 @@ Here you can see the respective window spec file:
 
 The windower spec file describes which slices of the data (aka *windows*) 
 are important and should be cut out.
+The specifications of this file are normally forwarded to
+:class:`~pySPACE.missions.support.windower.MarkerWindower`,
+which is finally doing the segmentation of the data.
+Check out the corresponding documentation to find out more about the
+parameters of the windower file.
 
 In the *window_defs* section, the respective windows are specified.
 
 Hence we want to detect movement *preparation* the data has to have some
 markers related to executed movements. In this example the marker "S 16" means that
 there has been some (e.g. physical) movement detected. The preparation
-happended before the movement so the resulting window is defined like this:
+happened before the movement so the resulting window is defined like this:
 
 .. code-block:: yaml
 
@@ -116,6 +124,8 @@ The markernames can be found in the *.vmrk* file of the dataset.
 Finally, you can start the operation by invoking::
 
     python launch.py --mcore --configuration your_configuration_file.yaml --operation example_lrp_windower.yaml
+
+For the details on this command, see: :ref:`CLI`.
 
 Processing the data
 ^^^^^^^^^^^^^^^^^^^

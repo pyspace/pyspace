@@ -224,10 +224,10 @@ def create_backend(backend_type = "serial"):
 
     The following backends are available:
 
-     * "serial": The SerialBackend
-     * "mcore":  The MulticoreBackend
-     * "mpi":    The mpi backend
-     * "loadl":  The LoadLevelerBackend
+        :``serial``: :class:`~pySPACE.environments.backends.serial.SerialBackend`
+        :``mcore``:  :class:`~pySPACE.environments.backends.multicore.MulticoreBackend`
+        :``mpi``:    :class:`~pySPACE.environments.backends.mpi_backend.MpiBackend`
+        :``loadl``:  :class:`~pySPACE.environments.backends.ll_backend.LoadLevelerBackend`
     """
     if backend_type == "serial":
         from pySPACE.environments.backends.serial import SerialBackend

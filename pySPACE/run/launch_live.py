@@ -5,9 +5,8 @@
 
 
 A script for running pyspace live. The script contains
-a class to control the other related classes neede in the online mode,
-and several methods that are used for the general startup of the suite..
-
+a class to control the other related classes needed in the online mode,
+and several methods that are used for the general startup of the suite.
 """
 
 import sys

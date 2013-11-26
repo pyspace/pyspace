@@ -8,8 +8,9 @@ import numpy
 try:
     import mdp
     from mdp.nodes import FastICANode
-except:
-    pass
+    import_error = False
+except ImportError, e:
+    import_error = e
 
 from pySPACE.missions.nodes.spatial_filtering.spatial_filtering import SpatialFilteringNode
 from pySPACE.resources.data_types.time_series import TimeSeries
@@ -19,24 +20,23 @@ from pySPACE.tools.filesystem import  create_directory
 import logging
 
 try:
+    class FastICANodeWrapper(FastICANode):
+        """The only reason for this node is to deal with the fact
+        that the ICANode super class does not accept the output_dim kwarg
+        """
+        def __init__(self, trainable=True,*args, **kwargs):
+            if "output_dim" in kwargs:
+                kwargs.pop("output_dim")
+            if trainable is False:
+                self._trainable = False
+            super(FastICANodeWrapper, self).__init__(*args, **kwargs)
 
-  class FastICANodeWrapper(FastICANode):
-    # The only reason for this node is to deal with the fact
-    # that the ICANode super class does not accept the output_dim kwarg 
-    def __init__(self, trainable=True,*args, **kwargs):
-        if "output_dim" in kwargs:
-            kwargs.pop("output_dim")
-        if trainable==False:
-            self._trainable=False
-        super(FastICANodeWrapper, self).__init__(*args, **kwargs)
-
-    def is_training(self):
-        """Return True if the node is in the training phase,
-        False otherwise."""
-        return self._training
-
+        def is_training(self):
+            """ Mapping to *self._training variable* """
+            return self._training
 except:
-    print "import failed"
+    pass
+
 
 class ICAWrapperNode(SpatialFilteringNode): #, FastICANodeWrapper):
     """ Wrapper around the Independent Component Analysis filtering of mdp
@@ -66,6 +66,8 @@ class ICAWrapperNode(SpatialFilteringNode): #, FastICANodeWrapper):
                 retained_channels : 42
     """
     def __init__(self, retained_channels=None, load_path = None, **kwargs):
+        if import_error:
+            raise ImportError(import_error)
         # Must be set before constructor of superclass is set
         self.trainable = (load_path == None) 
         if "output_dim" in kwargs:
@@ -103,7 +105,7 @@ class ICAWrapperNode(SpatialFilteringNode): #, FastICANodeWrapper):
         """ Returns whether this node requires supervised training. """
         return False
     
-    def train(self, data, label = None):
+    def train(self, data, label=None):
         super(ICAWrapperNode, self).train(data)
     
     def _train(self, data, label = None):

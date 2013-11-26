@@ -14,6 +14,5 @@ The documentation can be created by running ``make html`` in the ``docs`` direct
 To view the documentation open the ``index.html`` in the ``.build/html`` folder.
 
 A compiled version of the documentation can be found
-`on the webserver <https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/index.html>`_.
-This web page is updated automatically every day.
+`on the git web page <http://pyspace.github.io/pyspace/index.html>`_.
 """

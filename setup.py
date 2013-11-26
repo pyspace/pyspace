@@ -1,6 +1,12 @@
-""" Create pySPACE center, run basic tests
+""" Create pySPACE center (basic software configuration and data folder)
 
-This file must be run with python
+This file must be run with python.
+
+.. note:: In future this script shall create not only the basic configuration
+          folder, but also move the relevant code to site-packages
+          and install the required or even the optional dependencies.
+
+.. todo:: Make this script a real installation script.
 """
 
 from distutils.core import setup
@@ -109,55 +115,94 @@ def create_directory(path):
                 if not err_no == errno.EEXIST:
                     raise
 
-def save_copy(src,dest):
+def save_copy(src, dest):
+    """ Check if file exists and is new before copying
+
+    Otherwise a new file name is created.
+    """
     if not os.path.exists(dest):
-        shutil.copy2(src,dest)
+        shutil.copy2(src, dest)
     elif dest.endswith(".yaml"):
         import yaml
-        d=yaml.load(open(dest))
-        s=yaml.load(open(src))
-        if not d==s:
-            dest=dest[:-5]+"_new.yaml"
-            save_copy(src,dest)
+        d = yaml.load(open(dest))
+        s = yaml.load(open(src))
+        if not d == s:
+            dest = dest[:-5] + "_new.yaml"
+            save_copy(src, dest)
     elif dest.endswith(".csv") or dest.endswith(".rst"):
         pass
     else:
-        dest+=".new"
-        save_copy(src,dest)
+        dest += ".new"
+        save_copy(src, dest)
+
+setup_message = """
+Creating (or modifying) pySPACEcenter
+-------------------------------------
+
+The pySPACEcenter directory is created in your home directory.
+It will include subdirectories for specs, storage with some basic examples and
+a more elaborate example folder.
+Furthermore, the basic configuration file *config.yaml* will be created.
+You might want to have a look at this file to find out, what you can change
+in your basic configuration.
+To simplify the standard execution, links will be created to the main
+software scripts called *launch.py*, *launch_live.py* and
+*performance_results_analysis.py*.
+
+It is not yet possible to use these commands outside the folders as normal
+command line arguments. Moreover, this script is currently only creating
+the pySPACE usage folder. It is not yet installing the needed dependencies,
+mentioned in the documentation and it is leaving the software, where it is
+and it is not moving it to site-packages, as it is usual for other setup
+scripts. This will hopefully change in future.
+"""
+
 
 def setup_package():
-    
+    """ Copy configuration files to pySPACEcenter folder in the home dir
 
+    If files are already existing, they are not replaced, but new versions are
+    additionally stored.
+    """
+    print setup_message
     src_path = os.path.dirname(os.path.abspath(sys.argv[0]))
     create_directory(os.path.join(home, "pySPACEcenter"))
     #create_directory(os.path.join(home, "pySPACEcenter","examples"))
     create_directory(os.path.join(home, "pySPACEcenter","specs"))
     create_directory(os.path.join(home, "pySPACEcenter","storage"))
-    src_conf_file = os.path.join(src_path,"docs","examples","conf","example.yaml")
+    src_conf_file = os.path.join(src_path, "docs", "examples", "conf",
+                                 "example.yaml")
     dest_conf_file = os.path.join(home, "pySPACEcenter","config.yaml")
     save_copy(src_conf_file,dest_conf_file)
     
     try:
-        os.symlink(os.path.join(src_path,"pySPACE", "run", "launch.py"),os.path.join(home, "pySPACEcenter", "launch.py"))
+        os.symlink(os.path.join(src_path, "pySPACE", "run", "launch.py"),
+                   os.path.join(home, "pySPACEcenter", "launch.py"))
     except:
         pass
     try:
-        os.symlink(os.path.join(src_path,"pySPACE", "run", "launch_live.py"),os.path.join(home, "pySPACEcenter", "launch_live.py"))
+        os.symlink(os.path.join(src_path, "pySPACE", "run", "launch_live.py"),
+                   os.path.join(home, "pySPACEcenter", "launch_live.py"))
     except:
         pass
     try:
-        os.symlink(os.path.join(src_path,"pySPACE", "run", "gui","performance_results_analysis.py"),os.path.join(home, "pySPACEcenter", "performance_results_analysis.py"))
+        os.symlink(os.path.join(src_path,"pySPACE", "run", "gui",
+                   "performance_results_analysis.py"),
+                   os.path.join(home, "pySPACEcenter",
+                                "performance_results_analysis.py"))
     except:
         pass
         
-    examples=os.path.join(src_path,"docs","examples")
+    examples = os.path.join(src_path,"docs","examples")
     # copying examples folder
     for folder, _, files in os.walk(examples):
-        new_folder=os.path.join(home, "pySPACEcenter","examples",folder[len(examples)+1:])
+        new_folder=os.path.join(home, "pySPACEcenter", "examples",
+                                folder[len(examples)+1:])
         for file in files:
             if not file.startswith("."):
                 create_directory(new_folder)
-                save_copy(os.path.join(src_path,folder,file),os.path.join(new_folder,file))
+                save_copy(os.path.join(src_path, folder, file),
+                          os.path.join(new_folder, file))
     # copying important examples to normal structure to have a start
     for folder, _, files in os.walk(examples):
         new_folder=os.path.join(home, "pySPACEcenter",folder[len(examples)+1:])
@@ -168,14 +213,16 @@ def setup_package():
                     pass
             #"example" in file or "example_summary" in folder:
             elif "example" in file \
-                or "example_summary" in folder[len(examples)+1:] \
-                or file=="functions.yaml"\
-                or "template" in file\
-                or folder.endswith("templates") \
-                or folder.endswith("examples"):
-                    create_directory(new_folder)
-                    save_copy(os.path.join(src_path,folder,file),os.path.join(new_folder,file))
+                    or "example_summary" in folder[len(examples)+1:] \
+                    or file=="functions.yaml"\
+                    or "template" in file\
+                    or folder.endswith("templates") \
+                    or folder.endswith("examples"):
+                create_directory(new_folder)
+                save_copy(os.path.join(src_path, folder,file),
+                          os.path.join(new_folder, file))
 
+    print "The pySPACEcenter should be available now."
 #
 #    try:
 #        shutil.copytree(os.path.join(src_path,"docs","examples"),os.path.join(home, "pySPACEcenter","examples"))
@@ -195,10 +242,10 @@ def setup_package():
 #          author_email = email,
 #          maintainer = 'pySPACE Developers',
 #          maintainer_email = email,
-#          license = "https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/license.html",
+#          license = "http://pyspace.github.io/pyspace/license.html",
 #          platforms = ["Linux, OSX"],
-#          url = 'https://websrv.dfki.uni-bremen.de/IMMI/pySPACE/',
-#          download_url = 'http://spacegit.dfki.uni-bremen.de/pyspace',
+#          url = 'https://github.com/pyspace/',
+#          download_url = 'https://github.com/pyspace/pyspace/archive/master.zip',
 #          description = short_description,
 #          long_description = long_description,
 #          classifiers = classifiers,

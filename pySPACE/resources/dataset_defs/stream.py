@@ -402,6 +402,12 @@ class StreamDataset(BaseDataset):
 
     def set_window_defs(self, window_definition, nullmarker_stride_ms=1000, 
                         no_overlap=False, data_consistency_check=False):
+        """ Takes the window definition dictionary for later reading
+
+        The parameters are later on mainly forwarded to the
+        :class:`~pySPACE.missions.support.windower.MarkerWindower`.
+        To find more about these parameters, check out its documentation.
+        """
         self.window_definition = window_definition
         self.nullmarker_stride_ms = nullmarker_stride_ms
         self.no_overlap = no_overlap
@@ -843,7 +849,7 @@ class EDFReader(AbstractStreamReader):
             self.annotations[base+offset] = name.strip()
 
     def generate_meta_data(self):
-        """generate the necessary meta data for the windower."""
+        """ Generate the necessary meta data for the windower """
         m = self.read_edf_header()
 
         # calculate gain for each channel

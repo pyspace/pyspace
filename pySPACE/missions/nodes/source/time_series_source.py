@@ -165,6 +165,10 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     This is a main difference, since other source nodes, get access to
     the real data and generate a generator object.
 
+    For the segmentation of the data, the
+    :class:`~pySPACE.resources.dataset_defs.stream.StreamDataset`
+    uses the :class:`~pySPACE.missions.support.windower.MarkerWindower`.
+
     **Parameters**
 
         :windower_spec_file:
@@ -181,7 +185,11 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
             is looked up according to the location of the spec files. When
             set to True, the windower spec file can be specified with path (e.g.
             '/home/myuser/myspecs/mywindow.yaml') or without path, which indicates
-            that the window specs file is located in current local folder.
+            that the window specs file is located in current local folder
+            or the specification file folder of the node chain.
+            For the parameterization of the windower configuration file,
+            you should have a look at the documentation
+            of the :class:`~pySPACE.missions.support.windower.MarkerWindower`
 
             (*optional, default: False*)
 
@@ -369,7 +377,7 @@ class TimeSeries2TimeSeriesSourceNode(Stream2TimeSeriesSourceNode):
     Source node that interprets a stream of time series windows as
     raw data stream.
     The markers stored in marker_name attribute are used as the markers
-    for a MarkerWindower.
+    for a :class:`~pySPACE.missions.support.windower.MarkerWindower`.
 
     This node pretends to be a Stream2TimeSeriesSourceNode
     but takes real time series data and interprets it as a stream.
