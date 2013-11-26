@@ -182,7 +182,7 @@
 <span class="sd">        .. todo:: to document</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c"># If we haven&#39;t read the data for testing yet</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Accessing input dataset&#39;s test time series windows.&quot;</span><span class="p">)</span>
             <span class="c"># If the input dataset consists only of one single run,</span>
             <span class="c"># we use this as input for all runs to be conducted (i.e. we</span>
@@ -237,6 +237,10 @@
 <span class="sd">    This is a main difference, since other source nodes, get access to</span>
 <span class="sd">    the real data and generate a generator object.</span>
 
+<span class="sd">    For the segmentation of the data, the</span>
+<span class="sd">    :class:`~pySPACE.resources.dataset_defs.stream.StreamDataset`</span>
+<span class="sd">    uses the :class:`~pySPACE.missions.support.windower.MarkerWindower`.</span>
+
 <span class="sd">    **Parameters**</span>
 
 <span class="sd">        :windower_spec_file:</span>
@@ -253,7 +257,11 @@
 <span class="sd">            is looked up according to the location of the spec files. When</span>
 <span class="sd">            set to True, the windower spec file can be specified with path (e.g.</span>
 <span class="sd">            &#39;/home/myuser/myspecs/mywindow.yaml&#39;) or without path, which indicates</span>
-<span class="sd">            that the window specs file is located in current local folder.</span>
+<span class="sd">            that the window specs file is located in current local folder</span>
+<span class="sd">            or the specification file folder of the node chain.</span>
+<span class="sd">            For the parameterization of the windower configuration file,</span>
+<span class="sd">            you should have a look at the documentation</span>
+<span class="sd">            of the :class:`~pySPACE.missions.support.windower.MarkerWindower`</span>
 
 <span class="sd">            (*optional, default: False*)</span>
 
@@ -356,11 +364,33 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Requesting train data...&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">use_test_data</span><span class="p">:</span>
-            <span class="c"># Returns an iterator that iterates over an empty sequence</span>
-            <span class="c"># (i.e. an iterator that is immediately exhausted), since</span>
-            <span class="c"># this node does not provide any data that is explicitly</span>
-            <span class="c"># dedicated for training</span>
-            <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[]</span><span class="o">.</span><span class="n">__iter__</span><span class="p">())</span>
+            <span class="c"># If we haven&#39;t read the data for training yet</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Start streaming.&quot;</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">set_window_defs</span><span class="p">(</span>
+                    <span class="n">window_definition</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span><span class="p">,</span>
+                    <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">,</span>
+                    <span class="n">no_overlap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">no_overlap</span><span class="p">,</span>
+                    <span class="n">data_consistency_check</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_consistency_check</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span> <span class="s">&quot;train&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span> <span class="s">&quot;train&quot;</span><span class="p">)</span>
+
+                <span class="c"># Create a generator that emits the windows</span>
+                <span class="n">train_data_generator</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="o">*</span><span class="n">key</span><span class="p">))</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> \
+                    <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">train_data_generator</span><span class="p">,</span>
+                                     <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
+
+            <span class="c"># Return a fresh copy of the generator</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># Return the test data as there is no additional data that</span>
             <span class="c"># was dedicated for training</span>
@@ -394,7 +424,9 @@
                 <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
                 <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="o">*</span><span class="n">key</span><span class="p">))</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> \
+                <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">,</span>
+                                 <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
 
         <span class="c"># Return a fresh copy of the generator</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
@@ -417,7 +449,7 @@
 <span class="sd">    Source node that interprets a stream of time series windows as</span>
 <span class="sd">    raw data stream.</span>
 <span class="sd">    The markers stored in marker_name attribute are used as the markers</span>
-<span class="sd">    for a MarkerWindower.</span>
+<span class="sd">    for a :class:`~pySPACE.missions.support.windower.MarkerWindower`.</span>
 
 <span class="sd">    This node pretends to be a Stream2TimeSeriesSourceNode</span>
 <span class="sd">    but takes real time series data and interprets it as a stream.</span>
@@ -489,7 +521,7 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Aug 08, 2013.
+      Last updated on Nov 26, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

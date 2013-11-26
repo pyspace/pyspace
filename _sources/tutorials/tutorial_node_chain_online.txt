@@ -4,7 +4,7 @@ Process EEG data with the Live Environment
 ------------------------------------------------------
 
 In this tutorial we will learn how to use the live-environment to
-train the node chains on the data streamed from an external EEG-Server and
+train the node chains on the data streamed from an external EEG server and
 classify new instances based on the trained node chains.
 
 
@@ -19,13 +19,13 @@ Preparation
         :language: yaml
         
     * data_files
-        This fileds can be left empty for testing purposes.
+        This files can be left empty for testing purposes.
     
     * potentials
         This field describes every flow which is executed during the live processing.
         In this example there is only one flow called *SineWave*. It uses a dataset which 
         is encoded in the raw-eeg format and is located in the default storage directory.
-        Specific node-chains for the processing of the data are referenced for the 
+        Specific node chains for the processing of the data are referenced for the
         different processing steps (e.g. prewindowing, postprocessing).
     
     * eeg_server
@@ -56,7 +56,7 @@ Preparation
         
     For purposes, other than testing the pySPACE-live environment with artificial 
     data, please feel free to adapt it to your need (e.g. fill in more potentials or
-    node-chains). 
+    node chains).
         
 Execute the Test for pySPACE-live
 ==================================

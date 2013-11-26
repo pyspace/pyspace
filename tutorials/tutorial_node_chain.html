@@ -117,10 +117,12 @@ Therefore, it has to be underlined that we still have to use a bit
 <li><p class="first">Download and install pySPACE as it is described
 <a class="reference internal" href="tutorial_installation.html#t-install"><em>here</em></a>.</p>
 </li>
-<li><p class="first">The example data can be found in the storage of the pySPACEcenter under eeg_examples.
-There you will find the Folder &#8220;test_data/Set1&#8221;. The node_chain and the windower file
-needed in this tutorial are located in the specs folder of the pySPACEcenter. These
-are two .yaml files named <em>example_tutorial_eeg_only.yaml</em> and <em>windower/example_tutorial_eeg_only_window.yaml</em></p>
+<li><p class="first">The example data can be found in the storage of the pySPACEcenter under
+eeg_examples. There you will find the Folder &#8220;test_data/Set1&#8221;.
+The node_chain and the windower file needed in this tutorial are located
+in the specs folder of the pySPACEcenter. These
+are two .yaml files named <em>node_chains/example_tutorial_eeg_only.yaml</em>
+and <em>node_chains/windower/example_tutorial_eeg_only_window_spec.yaml</em></p>
 </li>
 <li><p class="first">To make things easier, your PYTHONPATH variable should contain the path to
 pySPACE. E.g. consider your framework folder to be in
@@ -143,7 +145,9 @@ either change your .bash_profile by adding:</p>
 the data you are investigating. The test data is in the <em>Set1</em> folder, stored in
 a binary .eeg file. It consists of 32-channels which all &#8220;measured&#8221; a sinusoid
 signal and you have two markers &#8220;R 32&#8221; and &#8220;R 64&#8221; in the data. Using an
-eeg-Fileviewer, the data looks like this:</p>
+EEG file viewer as integrated in BESA (BESA GmbH),
+BrainVision Analyzer 2 (Brain Products GmbH)
+or EEGLAB, the data looks like this:</p>
 <div class="figure align-center" style="width: 800px">
 <img alt="../_images/example_data_sinus.png" src="../_images/example_data_sinus.png" style="width: 800px;" />
 <p class="caption">Test data: shown is the progress over time (time between dashed lines equals
@@ -176,8 +180,10 @@ some information how the data should be cut relative to the markers and how this
 data should be labeled. This file is only necessary here, because we are dealing
 with raw EEG data, which -as a first step- has to be windowed. You can open and look at
 it, the definitions are more or less self explaining (you can find a bit more
-information on windowing in the general:ref:<cite>node chain tutorial&lt;tutorial_node_chain_operation&gt;</cite>).</p>
-<p>Now let us look at the processing sequence. If you open <em>example_tutorial_eeg_only.yaml</em> you
+information on windowing in the general
+<a class="reference internal" href="tutorial_node_chain_operation.html#tutorial-node-chain-operation"><em>node chain tutorial</em></a>).</p>
+<p>Now let us look at the processing sequence.
+If you open <em>example_tutorial_eeg_only.yaml</em> you
 will see the following:</p>
 <div class="highlight-yaml"><div class="highlight"><pre><span class="p-Indicator">-</span> 
     <span class="l-Scalar-Plain">node</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Offline_EEG_Source</span>
@@ -232,7 +238,7 @@ i.e. the so called <em>dataset</em>.</p>
 <p>Second, we define necessary directories and location of the NodeChain
 (please adjust the paths accordingly):</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">node_chain</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/specs/node_chains/example_tutorial_eeg_only.yaml&#39;</span>
-<span class="n">data_dir</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/storage/eeg_examples/test_data/Set1/&#39;</span>
+<span class="n">data_dir</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/examples/storage/eeg_examples/test_data/Set1/&#39;</span>
 <span class="n">store_dir</span><span class="o">=</span><span class="s">&#39;/home/user/pySPACEcenter/storage/myresults/&#39;</span>
 </pre></div>
 </div>
@@ -278,13 +284,14 @@ To do this, you can start with the following code in your <em>store_dir</em> and
 <div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">pylab</span> <span class="kn">as</span> <span class="nn">pl</span>
 
-<span class="n">data</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s">&#39;time_series_sp0_test.pickle&#39;</span><span class="p">)</span>
+<span class="n">data</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s">&#39;time_series_sp0_test.pickle&#39;</span><span class="p">))</span>
 <span class="n">first_elem</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
 
 <span class="k">print</span> <span class="n">first_elem</span><span class="o">.</span><span class="n">tag</span>
 <span class="k">print</span> <span class="n">first_elem</span><span class="o">.</span><span class="n">channel_names</span>
 
 <span class="n">pl</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">first_elem</span><span class="p">[:,</span><span class="mi">0</span><span class="p">])</span> <span class="c">#plot data of first electrode</span>
+<span class="n">pl</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -318,7 +325,7 @@ To do this, you can start with the following code in your <em>store_dir</em> and
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Aug 08, 2013.
+      Last updated on Nov 26, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

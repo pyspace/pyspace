@@ -24,8 +24,8 @@ For the execution of pySPACE it is helpful to take a look at the following quest
  2. Take a look at your pySPACEcenter. You already find a suggestion for your data organization
     and some examples there.
 
- 3. Does the storage provide the necessary data? The storage (i.e. the place for input and output
-    of pySPACE is by default located in your pySPACEcenter)
+ 3. Does the storage provide the necessary data? The storage (i.e., the place for input and output
+    of pySPACE) is by default located in your pySPACEcenter.
 
  4. Which :mod:`backend<pySPACE.environments.backends>` will I use? The most common are the *serial* and the *mcore* (=multicore) backend.
     By default, the :class:`~pySPACE.environments.backends.serial.SerialBackend` is used.
@@ -46,6 +46,8 @@ An alternative mode of execution is the :mod:`launch live<pySPACE.run.launch_liv
 starting point with pySPACE, and should be considered when you feel confident in using the framework and want to
 process your data online.
 
+.. _CLI:
+
 Command-Line Interface
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -60,9 +62,20 @@ are executing a link which points to this file. Before doing this, you can have 
    python launch.py --help
    
 You will see that there are a lot of options and usually you have to chose some of these. The main options are:
- * the backend
- * the operation (or operation_chain)
- * and: if you are not using the ``config.yaml``, the config-file
+ * the :mod:`backend<pySPACE.environments.backends>`:
+
+        :``--serial``: serial execution with the
+                       :class:`~pySPACE.environments.backends.serial.SerialBackend`
+        :``--mcore``:  use all cores of a PC with the
+                       :class:`~pySPACE.environments.backends.multicore.MulticoreBackend`
+        :``--mpi``:    distribute jobs on cluster with the
+                       :class:`~pySPACE.environments.backends.mpi_backend.MpiBackend`
+        :``--loadl``:  Submit jobs to the IBM LoadLeveler client with the
+                       :class:`~pySPACE.environments.backends.ll_backend.LoadLevelerBackend`
+
+ * the operation ``-o operation_file_name`` (or operation_chain ``--operation_chain chain_file_name``)
+ * and: if you are not using the ``config.yaml``, the config-file:
+   ``-c my_conf.yaml``
 
 So a proper call of :mod:`launch.py<pySPACE.run.launch>` would be for instance:
 

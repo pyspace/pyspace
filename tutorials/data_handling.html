@@ -1,0 +1,290 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>HOWTO: Data Handling &mdash; pySPACE 1.0 release documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE 1.0 release documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Frequently Asked Questions and pySPACE Troubleshooting" href="../faq.html" />
+    <link rel="prev" title="Setup and build the eegmanager" href="tutorial_work_with_the_eegserver.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions and pySPACE Troubleshooting"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_work_with_the_eegserver.html" title="Setup and build the eegmanager"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">HOWTO: Data Handling</a><ul>
+<li><a class="reference internal" href="#data-handling-for-benchmarking-applications">Data Handling for Benchmarking Applications</a><ul>
+<li><a class="reference internal" href="#the-summary">The Summary</a></li>
+<li><a class="reference internal" href="#the-dataset">The Dataset</a><ul>
+<li><a class="reference internal" href="#case-of-not-supported-storage-format">Case of not supported storage format</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#defining-new-types-of-data">Defining New Types of Data</a></li>
+<li><a class="reference internal" href="#data-handling-for-direct-processing-in-applications">Data Handling for Direct Processing in Applications</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="tutorial_work_with_the_eegserver.html"
+                        title="previous chapter">Setup and build the eegmanager</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../faq.html"
+                        title="next chapter">Frequently Asked Questions and pySPACE Troubleshooting</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/data_handling.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="howto-data-handling">
+<span id="data-handling"></span><h1>HOWTO: Data Handling<a class="headerlink" href="#howto-data-handling" title="Permalink to this headline">¶</a></h1>
+<p>When starting with pySPACE the first question, which often arises is:
+&#8220;What do I have to do to get my data in this framework and
+how can I get the right output?&#8221;
+The documentation on this issue is distributed and so we will give an overview
+with the needed links.</p>
+<p>Internal data structures in pySPACE are defined in the
+<a class="reference internal" href="../api/generated/pySPACE.resources.html#module-pySPACE.resources" title="pySPACE.resources"><tt class="xref py py-mod docutils literal"><span class="pre">resources</span></tt></a> package.
+Here, we distinguish between samples and datasets.
+Samples are grouped to datasets and datasets can be grouped to summaries.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Summaries are no defined data structure in pySPACE,
+because they are nothing more than the address to a folder name
+with one subfolder for each contained dataset
+(as depicted in <a class="reference internal" href="../directories/resources_dir.html#storage"><em>The Data Directory (storage)</em></a>).</p>
+</div>
+<div class="section" id="data-handling-for-benchmarking-applications">
+<h2>Data Handling for Benchmarking Applications<a class="headerlink" href="#data-handling-for-benchmarking-applications" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="the-summary">
+<h3>The Summary<a class="headerlink" href="#the-summary" title="Permalink to this headline">¶</a></h3>
+<p>The easiest way of getting your data into pySPACE
+is to transform it to a summary.
+When using the <tt class="docutils literal"><span class="pre">setup.py</span></tt> in the installation process,
+an example summary will be saved on your hard disk.</p>
+<p>For doing so, you first create a folder with the summary name in
+your storage folder.</p>
+<div class="admonition-see-also admonition seealso">
+<p class="first admonition-title">See also</p>
+<ul class="last simple">
+<li><a class="reference internal" href="../directories/resources_dir.html#storage"><em>The Data Directory (storage)</em></a></li>
+<li><a class="reference internal" href="../directories/operation_configuration.html#conf"><em>The Configuration File</em></a></li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">A summary should only include datasets of the same kind
+(e.g., streaming data or feature vector data) and no mixing.
+Otherwise the processing will not be compatible.</p>
+</div>
+</div>
+<div class="section" id="the-dataset">
+<h3>The Dataset<a class="headerlink" href="#the-dataset" title="Permalink to this headline">¶</a></h3>
+<p>As a next step you need at least one subfolder for the dataset you want to
+process with pySPACE.
+This folder then needs two components:</p>
+<blockquote>
+<div><ul class="simple">
+<li>the data file(s),</li>
+<li>and a file called <tt class="docutils literal"><span class="pre">metadata.yaml</span></tt>, which contains all meta information
+including the type and storage format of the data.</li>
+</ul>
+</div></blockquote>
+<p>The loading procedure of datasets is defined in the
+<a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.html#module-pySPACE.resources.dataset_defs" title="pySPACE.resources.dataset_defs"><tt class="xref py py-mod docutils literal"><span class="pre">dataset_defs</span></tt></a>.
+For reading new data, there are three main types of dataset definitions for:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.stream.html#module-pySPACE.resources.dataset_defs.stream" title="pySPACE.resources.dataset_defs.stream"><tt class="xref py py-mod docutils literal"><span class="pre">stream</span> <span class="pre">data</span></tt></a>,</li>
+<li><a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.time_series.html#module-pySPACE.resources.dataset_defs.time_series" title="pySPACE.resources.dataset_defs.time_series"><tt class="xref py py-mod docutils literal"><span class="pre">time_series</span> <span class="pre">data</span></tt></a>,</li>
+<li>and <a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#module-pySPACE.resources.dataset_defs.feature_vector" title="pySPACE.resources.dataset_defs.feature_vector"><tt class="xref py py-mod docutils literal"><span class="pre">feature_vector</span> <span class="pre">data</span></tt></a>.</li>
+</ul>
+</div></blockquote>
+<p>The type name is in the metadata file is written with underscore and directly
+corresponds to the module name.
+The respective class name is the same but written in camel case notation and with
+<tt class="docutils literal"><span class="pre">Dataset</span></tt> added to the name.
+The first two types deliver samples of
+<a class="reference internal" href="../api/generated/pySPACE.resources.data_types.time_series.html#module-pySPACE.resources.data_types.time_series" title="pySPACE.resources.data_types.time_series"><tt class="xref py py-class docutils literal"><span class="pre">times</span> <span class="pre">series</span> <span class="pre">objects</span></tt></a>
+and the last one
+<a class="reference internal" href="../api/generated/pySPACE.resources.data_types.feature_vector.html#module-pySPACE.resources.data_types.feature_vector" title="pySPACE.resources.data_types.feature_vector"><tt class="xref py py-class docutils literal"><span class="pre">feature</span> <span class="pre">vector</span> <span class="pre">objects</span></tt></a>.</p>
+<p>As a next step, you need to check, if your data format is supported by the
+corresponding dataset type.
+Therefore, you should check the respective documentation.
+All types support the csv format.
+For feature vector data, the arff format is supported, too.
+For streaming data BrainProducts eeg format, the EDF2 file format and
+the EEGLAB set format are supported.
+When processing streaming data with a
+<a class="reference internal" href="../api/generated/pySPACE.missions.operations.node_chain.html#module-pySPACE.missions.operations.node_chain" title="pySPACE.missions.operations.node_chain"><tt class="xref py py-mod docutils literal"><span class="pre">node</span> <span class="pre">chain</span> <span class="pre">operation</span></tt></a>
+you will also need an additional windower file,
+specifying how the data stream is segmented into time series objects.
+This is documented in the respective source node.
+If your storage format is supported, you just have to add the used
+<tt class="docutils literal"><span class="pre">storage_format</span></tt> parameter into your meta data file, as documented in
+the dataset definition.</p>
+<div class="section" id="case-of-not-supported-storage-format">
+<h4>Case of not supported storage format<a class="headerlink" href="#case-of-not-supported-storage-format" title="Permalink to this headline">¶</a></h4>
+<p>If your storage format is not supported, there are two possibilities.
+You can use an external tool, which converts your data to a compatible format,
+or you can integrate the code for loading your format into the
+dataset definition.</p>
+</div>
+</div>
+</div>
+<div class="section" id="defining-new-types-of-data">
+<h2>Defining New Types of Data<a class="headerlink" href="#defining-new-types-of-data" title="Permalink to this headline">¶</a></h2>
+<p>If you cannot use the existing data types, extra effort is needed and it is
+probably a good idea to search the discussion with the software developers.</p>
+<blockquote>
+<div><ul class="simple">
+<li>A new <a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.html#module-pySPACE.resources.dataset_defs" title="pySPACE.resources.dataset_defs"><tt class="xref py py-mod docutils literal"><span class="pre">dataset</span> <span class="pre">definitions</span></tt></a>
+need to be implemented</li>
+<li>and new <a class="reference internal" href="../api/generated/pySPACE.resources.data_types.html#module-pySPACE.resources.data_types" title="pySPACE.resources.data_types"><tt class="xref py py-mod docutils literal"><span class="pre">data_types</span></tt></a> respectively.</li>
+<li>A <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.source.html#module-pySPACE.missions.nodes.source" title="pySPACE.missions.nodes.source"><tt class="xref py py-mod docutils literal"><span class="pre">source</span></tt></a> node will be required
+for getting the data into a
+<a class="reference internal" href="../api/generated/pySPACE.missions.operations.node_chain.html#module-pySPACE.missions.operations.node_chain" title="pySPACE.missions.operations.node_chain"><tt class="xref py py-mod docutils literal"><span class="pre">node</span> <span class="pre">chain</span> <span class="pre">operation</span></tt></a></li>
+<li>and a <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.sink.html#module-pySPACE.missions.nodes.sink" title="pySPACE.missions.nodes.sink"><tt class="xref py py-mod docutils literal"><span class="pre">sink</span></tt></a> node
+for getting the data format out of a
+<a class="reference internal" href="../api/generated/pySPACE.missions.operations.node_chain.html#module-pySPACE.missions.operations.node_chain" title="pySPACE.missions.operations.node_chain"><tt class="xref py py-mod docutils literal"><span class="pre">node</span> <span class="pre">chain</span> <span class="pre">operation</span></tt></a>.</li>
+<li><a class="reference internal" href="../api/generated/pySPACE.missions.nodes.html#module-pySPACE.missions.nodes" title="pySPACE.missions.nodes"><tt class="xref py py-mod docutils literal"><span class="pre">nodes</span></tt></a> or
+<a class="reference internal" href="../api/generated/pySPACE.missions.operations.html#module-pySPACE.missions.operations" title="pySPACE.missions.operations"><tt class="xref py py-mod docutils literal"><span class="pre">operations</span></tt></a>.need to be implemented
+or modified, to process this data.</li>
+</ul>
+</div></blockquote>
+<p>A good example would be to integrate picture or video data into the framework.
+This data could be handled as feature vector or time series data, too, but
+a special format might be a better choice.</p>
+</div>
+<div class="section" id="data-handling-for-direct-processing-in-applications">
+<h2>Data Handling for Direct Processing in Applications<a class="headerlink" href="#data-handling-for-direct-processing-in-applications" title="Permalink to this headline">¶</a></h2>
+<p>For the application case, the aforementioned hard disc usage is infeasible and
+data needs to be directly forwarded to the node chain which shall process
+the data probably using <a class="reference internal" href="../api/generated/pySPACE.run.launch_live.html#module-pySPACE.run.launch_live" title="pySPACE.run.launch_live"><tt class="xref py py-mod docutils literal"><span class="pre">launch_live</span></tt></a>.
+Therefore, an iterator is needed, which produces objects of pySPACE
+<a class="reference internal" href="../api/generated/pySPACE.resources.data_types.html#module-pySPACE.resources.data_types" title="pySPACE.resources.data_types"><tt class="xref py py-mod docutils literal"><span class="pre">data_types</span></tt></a>. To achieve this the
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.source.external_generator_source.html#pySPACE.missions.nodes.source.external_generator_source.ExternalGeneratorSourceNode" title="pySPACE.missions.nodes.source.external_generator_source.ExternalGeneratorSourceNode"><tt class="xref py py-class docutils literal"><span class="pre">ExternalGeneratorSourceNode</span></tt></a>
+is used.</p>
+<p>For demonstration purposes this functionality is implemented in the
+<a class="reference internal" href="../api/generated/pySPACE.tools.live.html#module-pySPACE.tools.live" title="pySPACE.tools.live"><tt class="xref py py-mod docutils literal"><span class="pre">live</span></tt></a> tools. It contains a C++ based streaming software
+which can access EEG acquisition devices manufactured by BrainProducts
+(requires proprietary driver for Windows, see
+<a class="reference internal" href="tutorial_work_with_the_eegserver.html#tutorial-work-with-the-eegserver"><em>eegmanager tutorial</em></a>).
+The data is sent via TCP/IP and can be unpacked and formatted accordingly by the
+<a class="reference internal" href="../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient" title="pySPACE.tools.live.eeg_stream.EEGClient"><tt class="xref py py-class docutils literal"><span class="pre">client</span> <span class="pre">side</span></tt></a>. The received data is
+then handed over to the windower inside the
+<a class="reference internal" href="../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager" title="pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager"><tt class="xref py py-class docutils literal"><span class="pre">LiveEegStreamManager</span></tt></a>.
+The created windows are then fed into the current node chain using the
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.source.external_generator_source.html#pySPACE.missions.nodes.source.external_generator_source.ExternalGeneratorSourceNode" title="pySPACE.missions.nodes.source.external_generator_source.ExternalGeneratorSourceNode"><tt class="xref py py-class docutils literal"><span class="pre">ExternalGeneratorSourceNode</span></tt></a>.</p>
+<p>To have your own data processed in pySPACE live you have to replace the
+<a class="reference internal" href="../api/generated/pySPACE.environments.live.eeg_stream_manager.html#pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager" title="pySPACE.environments.live.eeg_stream_manager.LiveEegStreamManager"><tt class="xref py py-class docutils literal"><span class="pre">LiveEegStreamManager</span></tt></a>
+to fit to your custom
+protocol or medium, your raw-data gets transmitted over. Currently this involves
+replacing the use of this class by hand - but in future releases a
+modular architecture is intended when handling different kinds of live-data.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions and pySPACE Troubleshooting"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial_work_with_the_eegserver.html" title="Setup and build the eegmanager"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, pySPACE Developer Team.
+      Last updated on Nov 26, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

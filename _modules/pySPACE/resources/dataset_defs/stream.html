@@ -176,7 +176,12 @@
 <span class="sd">    EDF+D files may be integrated in a future release.</span>
 
 <span class="sd">    In any case, the file suffix should be *edf*.</span>
+<span class="sd">    </span>
+<span class="sd">    .. warning:: Currently only one streaming dataset can be loaded</span>
+<span class="sd">        as testing data.</span>
 
+<span class="sd">    .. todo:: Implement loading of training and testing data.</span>
+<span class="sd">    </span>
 <span class="sd">    **Parameters**</span>
 <span class="sd">    </span>
 <span class="sd">        :dataset_md:</span>
@@ -469,6 +474,12 @@
 </div>
 <div class="viewcode-block" id="StreamDataset.set_window_defs"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.StreamDataset.set_window_defs">[docs]</a>    <span class="k">def</span> <span class="nf">set_window_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_definition</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> 
                         <span class="n">no_overlap</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">data_consistency_check</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Takes the window definition dictionary for later reading</span>
+
+<span class="sd">        The parameters are later on mainly forwarded to the</span>
+<span class="sd">        :class:`~pySPACE.missions.support.windower.MarkerWindower`.</span>
+<span class="sd">        To find more about these parameters, check out its documentation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span> <span class="o">=</span> <span class="n">window_definition</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">nullmarker_stride_ms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">no_overlap</span> <span class="o">=</span> <span class="n">no_overlap</span>
@@ -476,8 +487,7 @@
 </div>
 <div class="viewcode-block" id="StreamDataset.get_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.StreamDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)</span> <span class="o">==</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
-                <span class="s">&quot;Currently only one streaming dataset can be loaded!&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;storage_format&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="s">&quot;bp_eeg&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;storage_format&#39;</span><span class="p">]:</span>
                 <span class="c"># remove &quot;.eeg&quot; suffix</span>
@@ -911,7 +921,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">annotations</span><span class="p">[</span><span class="n">base</span><span class="o">+</span><span class="n">offset</span><span class="p">]</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 </div>
 <div class="viewcode-block" id="EDFReader.generate_meta_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.EDFReader.generate_meta_data">[docs]</a>    <span class="k">def</span> <span class="nf">generate_meta_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;generate the necessary meta data for the windower.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Generate the necessary meta data for the windower &quot;&quot;&quot;</span>
         <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_edf_header</span><span class="p">()</span>
 
         <span class="c"># calculate gain for each channel</span>
@@ -1472,7 +1482,7 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Aug 08, 2013.
+      Last updated on Nov 26, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

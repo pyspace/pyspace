@@ -13,14 +13,20 @@ of the University Bremen.
 
 The installation process consists of several steps:
 
-1. Download and install pySPACE itself
+1. :ref:`download` and install pySPACE itself
 2. Install the needed extra packages/modules
 3. Prepare the pySPACE user environment
 
 1. Downloading
 ^^^^^^^^^^^^^^^
-Step 1 is quite easy: download the software at
-`GitHub <https://github.com/pyspace>`_.
+
+Step 1 is quite easy: :ref:`download` the software.
+Currently, there is no real installation script implemented, though this
+will hopefully change in future.
+So simply save the software, where you want and where you can find it easily.
+For interactively using the software it might be also useful
+to add the folder path to the PYTHONPATH variable.
+For the normal usage this is not required.
 
 2. Extra packages
 ^^^^^^^^^^^^^^^^^^
@@ -39,10 +45,10 @@ Mandatory packages are:
     :YAML:      http://www.yaml.org/
 
                 for reading and writing configuration files
-    :numpy:     http://www.numpy.org/
+    :NumPy:     http://www.numpy.org/
 
                 basic array handling library to handle data
-    :scipy:     http://www.scipy.org/
+    :SciPy:     http://www.scipy.org/
 
                 more complicated signal processing or linear algebra operations
                 
@@ -63,12 +69,13 @@ Optional packages are:
     :matplotlib:  http://matplotlib.org/
 
                   making fancy plots
-    :scikit:      http://scikit-learn.org/
+    :scikit-learn:
+                  http://scikit-learn.org/
 
                   Many scikit algorithms are available wrapped via the
                   :mod:`~pySPACE.missions.nodes.scikits_nodes`
                   module and can be used like normal nodes.
-    :pyqt4:       basis of the :mod:`guis <pySPACE.run.gui>`
+    :PyQt4:       basis of the :mod:`guis <pySPACE.run.gui>`
     :LIBSVM:      http://www.csie.ntu.edu.tw/~cjlin/libsvm/
 
                   Famous library for fast SVM classifiers.
@@ -122,6 +129,24 @@ in the software folder. This will create the folder `pySPACEcenter` and the
 relevant subfolders including the relevant default main configuration file and
 several examples.
 
+Furthermore, links to the three main routines for using the software will be
+created in this folder:
+
+.. currentmodule:: pySPACE.run
+.. autosummary::
+
+    launch
+    launch_live
+    gui.performance_results_analysis
+
+.. warning:: The name ``setup.py`` was chosen for future development,
+             where this script will be also responsible for a real installation
+             including the installation of dependencies and moving the
+             needed code to the site-packages folder.
+             So after running this script, pySPACE is probably not available
+             in IPython or for the import in other software or scripts without
+             additional effort.
+
 Customized Setup of Environment
 +++++++++++++++++++++++++++++++
 
@@ -139,6 +164,11 @@ Here is a documented example of the default configuration file:
 .. literalinclude:: ../examples/conf/example.yaml
     :language: yaml
 
+Next Steps
+^^^^^^^^^^
 
+After the installation you might want to
 
-   
+    * read :ref:`some basic introduction<getting_started>` or
+    * play around with a
+      :ref:`first basic benchmarking example <first_operation>`.
