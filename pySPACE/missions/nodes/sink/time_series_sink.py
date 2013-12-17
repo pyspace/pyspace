@@ -166,7 +166,7 @@ class TimeSeriesSinkNode(BaseNode):
                     if(not input_timeseries[0][0].marker_name.has_key(k)):
                         input_timeseries[0][0].marker_name[k] = []
                     for time in ts[0].marker_name[k]:
-                        input_timeseries[0][0].marker_name[k].append(time+ts[0].start_time+input_timeseries[0][0].start_time)
+                        input_timeseries[0][0].marker_name[k].append(time+ts[0].start_time)
         # Use the meta information from the first timeseries e.g. marker start/end_time
         # and create a new timeseries with the concatenated data
         merged_time_series = TimeSeries.replace_data(input_timeseries[0][0],output_data)

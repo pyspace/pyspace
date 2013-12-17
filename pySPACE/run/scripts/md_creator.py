@@ -63,20 +63,17 @@ def parse_list(input_list):
             index_split = index.split('-')
             # to handle -1 input
             if index_split[0] == '':
-                info.append(str(index))
+                info.append(int(index))
                 break
             low = int(index_split[0])
             high = int(index_split[1])
             rnge = high - low
-            new_index = [str(low)]
+            new_index = [int(low)]
             for i in range(rnge):
-                new_index.append(str(low + i + 1))
+                new_index.append(int(low + i + 1))
             info = info + new_index
         else:
-            info.append(str(index))
-
-    info = ','.join(info)
-    
+            info.append(int(index))
     return info
 
 def check_delimiter(data):

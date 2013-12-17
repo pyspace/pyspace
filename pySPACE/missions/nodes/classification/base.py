@@ -323,7 +323,8 @@ class RegularizedClassifierBase(BaseNode):
                 self.samples = []
             if self.labels is None:
                 self.labels = []
-        if class_label not in self.classes and not "REST" in self.classes:
+        if class_label not in self.classes and not "REST" in self.classes and \
+                not self.regression:
             warnings.warn("Please give the expected classes to the classifier! "
                           + "%s unknown. "%class_label
                           + "Therefore define the variable 'class_labels' in "
@@ -465,7 +466,8 @@ class RegularizedClassifierBase(BaseNode):
         if (self.kernel_type == 'POLY' or self.kernel_type == 'SIGMOID') \
                 and self.gamma is None:
             self.gamma = 1.0/self.dim
-        elif self.kernel_type == 'RBF' and self.gamma is None:
+        elif self.kernel_type == 'RBF' and self.gamma is None and \
+                not self.regression:
             a = self.labels.count(self.classes.index(self.classes[0]))
             b = self.labels.count(self.classes.index(self.classes[1]))
             if a > b:

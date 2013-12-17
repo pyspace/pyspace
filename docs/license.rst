@@ -20,6 +20,8 @@ pySPACE ist distributed under GPL::
     You should have received a copy of the GNU General Public License
     along with pySPACE.  If not, see <http://www.gnu.org/licenses/>.
 
+.. _cite:
+
 Citation
 ========
 
@@ -28,14 +30,19 @@ When using our software, we request you to cite the following paper::
     @article{krell2013:pySPACE,
     author = {Krell, Mario Michael and Straube, Sirko and Seeland, Anett and W{\"o}hrle, Hendrik and Teiwes, Johannes and Metzen, Jan Hendrik and Kirchner, Elsa Andrea and Kirchner, Frank},
     journal = {Frontiers in Neuroinformatics},
-    title = {{pySPACE} — A Signal Processing and Classification Environment in {Python}},
-    year = {submitted 2013}
+    title = {{pySPACE — A Signal Processing and Classification Environment in Python}},
+    year = {2013},
+    volume = {7},
+    number = {40},
+    url = {http://www.frontiersin.org/neuroinformatics/10.3389/fninf.2013.00040/abstract},
+    doi = {10.3389/fninf.2013.00040},
+    ISSN = {1662-5196},
     }
 
     Krell, M. M., Straube, S., Seeland, Anett,  Wöhrle, H., Teiwes, J.,
-    Metzen, J. H., Kirchner, E. A., Kirchner, F. (submitted 2013).
+    Metzen, J. H., Kirchner, E. A., Kirchner, F. (2013).
     pySPACE — A Signal Processing and Classification Environment in Python,
-    Frontiers in Neuroinformatics.
+    Frontiers in Neuroinformatics 7(40), doi: 10.3389/fninf.2013.00040.
 
 Furthermore, when using special algorithms of pySPACE we request you to also
 cite the corresponding publications to give credits to the scientists
@@ -135,6 +142,43 @@ Sphinx is distributed under the following BSD license::
     THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
     (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Relative Margin Machine
+-----------------------
+
+The matlab code for the relative margin machine in
+``pySPACE.missions.nodes.classification.svm_variants.rmm.m`` is provided under
+the following BSD license::
+
+    Copyright (c) 2008, Pannagadatta Shivaswamy and Tony Jebara, Columbia University
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this
+       list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+    ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+    ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+    (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+    The views and conclusions contained in the software and documentation are those
+    of the authors and should not be interpreted as representing official policies,
+    either expressed or implied, of the FreeBSD Project.
+
+The code is partially wrapped in
+:class:`~pySPACE.missions.nodes.classification.svm_variants.brmm.RMMClassifierMatlabNode`.
 
 Other external sources
 -----------------------------------------
