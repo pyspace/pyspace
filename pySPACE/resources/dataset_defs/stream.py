@@ -150,6 +150,10 @@ class StreamDataset(BaseDataset):
             # searching files
             data_files = glob.glob(os.path.join(
                 dataset_dir, str("*.%s" % suffix)))
+            if len(data_files) == 0 and suffix == "eeg":
+                suffix = "dat"
+                data_files = glob.glob(os.path.join(
+                    dataset_dir, str("*.%s" % suffix)))
             if len(data_files) == 0:
                 raise IOError, str("Cannot find any .%s file in %s" %
                     (suffix, dataset_dir))
@@ -159,9 +163,8 @@ class StreamDataset(BaseDataset):
         else:
             # assume .eeg files
             data_files = glob.glob(dataset_dir + os.sep + "*.eeg")
-            if(len(data_files) == 0):
+            if len(data_files) == 0:
                 data_files = glob.glob(dataset_dir + os.sep + "*.dat")
-
             assert len(data_files) == 1, \
                 "Error locating eeg-data files (.eeg/.dat)"
 

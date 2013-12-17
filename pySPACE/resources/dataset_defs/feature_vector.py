@@ -32,8 +32,8 @@ class FeatureVectorDataset(BaseDataset):
     
     It is able to load csv-Files, arff-files and pickle files,
     where one file is always responsible for one training or test set.
-    The name conventions are the same as for
-    :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDatasets`.
+    The name conventions are the same as described in
+    :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset`.
     It is important that a metadata.yaml file exists, giving all
     the relevant information of the data set,
     especially the storage format, which can be
@@ -43,8 +43,8 @@ class FeatureVectorDataset(BaseDataset):
     
     **pickle-files**
     
-    See :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDatasets`
-    name conventions in the tutorial.
+    See :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset`
+    for name conventions (in the tutorial).
     
     
     **arff-files**
@@ -147,7 +147,7 @@ class FeatureVectorDataset(BaseDataset):
         if not dataset_md is None: #data has to be loaded
             self._log("Loading feature vectors from input collection.")
             dataset_dir = self.meta_data["dataset_directory"]
-            s_format = self.meta_data['storage_format']
+            s_format = self.meta_data["storage_format"]
             if type(s_format) == list:
                 s_format = s_format[0]
             # mainly code copy from time series data set defs
@@ -285,17 +285,17 @@ class FeatureVectorDataset(BaseDataset):
           check needed if code can be sent to upper class
         """
         ## init ##
-        classes_names = self.meta_data['classes_names']
-        s_format = self.meta_data['storage_format']
+        classes_names = self.meta_data["classes_names"]
+        s_format = self.meta_data["storage_format"]
         if type(s_format) == list:
             s_format = s_format[0]
 
         # todo: automatical loading of csv?
-        delimiter = self.meta_data.get("delimiter",',')
+        delimiter = self.meta_data.get("delimiter", ",")
         if not len(delimiter) == 1:
             self._log("Wrong delimiter ('%s') given. Using default ','." %
                       delimiter, level=logging.CRITICAL)
-            delimiter = ','
+            delimiter = ","
 
         # Do lazy loading of the fv objects.
         if isinstance(self.data[(run_nr, split_nr, train_test)], basestring):
@@ -304,7 +304,7 @@ class FeatureVectorDataset(BaseDataset):
                                                             split_nr))
             if s_format == "pickle":
                 # Load the data from a pickled file
-                file = open(self.data[(run_nr, split_nr, train_test)], 'r')
+                file = open(self.data[(run_nr, split_nr, train_test)], "r")
                 self.data[(run_nr, split_nr, train_test)] = cPickle.load(file)
                 file.close()
                 sample = self.data[(run_nr, split_nr, train_test)][0][0]
@@ -319,11 +319,11 @@ class FeatureVectorDataset(BaseDataset):
                 f.close()
                 # Read the arff file completely ##
                 for line in data_set:
-                    if '@attribute class' in line \
-                            or '@relation' in line \
-                            or '@data' in line:
+                    if "@attribute class" in line \
+                            or "@relation" in line \
+                            or "@data" in line:
                         pass
-                    elif '@attribute' in line:
+                    elif "@attribute" in line:
                         name_line = line.split()
                         names.append(name_line[1])
                     else: 
@@ -332,7 +332,7 @@ class FeatureVectorDataset(BaseDataset):
                 # of each line in the data.
                 for line in data:
                     vector = line[0:-1]
-                    label = line[-1].rstrip('\n\r ')  # --> label is string
+                    label = line[-1].rstrip("\n\r ")  # --> label is string
                     if not label in classes_names:
                         classes_names.append(label)
                     sample = FeatureVector(numpy.atleast_2d([vector]).astype(
@@ -349,11 +349,12 @@ class FeatureVectorDataset(BaseDataset):
                 data_set = f.readlines()
                 f.close()
                 # getting rid of all unwanted rows
-                if self.meta_data.has_key('ignored_rows'):
-                    ignored_rows = self.meta_data['ignored_rows']
+                if "ignored_rows" in self.meta_data:
+                    ignored_rows = self.meta_data["ignored_rows"]
                     if not type(ignored_rows) == list:
                         warnings.warn("Wrong format: Ignored rows included!")
                         ignored_rows = []
+                    ignored_rows.sort()
                     remove_list = []
                     for i in ignored_rows:
                         remove_list.append(data_set[int(i)-1])
@@ -362,13 +363,13 @@ class FeatureVectorDataset(BaseDataset):
                 # get len_line and delete heading
                 feature_names = self.meta_data["feature_names"]
                 if s_format == "csv":
-                    names = data_set[0].rstrip(',\n').split(delimiter)
+                    names = data_set[0].rstrip(",\n").split(delimiter)
                     data_set.pop(0)
                 len_line = len(data_set[0].split(delimiter))
 
                 # get and prepare label column numbers (len_line needed)
                 try:
-                    label_column = self.meta_data['label_column']
+                    label_column = self.meta_data["label_column"]
                 except KeyError:
                     label_column = -1
                 # map column numbers to indices by subtracting -1
@@ -385,21 +386,25 @@ class FeatureVectorDataset(BaseDataset):
                 # very important sorting for index shifts
                 label_columns.sort()
                 # calculate unwanted columns
-                if self.meta_data.has_key('ignored_columns'):
-                    ignored_columns = self.meta_data['ignored_columns']
+                # note: These indices begin with 1 .
+                # They are internally shifted when used.
+                if self.meta_data.has_key("ignored_columns"):
+                    ignored_columns = self.meta_data["ignored_columns"]
                     if not type(ignored_columns) == list:
                         warnings.warn("Wrong format: Ignored columns included!")
                         ignored_columns = []
                     new_ignored_columns = []
                     for i in ignored_columns:
+                        i =  int(i)
                         if i < 0:
                             i += len_line
                         for label_column in label_columns:
-                            if int(i) >= label_column:
-                                i = int(i)-1
-                        new_ignored_columns.append(int(i))
+                            if i > label_column:
+                                i -= 1
+                        new_ignored_columns.append(i)
                 else:
                     new_ignored_columns = []
+                new_ignored_columns.sort()
                 # get all relevant feature_names
                 if feature_names is None:
                     if s_format == "csv":
@@ -432,7 +437,7 @@ class FeatureVectorDataset(BaseDataset):
                         warnings.warn("Line without delimiter:\n%s" % str(line))
                         continue
                     line = line.split(delimiter)
-                    line[-1] = line[-1].rstrip('\n\r')
+                    line[-1] = line[-1].rstrip("\n\r")
                     label = []
                     i = 0
                     for label_column in label_columns:
@@ -503,6 +508,17 @@ class FeatureVectorDataset(BaseDataset):
                                "data_pattern": "data_run" + os.sep 
                                                  + name + "_sp_tt." + s_format[0]})
         
+        if type(s_format) == list:
+            s_type = s_format[1]
+            s_format = s_format[0]
+        else:
+            s_type = "real"
+            
+        if not s_format in ["csv", "arff", "pickle"]:
+            self._log("Storage format not supported! Using default.", 
+                      level=logging.ERROR)
+            s_format = "pickle"
+        
         # Iterate through splits and runs in this dataset
         for key, feature_vectors in self.data.iteritems():
             # Construct result directory
@@ -513,13 +529,13 @@ class FeatureVectorDataset(BaseDataset):
                 
             key_str = "_sp%s_%s" % key[1:]
             # Store data depending on the desired format
-            if s_format[0] == "pickle":
+            if s_format == "pickle":
                 result_file = open(os.path.join(result_path, 
                                                 name + key_str + ".pickle"),
                                    "w")
          
                 cPickle.dump(feature_vectors, result_file, cPickle.HIGHEST_PROTOCOL)
-            elif s_format[0] == "arff": # Write as ARFF
+            elif s_format == "arff": # Write as ARFF
                 result_file = open(os.path.join(result_path, 
                                                 name + key_str + ".arff"),"w")
                 # Create the arff file header
@@ -527,7 +543,7 @@ class FeatureVectorDataset(BaseDataset):
                 result_file.write('@relation "%s"\n' % relation_name)
                 # Write the type of all features
                 for feature_name in self.meta_data["feature_names"]:
-                    result_file.write('@attribute %s %s\n' % (feature_name,  s_format[1]))
+                    result_file.write("@attribute %s %s\n" % (feature_name,  s_type))
                 classString = "" + ",".join(sorted(self.meta_data["classes_names"])) + ""
 
                 result_file.write("@attribute class {%s}\n" % classString)
@@ -545,12 +561,12 @@ class FeatureVectorDataset(BaseDataset):
                     for feature in features[0]:
                         result_file.write(feature_format % feature)
                     result_file.write("%s\n" % str(class_name))
-            elif s_format[0] == "csv": # Write as Comma Separated Value
+            elif s_format == "csv": # Write as Comma Separated Value
                 result_file = open(os.path.join(result_path, 
                                                 name + key_str + ".csv"),"w")
                 for feature_name in self.meta_data["feature_names"]:
-                    result_file.write('%s,' % (feature_name))
-                result_file.write('\n')
+                    result_file.write("%s," % (feature_name))
+                result_file.write("\n")
                 fv = feature_vectors[0][0]
                 if numpy.issubdtype(fv.dtype, numpy.floating):
                     feature_format = "%f,"

@@ -5,7 +5,9 @@
 pySPACE
 =======
 
-|
+For getting a basic introduction into pySPACE and its main principles,
+we refer to `the corresponding paper in the Frontiers in Neuroscience Journal <http://www.frontiersin.org/neuroinformatics/10.3389/fninf.2013.00040/abstract>`_.
+This paper should be also used to :ref:`cite pySPACE <cite>`.
 
 .. table:: **Quick Access**
 

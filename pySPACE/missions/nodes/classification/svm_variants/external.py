@@ -48,7 +48,6 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
             .. warning:: For using "one-class SVM" better use the
                 :class:`~pySPACE.missions.nodes.classification.one_class.LibsvmOneClassNode`
 
-            ..note:: Could be extended! (see libsvm package)
             
             (*optional, default: 'C-SVC'*)
             
