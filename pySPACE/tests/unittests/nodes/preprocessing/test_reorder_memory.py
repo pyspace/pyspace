@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unittests which test filtering nodes
 
 :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)

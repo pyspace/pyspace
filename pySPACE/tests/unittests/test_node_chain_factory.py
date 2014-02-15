@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unit tests for the NodeChainFactory
 
 :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)

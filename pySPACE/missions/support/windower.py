@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*
 
 """ Performs windowing of incoming stream and produces instances of fixed

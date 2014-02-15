@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unittests which test subsampling nodes
 
 .. todo:: Implement tests for FftResamplingNode

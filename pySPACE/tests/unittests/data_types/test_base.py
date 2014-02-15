@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Unit test for BaseData type
 
     This unit test creates TimeSeries objects and FeatureVector,

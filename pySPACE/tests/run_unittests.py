@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Runs all unit tests that can be found in the subdirectory
 
 

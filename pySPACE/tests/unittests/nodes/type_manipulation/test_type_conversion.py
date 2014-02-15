@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This module contains unittests which test FeatureVector2TimeSeriesNode.
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unittests which test filtering nodes
 
 .. todo:: Implement tests for VarianceFilterNode

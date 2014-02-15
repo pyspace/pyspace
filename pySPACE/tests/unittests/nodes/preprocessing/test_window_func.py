@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unittests that test window functions nodes
 
 :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)

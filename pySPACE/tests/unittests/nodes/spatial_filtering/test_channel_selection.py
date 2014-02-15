@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This module contains unittests that test the channel selection module
 

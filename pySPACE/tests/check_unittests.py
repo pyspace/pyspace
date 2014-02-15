@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This module checks whether the unittests for every nodes exist.
 If [-l] option is specified, the result will be printed into log file 

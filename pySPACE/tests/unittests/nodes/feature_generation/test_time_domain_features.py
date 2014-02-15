@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 This module contains unittests which test the time domain Feature Extraction node
 

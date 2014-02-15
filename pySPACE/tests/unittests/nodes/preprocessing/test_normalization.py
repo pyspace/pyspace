@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Unittests that test normalization nodes
 
 :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
