@@ -3,9 +3,9 @@
 Processing Benchmark Data - A First Usage Example
 ----------------------------------------------------
 
-In this tutorial we  process the example data, which comes with the software.
-Our first step is to get some performance results and the next step is to compare
-some algorithms.
+In this tutorial, we  process the example data, which comes with the software.
+Our first step is to get some performance results and the next step is
+to compare some algorithms.
 
 Before we start
 ^^^^^^^^^^^^^^^
@@ -30,8 +30,8 @@ This data already comes with the whole structure for processing with pySPACE.
 First Processing
 ^^^^^^^^^^^^^^^^
 
-After having a look at the data, we now want apply a classification algorithms.
-We do that by applying an *operation*:
+After having a look at the data, we now want to apply a classification
+algorithm. This is done by applying an *operation*:
 
 .. literalinclude:: ../examples/specs/operations/examples/classification.yaml
     :language: yaml
@@ -46,8 +46,8 @@ Now you should get some information on your setup and finally a progress bar.
 The result can now be found at
 ``~/pySPACEcenter/storage/operation_results/CURRENT_DATE_TIME``,
 where the time tag in the folder name corresponds to the start time of
-your algorithm
-You may have a look at the short_result.csv
+your algorithm.
+You may have a look at the ``short_result.csv``.
 If you want to browse the result tabular,
 start :mod:`~pySPACE.run.gui.performance_results_analysis`.
 

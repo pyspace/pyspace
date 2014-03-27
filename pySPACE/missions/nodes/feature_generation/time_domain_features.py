@@ -59,8 +59,7 @@ class TimeDomainFeaturesNode(BaseNode):
             if index >= 0:
                 return float(index) / x.sampling_frequency
             else:
-                return (x.end_time - x.start_time)/ 1000.0 \
-                            + float(index) / x.sampling_frequency 
+                return (x.shape[0] + float(index)) / x.sampling_frequency
         # We project onto the data points that should be used as features
         y = y[self.datapoints,:]
         if self.absolute:

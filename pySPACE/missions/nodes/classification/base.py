@@ -148,7 +148,10 @@ class RegularizedClassifierBase(BaseNode):
             
         :use_list:
             Switch to store samples as *list*. If set to *False* they are stored
-            as arrays. 
+            as arrays. Used for compatibility with LIBSVM. This parameter should
+            not be changed by the user.
+
+            (*optional, default False*)
         
         :multinomial:
             Accept more than two classes.
@@ -293,7 +296,19 @@ class RegularizedClassifierBase(BaseNode):
                 self._stop_training()
 
     def get_sensor_ranking(self):
-        """ Transform the classification vector to a sensor ranking """
+        """ Transform the classification vector to a sensor ranking
+
+        This method will fail, if the classification vector variable
+        ``self.features`` is not existing.
+        This is for example the case when using nonlinear classification with
+        kernels.
+        """
+        if not "features" in self.__dict__:
+            self.features = FeatureVector(
+                numpy.atleast_2d(self.w).astype(numpy.float64),
+                self.feature_names)
+            self._log("No features variable existing to create generic sensor "
+                "ranking in %s."%self.__class__.__name__, level=logging.ERROR)
         # channel name is what comes after the first underscore
         feat_channel_names = [chnames.split('_')[1]
                         for chnames in self.features.feature_names]

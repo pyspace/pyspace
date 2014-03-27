@@ -14,7 +14,7 @@ FILEAcquisition::FILEAcquisition()
 	};
 
 	merge_options(long_options, sizeof(long_options));
-    
+
 	filename = NULL;
 
 	vhdr = NULL;
@@ -142,7 +142,7 @@ int32_t FILEAcquisition::setup(std::string opts)
 	fflush(stdout);
 
 	if(!_exists(buf)) {
-		WTF("Error %d when opening file %s.", errno, buf);
+		WTF("Error %d when opening file %s", errno, buf);
 		return -1;
 	}
 	vmrk = new std::ifstream(buf, std::ifstream::in);
@@ -156,11 +156,11 @@ int32_t FILEAcquisition::setup(std::string opts)
 	fflush(stdout);
 
 	if(!_exists(buf)) {
-		OMG("Error %d when opening file %s.", errno, buf);
+		OMG("Error %d when opening file %s", errno, buf);
 		memset(buf, 0, 512);
 		sprintf(buf, "%s.dat", filename->c_str());
 		if(!_exists(buf)) {
-			WTF("Error %d when opening file %s.", errno, buf);
+			WTF("Error %d when opening file %s", errno, buf);
 			return -1;
 		}
 	}
@@ -173,6 +173,9 @@ int32_t FILEAcquisition::setup(std::string opts)
 
 void FILEAcquisition::run()
 {
+#ifdef PROFILE
+	pre_profile();
+#endif
 
 	int32_t ret;
 	working = true;
@@ -203,6 +206,10 @@ void FILEAcquisition::run()
 	if(vhdr != NULL) vhdr->close();
 	if(vmrk != NULL) vmrk->close();
 
+#ifdef PROFILE
+	post_profile();
+#endif
+
 	return;
 }
 
@@ -228,6 +235,9 @@ int32_t FILEAcquisition::getMessage(uint32_t type)
 		ret = _get_data_message();
 	}
 
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return ret;
 }
 
@@ -499,7 +509,7 @@ int32_t FILEAcquisition::_get_data_description()
 	in_data_description->sample_size = sample_size;
 	in_data_description->protocol_version = 2;
 	abs_start_time = getTime();
-	in_data_description->abs_start_time[0] = (uint32_t)((abs_start_time&0xffffffff00000000)>>32);
+    in_data_description->abs_start_time[0] = (uint32_t)((abs_start_time&0xffffffff00000000)>>32);
     in_data_description->abs_start_time[1] = (uint32_t)(abs_start_time&0xffffffff);
 	memcpy(in_data_description->resolutions, resolutions, 256*sizeof(uint8_t));
 	in_data_description->variable_names_size = variable_names_size;
@@ -581,7 +591,9 @@ int32_t FILEAcquisition::_get_data_message()
 	idm->sample_size = idd->sample_size;
 	idm->time_code = (uint32_t)((position*1000)/idd->frequency);
 //	idm->time_code = (uint32_t)getTimeDiff(abs_start_time);
-
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return idm->message_type;
 }
 

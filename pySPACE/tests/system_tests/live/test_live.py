@@ -107,7 +107,7 @@ class VIBotTestSuite(object):
 
         # create param file for testing
         # set prewindow ip to localhost
-        self.params["eeg_server"]["eeg_server_prewindow_ip"] = "127.0.0.1"
+        self.params["data_source"]["prewindow"]["ip"] = "127.0.0.1"
         yaml.dump(self.params, open(os.path.join(self.conf.spec_dir, "live_settings", str("%s_for_testing.yaml" % (self.param_file.split(".")[0]))), "wt"))
         self.params = yaml.load(open(os.path.join(self.conf.spec_dir, "live_settings", self.param_file)))
 
@@ -182,7 +182,7 @@ class VIBotTestSuite(object):
 
         # create param file for testing
         # set prediction ip to localhost
-        self.params["eeg_server"]["eeg_server_predict_ip"] = "127.0.0.1"
+        self.params["data_source"]["predict"]["ip"] = "127.0.0.1"
         yaml.dump(self.params, open(os.path.join(self.conf.spec_dir, "live_settings", str("%s_for_testing.yaml" % (self.param_file.split(".")[0]))), "wt"))
         self.params = yaml.load(open(os.path.join(self.conf.spec_dir, "live_settings", self.param_file)))
 
@@ -278,7 +278,7 @@ class VIBotTestSuite(object):
 if __name__ == "__main__":
 
     # create logger
-    logger = logging.getLogger("test-vi-bot")
+    logger = logging.getLogger("test-pySPACE-live")
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s")
     ch = logging.StreamHandler()

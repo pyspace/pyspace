@@ -46,6 +46,7 @@ class LiveTrainer(object):
         self.last_target_data = {}
         self.marker_windower = {}
         self.training_paused_potential = multiprocessing.Value('b',False)
+        self.nullmarker_stride_ms = None
 
     def set_controller(self,controller):
         """ Set reference to the calling controller """
@@ -55,7 +56,7 @@ class LiveTrainer(object):
         """ Set the stream manager that provides the training data """
         self.stream_manager = stream_manager
 
-    def prepare_training(self, training_files, potentials, operation):
+    def prepare_training(self, training_files, potentials, operation, nullmarker_stride_ms = None):
         """ Prepares pyspace live for training.
 
         Prepares everything for training of pyspace live,
@@ -65,6 +66,11 @@ class LiveTrainer(object):
         online_logger.info( "Preparing Training")
         self.potentials = potentials
         self.operation = operation
+        self.nullmarker_stride_ms = nullmarker_stride_ms
+        if self.nullmarker_stride_ms == None:
+            online_logger.warn( 'Nullmarker stride interval is %s. You can specify it in your parameter file.' % self.nullmarker_stride_ms)
+        else:
+            online_logger.info( 'Nullmarker stride interval is set to %s ms ' % self.nullmarker_stride_ms)
 
         online_logger.info( "Creating flows..")
         for key in self.potentials.keys():
@@ -74,17 +80,11 @@ class LiveTrainer(object):
                 online_logger.info( "node_chain_spec:" + self.potentials[key]["node_chain"])
 
             elif self.operation in ("prewindowing", "prewindowing_offline"):
-                if self.potentials[key].has_key("stream") and self.potentials[key]["stream"] == True:
-                    self.potentials[key]["prewindowing_flow"] = os.path.join(spec_base, self.potentials[key]["stream_prewindowing_flow"])
-                else:
-                    self.potentials[key]["prewindowing_flow"] = os.path.join(spec_base, self.potentials[key]["prewindowing_flow"])
+                self.potentials[key]["prewindowing_flow"] = os.path.join(spec_base, self.potentials[key]["prewindowing_flow"])
                 online_logger.info( "prewindowing_dataflow_spec: " + self.potentials[key]["prewindowing_flow"])
 
             elif self.operation == "prewindowed_train":
-                if self.potentials[key].has_key("stream") and self.potentials[key]["stream"] == True:
-                    self.potentials[key]["postprocess_flow"] = os.path.join(spec_base, self.potentials[key]["stream_postprocess_flow"])
-                else:
-                    self.potentials[key]["postprocess_flow"] = os.path.join(spec_base, self.potentials[key]["postprocess_flow"])
+                self.potentials[key]["postprocess_flow"] = os.path.join(spec_base, self.potentials[key]["postprocess_flow"])
                 online_logger.info( "postprocessing_dataflow_spec: " + self.potentials[key]["postprocess_flow"])
 
             self.training_active_potential[key] = multiprocessing.Value("b",False)
@@ -129,17 +129,8 @@ class LiveTrainer(object):
                 self.node_chains[key][0].set_generator(flow_generator(key))
                 flow = open(self.potentials[key]["prewindowing_flow"])
             elif self.operation == "prewindowed_train":
-                if self.potentials[key].has_key("stream") and self.potentials[key]["stream"] == True:
-                    self.node_chains[key] = NodeChainFactory.flow_from_yaml(Flow_Class = NodeChain,
-                                                                     flow_spec = file(self.potentials[key]["postprocess_flow"]))
-                    # create windower
-                    online_logger.info( "Creating Windower")
-                    online_logger.info(self.potentials[key]["windower_spec_path_train"])
-                    self.node_chains[key][0].set_windower_spec_file(os.path.join(spec_base, "node_chains", "windower", self.potentials[key]["windower_spec_path_train"]))
-                    replace_start_and_end_markers = True
-                else:
-                    self.node_chains[key] = NodeChainFactory.flow_from_yaml(Flow_Class = NodeChain, flow_spec = file(self.potentials[key]["postprocess_flow"]))
-                    replace_start_and_end_markers = False
+                self.node_chains[key] = NodeChainFactory.flow_from_yaml(Flow_Class = NodeChain, flow_spec = file(self.potentials[key]["postprocess_flow"]))
+                replace_start_and_end_markers = False
 
                 final_collection = TimeSeriesDataset()
                 final_collection_path = os.path.join(self.prewindowed_data_directory, key, "all_train_data")
@@ -161,7 +152,6 @@ class LiveTrainer(object):
                     collection = BaseDataset.load(d)
                     data = collection.get_data(0, 0, "train")
                     for d,(sample,label) in enumerate(data):
-
                         if replace_start_and_end_markers:
                             # in case we concatenate multiple 'Window' labeled
                             # sets we have to remove every start- and endmarker
@@ -198,11 +188,24 @@ class LiveTrainer(object):
 
                 flow = open(self.potentials[key]["postprocess_flow"])
 
+            # create window_stream for every potential
+
+            if self.operation in ("prewindowing"):
+                window_spec_file = os.path.join(spec_base,"node_chains","windower",
+                             self.potentials[key]["windower_spec_path_train"])
+
+                self.window_stream[key] = \
+                        self.stream_manager.request_window_stream(window_spec_file,
+                                                              nullmarker_stride_ms = self.nullmarker_stride_ms)
+            elif self.operation in ("prewindowing_offline"):
+                pass
+            elif self.operation in ("train"):
+                pass
+
             self.node_chain_definitions[key] = yaml.load(flow)
             flow.close()
 
-        # TODO: check if the prewindowing flow is still needed
-        # when using the stream mode!
+        # TODO: check if the prewindowing flow is still needed when using the stream mode!
         if self.operation in ("train"):
             online_logger.info( "Removing old flows...")
             try:
@@ -369,83 +372,50 @@ class LiveTrainer(object):
         """ A function that forwards the data to the worker threads """
         spec_base = self.potentials[key]["configuration"].spec_dir
         window_spec_file = {}
+ 
         if self.operation in ("prewindowing"):
-            # create window stream
-            if self.potentials[key].has_key("stream") and self.potentials[key]["stream"] == True:
-                self.stream_data_stream_mode(self, key, window_spec_file, spec_base, self.stream_manager)
-            else:
-                # request the window stream..
-                window_spec_file[key] = os.path.join(spec_base, 
-                                                     "node_chains", 
-                                                     "windower", 
-                                                     self.potentials[key]["windower_spec_path_train"])
-                
-                self.window_stream[key] = \
-                    self.stream_manager.request_window_stream(window_spec_file[key],
-                                                              nullmarker_stride_ms=1000)
-                # process the data
-                online_logger.info(str("streaming data for %s started" % key))
-                self.classification_thread(key)
-
+            online_logger.info(str("streaming data for %s started" % key))
+            
+            self.classification_thread(key)
+ 
             # all done!
             self.queue[key].put(None)
             online_logger.info(str("%s for %s finished" % (self.operation, key)))
-
+ 
         elif self.operation in ("prewindowing_offline"):
             data_set_count = 0
-
+ 
             # create local stream manager
             local_streaming = eeg_stream_manager.LiveEegStreamManager(online_logger)
-
+ 
             for train_dataset in self.training_data:
                 # continue if we are not supposed to train any further
                 if self.training_paused_potential.value == True:
                     continue
-
+ 
                 # stream local file
                 local_streaming.stream_local_file(train_dataset)
-
+ 
                 # create window stream
-                if self.potentials[key].has_key("stream") and self.potentials[key]["stream"] == True:
-                    window_spec_file[key] = os.path.join(spec_base, 
-                                                         "node_chains", 
-                                                         "windower", 
-                                                         self.potentials[key]["windower_spec_path_stream"])
-                    
-                    self.window_stream[key] = \
-                        local_streaming.request_window_stream(window_spec_file[key],
-                                                              nullmarker_stride_ms=1000,
-                                                              no_overlap = True)
-                        
-                    online_logger.info(key + " windower: " + str(self.window_stream[key]))
-
-                    # Put all windows into the queues so that they can be processed by
-                    # the multiple training threads
-                    online_logger.info( "Streaming data started")
-                    window_counter = 0
-                    for data, label in self.window_stream[key]:
-                        online_logger.info("Got instance number "+ str(window_counter) + " with class %s" % label)
-                        window_counter += 1
-                        self.queue[key].put((data, label))
-                else:
-                    window_spec_file[key] = os.path.join(spec_base, 
-                                                         "node_chains", 
-                                                         "windower", 
-                                                         self.potentials[key]["windower_spec_path_train"])
-                    
-                    self.window_stream[key] = local_streaming.request_window_stream(window_spec_file[key], \
-                                         nullmarker_stride_ms=50)
-                    # process the data
-                    online_logger.info(str("streaming data for %s started" % key))
-                    self.classification_thread(key)
+                window_spec_file[key] = os.path.join(spec_base, 
+                                                    "node_chains", 
+                                                    "windower", 
+                                                    self.potentials[key]["windower_spec_path_train"])
+                     
+                self.window_stream[key] = local_streaming.request_window_stream(window_spec_file[key], \
+                                         nullmarker_stride_ms=self.nullmarker_stride_ms)
+                # process the data
+                online_logger.info(str("streaming data for %s started" % key))
+                self.classification_thread(key)
+                
                 data_set_count += 1
                 online_logger.info(str("dataset %d completely streamed for %s" % (data_set_count, key)))
                 local_streaming.stop()
-
+ 
             # all done!
             self.queue[key].put(None)
             online_logger.info(str("training for %s finished" % key))
-
+ 
         elif self.operation in ("train"):
             data_set_count = 0
             local_streaming = eeg_stream_manager.LiveEegStreamManager(online_logger)
@@ -457,49 +427,26 @@ class LiveTrainer(object):
                 local_streaming.stream_local_file(train_dataset)
                 # create windower
                 
-                if self.potentials[key].has_key("stream") \
-                    and self.potentials[key]["stream"] == True:
-                    
-                    self.stream_data_stream_mode(key, window_spec_file, spec_base, local_streaming)
                 
-                else:
-                    window_spec_file[key] = \
-                        os.path.join(spec_base, 
-                                     "node_chains", 
-                                     "windower", 
-                                     self.potentials[key]["windower_spec_path_train"])
-                    
-                    self.window_stream[key] = \
-                        local_streaming.request_window_stream(window_spec_file[key], \
-                        nullmarker_stride_ms=50)
-                        
-                    online_logger.info(key + " windower: " + str(self.window_stream[key]))
-                    self.classification_thread(key)
-                    data_set_count += 1
-                    online_logger.info(str("dataset %d completely streamed for %s" % (data_set_count, key)))
-                    local_streaming.stop()
-
+                print 'window specs: ' , self.potentials[key]["windower_spec_path_train"]
+                 
+                window_spec_file[key] = \
+                    os.path.join(spec_base, 
+                                "node_chains", 
+                                "windower", 
+                                self.potentials[key]["windower_spec_path_train"])
+                     
+                self.window_stream[key] = \
+                    local_streaming.request_window_stream(window_spec_file[key], \
+                    nullmarker_stride_ms=self.nullmarker_stride_ms)
+                         
+                online_logger.info(key + " windower: " + str(self.window_stream[key]))
+                self.classification_thread(key)
+                data_set_count += 1
+                online_logger.info(str("dataset %d completely streamed for %s" % (data_set_count, key)))
+                    #local_streaming.stop()
+ 
             self.queue[key].put(None)
-
-    def stream_data_stream_mode(self, key, window_spec_file, spec_base, stream_instance):
-        window_spec_file[key] = \
-            os.path.join(spec_base, 
-                         "node_chains", 
-                         "windower", 
-                         self.potentials[key]["windower_spec_path_stream"])
-            
-        self.window_stream[key] = \
-            stream_instance.request_window_stream(window_spec_file[key],
-                                                  nullmarker_stride_ms=200,
-                                                  no_overlap = True)
-        
-        online_logger.info(key + " windower: " + str(self.window_stream[key]))
-        online_logger.info( "Streaming data started")
-        window_counter = 0
-        for data, label in self.window_stream[key]:
-            online_logger.info("Got instance number "+ str(window_counter) + " with class %s" % label)
-            window_counter += 1
-            self.queue[key].put((data, label))
 
     def start_training(self, operation, profiling=False):
         """ Trains flows on the streamed data """
@@ -528,7 +475,7 @@ class LiveTrainer(object):
         setup_timer = 0
         while not self.is_training_active():
             if setup_timer > 30:
-                online_logger("Training processes not started")
+                online_logger.error("Training processes not started")
                 raise RuntimeError("Training processes not started")
             else:
                 time.sleep(1)
@@ -540,17 +487,17 @@ class LiveTrainer(object):
 
     def is_training_active(self):
         """ Returns whether training is finished or still running """
-        active = True
-        dead = True
+        active = False
+        alive = False
 
         for key in self.potentials.keys():
-            active &= (self.training_active_potential[key].value == True)
+            active |= self.training_active_potential[key].value
 
         for key in self.train_process.iterkeys():
-            dead &= not self.train_process[key].is_alive()
+            alive |=  self.train_process[key].is_alive()
 
-        if dead:
-            active = not active
+        if not alive:
+            active = False
 
         return active
 

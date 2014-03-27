@@ -167,6 +167,10 @@ int32_t NETAcquisition::_connect()
 // the main run-loop
 void NETAcquisition::run(void)
 {
+#ifdef PROFILE
+	pre_profile();
+#endif
+
 	int32_t ret;
 	working = true;
 
@@ -231,6 +235,10 @@ error:
 	}
 	connected = 0;
 
+#ifdef PROFILE
+	post_profile();
+#endif
+
 	return;
 }
 
@@ -265,7 +273,7 @@ int32_t NETAcquisition::getMessage(int type)
 		current_length = sizeof(MessageHeader) - total_length;
 		ret = recv(server_socket, (char*)pData, current_length, 0);
 		if(!working || num_timeouts  > max_timeouts) {
-			if(num_timeouts  > max_timeouts) OMG("Stopping due to too many (%d) timeouts!", num_timeouts);
+			if((uint32_t)num_timeouts  > max_timeouts) OMG("Stopping due to too many (%d) timeouts!", num_timeouts);
 			// inject stop-message
 			tempHeader.message_type = 3;
 			tempHeader.message_size = sizeof(MessageHeader);
@@ -379,10 +387,10 @@ int32_t NETAcquisition::getMessage(int type)
 	}
 
 	if(abs_start_time == 0 && tempHeader.message_type == 1) {
-		abs_start_time = in_data_description->abs_start_time[0];
+        abs_start_time = in_data_description->abs_start_time[0];
         abs_start_time = abs_start_time << 32;
         abs_start_time += in_data_description->abs_start_time[1];
-		printf("%s: set start time to %llu\n", description().c_str(), abs_start_time);
+        printf("%s: set start time to %llu\n", description().c_str(), abs_start_time);
 	}
 
 	return tempHeader.message_type;

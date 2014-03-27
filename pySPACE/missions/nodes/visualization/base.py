@@ -522,7 +522,7 @@ class VisualizationBase(BaseNode):
             #set the specific directory for this particular node
             node_dir = os.path.join(result_dir, self.__class__.__name__)
             #do we have an index-number?
-            if index is None:
+            if not index is None:
                 #add the index-number...
                 node_dir += "_%d" % int(index)
             create_directory(node_dir)

@@ -1,10 +1,9 @@
 #include "util_ringbuffer.h"
 
-RingBuffer::RingBuffer(size_t size) 
+RingBuffer::RingBuffer(size_t size)  : BaseBuffer(size)
 {
     // init
     data = NULL;
-    buffer_size = 0;
     total_data = 0;
     m = NULL;
     
@@ -200,19 +199,19 @@ void RingBuffer::reset(void)
 	m->unlock();
 }
 
-uint32_t RingBuffer::get_size(void)
+float RingBuffer::fill(void) 
 {
-    return buffer_size;
+    return ((float)used*100)/buffer_size;
 }
 
-uint32_t RingBuffer::get_used(void)
+uint32_t RingBuffer::bytes_used(void)
 {
 	return used;
 }
 
-float RingBuffer::fill(void) 
+uint32_t RingBuffer::bytes_left()
 {
-    return ((float)used*100)/buffer_size;
+	return buffer_size-bytes_used();
 }
 
 float RingBuffer::bandwidth(void) 

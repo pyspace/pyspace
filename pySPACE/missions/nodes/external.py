@@ -41,6 +41,10 @@ DEFAULT_NODE_MAPPING = {}  # pySPACE.configuration.DEFAULT_NODE_MAPPING
 
 nodes = []
 
+# list of files or nodes that should not be imported
+# e.g. setup files may cause problems
+file_name_black_list = ["setup.py"]
+
 for root in pySPACE.configuration.external_nodes:
     root = os.path.expanduser(root)
     if not root in sys.path:
@@ -51,6 +55,8 @@ for root in pySPACE.configuration.external_nodes:
         package_path = dir_path.replace(os.sep, ".")
         # Check all files if they are Python modules
         for file_name in file_names:
+            if file_name in file_name_black_list:
+                continue
             if module_pattern.match(file_name):
                 # Import the module
                 module_name = file_name.split(".")[0]
@@ -68,7 +74,7 @@ for root in pySPACE.configuration.external_nodes:
                     # Add them to the global dict of nodes
                     for key, value in module._NODE_MAPPING.iteritems():
                         assert(key not in NODE_MAPPING.keys()), \
-                            "External node with name %s has already been defined!" % key
+                            "External node with name %s at %s has already been defined at %s!" % (key, value, NODE_MAPPING[key])
                         NODE_MAPPING[key] = value
                         _NODE_MAPPING[key] = value #value.__name__
                 for key,value in module_nodes:

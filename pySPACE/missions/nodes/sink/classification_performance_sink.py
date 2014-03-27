@@ -181,10 +181,11 @@ class PerformanceSinkNode(BaseNode):
             Generates a table which contains a confusion matrix over time/samples.
             There are two types of traces: short traces and long traces. 
             The short traces contain only the information, if a classification
-            was a TP, TN, FP or FN. The long traces contain may furthermore contain
+            was a TP, TN, FP or FN. The long traces furthermore contain
             loss values and are saved as a dictionary.
-            To save only short traces (for, e.g. performance reasons), set save_trace
-            to ``short``. To save long and short traces, set save_trace to True.    
+            To save only short traces (for, e.g. performance reasons),
+            set save_trace to ``short``.
+            To save long and short traces, set save_trace to True.
 
             (*optional, default: False*)
             
@@ -450,8 +451,8 @@ class PerformanceSinkNode(BaseNode):
                         save_trace=self.save_trace)
         self._log("Metrics added to dataset",level=logging.INFO)
 
-    def set_helper_parameters(self, classification_vector,label):
-        """ Some node parameters must be fetched from the classification vectors """
+    def set_helper_parameters(self, classification_vector, label):
+        """ Fetch some node parameters from the classification vector """
             # get an example for a classification vector for further analysis
         if self.example is None:
             self.example = classification_vector
@@ -757,6 +758,12 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
             
             (*optional, default: False*)
             
+        :save_time_plot:
+            If True a plot is stored which shows the predicted labels for all 
+            trials across time.
+            
+            (*optional, default: False*)
+            
         :sort: 
             If True the data has to be sorted according to the time (encoded in the
             tag attribute. Be aware that this only makes sense for data sets with
@@ -785,8 +792,9 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
     """
     def __init__(self,
                  uncertain_area=None, sliding_step=50, save_score_plot=False, 
-                 save_trial_plot=False, determine_labels=None, epoch_eval=False, 
-                 epoch_signal=None, sort=False,**kwargs):
+                 save_trial_plot=False, save_time_plot=False, 
+                 determine_labels=None, epoch_eval=False, epoch_signal=None, 
+                 sort=False, unused_win_defs=[], **kwargs):
         super(SlidingWindowSinkNode,self).__init__(**kwargs)
         self.set_permanent_attributes(uncertain_area=uncertain_area,
                                       sliding_step=sliding_step,
@@ -795,9 +803,11 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                                       epoch_eval=epoch_eval,
                                       save_score_plot=save_score_plot,
                                       save_trial_plot=save_trial_plot,
-                                      sort=sort)
+                                      save_time_plot=save_time_plot,
+                                      sort=sort,
+                                      unused_win_defs=unused_win_defs)
         if self.store == False:
-            self.store = save_score_plot or save_trial_plot
+            self.store = save_score_plot or save_trial_plot or save_time_plot
         
     def process_current_split(self):
         """ Compute the results of this sink node for the current split of the 
@@ -1071,17 +1081,47 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
             
             super(SlidingWindowSinkNode,self).store_state(result_dir)
             
-            if self.save_score_plot or self.save_trial_plot:
+            if self.save_score_plot or self.save_trial_plot or self.save_time_plot:
                 import matplotlib.pyplot as plt
-                data = [[classification_vector[0][0] for \
-                       classification_vector, label in self.data_time[k]] for \
+                data = [[pv.prediction for pv, _ in self.data_time[k]] for \
                        k in self.data_time.keys()]
-                data = numpy.array(data)
-                means = numpy.mean(data,axis=0)
-                stds = numpy.std(data,axis=0)
-                ind = numpy.arange(-1.0*(data.shape[1]-1)*self.sliding_step,
-                                                                         50, 50) 
+            
+            if self.save_time_plot:
+                label_data = [numpy.array([(pv.label, 
+                               float(pv.tag.split(';')[1].split(':')[1][:-2])) \
+                                     for pv, _ in self.data_time[k]]) \
+                        for k in self.data_time.keys()]
+                fig = plt.figure()
+                ax1 = plt.subplot(111)
+                ax1.yaxis.grid(True, linestyle='-', which='major', color='grey',
+                               alpha=0.5)
+                ax1.xaxis.grid(True, linestyle='-', which='major', color='grey',
+                               alpha=0.5)
+                for trial in label_data:
+                    ind = numpy.arange(-1.0*(len(trial)-1)*self.sliding_step,
+                                                                         50, 50)
+                    x = [ind[i] for i, (label, start_time) in enumerate(trial) \
+                         if label == self.ir_class]
+                    y = [start_time] * len(x)
+                    plt.plot(x, y,'bo')
+                plt.xlabel("Time (ms)")
+                plt.ylabel("Start time of trial (s)")
+                name = 'trail-time_plot_sp%s.pdf' % self.current_split
+                plt.savefig(os.path.join(node_dir,name),dpi=None,facecolor='w',
+                            edgecolor='w',orientation='portrait',papertype=None,
+                            format=None,transparent=False)  
+                plt.close(fig)                
+                
             if self.save_score_plot:
+                max_time = max([len(trial) for trial in data])
+                data_across_time = [[] for time_step in range(max_time)]
+                for trial in data:
+                    for i, elem in enumerate(trial[::-1]):
+                        data_across_time[i].append(elem)
+                means = [numpy.mean(time_step) for time_step in data_across_time]
+                stds = [numpy.std(time_step) for time_step in data_across_time]
+                ind = numpy.arange(-1.0*(max_time-1)*self.sliding_step, 50, 50)
+                
                 fig = plt.figure()
                 ax1 = plt.subplot(111)
                 ax1.yaxis.grid(True, linestyle='-', which='major', color='grey',
@@ -1089,7 +1129,8 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                 ax1.xaxis.grid(True, linestyle='-', which='major', color='grey',
                                alpha=0.5)
                 width = 30
-                plt.bar(ind, means, width, color='r', yerr=stds, ecolor='black')
+                plt.bar(ind, means[::-1], width, color='r', yerr=stds[::-1], 
+                                                                 ecolor='black')
                 ax1.set_xlim(ind[0]-width,ind[-1]+width)
                 ax1.set_ylim(min(means)-max(stds),max(means)+max(stds))
                 
@@ -1107,10 +1148,11 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                 plt.savefig(os.path.join(node_dir, name), dpi=None, format=None,
                             facecolor='w', edgecolor='w', papertype=None,
                             orientation='portrait', transparent=False)
+                plt.close(fig)
                     
             if self.save_trial_plot:
                 fig = plt.figure()
-                num_trials = data.shape[0]
+                num_trials = len(self.data_time.keys())
                 num_rows = num_cols = int(round(numpy.sqrt(num_trials)+0.5))
                 fig.set_size_inches((10*num_cols, 6*num_rows))
                 ymin = numpy.inf
@@ -1118,13 +1160,15 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                 for trial in data:
                     ymin = min([ymin,min(trial)])
                     ymax = max([ymax,max(trial)])
-                for i in range(data.shape[0]):
+                for i in range(num_trials):
+                    ind = numpy.arange(-1.0*(len(data[i])-1)*self.sliding_step,
+                                                                         50, 50)
                     ax = plt.subplot(num_rows, num_cols, i+1)
                     ax.yaxis.grid(True, linestyle='-', which='major', 
                                   color='grey', alpha=0.5)
                     ax.xaxis.grid(True, linestyle='-', which='major', 
                                   color='grey', alpha=0.5)
-                    plt.plot(ind, data[i,:], 'o')
+                    plt.plot(ind, data[i], 'o')
                     ax.set_xlim(ind[0],ind[-1])
                     ax.set_ylim(ymin,ymax)
                     start = self.data_time[i][0][0].tag.split(';')[1].split(':')[1]
@@ -1134,7 +1178,7 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                     plt.ylabel('SVM prediction value')
                     plt.xlabel('Time point of classification [ms]')
                     if self.label_change_points != []:
-                        x = (self.label_change_points[i] - data.shape[1] + 1) \
+                        x = (self.label_change_points[i] - len(data[i]) + 1) \
                                                             * self.sliding_step
                         # plot a line when positive class starts
                         plt.plot([x,x],[ymin,ymax])
@@ -1150,7 +1194,7 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                 plt.savefig(os.path.join(node_dir,name),dpi=None,facecolor='w',
                             edgecolor='w',orientation='portrait',papertype=None,
                             format=None,transparent=False)
-
+                plt.close(fig)
 
 # Specify special node names
 _NODE_MAPPING = {"Classification_Performance_Sink": PerformanceSinkNode,

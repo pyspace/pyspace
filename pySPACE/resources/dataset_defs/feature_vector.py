@@ -365,7 +365,11 @@ class FeatureVectorDataset(BaseDataset):
                 if s_format == "csv":
                     names = data_set[0].rstrip(",\n").split(delimiter)
                     data_set.pop(0)
-                len_line = len(data_set[0].split(delimiter))
+                line = data_set[0].split(delimiter)
+                line[-1] = line[-1].rstrip("\n\r")
+                if line[-1] == '':
+                        line.pop(-1)
+                len_line = len(line)
 
                 # get and prepare label column numbers (len_line needed)
                 try:
@@ -438,6 +442,8 @@ class FeatureVectorDataset(BaseDataset):
                         continue
                     line = line.split(delimiter)
                     line[-1] = line[-1].rstrip("\n\r")
+                    if line[-1] == '':
+                        line.pop(-1)
                     label = []
                     i = 0
                     for label_column in label_columns:

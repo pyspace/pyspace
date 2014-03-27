@@ -298,7 +298,12 @@ FILEOutput::~FILEOutput()
 
 }
 
-void FILEOutput::run() {
+void FILEOutput::run()
+{
+
+#ifdef PROFILE
+	pre_profile();
+#endif
 
 	working = true;
 
@@ -330,6 +335,10 @@ error:
 	vmrk->close();
 
 	FYI("Done!");
+
+#ifdef PROFILE
+	post_profile();
+#endif
 
 }
 

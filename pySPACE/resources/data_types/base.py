@@ -122,7 +122,7 @@ class BaseData(numpy.ndarray):
                 #print a,b
                 warnings.warn("Dimensions do not match. Better cast object to ndarray, before slicing! "+
                     "To locate the error check documentation in base.py"+
-                    " or uncomment the lower the next two lines and restart!")
+                    " or uncomment the lower next two lines and restart!")
         except:
             pass
 #        if raise_error:

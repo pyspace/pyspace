@@ -20,11 +20,10 @@ from pySPACE.resources.dataset_defs.base import BaseDataset
 
 
 class TimeSeriesDataset(BaseDataset):
-    """ Time series dataset
+    """ Loading and storing a time series dataset
     
-    This class encapsulate most relevant code for dealing with 
-    time series datasets, most importantly
-    for loading and storing them to the file system.
+    This class encapsulate most relevant code for dealing with time series 
+    datasets, most importantly for loading and storing them to the file system.
     
     These datasets consist of
     :mod:`~pySPACE.resources.data_types.time_series` objects.
@@ -33,7 +32,17 @@ class TimeSeriesDataset(BaseDataset):
     :mod:`~pySPACE.missions.nodes.sink.time_series_sink` node
     in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.
     
-    The standard format is 'pickle'.
+    The standard format is 'pickle', but it is also possible to load, e.g.,
+    BrainComputerInterface-competition data. For that, ``storage_format`` has
+    to be set in the format **bci_comp_[competition number]_[dataset number]**
+    in the metadata.yaml file. For example, **bci_comp_2_4** means loading of 
+    time series from BCI Competition II (2003), dataset IV.
+    Currently, the following datasets can be loaded:
+    
+        - BCI Competition II, dataset IV: self-paced key typing (left vs. right)
+        - BCI Competition III, dataset II: P300 speller paradigm, training data
+    
+    See http://www.bbci.de/competition/ for further information.
     
     **Parameters**
     
@@ -46,6 +55,11 @@ class TimeSeriesDataset(BaseDataset):
           A lambda function string that is evaluated before the data is stored.
 
           (*optional, default: None*)
+          
+    **Known issues**
+        The BCI Competition III dataset II should be actually loaded as a 
+        streaming dataset to enable different possibilities for windowing.
+        Segment ends (i.e., where a new letter starts) can be coded as marker.
     """
     def __init__(self, dataset_md=None, sort_string=None, **kwargs):
         super(TimeSeriesDataset, self).__init__(dataset_md=dataset_md)
@@ -85,6 +99,80 @@ class TimeSeriesDataset(BaseDataset):
                             ts_file = os.path.join(dataset_dir,data)
                             # Actual data will be loaded lazily
                             self.data[(run_nr, split_nr, train_test)] = ts_file
+            elif s_format.startswith("bci_comp"):
+                # get bci competion and dataset number
+                try:
+                    self.comp_number, self.comp_set = s_format.split('_')[2:]
+                except Exception:
+                    raise Exception, "%s --- Could not extract BCI competition"\
+                                     " and dataset number!" % s_format
+                if self.comp_number == "2":
+                    if self.comp_set == "4":
+                        
+                        def _update_sf(self, file_name):
+                            if '1000' in file_name:
+                                self.sf = 1000
+                            else:
+                                self.sf = 100
+                            self.meta_data["sampling_frequency"] = self.sf
+                            
+                        # structure: 2 mat file with data in different sampling
+                        # frequencies; txt file for test labels
+                        if "sampling_frequency" in self.meta_data.keys() and \
+                                "file_name" in self.meta_data.keys():
+                            # are they inconsistent?
+                            self.sf = self.meta_data["sampling_frequency"]
+                            if (self.sf == 100 and '1000' in \
+                                               self.meta_data["file_name"]) or \
+                                    (self.sf == 1000 and '1000' not in \
+                                               self.meta_data["file_name"]):
+                                warnings.warn("File name does not match "
+                                        "sampling frequency or vice versa. %s "
+                                        "is loaded." % self.meta_data["file_name"])
+                                self._update_sf(self.meta_data["file_name"])
+                            ts_file = os.path.join(dataset_dir,
+                                                    self.meta_data["file_name"])
+                        elif "file_name" in self.meta_data.keys():
+                            self._update_sf(self.meta_data["file_name"])
+                            ts_file = os.path.join(dataset_dir,
+                                                    self.meta_data["file_name"])
+                        elif "sampling_frequency" in self.meta_data.keys():
+                            self.sf = self.meta_data["sampling_frequency"]
+                            if self.sf == 1000:
+                                ts_file = os.path.join(dataset_dir,
+                                                           "sp1s_aa_1000Hz.mat")
+                            else:
+                                ts_file = os.path.join(dataset_dir, 
+                                                                  "sp1s_aa.mat")
+                        else:
+                            ts_file = glob.glob(os.path.join(dataset_dir,
+                                                                    "*.mat"))[0]
+                            warnings.warn("Either file name nor sampling "
+                                  "frequency is given. %s is loaded." % ts_file)
+                            self._update_sf(ts_file)
+                        self.data[(0, 0, "test")] = ts_file
+                        self.data[(0, 0, "train")] = ts_file
+                    else:
+                        raise NotImplementedError("Loading of BCI competition" \
+                                              " %s, dataset %s not supported " \
+                                            % (self.comp_number, self.comp_set))
+                elif self.comp_number == "3":
+                    if self.comp_set == "2":
+                        # structure: mat file for train and test data
+                        # TODO: loading test labels is not possible at the moment!
+                        #     glob.glob(os.path.join(dataset_dir,"*Test.mat"))[0]
+                        #self.data[(0, 0, "train")] = \
+                        self.data[(0, 0, "test")] = \
+                            glob.glob(os.path.join(dataset_dir,"*Train.mat"))[0]
+                    else:
+                        raise NotImplementedError("Loading of BCI competition" \
+                                              " %s, dataset %s not supported " \
+                                            % (self.comp_number, self.comp_set))
+                else:
+                    raise NotImplementedError("Loading of BCI competition %s," \
+                                              " dataset %s not supported " \
+                                            % (self.comp_number, self.comp_set))
+                        
             else: # s_format=="csv":
                 if "file_name" in self.meta_data.keys():
                     ts_file = os.path.join(dataset_dir,
@@ -151,6 +239,96 @@ class TimeSeriesDataset(BaseDataset):
                     self.data[(run_nr, split_nr, train_test)] = cPickle.load(f)
                     del sys.modules['abri_dp.types.time_series']
                 f.close()
+            elif s_format.startswith("bci_comp"):
+                from scipy.io import loadmat
+                from pySPACE.resources.data_types.time_series import TimeSeries
+                if self.comp_number == "2":
+                    if self.comp_set == "4":
+                        ts_fname = self.data[(run_nr, split_nr, train_test)]
+                        d = loadmat(ts_fname)
+                        channel_names = [name[0].astype('|S3') for name in \
+                                                                   d["clab"][0]]
+                        if train_test == "train":
+                            self.data[(run_nr, split_nr, train_test)] = []
+                            input_d = d["x_train"]
+                            input_l = d["y_train"][0]
+                            for i in range(input_d.shape[2]):
+                                self.data[(run_nr, split_nr, 
+                                           train_test)].append(\
+                                            (TimeSeries(input_d[:,:,i],
+                                                 channel_names, float(self.sf)), 
+                                        "Left" if input_l[i] == 0 else "Right"))
+                        else:
+                            label_fname = glob.glob(os.path.join(
+                                          os.path.dirname(ts_fname),"*.txt"))[0]
+                            input_d = d["x_test"]
+                            input_l = open(label_fname,'r')
+                            self.data[(run_nr, split_nr, train_test)] = []
+                            for i in range(input_d.shape[2]):
+                                label = int(input_l.readline())
+                                self.data[(run_nr, split_nr, 
+                                           train_test)].append(\
+                                            (TimeSeries(input_d[:,:,i],
+                                                 channel_names, float(self.sf)), 
+                                             "Left" if label == 0 else "Right"))
+                elif self.comp_number == "3":
+                    if self.comp_set == "2":
+                        data = loadmat(self.data[(run_nr, split_nr, train_test)])
+                        signal = data['Signal']
+                        flashing = data['Flashing']
+                        stimulus_code = data['StimulusCode']
+                        stimulus_type = data['StimulusType']
+                
+                        window = 240
+                        Fs = 240
+                        channels = 64
+                        epochs = signal.shape[0]
+                        self.data[(run_nr, split_nr, train_test)] = []
+                        self.start_offset_ms = 1000.0
+                        self.end_offset_ms = 1000.0
+                        
+                        whole_len = (self.start_offset_ms + self.end_offset_ms)*Fs/1000.0 + window
+                #        responses = numpy.zeros((12, 15, window, channels))
+                        responses = numpy.zeros((12, 15, whole_len, channels))
+                        for epoch in range(epochs):
+                            rowcolcnt=numpy.ones(12)
+                            for n in range(1, signal.shape[1]):
+                                if (flashing[epoch,n]==0 and flashing[epoch,n-1]==1):
+                                    rowcol=stimulus_code[epoch,n-1]
+                                    if n-24-self.start_offset_ms*Fs/1000.0 < 0:
+                                        temp = signal[epoch,0:n+window+self.end_offset_ms*Fs/1000.0-24,:]
+                                        temp = numpy.vstack((numpy.zeros((whole_len - temp.shape[0], temp.shape[1])), temp))
+                #                        print '1', temp.shape
+                                    elif n+window+self.end_offset_ms*Fs/1000.0-24> signal.shape[1]:
+                                        temp = signal[epoch,n-24-self.start_offset_ms*Fs/1000.0:signal.shape[1],:]
+                                        temp = numpy.vstack((temp, numpy.zeros((whole_len-temp.shape[0], temp.shape[1]))))
+                #                        print '2', temp.shape
+                                    else:
+                                        temp = signal[epoch, n-24-self.start_offset_ms*Fs/1000.0:n+window+self.end_offset_ms*Fs/1000.0-24, :]
+                #                        print '3', temp.shape
+                #                    responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=signal[epoch,n-24:n+window-24,:]
+                                    responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=temp
+                                    rowcolcnt[rowcol-1]=rowcolcnt[rowcol-1]+1
+                
+                            avgresp=numpy.mean(responses,1)
+                
+                            targets = stimulus_code[epoch,:]*stimulus_type[epoch,:]
+                            target_rowcol = []
+                            for value in targets:
+                                if value not in target_rowcol:
+                                    target_rowcol.append(value)
+                
+                            target_rowcol.sort()
+                
+                            for i in range(avgresp.shape[0]):
+                                temp = avgresp[i,:,:]
+                                data = TimeSeries(input_array = temp,
+                                                  channel_names = range(64), 
+                                                  sampling_frequency = window)
+                                if i == target_rowcol[1]-1 or i == target_rowcol[2]-1:
+                                    self.data[(run_nr, split_nr, train_test)].append((data,"Target"))
+                                else:
+                                    self.data[(run_nr, split_nr, train_test)].append((data,"Standard"))                 
         if self.stream_mode and not self.data[(run_nr, split_nr, train_test)] == []:
             # Create a connection to the TimeSeriesClient and return an iterator
             # that passes all received data through the windower.

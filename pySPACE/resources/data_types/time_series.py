@@ -1,4 +1,4 @@
-""" 2d array of channels x time series for windowed time series """
+""" 2d array of channels x time series for windowed time series"""
 
 import numpy
 import warnings
@@ -9,23 +9,36 @@ class TimeSeries(base.BaseData):
     """ Time Series object
     
     Represents a finite length time series consisting (potentially) of
-    several channels. Objects of this type are called "Windows" in other
-    contexts. 
+    several channels. Objects of this type are called "windows",
+    "epochs", or "trials" in other contexts.
+    Normally one channel corresponds to one sensor.
 
     The time series object is a
     2d array of channels times time series amplitudes
+    (*mandatory* first argument in constructor)
     with some additional properties.
     The additional properties are:
 
-    * channel names
-    * sampling frequency
-    * start time
-    * end time
-    * marker name (the name of the marker used to create this object,
-                   dictionary of included marker names and time stamps)
-    * name & tag (text format of object meta info)
+    * channel_names (*mandatory* second argument in constructor,
+                     list of stings without underscores)
+    * sampling_frequency (*mandatory* third argument in constructor,
+                          e.g., 5000.0 for 5kHz)
+    * start_time (*optional*)
+    * end_time (*optional*)
+    * marker_name (the name of the marker used to create this object,
+                   dictionary of included marker names and time stamps,
+                   *optional*)
+    * name & tag (text format of object meta info, *optional*)
 
     Channels can also be pseudo channels after spatial filtering.
+
+    When creating a TimSeries object, first the array has to be given to
+    the init function and then the other parameters/properties as
+    keyword arguments.
+    The array can be specified as two dimensional numpy array or in
+    list notation. The channels are on the second axes.
+    For example using the list ``[[1,2,3],[4,5,6]]`` would result in three
+    channels and two time points.
 
     :Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)
     :Created: 2008/03/05

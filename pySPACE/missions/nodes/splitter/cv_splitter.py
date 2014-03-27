@@ -195,9 +195,10 @@ class CrossValidationSplitterNode(BaseNode):
                     if (self.stratified or self.stratified_class) and \
                                   self.data[data_time[marker][0]][1] != label:
                         import warnings
-                        warnings.warn("Since there are several class labels" \
-                          " for one marker stratification is set to False.",
-                          UserWarning)
+                        warnings.warn(
+                            "Since there are several class labels"
+                            " for one marker stratification is set to False.",
+                            UserWarning)
                         self.stratified = False
                         self.stratified_class = None
                 last_window_end_time = window.end_time
@@ -205,8 +206,8 @@ class CrossValidationSplitterNode(BaseNode):
 
             if self.stratified: # each marker has only one label
                 # not more splits then markers of every class!
-                assert(min([len(markers) for markers in \
-                                      label_marker.values()]) >= self.splits)
+                assert(min([len(markers) for markers in
+                            label_marker.values()]) >= self.splits)
                 # extend result structure since we need it in the next block
                 split_indices = [[] for i in range(self.splits)]
                 # determine the splits of the data    
@@ -222,7 +223,9 @@ class CrossValidationSplitterNode(BaseNode):
                         # means half-open interval [split_start, split_end)
                         for i in range(split_start, split_end):
                             split_indices[j].extend(data_time[markers[i]])
-                split_indices = [sorted(split_list) for split_list in split_indices]
+                # avoid sorted labels by sorting time dependent
+                split_indices = [sorted(split_list)
+                                 for split_list in split_indices]
                 #print "run_number:", self.run_number    
                 #print "time_dependent && stratified:\n", split_indices
             
@@ -250,9 +253,9 @@ class CrossValidationSplitterNode(BaseNode):
                 for i in range(last_max_index, len(self.data)):
                     if self.data[i][1] != self.stratified_class:
                         split_indices[-1].append(i)
-
-                split_indices = [sorted(split_list) for split_list in split_indices]
-                    
+                # avoid sorted labels by sorting time dependent
+                split_indices = [sorted(split_list)
+                                 for split_list in split_indices]
                 print "time_dependent && stratified_class:\n", split_indices
             else:
                 # we should not have more splits then (marker)time points
@@ -272,11 +275,13 @@ class CrossValidationSplitterNode(BaseNode):
                     split_end = int(round(float(i + 1) * data_size / self.splits))
                     # means half-open interval [split_start, split_end)
                     for j in range(split_start,split_end):
-                        split_indices[i].extend(data_time[indices[j]]) 
+                        split_indices[i].extend(data_time[indices[j]])
+                # avoid sorted labels by sorting time dependent
+                split_indices = [sorted(split_list)
+                                 for split_list in split_indices]
                 #for index, splitlist in enumerate(split_indices):
                 #    print index, "first: ", self.data[splitlist[0]][0].start_time, ", last: ", self.data[splitlist[-1]][0].start_time, ", Laenge: ", len(data_time.keys()) 
                 #print "time_dependent:\n", split_indices
-
 
 
         elif self.stratified: # Stratified cross-validation
@@ -292,9 +297,9 @@ class CrossValidationSplitterNode(BaseNode):
             min_nr_per_class = min([len(data) for data in data_labeled.values()])
             if self.splits > min_nr_per_class:
                 self.splits = min_nr_per_class
-                self._log("Reducing number of splits to %s since no more " \
+                self._log("Reducing number of splits to %s since no more "
                           "instances of one of the classes are available." 
-                          % self.splits,level=logging.CRITICAL)
+                          % self.splits, level=logging.CRITICAL)
             # extend result structure since we need it in the next block
             split_indices = [[] for i in range(self.splits)]
             # determine the splits of the data    
@@ -309,6 +314,10 @@ class CrossValidationSplitterNode(BaseNode):
                     split_end = int(round(float(j+1) * data_size/self.splits))
                     # means half-open interval [split_start, split_end)
                     split_indices[j].extend(indices[split_start: split_end])
+            # avoid sorted labels
+            for j in range(self.splits):
+                r = random.Random(self.run_number)
+                r.shuffle(split_indices[j])
             # print "stratified:\n", split_indices
 
             # old trunk version
@@ -357,7 +366,7 @@ class CrossValidationSplitterNode(BaseNode):
             #     else: 
             #         indices.append(class2_indices.pop())
 
-        else: # Non-stratified cross-validation
+        else:  # Non-stratified cross-validation
             data_size = len(self.data)
             # We cannot have more splits than data points
             assert(data_size >= self.splits) 

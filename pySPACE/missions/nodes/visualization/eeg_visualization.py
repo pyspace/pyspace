@@ -283,7 +283,7 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
                 z = data[pos, :]
         
                 if self.smooth_corners:
-                    x,y,z = self._smooth_corners(x,y,z, data, pos)
+                    x,y,z = self._smooth_corners(x,y,z, data, channel_names, pos)
                 
                 #griddata returns a masked array
                 #you can get the data via zi[~zi.mask]            
@@ -381,43 +381,42 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
             pickle.dump(values, open(f_name + ".pickle",'w'))
 
         
-    def _smooth_corners(self, x, y, z, data, time_index):
+    def _smooth_corners(self, x, y, z, data, channel_names, time_index):
         """ Add sham electrodes to the corners of the coordinate system """
         # invent new corner electrodes using x and y positions of the margin
         # electrodes of the 64 electrode cap. Data is mean of neighbouring
         # electrodes based, again, on the 64 electrode cap.
         # 
         # frontleft FL positioned at [x(FT9), y(Fp1)]
-        data_view = data.view(numpy.ndarray)
         
-        x=numpy.append(x,x[numpy.where(numpy.array(data.channel_names)=='FT9')])
-        y=numpy.append(y,y[numpy.where(numpy.array(data.channel_names)=='Fp1')])
-        nz =  data_view[time_index, numpy.where(numpy.array(data.channel_names)=='Fp1')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='AF7')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='F7')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='FT9')]
+        x=numpy.append(x,x[numpy.where(numpy.array(channel_names)=='FT9')])
+        y=numpy.append(y,y[numpy.where(numpy.array(channel_names)=='Fp1')])
+        nz =  data[time_index, numpy.where(numpy.array(channel_names)=='Fp1')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='AF7')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='F7')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='FT9')]
         z=numpy.append(z, 0.1 * nz / 4.0)
         # frontright FR positioned at [x(FT10), y(Fp1)]
-        x=numpy.append(x,x[numpy.where(numpy.array(data.channel_names)=='FT10')])
-        y=numpy.append(y,y[numpy.where(numpy.array(data.channel_names)=='Fp1')])
-        nz =  data_view[time_index, numpy.where(numpy.array(data.channel_names)=='Fp2')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='AF8')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='F8')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='FT10')]
+        x=numpy.append(x,x[numpy.where(numpy.array(channel_names)=='FT10')])
+        y=numpy.append(y,y[numpy.where(numpy.array(channel_names)=='Fp1')])
+        nz =  data[time_index, numpy.where(numpy.array(channel_names)=='Fp2')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='AF8')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='F8')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='FT10')]
         z=numpy.append(z, 0.1 * nz / 4.0)
         # backleft BL positioned at [x(FT9), y(Oz)]
-        x=numpy.append(x,x[numpy.where(numpy.array(data.channel_names)=='FT9')])
-        y=numpy.append(y,y[numpy.where(numpy.array(data.channel_names)=='Oz')])
-        nz =  data_view[time_index, numpy.where(numpy.array(data.channel_names)=='TP9')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='P7')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='PO9')]
+        x=numpy.append(x,x[numpy.where(numpy.array(channel_names)=='FT9')])
+        y=numpy.append(y,y[numpy.where(numpy.array(channel_names)=='Oz')])
+        nz =  data[time_index, numpy.where(numpy.array(channel_names)=='TP9')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='P7')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='PO9')]
         z=numpy.append(z, 0.1 * nz / 4.0)
         # backright BR positioned at [x(FT10), y(Oz)]
-        x=numpy.append(x,x[numpy.where(numpy.array(data.channel_names)=='FT10')])
-        y=numpy.append(y,y[numpy.where(numpy.array(data.channel_names)=='Oz')])
-        nz =  data_view[time_index, numpy.where(numpy.array(data.channel_names)=='TP10')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='P8')] +\
-              data_view[time_index, numpy.where(numpy.array(data.channel_names)=='PO10')]
+        x=numpy.append(x,x[numpy.where(numpy.array(channel_names)=='FT10')])
+        y=numpy.append(y,y[numpy.where(numpy.array(channel_names)=='Oz')])
+        nz =  data[time_index, numpy.where(numpy.array(channel_names)=='TP10')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='P8')] +\
+              data[time_index, numpy.where(numpy.array(channel_names)=='PO10')]
         z=numpy.append(z, 0.1 * nz / 4.0)
         
         return x,y,z

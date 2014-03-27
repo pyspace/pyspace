@@ -33,22 +33,29 @@ class MpiBackend(Backend):
 
     This backend assumes a global file system that is seen by all nodes running 
     the processes. 
+    
+    **Parameters**
+        :pool_size: Define how many MPI processes should be started in parallel.
+                    This should not exceed the amount of available processors.
+                    (or the number of mpi slots defined in the hostsfile)
+        
+            (*recommended, default: 156*)
  
     """
     
-    def __init__(self):
+    def __init__(self, pool_size = 156):
         super(MpiBackend, self).__init__()
-        
-        self.COMMAND_MPI = '/usr/lib64/openmpi/bin/mpirun'
+        #self.COMMAND_MPI = '/usr/lib64/openmpi/bin/mpirun'
+        self.COMMAND_MPI = 'mpirun'
         self.COMMAND_PYTHON = sys.executable
         self.runner_script = os.sep.join([pySPACE.configuration.root_dir,
-                             "app",
+                             "environments",
                              "backends",
                              "mpi_runner.py"])
         # start as many processes as the total number of processors
         # available
-        self.NumberOfProcessesToRunAtBeginning = 156
-        self.NumberOfProcessesToRunLater = 39
+        self.NumberOfProcessesToRunAtBeginning = pool_size
+        self.NumberOfProcessesToRunLater = pool_size #39
     def __del__(self):
         pass
         
@@ -154,6 +161,8 @@ class MpiBackend(Backend):
                 [self.runner_script] + 
                 self.process_args_list)
             # Start the processes. 
+            self._log("mpi-parameters: %s" % args, level=logging.DEBUG);
+            self._log("mpi-parameters-joined: %s" % os.path.join(args), level=logging.DEBUG);
             p =subprocess.Popen(args)
             #self.pids.append(p)
             self.IndexCopyStart += self.NumberOfProcessesToRunAtBeginning

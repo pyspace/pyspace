@@ -150,7 +150,7 @@ class Operation(object):
         if not operation_spec.has_key("input_path"):
             warnings.warn("No input path found in operation specification.")
         input_path_pattern = os.sep.join([storage,
-                                          operation_spec["input_path"],
+                                          operation_spec.get("input_path", ""),
                                           "*", ""])
         input_paths = glob.glob(input_path_pattern)
         obsolete_paths=[]

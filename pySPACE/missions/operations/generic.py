@@ -99,76 +99,78 @@ import os
 import sys
 import imp
 import yaml
+import logging
+import traceback
 # processing was renamed in Python 2.6 to multiprocessing
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
     import processing
 else:
     import multiprocessing as processing
 
-import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
-    
+
+
 class GenericOperation(Operation):
     """ Generic operation performing computation based on external module
-    
+
     A GenericOperation consists of a set of GenericProcess instances. Each of
-    these processes consists of calling a function "process" defined in an 
+    these processes consists of calling a function "process" defined in an
     external module for a specific parametrization.
-    
+
     The results of this operation are collected using the
     consolidate method that produces a consistent representation
     of the result. Especially it collects not only the data,
     but also saves information of the in and out coming files and the used
     specification files.
-    
-    Objects of this class are typically create using the *create* factory 
+
+    Objects of this class are typically create using the *create* factory
     method based on a operation_spec dictionary. This dictionary in turn is
     typically create based on a configuration file in YAML syntax. Which
     parameters need to be specified in this configuration file are listed below.
     See example_generic_operation.yaml for an example.
-    """   
-    def __init__(self, processes, operation_spec, result_directory, 
+    """
+    def __init__(self, processes, operation_spec, result_directory,
                  code_string, number_processes):
         super(GenericOperation, self).__init__(processes, operation_spec,
                                                result_directory)
-        
+
         self.code_string = code_string
         self.number_processes = number_processes
-        
+
         # we add this since some backends assume that this attribute exists
-        self.create_process = None 
-        
+        self.create_process = None
+
     @classmethod
     def create(cls, operation_spec, result_directory, debug=False, input_paths=[]):
         """ Factory method for creating a :class:`GenericOperation`.
-        
-        Factory method for creating a GenericOperation based on the 
+
+        Factory method for creating a GenericOperation based on the
         information given in the operation specification *operation_spec*.
         """
         assert(operation_spec["type"] == "generic")
-        
+
         configuration_template = operation_spec["configuration_template"]
 
-        # Compute all possible parameter combinations 
+        # Compute all possible parameter combinations
         parameter_settings = cls._get_parameter_space(operation_spec)
         processes = processing.Queue()
-        for process_id, parameter_setting in enumerate(parameter_settings):                        
+        for process_id, parameter_setting in enumerate(parameter_settings):
             process = GenericProcess(process_id=process_id,
                                      configuration_template=configuration_template,
                                      parameter_setting=parameter_setting,
                                      result_directory=result_directory,
                                      code_string=operation_spec["code"])
-            
+
             processes.put(process)
-         
+
         # Indicate that we are at then end of the process queue and no more jobs
-        # will be added              
+        # will be added
         processes.put(False)
-         
+
         # create and return the operation object
         return cls(processes, operation_spec, result_directory,
                     operation_spec["code"], len(parameter_settings))
-         
+
     def consolidate(self):
         """Perform cleanup / consolidation at the end of operation. """
         # Write the specification of this operation to the result directory in
@@ -178,109 +180,112 @@ class GenericOperation(Operation):
                                                   "source_operation.yaml"), 'w')
         yaml.dump(self.operation_spec, source_operation_file)
         source_operation_file.close()
-        
+
         # First execute module to get function definitions
         # Create pseudo module
         tempmodule = imp.new_module('tempmodule')
         exec self.code_string in tempmodule.__dict__
-        
+
         # Call consolidate function
         tempmodule.consolidate(self.result_directory,
                       yaml.load(self.operation_spec["configuration_template"]))
-    
-    
+
+
 class GenericProcess(Process):
     """ Generic process performing computation specified in external module.
-    
-    This process calls the function "process" defined 
-    
+
+    This process calls the function "process" defined
+
     **Parameters**
         :process_id:
             Globally unique id of this process. Might be used e.g. for
             creating a file into which the results of this process are stored.
-            
+
             (*obligatory*)
-            
+
         :configuration_template:
-            Template (string) which determines the parameters that are passed 
-            to the "process" function contained in the code_string via the 
+            Template (string) which determines the parameters that are passed
+            to the "process" function contained in the code_string via the
             *config*  parameter. The template is instantiated based on the given
             parameter_setting (see below). It must adhere the YAML standard and
             correspond to a dictionary mapping parameter name to value.
-            
+
             (*obligatory*)
-            
+
         :parameter_setting:
-            Dictionary containing the mapping from parameter name (must be 
+            Dictionary containing the mapping from parameter name (must be
             contained in configuration_template string) to parameter value.
             The specific parameter values define this particular computation.
-            
+
             (*obligatory*)
-        
+
         :result_directory:
             Directory into which the results of the computation of this
             function are stored.
-            
+
             (*obligatory*)
-            
+
         :code_string:
             A string containing a definition of a python function with the name
-            "process". Note: We pass the string-definition of the function 
+            "process". Note: We pass the string-definition of the function
             instead of the function itself since GenericProcess objects are
             often serializes using pickle. This wouldn't work when the object
             would contain a reference to a function object.
-            
+
             (*obligatory*)
-                                
+
     """
-    
+
     def __init__(self, process_id, configuration_template, parameter_setting,
                  result_directory, code_string):
-        
+
         super(GenericProcess, self).__init__()
-        
+
         self.process_id = process_id
         self.configuration_template = configuration_template
         self.parameter_setting = parameter_setting
-        self.result_directory = result_directory      
+        self.result_directory = result_directory
         self.code_string = code_string
-        
-        # Instantiate the configuration_template for the specific 
+
+        # Instantiate the configuration_template for the specific
         # parametrization defined in parameter_setting.
         for key, value in parameter_setting.iteritems():
             # Parameters framed by "#" are considered to be escaped
-            if "#"+key+"#" in  configuration_template:
+            if "#"+key+"#" in configuration_template:
                 configuration_template = \
-                        configuration_template.replace("#"+key+"#", "##")
-            
+                    configuration_template.replace("#"+key+"#", "##")
+
             # Apply replacement of key-value pairs
             configuration_template = \
-                    configuration_template.replace(str(key),'%s' % str(value))
+                configuration_template.replace(str(key), '%s' % str(value))
 
             # Reinsert escaped parameters
-            if "##" in  configuration_template:
+            if "##" in configuration_template:
                 configuration_template = \
-                        configuration_template.replace("##", key)
-        
+                    configuration_template.replace("##", key)
+
         # Evaluate instantiated configuration template string
         self.config = yaml.load(configuration_template)
-    
+
     def __call__(self):
         """ Executes this process on the respective modality. """
         ############## Prepare benchmarking ##############
         self.pre_benchmarking()
-        
-        ##### Execute computation specified in external python module #########
-        
-        # Create pseudo module
-        tempmodule = imp.new_module('tempmodule')
-        exec self.code_string in tempmodule.__dict__
-        
-        # Perform actual computation
-        retval = tempmodule.process(self.process_id, self.result_directory,
-                                    self.config, self.parameter_setting)
-        
-        ############## Clean up after benchmarking ##############
-        self.post_benchmarking() 
-        
 
+        ##### Execute computation specified in external python module #########
+
+        tempmodule = imp.new_module('tempmodule')
+        try:
+            # Create pseudo module
+            exec self.code_string in tempmodule.__dict__
+
+            # Perform actual computation
+            tempmodule.process(self.process_id, self.result_directory,
+                               self.config, self.parameter_setting)
+        except:
+            # Send exception to Logger
+            self._log(traceback.format_exc(), level=logging.ERROR)
+            raise
+
+        ############## Clean up after benchmarking ##############
+        self.post_benchmarking()

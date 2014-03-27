@@ -4,6 +4,7 @@ EEGManager::EEGManager()
 {
 	fill.resize(1);
 	bandwidth.resize(1);
+	working = false;
 }
 
 EEGManager::~EEGManager()
@@ -36,7 +37,7 @@ int32_t EEGManager::check()
 
 	// do we now have enough modules?
 	if(modules.size() < 2) {
-		OMG("cannot work with %d module(s)!", modules.size());
+		OMG("cannot work with %ld module(s)!", modules.size());
 		return -1;
 	}
 
@@ -73,11 +74,11 @@ void EEGManager::run()
 {
 
 
-	uint64_t startTime;
+	timeval startTime, endTime;
 	std::vector<Module*>::iterator itm;
 //	RingBuffer* rb;
 
-	startTime = getTime();
+	gettimeofday(&startTime, 0);
 
 	if(0 > connect_modules()) goto error;
 
@@ -87,6 +88,8 @@ void EEGManager::run()
 	start_modules();
 
 	working = true;
+    
+    fflush(stdout);
 
 	while(working) {
 		// perform some monitoring tasks on the running modules
@@ -129,7 +132,12 @@ error:
 	cleanup();
 
 	// final output
-	FYI("eegmanager done - runtime %d ms", getTimeDiff(startTime));
+	gettimeofday(&endTime, 0);
+
+	uint32_t runtime;
+	runtime = (endTime.tv_sec - startTime.tv_sec)*1000;
+	runtime += (endTime.tv_usec - startTime.tv_usec)/1000;
+	FYI("eegmanager done - runtime %d ms", runtime);
 
 	return;
 }
@@ -177,8 +185,16 @@ void EEGManager::stop()
 
 int32_t EEGManager::connect_modules()
 {
-
-	RingBuffer* link = new RingBuffer(FIFO_SIZE);
+    BaseBuffer* link = NULL;
+#ifdef USE_FILEBUFFER
+    link = (BaseBuffer*)(new FileBuffer(FIFO_SIZE));
+#else
+	link = (BaseBuffer*)(new RingBuffer(FIFO_SIZE));
+#endif
+    if(link == NULL) {
+        OMG("could not create buffer class!");
+        return -1;
+    }
 	if(link->get_size() != FIFO_SIZE) {
 		OMG("Error allocating ringbuffer!");
 		return -1;
@@ -194,7 +210,12 @@ int32_t EEGManager::connect_modules()
 		} else {
 			modules.at(i)->setPrev(link);
 			link = NULL;
-			link = new RingBuffer(FIFO_SIZE);
+#ifdef USE_FILEBUFFER
+			link = (BaseBuffer*)(new FileBuffer(FIFO_SIZE));
+#else
+			link = (BaseBuffer*)(new RingBuffer(FIFO_SIZE));
+#endif
+
 			if(link->get_size() != FIFO_SIZE) {
 				OMG("Error allocating ringbuffer!");
 				return -1;
@@ -279,7 +300,7 @@ void EEGManager::cleanup()
 		modules.erase(modules.begin());
 	}
 
-	RingBuffer* buffer = NULL;
+	BaseBuffer* buffer = NULL;
 	while(buffers.size() > 0) {
 		delete buffers.front();
 		buffers.erase(buffers.begin());

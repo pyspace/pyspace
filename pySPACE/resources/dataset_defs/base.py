@@ -1,8 +1,4 @@
-""" Base Module for datasets to specify the interface for these
-
-
-
-"""
+""" Base Module for datasets to specify the interface for these """
 
 import yaml
 import os
@@ -16,6 +12,7 @@ from pySPACE.run.scripts import md_creator
 from collections import defaultdict
 
 class UnknownDatasetTypeException(Exception):
+    """ Wrapper around error, when dataset type is not available """
     pass
 
 class BaseDataset(object):
@@ -53,10 +50,10 @@ class BaseDataset(object):
         
         # A dictionary containing some meta data for the respective
         # dataset type.
-        self.meta_data = {"train_test": False, # defaults
+        self.meta_data = {"train_test": False,  # defaults
                           "splits": 1,
                           "runs": 1} 
-        if not  dataset_md is None:
+        if not dataset_md is None:
             self.update_meta_data(dataset_md)
 
     @classmethod
@@ -85,65 +82,74 @@ class BaseDataset(object):
         # construct dataset module and class name dependent on the type
         # for backward compatibility type is casted to lower-case
         data_mod_name = meta_data["type"].lower()
-        data_class_name = ''.join([x.title() for x in meta_data["type"].split('_')])
+        data_class_name = ''.join([x.title()
+                                   for x in meta_data["type"].split('_')])
         data_class_name += "Dataset"
         # dynamic class import: from data_mod_name import col_class_name
         try:
-            dataset_module = __import__('pySPACE.resources.dataset_defs.%s' % data_mod_name,
-                                       fromlist=[data_class_name])
+            dataset_module = __import__(
+                'pySPACE.resources.dataset_defs.%s' % data_mod_name,
+                fromlist=[data_class_name])
         except:
-            msg = "Dataset type %s in %s is unknown" % (meta_data["type"],meta_data["dataset_directory"])
+            msg = "Dataset type %s in %s is unknown" % \
+                (meta_data["type"], meta_data["dataset_directory"])
             raise UnknownDatasetTypeException(msg)
-        dataset_class = getattr(dataset_module,data_class_name)
+        dataset_class = getattr(dataset_module, data_class_name)
         # delegate to subclass
         return dataset_class(dataset_md=meta_data,
-                                dataset_dir=dataset_dir)
+                             dataset_dir=dataset_dir)
 
     @staticmethod
     def load_meta_data(dataset_dir, file_name="metadata.yaml"):
         """ Load the meta data of the dataset """
         try:
             file_path = os.sep.join([dataset_dir,file_name])
-            meta_file =  open(file_path,'r')
+            meta_file = open(file_path,'r')
         except IOError:
             pass
         else:
             meta_data = yaml.load(meta_file)
-            if meta_data.has_key("ignored_columns"):
-                meta_data["ignored_columns"]= md_creator.parse_list(meta_data["ignored_columns"])
+            if "ignored_columns" in meta_data:
+                meta_data["ignored_columns"] = \
+                    md_creator.parse_list(meta_data["ignored_columns"])
             if meta_data.has_key("ignored_rows"):
-                meta_data["ignored_rows"]= md_creator.parse_list(meta_data["ignored_rows"])
+                meta_data["ignored_rows"] = \
+                    md_creator.parse_list(meta_data["ignored_rows"])
             meta_file.close()
             return meta_data
         # Error handling and backward compatibility
         try:
-            file_path = os.sep.join([dataset_dir,"collection.yaml"])
-            meta_file =  open(file_path,'r')
+            file_path = os.sep.join([dataset_dir, "collection.yaml"])
+            meta_file = open(file_path,'r')
             meta_data = yaml.load(meta_file)
             if meta_data.has_key("ignored_columns"):
-                meta_data["ignored_columns"]= md_creator.parse_list(meta_data["ignored_columns"])
+                meta_data["ignored_columns"] = \
+                    md_creator.parse_list(meta_data["ignored_columns"])
             if meta_data.has_key("ignored_rows"):
-                meta_data["ignored_rows"]= md_creator.parse_list(meta_data["ignored_rows"])
+                meta_data["ignored_rows"] = \
+                    md_creator.parse_list(meta_data["ignored_rows"])
             meta_file.close()
-            warnings.warn("'collection.yaml' needs to be renamed to 'metadata.yaml'!")
+            warnings.warn(
+                "'collection.yaml' needs to be renamed to 'metadata.yaml'!")
             return meta_data
         except IOError:
             # check if we have a feature vector dataset with missing metadata.yaml
             csv_file = None
-            for dirpath,dirnames,files in os.walk(dataset_dir):
+            for dirpath, dirnames,files in os.walk(dataset_dir):
                 for file in files:
                     if file.endswith(".csv") or file.endswith(".arff"):
-                        csv_file=file
+                        csv_file = file
                         break
                 if csv_file:
                     break
             if csv_file:
-                warnings.warn("If you want to use csv-files, "+
-                    "you have to generate a %s! "%file_name+
-                    "The pySPACE documentation tells you what you have to specify. "+
-                    "You can also use :script:`pySPACE.run.scripts.md_creator.py`. "+
+                warnings.warn(
+                    "If you want to use csv-files, you have to " +
+                    "generate a %s! The pySPACE documentation " % file_name +
+                    "tells you what you have to specify. You can also use " +
+                    ":script:`pySPACE.run.scripts.md_creator.py`. " +
                     "We will try this in the following...")
-                print("Found '%s' at '%s'!"%(csv_file,dirpath))
+                print("Found '%s' at '%s'!" % (csv_file, dirpath))
                 if not dirpath==dataset_dir:
                     print("Maybe you specified the wrong input_path?")
                 md_file = dirpath+os.sep+file_name
@@ -153,20 +159,21 @@ class BaseDataset(object):
                     meta_data = yaml.load(collection_meta_file)
                     collection_meta_file.close()
                     return meta_data
-            raise Exception("No pySPACE dataset '%s' found. "% dataset_dir+\
-                            "You have to specify a %s in each dataset directory. "%file_name+\
-                            "Have a look at the pySPACE documentation.")
+            raise Exception("No pySPACE dataset '%s' found. " % dataset_dir +
+                            "You have to specify a %s in each " % file_name +
+                            "dataset directory. Have a look at the pySPACE "
+                            "documentation. Continuing...")
     
     @staticmethod
-    def store_meta_data(dataset_dir, meta_data,file_name="metadata.yaml"):
+    def store_meta_data(dataset_dir, meta_data, file_name="metadata.yaml"):
         """ Stores the meta data of a dataset """
         # Loading the dataset meta file
         try:
-            collection_meta_file =  open(os.sep.join([dataset_dir, file_name]),
-                                         'w')
+            collection_meta_file = open(os.sep.join([dataset_dir, file_name]),
+                                        'w')
         except IOError: 
-            raise Exception("No pySPACE dataset %s found." % dataset_dir)
-        
+            raise Exception("No pySPACE dataset %s found. Continuing..."
+                                % dataset_dir)
         yaml.dump(meta_data, collection_meta_file)
         collection_meta_file.close()
 
@@ -185,17 +192,17 @@ class BaseDataset(object):
           * *run*: The run number this sample belongs to Defaults to 0
         
         """
-        if train=="test":
-            train=False
-        if train == True:
+        if train == "test":
+            train = False
+        if train:
             self.meta_data["train_test"] = True
         if split + 1 > self.meta_data["splits"]: 
             self.meta_data["splits"] = split + 1
 
-        key =  (run, split, "train" if train else "test")
+        key = (run, split, "train" if train else "test")
 
         if isinstance(self.data[key], basestring):
-            self.data[key]=[]
+            self.data[key] = []
         self.data[key].append((sample, label))
 
     def update_meta_data(self, meta_data):
@@ -213,7 +220,7 @@ class BaseDataset(object):
         Returns the number of splits contained in this dataset
         for the given run number *current_number* """
         splits = set(split for run, split, train_test in self.data.keys()
-                                if run == current_run)
+                     if run == current_run)
         return list(splits)
     
     def dump(self, result_path, name):
@@ -234,7 +241,7 @@ class BaseDataset(object):
         result_file.write(cPickle.dumps(self, protocol=2))
         result_file.close()
     
-    def store(self, result_dir, s_format = None):
+    def store(self, result_dir, s_format=None):
         """ Stores this dataset in the directory *result_dir*.
         
         In contrast to *dump* this method stores the dataset
@@ -250,12 +257,12 @@ class BaseDataset(object):
         """
         raise NotImplementedError()
 
-    def _log(self, message, level = logging.INFO):
+    def _log(self, message, level=logging.INFO):
         """ Logs  the given message  with the given logging level """
         root_logger = logging.getLogger("%s-%s.%s" % (socket.gethostname(),
                                         os.getpid(),
                                         self))
-        if len(root_logger.handlers)==0:
+        if len(root_logger.handlers) == 0:
             root_logger.addHandler(logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT))
 
@@ -264,4 +271,3 @@ class BaseDataset(object):
     def __repr__(self):
         """ Return a string representation of this class"""
         return self.__class__.__name__
-        

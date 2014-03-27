@@ -28,6 +28,7 @@ class LiveAdaptor(object):
         self.target_shown = {}
         self.last_target_data = {}
         self.window_stream = {}
+        self.nullmarker_stride_ms = None
 
     def set_eeg_stream_manager(self, stream_manager):
         self.stream_manager = stream_manager
@@ -84,12 +85,19 @@ class LiveAdaptor(object):
             unadapted_file = open("%s/%s.pickle" % (self.directory, "abri_flow_" + key + "_unadapted"), 'w+')
             cPickle.dump(unadapted_flow[key], unadapted_file)
 
-    def prepare_adaptation(self, adaptation_files, datasets):
+    def prepare_adaptation(self, adaptation_files, datasets, nullmarker_stride_ms = None):
         """ Prepares the threshold adaptation.
         """
 
         online_logger.info( "Preparing Adaptation")
         online_logger.info( "adaptation files:" + str(adaptation_files))
+        
+        self.nullmarker_stride_ms = nullmarker_stride_ms
+        if self.nullmarker_stride_ms == None:
+            online_logger.warn( 'Nullmarker stride interval is %s. You can specify it in your parameter file.' % self.nullmarker_stride_ms)
+        else:
+            online_logger.info( 'Nullmarker stride interval is set to %s ms' % self.nullmarker_stride_ms)
+        
         for key in self.datasets.keys():
             if "threshold_adaptation_flow" in self.datasets[key]:
                 spec_base = self.datasets[key]["configuration"].spec_dir

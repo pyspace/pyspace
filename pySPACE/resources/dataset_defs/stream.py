@@ -893,9 +893,9 @@ class EDFReader(AbstractStreamReader):
         else:
             warnings.warn("no marker channel is set - no markers will be streamed!")
             for s in range(1,256,1):
-                self.markerNames[str('S%3d' % s)] = s
+                self._markerids[str('S%3d' % s)] = s
             for r in range(1,256,1):
-                self.markerNames[str('R%3d' % r)] = r+256
+                self._markerids[str('R%3d' % r)] = r+256
 
         # generate reverse mapping
         for k,v in zip(self._markerids.iterkeys(), self._markerids.itervalues()):

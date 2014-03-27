@@ -240,7 +240,10 @@ def create_backend(backend_type = "serial"):
             backend = MulticoreBackend()
     elif backend_type == "mpi":
         from pySPACE.environments.backends.mpi_backend import MpiBackend
-        backend = MpiBackend()
+        if hasattr(pySPACE.configuration, "pool_size"):
+            backend = MpiBackend(pySPACE.configuration.pool_size)
+        else:
+            backend = MpiBackend()
     elif backend_type == "loadl":
         from pySPACE.environments.backends.ll_backend import LoadLevelerBackend
         backend = LoadLevelerBackend()

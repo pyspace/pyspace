@@ -24,6 +24,9 @@ Module::Module()
 
 	meta = 0;
 
+#ifdef PROFILE
+	prof = NULL;
+#endif
 }
 
 Module::~Module()
@@ -60,7 +63,7 @@ Module::~Module()
 
 }
 
-void Module::setPrev(RingBuffer* p)
+void Module::setPrev(BaseBuffer* p)
 {
 	if(prev != NULL) {
 		OMG("already attached to buffer at %16lu", (uintptr_t)prev);
@@ -69,7 +72,7 @@ void Module::setPrev(RingBuffer* p)
 
 }
 
-void Module::setNext(RingBuffer* n)
+void Module::setNext(BaseBuffer* n)
 {
 	if(next != NULL) {
 		OMG("already attached to buffer at %16lu", (uintptr_t)next);
@@ -166,16 +169,19 @@ int32_t Module::getMessage(uint32_t type)
 
 	// set absolute start time
 	if(abs_start_time == 0 && header.message_type == 1) {
-		abs_start_time = in_data_description->abs_start_time[0];
+        abs_start_time = in_data_description->abs_start_time[0];
         abs_start_time = abs_start_time << 32;
         abs_start_time += in_data_description->abs_start_time[1];
-		printf("%s: set start time to %llu\n", description().c_str(), abs_start_time);
+        printf("%s: set start time to %llu\n", description().c_str(), abs_start_time);
 	}
 	
 	if(type != header.message_type) {
 		FYI("requested MSGTYPE(%u) but received %u", type, header.message_type);
 	}
 
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return header.message_type;
 }
 
@@ -191,6 +197,10 @@ int32_t Module::process(void) {
 	}
 
 	out_data_message = in_data_message;
+
+#ifdef PROFILE
+	PROF(prof);
+#endif
 
 	return 0;
 }
@@ -212,18 +222,22 @@ int32_t Module::putMessage(MessageHeader* header)
 
 	char* p_data = (char*)header;
 
-	while(total_length < header->message_size && working) {
-		ret = next->write(p_data, header->message_size-total_length);
-		total_length += ret;
-		p_data += ret;
-	}
+	total_length = next->blocking_write(p_data, header->message_size, &working);
+//	while(total_length < header->message_size && working) {
+//		ret = next->write(p_data, header->message_size-total_length);
+//		total_length += ret;
+//		p_data += ret;
+//	}
 
 	if(header->message_type == 3) {
 		stop();
 	}
 	// invalidate current message
-	header->message_type = 3;
+//	header->message_type = 3;
 
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return total_length;
 }
 
@@ -268,7 +282,8 @@ void Module::string2argv(std::string* opts, int* argc, char** &argv)
     argv = (char**)malloc(tokens.size()*sizeof(char*));
 
     for (std::vector<std::string>::iterator it = tokens.begin(); it!=tokens.end(); ++it) {
-        argv[i] = (char*)malloc(it->size());
+        argv[i] = (char*)malloc(it->size()+1); // +1 for terminating null-character
+        memset(argv[i], 0, it->size()+1); // initialize memory
         strcpy(argv[i++], it->c_str());
     }
 
@@ -485,7 +500,7 @@ std::string Module::usage()
         o++;
     }
 
-	return std::string(buf);
+    return std::string(buf);
 }
 
 // returns the parameter of the configure module
@@ -495,3 +510,14 @@ std::string Module::getParameters()
 	if(parameters == NULL) return std::string("");
 	return *parameters;
 }
+
+
+#ifdef PROFILE
+void Module::pre_profile() {
+	prof = fopen(this->description().c_str(), "wt");
+}
+
+void Module::post_profile() {
+	fclose(prof);
+}
+#endif

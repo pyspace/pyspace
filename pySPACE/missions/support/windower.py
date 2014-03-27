@@ -448,6 +448,9 @@ class MarkerWindower(Windower):
         # additional parameters, e.g. security checks etc
         self.data_consistency_check = data_consistency_check
         self.no_overlap = no_overlap
+
+        if debug:
+            print(" extracting windows with %soverlap" % ("No " if self.no_overlap else ""))
     
     def _max_scan_ranges(self):
         """Scan window and constraint definitions to determine maximum extent
@@ -1020,12 +1023,7 @@ class RingBufferFull(RingBuffer):
         self.data[self.cur]=x
         self.cur=int((self.cur+1) % self.max)
     def get(self):
-        return self.data[self.cur:]+self.data[:self.cur]            
-
-if __name__ == '__main__':    
-    suite = unittest.TestLoader().loadTestsFromName(
-        'unittests.test_windower.MarkerWindowerTestCase')    
-    unittest.TextTestRunner(verbosity=1).run(suite)
+        return self.data[self.cur:]+self.data[:self.cur]
 
 
 class WindowFactory(object):

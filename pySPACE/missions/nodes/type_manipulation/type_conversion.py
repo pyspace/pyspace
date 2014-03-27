@@ -196,8 +196,14 @@ class FeatureVector2TimeSeriesNode(BaseNode):
             self.times.sort()
 
         if self.frequency is None:
-            # calculate sampling frequency
-            self.frequency = 1.0/(self.times[1] - self.times[0])
+            try:
+                # calculate sampling frequency
+                self.frequency = 1.0/(self.times[1] - self.times[0])
+            except IndexError:
+                self.frequency = 1.0
+                self._log("Unable to determine sampling frequency! Setting to 1.", 
+                          level=logging.ERROR)
+                
 
         # check structure of feature names, if it fits to reshape approach
         if not self.reshape and not self.shape_test:
@@ -314,7 +320,7 @@ class MonoTimeSeries2FeatureNode(Feature2MonoTimeSeriesNode):
     def _invert(self,data):
         """ Irrelevant inversion introduced just for completeness """
         return super(MonoTimeSeries2FeatureNode,self)._execute(data)
-    
+
 class CastDatatypeNode(BaseNode):
     """Changes the datatype of the data
     
@@ -356,5 +362,5 @@ _NODE_MAPPING = {"Prediction2Features": Prediction2FeaturesNode,
                 "Features2Prediction": Features2PredictionNode,
                 "LabeledFeature2TimeSeries": FeatureVector2TimeSeriesNode,
                 "Feature2TimeSeries": FeatureVector2TimeSeriesNode,
-                "CastDataType": CastDatatypeNode
+                "CastDatatype": CastDatatypeNode,
                 }

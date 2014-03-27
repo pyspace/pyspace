@@ -39,7 +39,7 @@ class RMM2Node(RegularizedClassifierBase):
 
     **References**
 
-        :author:    Krell, M. M.  and Feess, D. and Straube, S.
+        :author:    Krell, M. M. and Feess, D. and Straube, S.
         :title:     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
         :journal:   Pattern Recognition Letters
         :publisher: Elsevier
@@ -365,9 +365,8 @@ class RMM2Node(RegularizedClassifierBase):
         self.ci = []
         # Mapping from class to value of classifier (-1,1)
         self.bi = []
-        self.num_samples = 0
+        self.num_samples = len(self.samples)
         for label in self.labels:
-            self.num_samples += 1
             self.append_weights_and_class_factors(label)
 
     def append_weights_and_class_factors(self, label):
@@ -404,7 +403,7 @@ class RMM2Node(RegularizedClassifierBase):
         self.total_descent(self.dual_solution, M, reduced_indices)
         ## outer iteration loop ##
         while self.difference > self.tolerance and \
-                self.iterations <= self.max_iterations:
+                self.iterations < self.max_iterations:
             # inner iteration loop only on active vectors/alpha (non zero) ##
             self.sub_iterations = 0
             # sorting or randomizing non zero indices
@@ -504,6 +503,9 @@ class RMM2Node(RegularizedClassifierBase):
         if self.version == "matrix":
             dual_diff = current_dual[:, 0] - current_dual[:, 1]
         for i in relevant_indices:
+            if not (self.sub_iterations < self.max_sub_iterations
+                    and self.iterations < self.max_iterations):
+                break
             beta = False
             old_dual = current_dual[i]
             ### Main Function ###
@@ -605,9 +607,6 @@ class RMM2Node(RegularizedClassifierBase):
             self.difference += current_difference
             self.sub_iterations += 1
             self.iterations += 1
-            if not (self.sub_iterations < self.max_sub_iterations
-                    and self.iterations < self.max_iterations):
-                break
         if self.reduce_non_zeros:
             for index in self.irrelevant_indices:
                 relevant_indices.remove(index)
@@ -1180,7 +1179,6 @@ class RMMClassifierMatlabNode(RegularizedClassifierBase):
         :url:       http://portal.acm.org/citation.cfm?id=1756031
         :volume:    11
         :year:      2010
-}
 
     **Parameters**
         :complexity:

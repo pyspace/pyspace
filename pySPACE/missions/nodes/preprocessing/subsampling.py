@@ -448,6 +448,12 @@ class DecimationBase(BaseNode):
                 
         return data
     
+    def store_state(self, result_dir, index=None):
+        """ Stores this node in the given directory *result_dir* """
+        if self.store:
+            for index, node in enumerate(self.low_pass_nodes):
+                node.store_state(result_dir, index)
+            super(DecimationBase, self).store_state(result_dir, index)
               
 class DecimationIIRNode(DecimationBase):
     """ Downsampling with a preceding IIR filter
@@ -547,7 +553,8 @@ class DecimationFIRNode(DecimationBase):
                                          comp_type=self.comp_type,
                                          width=transition_region_width,
                                          skip=skip,
-                                         time_shift = self.time_shift)
+                                         time_shift = self.time_shift,
+                                         store = self.store)
 
 
 _NODE_MAPPING = {"Resampling": FFTResamplingNode,

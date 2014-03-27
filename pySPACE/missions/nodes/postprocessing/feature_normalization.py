@@ -255,16 +255,15 @@ class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
             data_array = data_array[0,:]
             if self.translation is None:
                 self.translation = numpy.zeros(data_array.shape)
-                self.mean_diff = numpy.zeros(data_array.shape)
+                self.sqr_sum = numpy.zeros(data_array.shape)
                 self.mult = numpy.zeros(data_array.shape)
             self.n += 1
             delta = data_array - self.translation
-            self.translation += delta / self.n;
-            self.mean_diff = self.mean_diff + delta * (data_array - self.translation)
+            self.translation += 1.0*delta / self.n
+            self.sqr_sum += 1.0*(self.n-1)/self.n*(delta**2)
             for i in range(self.dim):
-                if not(self.mean_diff[i] == 0):
-                    self.mult[i] = max((self.n - 1),1)/self.mean_diff[i]
-            
+                if not (self.sqr_sum[i] < self.tolerance):
+                    self.mult[i] = numpy.sqrt(self.n/self.sqr_sum[i])
 
     def _inc_train(self, data, class_label=None):
         self._train(data)
@@ -361,7 +360,10 @@ class EuclideanFeatureNormalizationNode(BaseNode):
         a = x[0,:]
         if self.dim == None:
             self.dim = len(a)
-        a = a*numpy.float128(1)/numpy.linalg.norm(a)
+        norm = numpy.linalg.norm(a)
+        if norm == 0:
+            norm = 1
+        a = a * numpy.float128(1) / norm
         if self.dimension_scale:
             a = FeatureVector([len(a)*a],self.feature_names)
             return a

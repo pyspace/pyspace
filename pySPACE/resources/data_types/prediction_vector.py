@@ -30,8 +30,9 @@ class PredictionVector(base.BaseData):
             elif type(prediction) == numpy.ndarray:
                 input_array = numpy.atleast_2d(prediction)
             elif prediction is None:
-                raise TypeError("You should at least give a prediction value of \
-                1 or -1 in the input array or the prediction component")
+                raise TypeError(
+                    "You should at least give a prediction value " +
+                    "of 1 or -1 in the input array or the prediction component")
             else:
                 if type(prediction) == numpy.float64 or \
                         type(prediction) == float:
