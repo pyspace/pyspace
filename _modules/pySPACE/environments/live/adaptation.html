@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -100,6 +98,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">target_shown</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span>
 </div>
 <div class="viewcode-block" id="LiveAdaptor.set_eeg_stream_manager"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.set_eeg_stream_manager">[docs]</a>    <span class="k">def</span> <span class="nf">set_eeg_stream_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream_manager</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span> <span class="o">=</span> <span class="n">stream_manager</span>
@@ -156,12 +155,19 @@
             <span class="n">unadapted_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">directory</span><span class="p">,</span> <span class="s">&quot;abri_flow_&quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot;_unadapted&quot;</span><span class="p">),</span> <span class="s">&#39;w+&#39;</span><span class="p">)</span>
             <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">unadapted_flow</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">unadapted_file</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="LiveAdaptor.prepare_adaptation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.prepare_adaptation">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_adaptation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adaptation_files</span><span class="p">,</span> <span class="n">datasets</span><span class="p">):</span>
+<div class="viewcode-block" id="LiveAdaptor.prepare_adaptation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.adaptation.html#pySPACE.environments.live.adaptation.LiveAdaptor.prepare_adaptation">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_adaptation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">adaptation_files</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Prepares the threshold adaptation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Preparing Adaptation&quot;</span><span class="p">)</span>
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;adaptation files:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">adaptation_files</span><span class="p">))</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">nullmarker_stride_ms</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is </span><span class="si">%s</span><span class="s">. You can specify it in your parameter file.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is set to </span><span class="si">%s</span><span class="s"> ms&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="k">if</span> <span class="s">&quot;threshold_adaptation_flow&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
                 <span class="n">spec_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">spec_dir</span>
@@ -351,8 +357,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -92,11 +90,10 @@
 
 
 <div class="viewcode-block" id="TimeSeriesDataset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset">[docs]</a><span class="k">class</span> <span class="nc">TimeSeriesDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Time series dataset</span>
+    <span class="sd">&quot;&quot;&quot; Loading and storing a time series dataset</span>
 <span class="sd">    </span>
-<span class="sd">    This class encapsulate most relevant code for dealing with </span>
-<span class="sd">    time series datasets, most importantly</span>
-<span class="sd">    for loading and storing them to the file system.</span>
+<span class="sd">    This class encapsulate most relevant code for dealing with time series </span>
+<span class="sd">    datasets, most importantly for loading and storing them to the file system.</span>
 <span class="sd">    </span>
 <span class="sd">    These datasets consist of</span>
 <span class="sd">    :mod:`~pySPACE.resources.data_types.time_series` objects.</span>
@@ -105,7 +102,17 @@
 <span class="sd">    :mod:`~pySPACE.missions.nodes.sink.time_series_sink` node</span>
 <span class="sd">    in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.</span>
 <span class="sd">    </span>
-<span class="sd">    The standard format is &#39;pickle&#39;.</span>
+<span class="sd">    The standard format is &#39;pickle&#39;, but it is also possible to load, e.g.,</span>
+<span class="sd">    BrainComputerInterface-competition data. For that, ``storage_format`` has</span>
+<span class="sd">    to be set in the format **bci_comp_[competition number]_[dataset number]**</span>
+<span class="sd">    in the metadata.yaml file. For example, **bci_comp_2_4** means loading of </span>
+<span class="sd">    time series from BCI Competition II (2003), dataset IV.</span>
+<span class="sd">    Currently, the following datasets can be loaded:</span>
+<span class="sd">    </span>
+<span class="sd">        - BCI Competition II, dataset IV: self-paced key typing (left vs. right)</span>
+<span class="sd">        - BCI Competition III, dataset II: P300 speller paradigm, training data</span>
+<span class="sd">    </span>
+<span class="sd">    See http://www.bbci.de/competition/ for further information.</span>
 <span class="sd">    </span>
 <span class="sd">    **Parameters**</span>
 <span class="sd">    </span>
@@ -118,6 +125,11 @@
 <span class="sd">          A lambda function string that is evaluated before the data is stored.</span>
 
 <span class="sd">          (*optional, default: None*)</span>
+<span class="sd">          </span>
+<span class="sd">    **Known issues**</span>
+<span class="sd">        The BCI Competition III dataset II should be actually loaded as a </span>
+<span class="sd">        streaming dataset to enable different possibilities for windowing.</span>
+<span class="sd">        Segment ends (i.e., where a new letter starts) can be coded as marker.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="TimeSeriesDataset.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">sort_string</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">TimeSeriesDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span><span class="o">=</span><span class="n">dataset_md</span><span class="p">)</span>
@@ -157,6 +169,80 @@
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
                             <span class="c"># Actual data will be loaded lazily</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+            <span class="k">elif</span> <span class="n">s_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;bci_comp&quot;</span><span class="p">):</span>
+                <span class="c"># get bci competion and dataset number</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">=</span> <span class="n">s_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> --- Could not extract BCI competition&quot;</span>\
+                                     <span class="s">&quot; and dataset number!&quot;</span> <span class="o">%</span> <span class="n">s_format</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;4&quot;</span><span class="p">:</span>
+                        
+                        <span class="k">def</span> <span class="nf">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="s">&#39;1000&#39;</span> <span class="ow">in</span> <span class="n">file_name</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="mi">1000</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="mi">100</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sf</span>
+                            
+                        <span class="c"># structure: 2 mat file with data in different sampling</span>
+                        <span class="c"># frequencies; txt file for test labels</span>
+                        <span class="k">if</span> <span class="s">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> \
+                                <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="c"># are they inconsistent?</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">100</span> <span class="ow">and</span> <span class="s">&#39;1000&#39;</span> <span class="ow">in</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span> <span class="ow">or</span> \
+                                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">1000</span> <span class="ow">and</span> <span class="s">&#39;1000&#39;</span> <span class="ow">not</span> <span class="ow">in</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">]):</span>
+                                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;File name does not match &quot;</span>
+                                        <span class="s">&quot;sampling frequency or vice versa. </span><span class="si">%s</span><span class="s"> &quot;</span>
+                                        <span class="s">&quot;is loaded.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                            <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                            <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="s">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">:</span>
+                                <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
+                                                           <span class="s">&quot;sp1s_aa_1000Hz.mat&quot;</span><span class="p">)</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> 
+                                                                  <span class="s">&quot;sp1s_aa.mat&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">ts_file</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
+                                                                    <span class="s">&quot;*.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Either file name nor sampling &quot;</span>
+                                  <span class="s">&quot;frequency is given. </span><span class="si">%s</span><span class="s"> is loaded.&quot;</span> <span class="o">%</span> <span class="n">ts_file</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="n">ts_file</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;train&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition&quot;</span> \
+                                              <span class="s">&quot; </span><span class="si">%s</span><span class="s">, dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                                            <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;3&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
+                        <span class="c"># structure: mat file for train and test data</span>
+                        <span class="c"># TODO: loading test labels is not possible at the moment!</span>
+                        <span class="c">#     glob.glob(os.path.join(dataset_dir,&quot;*Test.mat&quot;))[0]</span>
+                        <span class="c">#self.data[(0, 0, &quot;train&quot;)] = \</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> \
+                            <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s">&quot;*Train.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition&quot;</span> \
+                                              <span class="s">&quot; </span><span class="si">%s</span><span class="s">, dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                                            <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition </span><span class="si">%s</span><span class="s">,&quot;</span> \
+                                              <span class="s">&quot; dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                                            <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
+                        
             <span class="k">else</span><span class="p">:</span> <span class="c"># s_format==&quot;csv&quot;:</span>
                 <span class="k">if</span> <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                     <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
@@ -223,6 +309,96 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
                     <span class="k">del</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s">&#39;abri_dp.types.time_series&#39;</span><span class="p">]</span>
                 <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">s_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;bci_comp&quot;</span><span class="p">):</span>
+                <span class="kn">from</span> <span class="nn">scipy.io</span> <span class="kn">import</span> <span class="n">loadmat</span>
+                <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;4&quot;</span><span class="p">:</span>
+                        <span class="n">ts_fname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
+                        <span class="n">d</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">)</span>
+                        <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;|S3&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> \
+                                                                   <span class="n">d</span><span class="p">[</span><span class="s">&quot;clab&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+                        <span class="k">if</span> <span class="n">train_test</span> <span class="o">==</span> <span class="s">&quot;train&quot;</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;x_train&quot;</span><span class="p">]</span>
+                            <span class="n">input_l</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;y_train&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">input_d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> 
+                                           <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
+                                            <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_d</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">],</span>
+                                                 <span class="n">channel_names</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span><span class="p">)),</span> 
+                                        <span class="s">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">input_l</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;Right&quot;</span><span class="p">))</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">label_fname</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                                          <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">),</span><span class="s">&quot;*.txt&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;x_test&quot;</span><span class="p">]</span>
+                            <span class="n">input_l</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">label_fname</span><span class="p">,</span><span class="s">&#39;r&#39;</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">input_d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+                                <span class="n">label</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">input_l</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> 
+                                           <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
+                                            <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_d</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">],</span>
+                                                 <span class="n">channel_names</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span><span class="p">)),</span> 
+                                             <span class="s">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;Right&quot;</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;3&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
+                        <span class="n">data</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)])</span>
+                        <span class="n">signal</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Signal&#39;</span><span class="p">]</span>
+                        <span class="n">flashing</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Flashing&#39;</span><span class="p">]</span>
+                        <span class="n">stimulus_code</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusCode&#39;</span><span class="p">]</span>
+                        <span class="n">stimulus_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusType&#39;</span><span class="p">]</span>
+                
+                        <span class="n">window</span> <span class="o">=</span> <span class="mi">240</span>
+                        <span class="n">Fs</span> <span class="o">=</span> <span class="mi">240</span>
+                        <span class="n">channels</span> <span class="o">=</span> <span class="mi">64</span>
+                        <span class="n">epochs</span> <span class="o">=</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span> <span class="o">=</span> <span class="mf">1000.0</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span> <span class="o">=</span> <span class="mf">1000.0</span>
+                        
+                        <span class="n">whole_len</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="p">)</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span> <span class="o">+</span> <span class="n">window</span>
+                <span class="c">#        responses = numpy.zeros((12, 15, window, channels))</span>
+                        <span class="n">responses</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">whole_len</span><span class="p">,</span> <span class="n">channels</span><span class="p">))</span>
+                        <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+                            <span class="n">rowcolcnt</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                                <span class="k">if</span> <span class="p">(</span><span class="n">flashing</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">flashing</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">==</span><span class="mi">1</span><span class="p">):</span>
+                                    <span class="n">rowcol</span><span class="o">=</span><span class="n">stimulus_code</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                                    <span class="k">if</span> <span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                                        <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="mi">0</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="p">,:]</span>
+                                        <span class="n">temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">whole_len</span> <span class="o">-</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">temp</span><span class="p">))</span>
+                <span class="c">#                        print &#39;1&#39;, temp.shape</span>
+                                    <span class="k">elif</span> <span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="o">&gt;</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                                        <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">:</span><span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],:]</span>
+                                        <span class="n">temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">temp</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">whole_len</span><span class="o">-</span><span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
+                <span class="c">#                        print &#39;2&#39;, temp.shape</span>
+                                    <span class="k">else</span><span class="p">:</span>
+                                        <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="p">,</span> <span class="p">:]</span>
+                <span class="c">#                        print &#39;3&#39;, temp.shape</span>
+                <span class="c">#                    responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=signal[epoch,n-24:n+window-24,:]</span>
+                                    <span class="n">responses</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,:,:]</span><span class="o">=</span><span class="n">temp</span>
+                                    <span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
+                
+                            <span class="n">avgresp</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">responses</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                
+                            <span class="n">targets</span> <span class="o">=</span> <span class="n">stimulus_code</span><span class="p">[</span><span class="n">epoch</span><span class="p">,:]</span><span class="o">*</span><span class="n">stimulus_type</span><span class="p">[</span><span class="n">epoch</span><span class="p">,:]</span>
+                            <span class="n">target_rowcol</span> <span class="o">=</span> <span class="p">[]</span>
+                            <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">targets</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">value</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">target_rowcol</span><span class="p">:</span>
+                                    <span class="n">target_rowcol</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                
+                            <span class="n">target_rowcol</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                
+                            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">avgresp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                                <span class="n">temp</span> <span class="o">=</span> <span class="n">avgresp</span><span class="p">[</span><span class="n">i</span><span class="p">,:,:]</span>
+                                <span class="n">data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_array</span> <span class="o">=</span> <span class="n">temp</span><span class="p">,</span>
+                                                  <span class="n">channel_names</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span> 
+                                                  <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">window</span><span class="p">)</span>
+                                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Target&quot;</span><span class="p">))</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Standard&quot;</span><span class="p">))</span>                 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_mode</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">==</span> <span class="p">[]:</span>
             <span class="c"># Create a connection to the TimeSeriesClient and return an iterator</span>
             <span class="c"># that passes all received data through the windower.</span>
@@ -581,8 +757,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

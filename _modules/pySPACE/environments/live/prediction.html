@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -77,13 +75,18 @@
 <span class="kn">import</span> <span class="nn">multiprocessing</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">xmlrpclib</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 
 <span class="n">online_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;OnlineLogger&quot;</span><span class="p">)</span>
 
+<span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pySPACE</span>
 <span class="kn">from</span> <span class="nn">pySPACE.environments.live</span> <span class="kn">import</span> <span class="n">eeg_stream_manager</span>
 <span class="kn">import</span> <span class="nn">pySPACE.environments.live.communication.socket_messenger</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.logging_stream_colorer</span> <span class="kn">import</span> <span class="n">ColorFormatter</span><span class="p">,</span> <span class="n">COLORS</span>
@@ -212,7 +215,7 @@
                 <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_result</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s">&quot;negative_event&quot;</span><span class="p">]:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;unknwon event type: event_str=</span><span class="si">%s</span><span class="s"> last_result=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event_str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_result</span><span class="p">[</span><span class="n">key</span><span class="p">])))</span>
+                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;unknwon event type: event_str=</span><span class="si">%s</span><span class="s"> last_result=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">event_str</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_result</span><span class="p">)))</span>
 
                 <span class="c"># store it</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">last_result</span> <span class="o">=</span> <span class="n">event_str</span>
@@ -240,9 +243,9 @@
     <span class="sd">&quot;&quot;&quot; Class that is responsible to perform the actual predictions.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="Predictor.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.prediction.html#pySPACE.environments.live.prediction.Predictor.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">live_processing</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">configuration</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Predictor.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.prediction.html#pySPACE.environments.live.prediction.Predictor.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">live_processing</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="n">configuration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">predicting_active_potential</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">abri_flow</span> <span class="o">=</span> <span class="p">{}</span>
@@ -277,6 +280,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span> <span class="o">=</span> <span class="bp">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span> <span class="o">=</span> <span class="p">{}</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span>
 </div>
 <div class="viewcode-block" id="Predictor.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.prediction.html#pySPACE.environments.live.prediction.Predictor.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span><span class="o">.</span><span class="n">end_transmission</span><span class="p">()</span>
@@ -347,9 +352,7 @@
                 <span class="n">flh_2</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">directory</span> <span class="p">,</span> <span class="s">&quot;prewindowed_train_flow_&quot;</span><span class="o">+</span> <span class="n">key</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flh_2</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">abri_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prewindowing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">postprocessing_flow</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
                 <span class="n">flh_1</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -360,11 +363,19 @@
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Reloading learned models ... Done!&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="mi">0</span>
 </div>
-<div class="viewcode-block" id="Predictor.prepare_predicting"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.prediction.html#pySPACE.environments.live.prediction.Predictor.prepare_predicting">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">testing_data</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="Predictor.prepare_predicting"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.prediction.html#pySPACE.environments.live.prediction.Predictor.prepare_predicting">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">datasets</span><span class="p">,</span> <span class="n">testing_data</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Prepares the trained aBRI-DP flows to classify new instances.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span><span class="o">.</span><span class="n">register</span><span class="p">()</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">nullmarker_stride_ms</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is </span><span class="si">%s</span><span class="s">. You can specify it in your parameter file.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is set to </span><span class="si">%s</span><span class="s"> ms&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        
 
         <span class="k">if</span> <span class="n">testing_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
@@ -380,12 +391,12 @@
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Creating &quot;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower stream&quot;</span><span class="p">)</span>
             <span class="n">window_spec</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span><span class="s">&quot;node_chains&quot;</span><span class="p">,</span><span class="s">&quot;windower&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_prediction&quot;</span><span class="p">])</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                    <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">no_overlap</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                    <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec</span><span class="p">,</span> \
+                                                   <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="n">nullmarker_stride_ms</span><span class="p">,</span> \
+                                                   <span class="n">no_overlap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
         <span class="c"># Classification is done in separate threads, we send the time series</span>
         <span class="c"># windows to these threads via two queues</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
@@ -455,11 +466,11 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span><span class="o">.</span><span class="n">send_message</span><span class="p">((</span><span class="n">key</span><span class="p">,</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">prediction</span><span class="p">))</span>
 
                     <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;positive_event&quot;</span><span class="p">]:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">lrp_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Classified movement window as &quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">pos_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Classified window as &quot;</span>
                                               <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; with score &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">prediction</span><span class="p">))</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">event_queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;positive_prediction&quot;</span><span class="p">])</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">no_lrp_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Classified movement window as &quot;</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">neg_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Classified window as &quot;</span>
                                                <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; with score &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">prediction</span><span class="p">))</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">event_queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">datasets</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;negative_prediction&quot;</span><span class="p">])</span>
 
@@ -589,10 +600,10 @@
         <span class="c"># Setting up log level</span>
         <span class="c"># create a logger</span>
         <span class="c"># create logger for test output</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lrp_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;abriOnlineProcessorLoggerForLrps&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lrp_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_lrp_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;abriOnlineProcessorLoggerForNoLrps&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_lrp_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;positiveEventLogger&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neg_logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;negativeEventLogger&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neg_logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 
         <span class="n">formatterResultsStreamNoLrp</span> <span class="o">=</span> <span class="n">ColorFormatter</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%(asctime)s</span><span class="s"> - </span><span class="si">%(name)s</span><span class="s">: </span><span class="si">%(message)s</span><span class="s">&quot;</span><span class="p">,</span>
                                                 <span class="n">color</span> <span class="o">=</span> <span class="n">COLORS</span><span class="o">.</span><span class="n">RED</span><span class="p">)</span>
@@ -614,10 +625,10 @@
         <span class="n">loggingStreamHandlerResultsNoLrp</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         <span class="n">loggingFileHandlerResults</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">lrp_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandlerResultsLrp</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_lrp_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandlerResultsNoLrp</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lrp_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandlerResults</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_lrp_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandlerResults</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandlerResultsLrp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neg_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingStreamHandlerResultsNoLrp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandlerResults</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">neg_logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">loggingFileHandlerResults</span><span class="p">)</span>
 </pre></div></div></div>
 
           </div>
@@ -640,8 +651,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -78,23 +76,18 @@
 <span class="sd">Created by Timo Duchrow on 2008-08-26.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;$Revision: 456 $&quot;</span>
-<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;EEGClient&#39;</span><span class="p">]</span>
-
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">struct</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
-<span class="kn">import</span> <span class="nn">cProfile</span>
-<span class="kn">import</span> <span class="nn">pstats</span>
+<span class="kn">import</span> <span class="nn">Queue</span>
 <span class="kn">import</span> <span class="nn">signal</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">xmlrpclib</span>
 <span class="kn">import</span> <span class="nn">random</span>
-<span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">glob</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
@@ -103,11 +96,19 @@
 <span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
 
+<span class="kn">import</span> <span class="nn">pySPACE</span>
+<span class="kn">from</span> <span class="nn">ipmarkers</span> <span class="kn">import</span> <span class="n">MarkerServer</span>
+
+<span class="n">usb_warning</span> <span class="o">=</span> <span class="bp">True</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">pySPACE.missions.support.CPP.shared_memory_access.build</span> <span class="kn">import</span> <span class="n">shmaccess</span>
-    <span class="n">import_error</span> <span class="o">=</span> <span class="bp">False</span>
-<span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-    <span class="n">import_error</span> <span class="o">=</span> <span class="n">e</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="s">&quot;eeg_modules_dir&quot;</span><span class="p">):</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">eeg_modules_dir</span><span class="p">)</span>
+        <span class="kn">from</span> <span class="nn">eeg_acquisition.pybrainamp</span> <span class="kn">import</span> <span class="n">BUASubprocess</span>
+        <span class="n">usb_warning</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.support.WindowerInterface</span> <span class="kn">import</span> <span class="n">AbstractStreamReader</span>
 
 <span class="n">verbose</span> <span class="o">=</span> <span class="bp">False</span>
 
@@ -127,40 +128,54 @@
 <span class="n">T_ReadyMessage</span> <span class="o">=</span> <span class="mi">10</span>
 
 
-<div class="viewcode-block" id="EEGClient"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient">[docs]</a><span class="k">class</span> <span class="nc">EEGClient</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="EEGClient"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient">[docs]</a><span class="k">class</span> <span class="nc">EEGClient</span><span class="p">(</span><span class="n">AbstractStreamReader</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;EEG stream client for EEG stream protocol&quot;&quot;&quot;</span>
-<div class="viewcode-block" id="EEGClient.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">,</span> <span class="n">prio</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="EEGClient.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">EEGClient</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
-        <span class="c"># variable names with capitalization correspond to structures members</span>
-        <span class="c"># defined in RecorderRDA.h</span>
+
+        <span class="c"># containers for abstract properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span> <span class="o">=</span> <span class="bp">None</span>   <span class="c"># sampling interval</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># list of channel names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># standard number of paints in one data block</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>       <span class="c"># dictionary with marker names</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">host</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="bp">None</span>           <span class="c"># number of channels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span> <span class="o">=</span> <span class="bp">None</span>   <span class="c"># sampling interval</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">resolutions</span> <span class="o">=</span> <span class="bp">None</span>         <span class="c"># list of resolutions / channel</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># list of channel names</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channelids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        
         <span class="bp">self</span><span class="o">.</span><span class="n">abs_start_time</span> <span class="o">=</span> <span class="mi">0</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">priority</span> <span class="o">=</span> <span class="n">prio</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">=</span> <span class="bp">None</span>        <span class="c"># standard number of paints in one data block</span>
-        
         <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>        
-
+        <span class="bp">self</span><span class="o">.</span><span class="n">meta</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span> <span class="o">=</span> <span class="bp">None</span>           <span class="c"># last sample block read</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span> <span class="o">=</span> <span class="bp">None</span>         <span class="c"># last marker block read</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>       <span class="c"># dictionary with marker names</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c"># number of different marker types</span>
-
         <span class="bp">self</span><span class="o">.</span><span class="n">lostmarker</span> <span class="o">=</span> <span class="bp">False</span>         <span class="c"># for two markers corresponding to one sample in last sample of a block</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lostmarkertypedesc</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">running</span> <span class="o">=</span> <span class="bp">True</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClient.dSamplingInterval"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.dSamplingInterval">[docs]</a>    <span class="k">def</span> <span class="nf">dSamplingInterval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClient.stdblocksize"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.stdblocksize">[docs]</a>    <span class="k">def</span> <span class="nf">stdblocksize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClient.markerids"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.markerids">[docs]</a>    <span class="k">def</span> <span class="nf">markerids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClient.channelNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.channelNames">[docs]</a>    <span class="k">def</span> <span class="nf">channelNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClient.markerNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.markerNames">[docs]</a>    <span class="k">def</span> <span class="nf">markerNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span>
         
         </div>
 <div class="viewcode-block" id="EEGClient.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
@@ -197,12 +212,7 @@
         
         <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
             <span class="k">print</span> <span class="s">&quot;connected to server&quot;</span>
-            
-    </div>
-<div class="viewcode-block" id="EEGClient.syncread"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.syncread">[docs]</a>    <span class="k">def</span> <span class="nf">syncread</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Perform synchronous read of one data block&quot;&quot;&quot;</span>
-        <span class="k">pass</span>
-    </div>
+</div>
 <div class="viewcode-block" id="EEGClient.regcallback"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClient.regcallback">[docs]</a>    <span class="k">def</span> <span class="nf">regcallback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Register callback function&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
@@ -327,7 +337,7 @@
         <span class="c"># read number of channels and sampling interval</span>
         <span class="n">fmt</span> <span class="o">=</span> <span class="s">&#39;IIIII&#39;</span>
         <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span><span class="p">)</span> <span class="o">=</span> \
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sample_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">protocol_version</span><span class="p">)</span> <span class="o">=</span> \
             <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
         <span class="n">offset</span> <span class="o">+=</span> <span class="n">nread</span>
         <span class="c"># offset += 4 </span>
@@ -379,7 +389,7 @@
         <span class="n">namesbuf</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
         <span class="n">nread</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt</span><span class="p">)</span>
         <span class="c"># build list of channel names</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
         <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
         <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">namesbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">:</span>
@@ -415,8 +425,8 @@
         <span class="n">namesbuf</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack_from</span><span class="p">(</span><span class="n">fmt</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
 
         <span class="c"># build list of marker names</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="n">nstr</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
         <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">namesbuf</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
             <span class="k">if</span> <span class="n">c</span> <span class="o">==</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span><span class="p">:</span>
@@ -574,95 +584,33 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 </div></div>
-<div class="viewcode-block" id="EEGClientShm"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm">[docs]</a><span class="k">class</span> <span class="nc">EEGClientShm</span><span class="p">(</span><span class="n">EEGClient</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Acquire raw streamed eeg-data from shared memory.</span>
-
-<span class="sd">        This implementation uses a custom c-extension located</span>
-<span class="sd">        in pySPACE/missions/support/CPP/shared_memory_access.</span>
-<span class="sd">        Please follow instruction on how to build etc. in the</span>
-<span class="sd">        corresponding README file. (TODO:!)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    
-<div class="viewcode-block" id="EEGClientShm.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shm_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
-
-<span class="sd">        :param shm_name:</span>
-<span class="sd">            the name of the shared memory segment - usually</span>
-<span class="sd">            a 32-bit integer.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">EEGClientShm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">kwargs</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="n">import_error</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">import_error</span>
-        <span class="k">if</span> <span class="n">shm_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;please specify shared memory name!&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
-</div>
-<div class="viewcode-block" id="EEGClientShm.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">shmaccess</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="mi">22</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="n">e</span>
-</div>
-<div class="viewcode-block" id="EEGClientShm._readmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientShm._readmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_readmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
-        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">read</span> <span class="o">=</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-            <span class="k">except</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">StreamGap</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="c"># print e</span>
-                <span class="k">continue</span>
-            <span class="k">except</span> <span class="n">shmaccess</span><span class="o">.</span><span class="n">StopIteration</span><span class="p">:</span>
-                <span class="k">print</span> <span class="s">&quot;dataset completely streamed..&quot;</span>
-                <span class="k">break</span>
-
-            <span class="k">break</span>
-
-        <span class="p">(</span><span class="n">nSize</span><span class="p">,</span> <span class="n">nType</span><span class="p">)</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">,</span> <span class="n">read</span><span class="p">[:</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">)])</span>
-
-        <span class="n">payload</span> <span class="o">=</span> <span class="n">read</span><span class="p">[</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">fmt_RDA_MessageHeader</span><span class="p">):]</span>
-
-        <span class="c"># invoke appropiate handler for decoding</span>
-        <span class="k">if</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStart</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_getstartmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_getdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageMuxData</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_getmuxdatamsg</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageStop</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_getstopmsg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">nType</span> <span class="o">==</span> <span class="n">T_RDA_MessageData32</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_getdata32msg</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">nType</span>
-</div></div>
 <div class="viewcode-block" id="EEGServer"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer">[docs]</a><span class="k">class</span> <span class="nc">EEGServer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;EEG stream server for EEG stream protocol&quot;&quot;&quot;</span>
 <div class="viewcode-block" id="EEGServer.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">absolute_data_path</span><span class="p">,</span> <span class="n">block_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">51244</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">absolute_data_path</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span> <span class="o">=</span> <span class="n">block_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">executable</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;eegmanager&quot;</span><span class="p">,</span> <span class="s">&quot;release&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">)</span> 
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">executable</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;eegmanager&quot;</span><span class="p">,</span> <span class="s">&quot;release&quot;</span><span class="p">,</span> <span class="s">&quot;eegmanager&quot;</span><span class="p">)</span>
+</div>
 <div class="viewcode-block" id="EEGServer.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;EEG-Server could not be started. Did you compile it correctly?&#39;</span><span class="p">)</span>
-        </div>
+</div>
 <div class="viewcode-block" id="EEGServer.start"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Starts the EEG server&quot;&quot;&quot;</span>
-        
-                    
+
+
         <span class="k">if</span> <span class="bp">None</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="p">:</span>
             <span class="n">server_out_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;server_out_log&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
-            <span class="n">server_err_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;server_err_log&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span> 
-        
+            <span class="n">server_err_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;server_err_log&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+
             <span class="n">eeg_acq_root</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">__name__</span><span class="p">]</span><span class="o">.</span><span class="n">__file__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
-        
+
             <span class="c"># Workaround for finding Free XML-Ports</span>
             <span class="n">freeport</span> <span class="o">=</span> <span class="bp">False</span>
             <span class="n">call</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
@@ -673,45 +621,45 @@
                 <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;There is no existing executable in </span><span class="si">%s</span><span class="s">. Please compile!&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">eeg_acq_root</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">executable</span><span class="p">)))</span>
 
             <span class="k">while</span> <span class="ow">not</span> <span class="n">freeport</span><span class="p">:</span>
-                <span class="c"># Add Port number, create test-ProxyServer, </span>
+                <span class="c"># Add Port number, create test-ProxyServer,</span>
                 <span class="c"># XMLRPC-Port range: 16253..26253</span>
                 <span class="n">xmlport</span> <span class="o">=</span> <span class="mi">16253</span> <span class="o">+</span> <span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">10000</span><span class="p">)</span>
                 <span class="n">call</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">xmlport</span><span class="p">))</span>
                 <span class="n">test_proxy</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">&quot;http://127.0.0.1:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-                
+
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">test_proxy</span><span class="o">.</span><span class="n">system</span><span class="o">.</span><span class="n">listMethods</span><span class="p">()</span>
                 <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
                     <span class="n">freeport</span> <span class="o">=</span> <span class="bp">True</span>
-                    
+
                 <span class="k">del</span> <span class="n">test_proxy</span>
-                    
+
                 <span class="c"># Remove Portnumber</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">freeport</span><span class="p">:</span>
                     <span class="n">call</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-              
-            <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">call</span><span class="p">,</span> 
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">call</span><span class="p">,</span>
                                        <span class="n">cwd</span><span class="o">=</span><span class="n">eeg_acq_root</span><span class="p">,</span>
                                        <span class="n">stdin</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                                        <span class="n">stderr</span><span class="o">=</span><span class="n">server_err_log</span><span class="p">,</span>
                                        <span class="n">stdout</span><span class="o">=</span><span class="n">server_out_log</span><span class="p">)</span>
-                      
+
             <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span> <span class="o">=</span> <span class="n">xmlrpclib</span><span class="o">.</span><span class="n">ServerProxy</span><span class="p">(</span><span class="s">&quot;http://127.0.0.1:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">call</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
-        
+
         <span class="n">mysocket</span> <span class="o">=</span> <span class="bp">None</span>
-        
+
         <span class="c"># wait for the server to startup...</span>
         <span class="c"># TODO: check this! Time depends on number of started processes!</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-        
-        <span class="k">try</span><span class="p">:</span> 
+
+        <span class="k">try</span><span class="p">:</span>
             <span class="c">#try to get a socket connection and start the server</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">block_size</span><span class="p">)</span>
-            
+
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
-            
-            <span class="c"># check if the server process is still running? </span>
+
+            <span class="c"># check if the server process is still running?</span>
             <span class="c"># returncode:   None -&gt; still running</span>
             <span class="c">#               Numeric -&gt; terminated</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
@@ -719,58 +667,297 @@
                 <span class="n">ret</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">returncode</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">server_process</span> <span class="o">=</span> <span class="bp">None</span>
                 <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">,</span> <span class="s">&quot;Server Process should run but exited with status </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ret</span><span class="p">)</span>
-            
+
             <span class="n">mysocket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
-  
+
             <span class="n">connected</span> <span class="o">=</span> <span class="n">mysocket</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
-       
+
         <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span><span class="n">message</span><span class="p">):</span>
             <span class="c"># failure in connection</span>
-            <span class="k">if</span> <span class="n">mysocket</span><span class="p">:</span> 
-                <span class="n">mysocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
-                
-            <span class="c"># could not open connection -&gt; kill server    </span>
+            <span class="k">if</span> <span class="n">mysocket</span><span class="p">:</span>
+                <span class="n">mysocket</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+            <span class="c"># could not open connection -&gt; kill server</span>
             <span class="n">os</span><span class="o">.</span><span class="n">kill</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_process</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGKILL</span><span class="p">)</span>
-            
+
             <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;error: </span><span class="si">%d</span><span class="s"> could not open socket(</span><span class="si">%d</span><span class="s">): </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
-            
+
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    
+
         <span class="c">#Create a method which handles the tear down of the server</span>
         <span class="k">def</span> <span class="nf">kill</span><span class="p">():</span>
-            <span class="sd">&quot;&quot;&quot; Kills the running EEG server &quot;&quot;&quot;</span>    
+            <span class="sd">&quot;&quot;&quot; Kills the running EEG server &quot;&quot;&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
             <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">3</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
-            
+
         <span class="c">#Add signal handler</span>
         <span class="n">signals</span> <span class="o">=</span> <span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGHUP</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGQUIT</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">sig</span> <span class="ow">in</span> <span class="n">signals</span><span class="p">:</span>
             <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">sig</span><span class="p">,</span> <span class="n">kill</span><span class="p">)</span>
-            </div>
+</div>
 <div class="viewcode-block" id="EEGServer.reset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGServer.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reset the EEG server so that he points again to the beginning&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">server_proxy</span><span class="o">.</span><span class="n">shut_down</span><span class="p">()</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</div></div>
+<div class="viewcode-block" id="EEGClientUsb"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb">[docs]</a><span class="k">class</span> <span class="nc">EEGClientUsb</span><span class="p">(</span><span class="n">AbstractStreamReader</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Acquire raw streamed eeg-data from usb-acquisition submodule</span>
 
+<span class="sd">        This implementation uses the usb1 module, available from</span>
+<span class="sd">        Pip/easy_install. usb1 is used to wrap calls to the libusbx c-library.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="EEGClientUsb.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ipmarker_server</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; currently no parameter</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">usb_warning</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;The usb_acquisition Module could not be imported!&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">EEGClientUsb</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
+        <span class="bp">self</span><span class="o">.</span><span class="n">all_channels</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Fp1&#39;</span><span class="p">,</span> <span class="s">&#39;Fp2&#39;</span><span class="p">,</span> <span class="s">&#39;F7&#39;</span><span class="p">,</span> <span class="s">&#39;F3&#39;</span><span class="p">,</span> <span class="s">&#39;Fz&#39;</span><span class="p">,</span> <span class="s">&#39;F4&#39;</span><span class="p">,</span> <span class="s">&#39;F8&#39;</span><span class="p">,</span> <span class="s">&#39;FC5&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FC1&#39;</span><span class="p">,</span> <span class="s">&#39;FC2&#39;</span><span class="p">,</span> <span class="s">&#39;FC6&#39;</span><span class="p">,</span> <span class="s">&#39;T7&#39;</span><span class="p">,</span> <span class="s">&#39;C3&#39;</span><span class="p">,</span> <span class="s">&#39;Cz&#39;</span><span class="p">,</span> <span class="s">&#39;C4&#39;</span><span class="p">,</span> <span class="s">&#39;T8&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;TP9&#39;</span><span class="p">,</span> <span class="s">&#39;CP5&#39;</span><span class="p">,</span> <span class="s">&#39;CP1&#39;</span><span class="p">,</span> <span class="s">&#39;CP2&#39;</span><span class="p">,</span> <span class="s">&#39;CP6&#39;</span><span class="p">,</span> <span class="s">&#39;TP10&#39;</span><span class="p">,</span> <span class="s">&#39;P7&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;P3&#39;</span><span class="p">,</span> <span class="s">&#39;Pz&#39;</span><span class="p">,</span> <span class="s">&#39;P4&#39;</span><span class="p">,</span> <span class="s">&#39;P8&#39;</span><span class="p">,</span> <span class="s">&#39;PO9&#39;</span><span class="p">,</span> <span class="s">&#39;O1&#39;</span><span class="p">,</span> <span class="s">&#39;Oz&#39;</span><span class="p">,</span> <span class="s">&#39;O2&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;PO10&#39;</span><span class="p">,</span> <span class="s">&#39;AF7&#39;</span><span class="p">,</span> <span class="s">&#39;AF3&#39;</span><span class="p">,</span> <span class="s">&#39;AF4&#39;</span><span class="p">,</span> <span class="s">&#39;AF8&#39;</span><span class="p">,</span> <span class="s">&#39;F5&#39;</span><span class="p">,</span> <span class="s">&#39;F1&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;F2&#39;</span><span class="p">,</span> <span class="s">&#39;F6&#39;</span><span class="p">,</span> <span class="s">&#39;FT9&#39;</span><span class="p">,</span> <span class="s">&#39;FT7&#39;</span><span class="p">,</span> <span class="s">&#39;FC3&#39;</span><span class="p">,</span> <span class="s">&#39;FC4&#39;</span><span class="p">,</span> <span class="s">&#39;FT8&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FT10&#39;</span><span class="p">,</span> <span class="s">&#39;C5&#39;</span><span class="p">,</span> <span class="s">&#39;C1&#39;</span><span class="p">,</span> <span class="s">&#39;C2&#39;</span><span class="p">,</span> <span class="s">&#39;C6&#39;</span><span class="p">,</span> <span class="s">&#39;TP7&#39;</span><span class="p">,</span> <span class="s">&#39;CP3&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;CPz&#39;</span><span class="p">,</span> <span class="s">&#39;CP4&#39;</span><span class="p">,</span> <span class="s">&#39;TP8&#39;</span><span class="p">,</span> <span class="s">&#39;P5&#39;</span><span class="p">,</span> <span class="s">&#39;P1&#39;</span><span class="p">,</span> <span class="s">&#39;P2&#39;</span><span class="p">,</span> <span class="s">&#39;P6&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;PO7&#39;</span><span class="p">,</span> <span class="s">&#39;PO3&#39;</span><span class="p">,</span> <span class="s">&#39;POz&#39;</span><span class="p">,</span> <span class="s">&#39;PO4&#39;</span><span class="p">,</span> <span class="s">&#39;PO8&#39;</span><span class="p">,</span> <span class="s">&#39;Fpz&#39;</span><span class="p">,</span> <span class="s">&#39;F9&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;AFF5h&#39;</span><span class="p">,</span> <span class="s">&#39;AFF1h&#39;</span><span class="p">,</span> <span class="s">&#39;AFF2h&#39;</span><span class="p">,</span> <span class="s">&#39;AFF6h&#39;</span><span class="p">,</span> <span class="s">&#39;F10&#39;</span><span class="p">,</span> <span class="s">&#39;FTT9h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FTT7h&#39;</span><span class="p">,</span> <span class="s">&#39;FCC5h&#39;</span><span class="p">,</span> <span class="s">&#39;FCC3h&#39;</span><span class="p">,</span> <span class="s">&#39;FCC1h&#39;</span><span class="p">,</span> <span class="s">&#39;FCC2h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FCC4h&#39;</span><span class="p">,</span> <span class="s">&#39;FCC6h&#39;</span><span class="p">,</span> <span class="s">&#39;FTT8h&#39;</span><span class="p">,</span> <span class="s">&#39;FTT10h&#39;</span><span class="p">,</span> <span class="s">&#39;TPP9h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;TPP7h&#39;</span><span class="p">,</span> <span class="s">&#39;CPP5h&#39;</span><span class="p">,</span> <span class="s">&#39;CPP3h&#39;</span><span class="p">,</span> <span class="s">&#39;CPP1h&#39;</span><span class="p">,</span> <span class="s">&#39;CPP2h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;CPP4h&#39;</span><span class="p">,</span> <span class="s">&#39;CPP6h&#39;</span><span class="p">,</span> <span class="s">&#39;TPP8h&#39;</span><span class="p">,</span> <span class="s">&#39;TPP10h&#39;</span><span class="p">,</span> <span class="s">&#39;POO9h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;POO1&#39;</span><span class="p">,</span> <span class="s">&#39;POO2&#39;</span><span class="p">,</span> <span class="s">&#39;POO10h&#39;</span><span class="p">,</span> <span class="s">&#39;Iz&#39;</span><span class="p">,</span> <span class="s">&#39;AFp1&#39;</span><span class="p">,</span> <span class="s">&#39;AFp2&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FFT9h&#39;</span><span class="p">,</span> <span class="s">&#39;FFT7h&#39;</span><span class="p">,</span> <span class="s">&#39;FFC5h&#39;</span><span class="p">,</span> <span class="s">&#39;FFC3h&#39;</span><span class="p">,</span> <span class="s">&#39;FFC1h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;FFC2h&#39;</span><span class="p">,</span> <span class="s">&#39;FFC4h&#39;</span><span class="p">,</span> <span class="s">&#39;FFC6h&#39;</span><span class="p">,</span> <span class="s">&#39;FFT8h&#39;</span><span class="p">,</span> <span class="s">&#39;FFT10h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;TTP7h&#39;</span><span class="p">,</span> <span class="s">&#39;CCP5h&#39;</span><span class="p">,</span> <span class="s">&#39;CCP3h&#39;</span><span class="p">,</span> <span class="s">&#39;CCP1h&#39;</span><span class="p">,</span> <span class="s">&#39;CCP2h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;CCP4h&#39;</span><span class="p">,</span> <span class="s">&#39;CCP6h&#39;</span><span class="p">,</span> <span class="s">&#39;TTP8h&#39;</span><span class="p">,</span> <span class="s">&#39;P9&#39;</span><span class="p">,</span> <span class="s">&#39;PPO9h&#39;</span><span class="p">,</span> <span class="s">&#39;PPO5h&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;PPO1h&#39;</span><span class="p">,</span> <span class="s">&#39;PPO2h&#39;</span><span class="p">,</span> <span class="s">&#39;PPO6h&#39;</span><span class="p">,</span> <span class="s">&#39;PPO10h&#39;</span><span class="p">,</span> <span class="s">&#39;P10&#39;</span><span class="p">,</span> <span class="s">&#39;I1&#39;</span><span class="p">,</span>\
+                            <span class="s">&#39;OI1h&#39;</span><span class="p">,</span> <span class="s">&#39;OI2h&#39;</span><span class="p">,</span> <span class="s">&#39;I2&#39;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span> <span class="o">=</span> <span class="n">ipmarker_server</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip_lastmarker</span> <span class="o">=</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span> <span class="o">=</span> <span class="mi">5000</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_id_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span> <span class="o">=</span> <span class="mi">100</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fmt</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">channelids</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolutions</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dig_lastmarker</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span> <span class="o">=</span> <span class="n">BUASubprocess</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClientUsb.dSamplingInterval"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.dSamplingInterval">[docs]</a>    <span class="k">def</span> <span class="nf">dSamplingInterval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClientUsb.stdblocksize"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.stdblocksize">[docs]</a>    <span class="k">def</span> <span class="nf">stdblocksize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClientUsb.markerids"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.markerids">[docs]</a>    <span class="k">def</span> <span class="nf">markerids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClientUsb.channelNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.channelNames">[docs]</a>    <span class="k">def</span> <span class="nf">channelNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span>
+</div>
+    <span class="nd">@property</span>
+<div class="viewcode-block" id="EEGClientUsb.markerNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.markerNames">[docs]</a>    <span class="k">def</span> <span class="nf">markerNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.regcallback"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.regcallback">[docs]</a>    <span class="k">def</span> <span class="nf">regcallback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.block_length_ms"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.block_length_ms">[docs]</a>    <span class="k">def</span> <span class="nf">block_length_ms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="o">*</span><span class="mi">1000</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.disconnect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.disconnect">[docs]</a>    <span class="k">def</span> <span class="nf">disconnect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.new_marker_id"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.new_marker_id">[docs]</a>    <span class="k">def</span> <span class="nf">new_marker_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">marker_id_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_id_counter</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nchannels</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">is_alive</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;Acquisition quit early!&quot;</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nchannels</span><span class="o">.</span><span class="n">value</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">,</span> <span class="s">&quot;No Amplifiers found! Switch them on?&quot;</span>
+
+        <span class="c"># generate all possible marker names and ids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="s">&#39;null&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&#39;S</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">s</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_marker_id</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&#39;R</span><span class="si">%d</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">r</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_marker_id</span><span class="p">()</span>
+        <span class="c"># generate reverse mapping</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span><span class="n">v</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">=</span> <span class="n">k</span>
+
+        <span class="c"># select channelnames</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_channels</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">]</span>
+
+        <span class="c"># calculate raw-data threshold</span>
+        <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nextra_channels</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span> \
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nall_channels</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="o">.</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nextra_channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nextra_channels</span><span class="o">.</span><span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nall_channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">nall_channels</span><span class="o">.</span><span class="n">value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_raw_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">nall_channels</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.read"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nblocks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+        <span class="n">readblocks</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">readblocks</span> <span class="o">&lt;</span> <span class="n">nblocks</span> <span class="ow">or</span> <span class="n">nblocks</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+            <span class="c"># get enough raw data blocks</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gather_enough_data</span><span class="p">()</span>
+
+            <span class="c"># split data and marker in seperate arrays</span>
+            <span class="n">ndsamples</span><span class="p">,</span> <span class="n">ndmarkers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">separate</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">:</span>
+                <span class="n">f</span><span class="p">(</span><span class="n">ndsamples</span><span class="p">,</span> <span class="n">ndmarkers</span><span class="p">)</span>
+
+            <span class="n">readblocks</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">readblocks</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.gather_enough_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.gather_enough_data">[docs]</a>    <span class="k">def</span> <span class="nf">gather_enough_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; gets enough data to generate a block</span>
+<span class="sd">            of size stdblocksize in channel and markers</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_raw_data</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">timestamp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">acquisition</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fmt</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fmt</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%d</span><span class="s">h&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+
+            <span class="n">values</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fmt</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">timestamp</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">block_length_ms</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.separate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.separate">[docs]</a>    <span class="k">def</span> <span class="nf">separate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; separates the raw-data into the data- and marker-channels</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">packet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">min_raw_data</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw_data</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">min_raw_data</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c"># example block-layout for 32 channels:</span>
+        <span class="c"># [marker:1][reserved:4][nchannels data:32] :||</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">mark</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">):</span>
+            <span class="n">mark</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">digital_marker</span><span class="p">(</span><span class="n">packet</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">packet</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">nextra_channels</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">nextra_channels</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">])</span>
+            <span class="n">packet</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">nall_channels</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">mark</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">insert_ip_markers</span><span class="p">(</span><span class="n">mark</span><span class="p">)</span>
+
+        <span class="n">ndata</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">ndata</span> <span class="o">=</span> <span class="n">ndata</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">ndata</span><span class="p">,</span> <span class="n">mark</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.insert_ip_markers"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.insert_ip_markers">[docs]</a>    <span class="k">def</span> <span class="nf">insert_ip_markers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mark</span><span class="p">):</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_lastmarker</span><span class="p">:</span>
+                <span class="n">m</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ip_lastmarker</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ip_lastmarker</span> <span class="o">=</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">m</span><span class="p">,</span> <span class="n">t</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ipmarker_server</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">m</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">t</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">break</span>
+
+            <span class="n">time_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">time2index</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+            <span class="n">mark_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mark2index</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">time_index</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">mark</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ip_lastmarker</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="k">elif</span> <span class="n">time_index</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">time_index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">mark</span><span class="p">):</span>
+                <span class="n">mark</span><span class="p">[</span><span class="n">time_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">mark_index</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Index did not fit: </span><span class="si">%d</span><span class="s"> (</span><span class="si">%d</span><span class="s">, </span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span>
+                    <span class="p">(</span><span class="n">time_index</span><span class="p">,</span> <span class="n">mark_index</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">mark_index</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">mark</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.mark2index"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.mark2index">[docs]</a>    <span class="k">def</span> <span class="nf">mark2index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">m</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+            <span class="n">new</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_marker_id</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">new</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="n">m</span>
+            <span class="c"># print(&quot;added new marker %s with id %d&quot; % (m, new))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.time2index"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.time2index">[docs]</a>    <span class="k">def</span> <span class="nf">time2index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">((</span><span class="n">t</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">stdblocksize</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">block_length_ms</span><span class="p">()</span>
+        <span class="c"># make sure its not negative!</span>
+        <span class="c"># (a negative index means that the marker was delayed!)</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EEGClientUsb.digital_marker"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.EEGClientUsb.digital_marker">[docs]</a>    <span class="k">def</span> <span class="nf">digital_marker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw_value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">raw_value</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">dig_lastmarker</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="n">raw_value</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dig_lastmarker</span><span class="o">^</span><span class="mh">0xffff</span><span class="p">)</span>
+            <span class="n">smarker</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span>
+            <span class="n">rmarker</span> <span class="o">=</span> <span class="p">(</span><span class="n">m</span> <span class="o">&amp;</span> <span class="mh">0xff00</span><span class="p">)</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span>
+            <span class="k">if</span> <span class="n">smarker</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;S</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">smarker</span><span class="p">)]</span>
+            <span class="k">elif</span> <span class="n">rmarker</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;R</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">rmarker</span><span class="p">)]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dig_lastmarker</span> <span class="o">=</span> <span class="n">raw_value</span>
+        <span class="k">return</span> <span class="n">value</span>
 </div></div>
 <div class="viewcode-block" id="dummylisten1"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten1">[docs]</a><span class="k">def</span> <span class="nf">dummylisten1</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">):</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;*&quot;</span><span class="p">)</span>
     <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
     </div>
-<div class="viewcode-block" id="dummylisten2"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten2">[docs]</a><span class="k">def</span> <span class="nf">dummylisten2</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
-    <span class="c">#print &quot;samples:&quot;, samples</span>
-    <span class="k">print</span> <span class="s">&quot;markers:&quot;</span><span class="p">,</span> <span class="n">markers</span>
+<div class="viewcode-block" id="dummylisten2"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten2">[docs]</a><span class="k">def</span> <span class="nf">dummylisten2</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">):</span>
+    <span class="k">print</span> <span class="n">samples</span><span class="p">[:</span><span class="mi">32</span><span class="p">]</span>
     </div>
-<div class="viewcode-block" id="dummylisten3"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten3">[docs]</a><span class="k">def</span> <span class="nf">dummylisten3</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">,</span> <span class="n">meta</span><span class="o">=</span><span class="nb">dict</span><span class="p">()):</span>
+<div class="viewcode-block" id="dummylisten3"><a class="viewcode-back" href="../../../../api/generated/pySPACE.tools.live.eeg_stream.html#pySPACE.tools.live.eeg_stream.dummylisten3">[docs]</a><span class="k">def</span> <span class="nf">dummylisten3</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">):</span>
+    <span class="c"># print markers</span>
     <span class="k">pass</span>
 </div>
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>      
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">host</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
@@ -788,23 +975,33 @@
     <span class="k">else</span><span class="p">:</span>
         <span class="c"># Setup for Localhost  </span>
         <span class="c"># c = EEGClient(host=&#39;127.0.0.1&#39;, port=51244)</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">EEGClientShm</span><span class="p">(</span><span class="n">shm_name</span> <span class="o">=</span> <span class="mi">22</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">MarkerServer</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="mi">55555</span><span class="p">)</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">EEGClientUsb</span><span class="p">(</span><span class="n">ipmarker_server</span><span class="o">=</span><span class="n">s</span><span class="p">)</span>
 
-    <span class="n">c</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-    <span class="n">c</span><span class="o">.</span><span class="n">regcallback</span><span class="p">(</span><span class="n">dummylisten1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">marker_listen</span><span class="p">(</span><span class="n">samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">markers</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">m</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">print</span> <span class="n">c</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">m</span><span class="p">],</span> <span class="n">i</span>
+
+    <span class="n">c</span><span class="o">.</span><span class="n">regcallback</span><span class="p">(</span><span class="n">marker_listen</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">&quot;running with </span><span class="si">%d</span><span class="s"> channels&quot;</span> <span class="o">%</span> <span class="n">c</span><span class="o">.</span><span class="n">nChannels</span><span class="p">)</span>
     
     <span class="n">n</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nblocks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
     <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
-    <span class="n">n</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nblocks</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
-    <span class="c"># n += c.read(nblocks=1, verbose=True)</span>
-    <span class="c"># n += c.read(nblocks=-1)</span>
+    <span class="n">n</span> <span class="o">+=</span> <span class="n">c</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">nblocks</span><span class="o">=</span><span class="mi">2500</span><span class="p">)</span>
     <span class="n">stop</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+    <span class="n">c</span><span class="o">.</span><span class="n">disconnect</span><span class="p">()</span>
     
     <span class="n">total_b</span>  <span class="o">=</span> <span class="n">n</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">stdblocksize</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">nChannels</span><span class="o">*</span><span class="n">c</span><span class="o">.</span><span class="n">sample_size</span>
     <span class="n">total_kb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_b</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
     <span class="n">total_mb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_kb</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
     <span class="n">total_gb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_mb</span><span class="p">)</span><span class="o">/</span><span class="mf">1000.0</span>
-    
+
+    <span class="k">del</span> <span class="n">c</span>
+
     <span class="n">rate_mb_s</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">total_mb</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>
     
     <span class="k">print</span> <span class="s">&quot;received </span><span class="si">%06f</span><span class="s"> MB in </span><span class="si">%04f</span><span class="s"> Seconds := </span><span class="si">%f</span><span class="s"> MB/s&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">total_mb</span><span class="p">,</span> <span class="p">(</span><span class="n">stop</span><span class="o">-</span><span class="n">start</span><span class="p">),</span> <span class="n">rate_mb_s</span><span class="p">)</span>
@@ -831,8 +1028,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

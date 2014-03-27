@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -105,22 +103,29 @@
 
 <span class="sd">    This backend assumes a global file system that is seen by all nodes running </span>
 <span class="sd">    the processes. </span>
+<span class="sd">    </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :pool_size: Define how many MPI processes should be started in parallel.</span>
+<span class="sd">                    This should not exceed the amount of available processors.</span>
+<span class="sd">                    (or the number of mpi slots defined in the hostsfile)</span>
+<span class="sd">        </span>
+<span class="sd">            (*recommended, default: 156*)</span>
 <span class="sd"> </span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="MpiBackend.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="MpiBackend.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_size</span> <span class="o">=</span> <span class="mi">156</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">MpiBackend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span> <span class="o">=</span> <span class="s">&#39;/usr/lib64/openmpi/bin/mpirun&#39;</span>
+        <span class="c">#self.COMMAND_MPI = &#39;/usr/lib64/openmpi/bin/mpirun&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_MPI</span> <span class="o">=</span> <span class="s">&#39;mpirun&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">COMMAND_PYTHON</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">executable</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">root_dir</span><span class="p">,</span>
-                             <span class="s">&quot;app&quot;</span><span class="p">,</span>
+                             <span class="s">&quot;environments&quot;</span><span class="p">,</span>
                              <span class="s">&quot;backends&quot;</span><span class="p">,</span>
                              <span class="s">&quot;mpi_runner.py&quot;</span><span class="p">])</span>
         <span class="c"># start as many processes as the total number of processors</span>
         <span class="c"># available</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span> <span class="o">=</span> <span class="mi">156</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span> <span class="o">=</span> <span class="mi">39</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span> <span class="o">=</span> <span class="n">pool_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunLater</span> <span class="o">=</span> <span class="n">pool_size</span> <span class="c">#39</span></div>
 <div class="viewcode-block" id="MpiBackend.__del__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.mpi_backend.html#pySPACE.environments.backends.mpi_backend.MpiBackend.__del__">[docs]</a>    <span class="k">def</span> <span class="nf">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">pass</span>
         
@@ -226,6 +231,8 @@
                 <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">runner_script</span><span class="p">]</span> <span class="o">+</span> 
                 <span class="bp">self</span><span class="o">.</span><span class="n">process_args_list</span><span class="p">)</span>
             <span class="c"># Start the processes. </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;mpi-parameters: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">args</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">);</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;mpi-parameters-joined: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">);</span>
             <span class="n">p</span> <span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
             <span class="c">#self.pids.append(p)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">IndexCopyStart</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">NumberOfProcessesToRunAtBeginning</span>
@@ -417,8 +424,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

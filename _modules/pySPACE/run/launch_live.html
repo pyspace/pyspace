@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -90,6 +88,8 @@
 <span class="kn">import</span> <span class="nn">datetime</span>
 <span class="kn">import</span> <span class="nn">optparse</span>
 <span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">select</span> <span class="kn">import</span> <span class="n">select</span>
 
 <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
 <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -114,65 +114,48 @@
 <span class="sd">    and additional parameter files for scenario/task specific parameterization.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-<div class="viewcode-block" id="LiveController.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                    <span class="n">parameters</span><span class="p">,</span>
-                    <span class="n">configuration</span><span class="p">,</span>
-                    <span class="n">live_processing</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="LiveController.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters_</span><span class="p">,</span> <span class="n">live_processing</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
 
-        <span class="c"># fetch mandatory parameters</span>
+        <span class="c"># create two level defaultdict for parameters!</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span> <span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="bp">None</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span><span class="n">value</span> <span class="ow">in</span> <span class="n">parameters_</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+ 
+            <span class="c">#if the dict value is also a dict, convert this also to a defaultdict</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_dict_to_defaultdict</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>    
+            <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>     
+
+        <span class="c"># fetch parameters that would be nice to have</span>
         <span class="n">datafile_info</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;data_files&quot;</span><span class="p">]</span>
-        <span class="n">eeg_server_info</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;eeg_server&quot;</span><span class="p">]</span>
-        <span class="n">live_server_info</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;live_server&quot;</span><span class="p">]</span>
+        <span class="n">data_source</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;data_source&quot;</span><span class="p">]</span>
+
         <span class="n">potentials</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;potentials&quot;</span><span class="p">]</span>
-        <span class="n">flow_persistency_directory</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;flow_persistency_directory&quot;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow_persistency_directory</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;flow_persistency_directory&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prewindowed_data_directory</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;prewindowed_data_directory&quot;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">datafile_train</span> <span class="o">=</span> <span class="n">datafile_info</span><span class="p">[</span><span class="s">&quot;eeg_data_file_train&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">datafile_test</span> <span class="o">=</span> <span class="n">datafile_info</span><span class="p">[</span><span class="s">&quot;eeg_data_file_test&quot;</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;nullmarker_stride_ms&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;default_port&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_offline_predict_ip</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;predict_offline&quot;</span><span class="p">][</span><span class="s">&quot;ip&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_predict_ip</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;predict&quot;</span><span class="p">][</span><span class="s">&quot;ip&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;train&quot;</span><span class="p">][</span><span class="s">&quot;ip&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_prewindow_ip</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;prewindow&quot;</span><span class="p">][</span><span class="s">&quot;ip&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_record</span> <span class="o">=</span> <span class="n">data_source</span><span class="p">[</span><span class="s">&quot;record&quot;</span><span class="p">]</span>
+
+        <span class="c"># settings for recording</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;record&quot;</span><span class="p">][</span><span class="s">&quot;subject&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;record&quot;</span><span class="p">][</span><span class="s">&quot;experiment&quot;</span><span class="p">]</span>
 
         <span class="c"># try to fetch optional parameters, set them to None if not present</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">prewindowed_data_directory</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;prewindowed_data_directory&quot;</span><span class="p">]</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="n">prewindowed_data_directory</span> <span class="o">=</span> <span class="bp">None</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">datafile_train</span> <span class="o">=</span> \
-            <span class="n">datafile_info</span><span class="p">[</span><span class="s">&quot;eeg_data_file_train&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">datafile_test</span> <span class="o">=</span> \
-            <span class="n">datafile_info</span><span class="p">[</span><span class="s">&quot;eeg_data_file_test&quot;</span><span class="p">]</span>
+        <span class="c"># live_server_info = parameters[&quot;live_server&quot;]</span>
+        <span class="c"># self.live_server_ip = live_server_info[&quot;live_server_ip&quot;]</span>
+        <span class="c"># self.live_xmlrpc_port = live_server_info[&quot;live_xmlrpc_port&quot;]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span> <span class="o">=</span> \
-            <span class="n">eeg_server_info</span><span class="p">[</span><span class="s">&quot;eeg_server_train_ip&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_predict_ip</span> <span class="o">=</span> \
-            <span class="n">eeg_server_info</span><span class="p">[</span><span class="s">&quot;eeg_server_predict_ip&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_offline_predict_ip</span> <span class="o">=</span> \
-            <span class="n">eeg_server_info</span><span class="p">[</span><span class="s">&quot;eeg_server_offline_predict_ip&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span> <span class="o">=</span> \
-            <span class="n">eeg_server_info</span><span class="p">[</span><span class="s">&quot;eeg_server_eeg_port&quot;</span><span class="p">]</span>
-
-        <span class="c"># check if recording data is set</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;record&quot;</span><span class="p">][</span><span class="s">&quot;subject&quot;</span><span class="p">]</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="s">&quot;record&quot;</span><span class="p">][</span><span class="s">&quot;experiment&quot;</span><span class="p">]</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="o">=</span> <span class="bp">None</span>
-
-
-        <span class="c"># try to fetch optional parameters, set them to None if not present</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_prewindow_ip</span> <span class="o">=</span> \
-                <span class="n">eeg_server_info</span><span class="p">[</span><span class="s">&quot;eeg_server_prewindow_ip&quot;</span><span class="p">]</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_prewindow_ip</span> <span class="o">=</span> <span class="bp">None</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">live_server_ip</span> <span class="o">=</span> \
-            <span class="n">live_server_info</span><span class="p">[</span><span class="s">&quot;live_server_ip&quot;</span><span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">live_xmlrpc_port</span> <span class="o">=</span> \
-            <span class="n">live_server_info</span><span class="p">[</span><span class="s">&quot;live_xmlrpc_port&quot;</span><span class="p">]</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">flow_persistency_directory</span> <span class="o">=</span> \
-            <span class="n">flow_persistency_directory</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">prewindowed_data_directory</span> <span class="o">=</span> \
-            <span class="n">prewindowed_data_directory</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="n">configuration</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">=</span> <span class="bp">None</span>
 
@@ -180,23 +163,50 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">live_prewindower</span> <span class="o">=</span> <span class="bp">None</span>
 
-        <span class="k">if</span> <span class="n">live_processing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">environments</span><span class="o">.</span><span class="n">live</span><span class="o">.</span><span class="n">communication</span><span class="o">.</span><span class="n">log_messenger</span><span class="o">.</span><span class="n">LogMessenger</span><span class="p">()</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span> <span class="o">=</span> <span class="n">live_processing</span>
 
         <span class="c"># figure out all potentials and</span>
         <span class="c"># store all relevant information</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">erps</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">potentials</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
             <span class="k">for</span> <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">potential</span><span class="p">)</span> <span class="ow">in</span> <span class="n">potentials</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                <span class="n">potential</span><span class="p">[</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+                    <span class="n">potential</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_dict_to_defaultdict</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span> 
+                <span class="n">potential</span><span class="p">[</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span> 
                 <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">[</span><span class="n">potential</span><span class="p">[</span><span class="s">&quot;flow_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">potential</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">potential</span> <span class="ow">in</span> <span class="n">potentials</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+                    <span class="n">potential</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">convert_dict_to_defaultdict</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span> 
                 <span class="n">potential</span><span class="p">[</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
-                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span>
+                <span class="c"># online_logger.info(potential)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">[</span><span class="n">potential</span><span class="p">[</span><span class="s">&quot;flow_id&quot;</span><span class="p">]]</span> <span class="o">=</span> <span class="n">potential</span>
+                
+        <span class="n">results_to_send</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;online_result_messenger&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&#39;online_result_messenger&#39;</span><span class="p">]:</span>
+                <span class="n">results_to_send</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">live_processing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results_to_send</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">environments</span><span class="o">.</span><span class="n">live</span><span class="o">.</span><span class="n">communication</span><span class="o">.</span><span class="n">socket_messenger</span><span class="o">.</span><span class="n">SocketMessenger</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">results_to_send</span><span class="p">)</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&#39;Prediction results from </span><span class="si">%s</span><span class="s"> will be send via socket.&#39;</span><span class="p">,</span> <span class="s">&#39; and &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">results_to_send</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">environments</span><span class="o">.</span><span class="n">live</span><span class="o">.</span><span class="n">communication</span><span class="o">.</span><span class="n">log_messenger</span><span class="o">.</span><span class="n">LogMessenger</span><span class="p">()</span>
+            <span class="c"># self.messenger = pySPACE.environments.live.communication.socket_messenger.SocketMessenger(key=&quot;P3&quot;)</span>
+            <span class="c"># self.messenger = pySPACE.environments.live.communication.socket_messenger.EmbeddedSocketManager(key=&quot;P3&quot;)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">messenger</span> <span class="o">=</span> <span class="n">live_processing</span>
+</div>
+<div class="viewcode-block" id="LiveController.convert_dict_to_defaultdict"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.convert_dict_to_defaultdict">[docs]</a>    <span class="k">def</span> <span class="nf">convert_dict_to_defaultdict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dict_to_convert</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dict_to_convert</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;CARE: trying to convert a </span><span class="si">%s</span><span class="s"> to defaultdict&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="nb">type</span><span class="p">(</span><span class="n">dict_to_convert</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">dict_to_convert</span>
+        <span class="n">mydefaultdict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="bp">None</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dict_to_convert</span><span class="p">:</span>
+            <span class="n">mydefaultdict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">dict_to_convert</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">mydefaultdict</span>
+            
+                
 
 </div>
 <div class="viewcode-block" id="LiveController.prewindowing"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.prewindowing">[docs]</a>    <span class="k">def</span> <span class="nf">prewindowing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">online</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
@@ -212,9 +222,9 @@
 
         <span class="k">if</span> <span class="n">online</span><span class="p">:</span>
             <span class="c"># create the stream manager</span>
-            <span class="n">stream_manager</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span><span class="p">)</span>
-            <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_prewindow_ip</span><span class="p">,</span>
-                                                 <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
+            <span class="n">stream_manager</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
+            <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="n">ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_prewindow_ip</span><span class="p">,</span>
+                                                 <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
             <span class="c"># setup recording if option is set</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
                     <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
@@ -228,7 +238,9 @@
             <span class="c"># in online case just connect to the streaming server</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">live_prewindower</span><span class="o">.</span><span class="n">prepare_training</span><span class="p">(</span><span class="n">prewindowing_files</span><span class="p">,</span>
                                                    <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span>
-                                                   <span class="s">&quot;prewindowing&quot;</span><span class="p">)</span>
+                                                   <span class="s">&quot;prewindowing&quot;</span><span class="p">,</span>
+                                                   <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
+
 
 
 
@@ -250,7 +262,8 @@
 
             <span class="bp">self</span><span class="o">.</span><span class="n">live_prewindower</span><span class="o">.</span><span class="n">prepare_training</span><span class="p">(</span><span class="n">prewindowing_files</span><span class="p">,</span>
                                           <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span>
-                                          <span class="s">&quot;prewindowing_offline&quot;</span><span class="p">)</span>
+                                          <span class="s">&quot;prewindowing_offline&quot;</span><span class="p">,</span>
+                                          <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">start_prewindowing</span><span class="p">(</span><span class="n">online</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="LiveController.start_prewindowing"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.start_prewindowing">[docs]</a>    <span class="k">def</span> <span class="nf">start_prewindowing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">online</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
@@ -271,7 +284,8 @@
         <span class="n">postprocessing_files</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">pw_trainer</span><span class="o">.</span><span class="n">prepare_training</span><span class="p">(</span><span class="n">postprocessing_files</span><span class="p">,</span>
                                   <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span>
-                                  <span class="s">&quot;prewindowed_train&quot;</span><span class="p">)</span>
+                                  <span class="s">&quot;prewindowed_train&quot;</span><span class="p">,</span>
+                                  <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
 
         <span class="c"># Let pyspace live train on this data</span>
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Start pyspace live training&quot;</span><span class="p">)</span>
@@ -288,8 +302,8 @@
         <span class="n">stream_manager</span> <span class="o">=</span> \
             <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
 
-        <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span><span class="p">,</span>
-                                             <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
+        <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="n">ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span><span class="p">,</span>
+                                             <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
 
         <span class="c"># Prepare trainer for training</span>
         <span class="n">online_trainer</span><span class="o">.</span><span class="n">set_eeg_stream_manager</span><span class="p">(</span><span class="n">stream_manager</span><span class="p">)</span>
@@ -314,7 +328,8 @@
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;#&quot;</span><span class="o">*</span><span class="mi">30</span><span class="p">)</span>
         <span class="n">online_trainer</span><span class="o">.</span><span class="n">prepare_training</span><span class="p">(</span><span class="n">training_files</span><span class="p">,</span>
                                       <span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span>
-                                      <span class="s">&quot;train&quot;</span><span class="p">)</span>
+                                      <span class="s">&quot;train&quot;</span><span class="p">,</span>
+                                      <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
 
         <span class="c"># Let pyspace live train on this data</span>
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Start pyspace live training&quot;</span><span class="p">)</span>
@@ -337,8 +352,8 @@
         <span class="n">stream_manager</span> <span class="o">=</span> \
             <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
 
-        <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span><span class="p">,</span>
-                                             <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
+        <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="n">ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_train_ip</span><span class="p">,</span>
+                                             <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
 
         <span class="c"># Prepare live_adaptor for adaptation</span>
         <span class="n">live_adaptor</span><span class="o">.</span><span class="n">set_eeg_stream_manager</span><span class="p">(</span><span class="n">stream_manager</span><span class="p">)</span>
@@ -397,7 +412,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
 
             <span class="c"># create pyspace live processing server</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span> <span class="o">=</span> <span class="n">prediction</span><span class="o">.</span><span class="n">Predictor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">messenger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span> <span class="o">=</span> <span class="n">prediction</span><span class="o">.</span><span class="n">Predictor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">messenger</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">set_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">prediction_process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span>
 
@@ -410,22 +425,21 @@
             <span class="k">if</span> <span class="n">online</span><span class="p">:</span>
 
                 <span class="c"># init eeg streaming and recording</span>
-                <span class="n">stream_manager</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span><span class="p">)</span>
-                <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_predict_ip</span><span class="p">,</span>
-                                                     <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
-
-                <span class="c"># setup recording if option is set</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> \
-                        <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                    <span class="n">stream_manager</span><span class="o">.</span><span class="n">record_with_options</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span> <span class="n">online</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;RAW DATA IS NOT RECORDED!&quot;</span><span class="p">)</span>
+                <span class="n">stream_manager</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
+                <span class="n">stream_manager</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="n">ip</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_predict_ip</span><span class="p">,</span>
+                                                     <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_eeg_port</span><span class="p">)</span>
 
                 <span class="c"># set teht stream manager into the trainger object</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">set_eeg_stream_manager</span><span class="p">(</span><span class="n">stream_manager</span><span class="p">)</span>
 
                 <span class="c"># prepare the prediction</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
+
+                <span class="c"># setup recording if option is set</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="n">stream_manager</span><span class="o">.</span><span class="n">record_with_options</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span> <span class="n">online</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;RAW DATA IS NOT RECORDED!&quot;</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="c"># when running offline prepare local streaming</span>
@@ -439,11 +453,11 @@
                     <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;could not determine testing data!&quot;</span>
 
                 <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;testing file: </span><span class="si">%s</span><span class="s"> &quot;</span> <span class="o">%</span> <span class="n">testing_file</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span> <span class="n">testing_file</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">prepare_predicting</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">erps</span><span class="p">,</span> <span class="n">testing_file</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_nullmarker_stride_ms</span><span class="p">)</span>
 
             <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Finished&quot;</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">remote</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">remote</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">online</span><span class="p">:</span>
                 <span class="nb">raw_input</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Press Enter to start predicting &quot;</span><span class="p">)</span>
 
         <span class="c"># Let pyspace live classify the test data</span>
@@ -454,20 +468,28 @@
 
 </div>
 <div class="viewcode-block" id="LiveController.stop_prediction"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.stop_prediction">[docs]</a>    <span class="k">def</span> <span class="nf">stop_prediction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c"># Create pyspace live processing server</span>
+        <span class="c"># stop running prediction</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">live_processing</span><span class="o">.</span><span class="n">process_external_command</span><span class="p">(</span><span class="s">&quot;STOP&quot;</span><span class="p">)</span>
-
 </div>
-<div class="viewcode-block" id="LiveController.get_live_flow"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.get_live_flow">[docs]</a>    <span class="k">def</span> <span class="nf">get_live_flow</span> <span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="LiveController.record"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.LiveController.record">[docs]</a>    <span class="k">def</span> <span class="nf">record</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># just record incoming data - press enter to stop</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;recording .. (press enter to stop)&quot;</span><span class="p">)</span>
 
-        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/abri_flow_P3.yaml&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_persistency_directory</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
-        <span class="n">abri_flow_p3</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/abri_flow_LRP.yaml&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_persistency_directory</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
-        <span class="n">abri_flow_lrp</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-        <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">data_stream</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
+        <span class="n">data_stream</span><span class="o">.</span><span class="n">initialize_eeg_server</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">eeg_server_record</span><span class="p">)</span>
 
-        <span class="k">return</span> <span class="n">abri_flow_p3</span><span class="p">,</span> <span class="n">abri_flow_lrp</span>
+        <span class="n">window_stream</span> <span class="o">=</span> <span class="n">data_stream</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">no_overlap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">data_stream</span><span class="o">.</span><span class="n">record_with_options</span><span class="p">(</span><span class="n">subject</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">,</span>
+                                        <span class="n">experiment</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
+                                        <span class="n">online</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">window</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">window_stream</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">select</span><span class="p">([</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">],</span> <span class="p">[],</span> <span class="p">[],</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="p">([</span><span class="n">sys</span><span class="o">.</span><span class="n">stdin</span><span class="p">],</span> <span class="p">[],</span> <span class="p">[]):</span>
+                <span class="k">break</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Received window with label </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">label</span><span class="p">)</span>
+
+        <span class="n">data_stream</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;stopped recording!&quot;</span><span class="p">)</span>
 </div></div>
 <div class="viewcode-block" id="parse_arguments"><a class="viewcode-back" href="../../../api/generated/pySPACE.run.launch_live.html#pySPACE.run.launch_live.parse_arguments">[docs]</a><span class="k">def</span> <span class="nf">parse_arguments</span><span class="p">():</span>
     <span class="sd">&quot;&quot;&quot; Parses the command line arguments to create options object&quot;&quot;&quot;</span>
@@ -524,6 +546,11 @@
                       <span class="n">help</span><span class="o">=</span><span class="s">&quot;Start remote control&quot;</span><span class="p">,</span>
                       <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">,</span>
                       <span class="n">dest</span><span class="o">=</span><span class="s">&quot;remote&quot;</span><span class="p">,</span>
+                      <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s">&quot;--record&quot;</span><span class="p">,</span>
+                      <span class="n">help</span><span class="o">=</span><span class="s">&quot;Just record data into the specified storage dir&quot;</span><span class="p">,</span>
+                      <span class="n">action</span><span class="o">=</span><span class="s">&quot;store_true&quot;</span><span class="p">,</span>
+                      <span class="n">dest</span><span class="o">=</span><span class="s">&quot;record&quot;</span><span class="p">,</span>
                       <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
 
 
@@ -640,9 +667,7 @@
                     <span class="c"># starting controller</span>
                     <span class="n">cfg</span> <span class="o">=</span> <span class="n">adrf</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
                     <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller...&quot;</span><span class="p">)</span>
-                    <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span>
-                                                       <span class="n">conf</span><span class="p">,</span>
-                                                       <span class="n">adrf</span><span class="p">)</span>
+                    <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">adrf</span><span class="p">)</span>
 
                     <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller finished&quot;</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">server_process</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
@@ -711,8 +736,7 @@
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller...&quot;</span><span class="p">)</span>
 
 
-        <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span>
-                                           <span class="n">conf</span><span class="p">)</span>
+        <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
 
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller finished&quot;</span><span class="p">)</span>
 
@@ -738,8 +762,6 @@
         <span class="n">parameters</span> <span class="o">=</span> <span class="n">read_parameter_file</span><span class="p">(</span><span class="n">param_file_name</span><span class="p">)</span>
 
 
-
-        <span class="kn">from</span> <span class="nn">pySPACE.environments</span> <span class="kn">import</span> <span class="n">big_bang</span>
         <span class="kn">from</span> <span class="nn">pySPACE.environments.live</span> <span class="kn">import</span> <span class="n">eeg_stream_manager</span><span class="p">,</span> <span class="n">prediction</span><span class="p">,</span> <span class="n">adaptation</span><span class="p">,</span> <span class="n">communication</span><span class="p">,</span> <span class="n">trainer</span>
         <span class="kn">import</span> <span class="nn">pySPACE.environments.live.communication.log_messenger</span>
 
@@ -747,7 +769,7 @@
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller...&quot;</span><span class="p">)</span>
 
 
-        <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">parameters</span><span class="p">,</span> <span class="n">conf</span><span class="p">)</span>
+        <span class="n">liveControl</span> <span class="o">=</span> <span class="n">LiveController</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
 
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Constructing Controller finished&quot;</span><span class="p">)</span>
 
@@ -760,36 +782,27 @@
             <span class="c"># first start eegclient</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">prewindowing</span><span class="p">(</span><span class="n">online</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
             <span class="n">create_backup</span><span class="p">(</span><span class="n">liveControl</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">prewindowing_offline</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">prewindowing</span><span class="p">(</span><span class="n">online</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
             <span class="n">create_backup</span><span class="p">(</span><span class="n">liveControl</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">prewindowed_train</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">prewindowed_train</span><span class="p">()</span>
             <span class="n">create_backup</span><span class="p">(</span><span class="n">liveControl</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">train</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
             <span class="n">create_backup</span><span class="p">(</span><span class="n">liveControl</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">adapt</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">adapt_classification_threshold</span><span class="p">()</span>
             <span class="n">create_backup</span><span class="p">(</span><span class="n">liveControl</span><span class="p">,</span> <span class="n">options</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">predict</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">online</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">predict_offline</span><span class="p">:</span>
             <span class="n">liveControl</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">online</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
-            <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">options</span><span class="o">.</span><span class="n">record</span><span class="p">:</span>
+            <span class="n">liveControl</span><span class="o">.</span><span class="n">record</span><span class="p">()</span>
+
+        <span class="n">server_process</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+        <span class="n">server_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
 </pre></div>
 
           </div>
@@ -812,8 +825,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

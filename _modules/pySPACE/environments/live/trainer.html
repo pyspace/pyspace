@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -118,6 +116,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">last_target_data</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">training_paused_potential</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s">&#39;b&#39;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span>
 </div>
 <div class="viewcode-block" id="LiveTrainer.set_controller"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.set_controller">[docs]</a>    <span class="k">def</span> <span class="nf">set_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">controller</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Set reference to the calling controller &quot;&quot;&quot;</span>
@@ -127,7 +126,7 @@
         <span class="sd">&quot;&quot;&quot; Set the stream manager that provides the training data &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span> <span class="o">=</span> <span class="n">stream_manager</span>
 </div>
-<div class="viewcode-block" id="LiveTrainer.prepare_training"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.prepare_training">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">training_files</span><span class="p">,</span> <span class="n">potentials</span><span class="p">,</span> <span class="n">operation</span><span class="p">):</span>
+<div class="viewcode-block" id="LiveTrainer.prepare_training"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.prepare_training">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">training_files</span><span class="p">,</span> <span class="n">potentials</span><span class="p">,</span> <span class="n">operation</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Prepares pyspace live for training.</span>
 
 <span class="sd">        Prepares everything for training of pyspace live,</span>
@@ -137,6 +136,11 @@
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Preparing Training&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span> <span class="o">=</span> <span class="n">potentials</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">=</span> <span class="n">operation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">nullmarker_stride_ms</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is </span><span class="si">%s</span><span class="s">. You can specify it in your parameter file.&#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&#39;Nullmarker stride interval is set to </span><span class="si">%s</span><span class="s"> ms &#39;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
 
         <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Creating flows..&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
@@ -146,17 +150,11 @@
                 <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;node_chain_spec:&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;node_chain&quot;</span><span class="p">])</span>
 
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;prewindowing&quot;</span><span class="p">,</span> <span class="s">&quot;prewindowing_offline&quot;</span><span class="p">):</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream_prewindowing_flow&quot;</span><span class="p">])</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">])</span>
                 <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;prewindowing_dataflow_spec: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">])</span>
 
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">==</span> <span class="s">&quot;prewindowed_train&quot;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream_postprocess_flow&quot;</span><span class="p">])</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">])</span>
                 <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;postprocessing_dataflow_spec: &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">])</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">training_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Value</span><span class="p">(</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="bp">False</span><span class="p">)</span>
@@ -201,17 +199,8 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">node_chains</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="n">flow_generator</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
                 <span class="n">flow</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;prewindowing_flow&quot;</span><span class="p">])</span>
             <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="o">==</span> <span class="s">&quot;prewindowed_train&quot;</span><span class="p">:</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">node_chains</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">Flow_Class</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">,</span>
-                                                                     <span class="n">flow_spec</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]))</span>
-                    <span class="c"># create windower</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Creating Windower&quot;</span><span class="p">)</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">node_chains</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_windower_spec_file</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> <span class="s">&quot;windower&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">]))</span>
-                    <span class="n">replace_start_and_end_markers</span> <span class="o">=</span> <span class="bp">True</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">node_chains</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">Flow_Class</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">,</span> <span class="n">flow_spec</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]))</span>
-                    <span class="n">replace_start_and_end_markers</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">node_chains</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">Flow_Class</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">,</span> <span class="n">flow_spec</span> <span class="o">=</span> <span class="nb">file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">]))</span>
+                <span class="n">replace_start_and_end_markers</span> <span class="o">=</span> <span class="bp">False</span>
 
                 <span class="n">final_collection</span> <span class="o">=</span> <span class="n">TimeSeriesDataset</span><span class="p">()</span>
                 <span class="n">final_collection_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prewindowed_data_directory</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s">&quot;all_train_data&quot;</span><span class="p">)</span>
@@ -233,7 +222,6 @@
                     <span class="n">collection</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
                     <span class="n">data</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;train&quot;</span><span class="p">)</span>
                     <span class="k">for</span> <span class="n">d</span><span class="p">,(</span><span class="n">sample</span><span class="p">,</span><span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
-
                         <span class="k">if</span> <span class="n">replace_start_and_end_markers</span><span class="p">:</span>
                             <span class="c"># in case we concatenate multiple &#39;Window&#39; labeled</span>
                             <span class="c"># sets we have to remove every start- and endmarker</span>
@@ -270,11 +258,24 @@
 
                 <span class="n">flow</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;postprocess_flow&quot;</span><span class="p">])</span>
 
+            <span class="c"># create window_stream for every potential</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;prewindowing&quot;</span><span class="p">):</span>
+                <span class="n">window_spec_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span><span class="s">&quot;node_chains&quot;</span><span class="p">,</span><span class="s">&quot;windower&quot;</span><span class="p">,</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">,</span>
+                                                              <span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;prewindowing_offline&quot;</span><span class="p">):</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;train&quot;</span><span class="p">):</span>
+                <span class="k">pass</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_definitions</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
             <span class="n">flow</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
-        <span class="c"># TODO: check if the prewindowing flow is still needed</span>
-        <span class="c"># when using the stream mode!</span>
+        <span class="c"># TODO: check if the prewindowing flow is still needed when using the stream mode!</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;train&quot;</span><span class="p">):</span>
             <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Removing old flows...&quot;</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
@@ -441,83 +442,50 @@
         <span class="sd">&quot;&quot;&quot; A function that forwards the data to the worker threads &quot;&quot;&quot;</span>
         <span class="n">spec_base</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;configuration&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">spec_dir</span>
         <span class="n">window_spec_file</span> <span class="o">=</span> <span class="p">{}</span>
+ 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;prewindowing&quot;</span><span class="p">):</span>
-            <span class="c"># create window stream</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">stream_data_stream_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">window_spec_file</span><span class="p">,</span> <span class="n">spec_base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c"># request the window stream..</span>
-                <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
-                                                     <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
-                                                     <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
-                                                     <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
-                
-                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                    <span class="bp">self</span><span class="o">.</span><span class="n">stream_manager</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
-                                                              <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
-                <span class="c"># process the data</span>
-                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;streaming data for </span><span class="si">%s</span><span class="s"> started&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-
+            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;streaming data for </span><span class="si">%s</span><span class="s"> started&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+ 
             <span class="c"># all done!</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
             <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s"> for </span><span class="si">%s</span><span class="s"> finished&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation</span><span class="p">,</span> <span class="n">key</span><span class="p">)))</span>
-
+ 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;prewindowing_offline&quot;</span><span class="p">):</span>
             <span class="n">data_set_count</span> <span class="o">=</span> <span class="mi">0</span>
-
+ 
             <span class="c"># create local stream manager</span>
             <span class="n">local_streaming</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
-
+ 
             <span class="k">for</span> <span class="n">train_dataset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_data</span><span class="p">:</span>
                 <span class="c"># continue if we are not supposed to train any further</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_paused_potential</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
                     <span class="k">continue</span>
-
+ 
                 <span class="c"># stream local file</span>
                 <span class="n">local_streaming</span><span class="o">.</span><span class="n">stream_local_file</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">)</span>
-
+ 
                 <span class="c"># create window stream</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                    <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
-                                                         <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
-                                                         <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
-                                                         <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_stream&quot;</span><span class="p">])</span>
-                    
-                    <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                        <span class="n">local_streaming</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
-                                                              <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
-                                                              <span class="n">no_overlap</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
-                        
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
-
-                    <span class="c"># Put all windows into the queues so that they can be processed by</span>
-                    <span class="c"># the multiple training threads</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Streaming data started&quot;</span><span class="p">)</span>
-                    <span class="n">window_counter</span> <span class="o">=</span> <span class="mi">0</span>
-                    <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
-                        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Got instance number &quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">window_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; with class </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">label</span><span class="p">)</span>
-                        <span class="n">window_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
-                                                         <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
-                                                         <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
-                                                         <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
-                    
-                    <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">local_streaming</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> \
-                                         <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-                    <span class="c"># process the data</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;streaming data for </span><span class="si">%s</span><span class="s"> started&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
+                                                    <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
+                                                    <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
+                     
+                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">local_streaming</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> \
+                                         <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+                <span class="c"># process the data</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;streaming data for </span><span class="si">%s</span><span class="s"> started&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                
                 <span class="n">data_set_count</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;dataset </span><span class="si">%d</span><span class="s"> completely streamed for </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data_set_count</span><span class="p">,</span> <span class="n">key</span><span class="p">)))</span>
                 <span class="n">local_streaming</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-
+ 
             <span class="c"># all done!</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
             <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;training for </span><span class="si">%s</span><span class="s"> finished&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
-
+ 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">operation</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;train&quot;</span><span class="p">):</span>
             <span class="n">data_set_count</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">local_streaming</span> <span class="o">=</span> <span class="n">eeg_stream_manager</span><span class="o">.</span><span class="n">LiveEegStreamManager</span><span class="p">(</span><span class="n">online_logger</span><span class="p">)</span>
@@ -529,49 +497,26 @@
                 <span class="n">local_streaming</span><span class="o">.</span><span class="n">stream_local_file</span><span class="p">(</span><span class="n">train_dataset</span><span class="p">)</span>
                 <span class="c"># create windower</span>
                 
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;stream&quot;</span><span class="p">)</span> \
-                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;stream&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-                    
-                    <span class="bp">self</span><span class="o">.</span><span class="n">stream_data_stream_mode</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">window_spec_file</span><span class="p">,</span> <span class="n">spec_base</span><span class="p">,</span> <span class="n">local_streaming</span><span class="p">)</span>
                 
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
-                                     <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
-                                     <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
-                                     <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
-                    
-                    <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-                        <span class="n">local_streaming</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> \
-                        <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
-                        
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
-                    <span class="n">data_set_count</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;dataset </span><span class="si">%d</span><span class="s"> completely streamed for </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data_set_count</span><span class="p">,</span> <span class="n">key</span><span class="p">)))</span>
-                    <span class="n">local_streaming</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
-
+                <span class="k">print</span> <span class="s">&#39;window specs: &#39;</span> <span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">]</span>
+                 
+                <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
+                                <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
+                                <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
+                                <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_train&quot;</span><span class="p">])</span>
+                     
+                <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">local_streaming</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> \
+                    <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span><span class="p">)</span>
+                         
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">classification_thread</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="n">data_set_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s">&quot;dataset </span><span class="si">%d</span><span class="s"> completely streamed for </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data_set_count</span><span class="p">,</span> <span class="n">key</span><span class="p">)))</span>
+                    <span class="c">#local_streaming.stop()</span>
+ 
             <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
-</div>
-<div class="viewcode-block" id="LiveTrainer.stream_data_stream_mode"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.stream_data_stream_mode">[docs]</a>    <span class="k">def</span> <span class="nf">stream_data_stream_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">window_spec_file</span><span class="p">,</span> <span class="n">spec_base</span><span class="p">,</span> <span class="n">stream_instance</span><span class="p">):</span>
-        <span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">spec_base</span><span class="p">,</span> 
-                         <span class="s">&quot;node_chains&quot;</span><span class="p">,</span> 
-                         <span class="s">&quot;windower&quot;</span><span class="p">,</span> 
-                         <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s">&quot;windower_spec_path_stream&quot;</span><span class="p">])</span>
-            
-        <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> \
-            <span class="n">stream_instance</span><span class="o">.</span><span class="n">request_window_stream</span><span class="p">(</span><span class="n">window_spec_file</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
-                                                  <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>
-                                                  <span class="n">no_overlap</span> <span class="o">=</span> <span class="bp">True</span><span class="p">)</span>
-        
-        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s">&quot; windower: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
-        <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span> <span class="s">&quot;Streaming data started&quot;</span><span class="p">)</span>
-        <span class="n">window_counter</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">window_stream</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
-            <span class="n">online_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Got instance number &quot;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">window_counter</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; with class </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">label</span><span class="p">)</span>
-            <span class="n">window_counter</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">queue</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">put</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
 </div>
 <div class="viewcode-block" id="LiveTrainer.start_training"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.start_training">[docs]</a>    <span class="k">def</span> <span class="nf">start_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">,</span> <span class="n">profiling</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Trains flows on the streamed data &quot;&quot;&quot;</span>
@@ -600,7 +545,7 @@
         <span class="n">setup_timer</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_training_active</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">setup_timer</span> <span class="o">&gt;</span> <span class="mi">30</span><span class="p">:</span>
-                <span class="n">online_logger</span><span class="p">(</span><span class="s">&quot;Training processes not started&quot;</span><span class="p">)</span>
+                <span class="n">online_logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Training processes not started&quot;</span><span class="p">)</span>
                 <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Training processes not started&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -612,17 +557,17 @@
 </div>
 <div class="viewcode-block" id="LiveTrainer.is_training_active"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.live.trainer.html#pySPACE.environments.live.trainer.LiveTrainer.is_training_active">[docs]</a>    <span class="k">def</span> <span class="nf">is_training_active</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether training is finished or still running &quot;&quot;&quot;</span>
-        <span class="n">active</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="n">dead</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">active</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">alive</span> <span class="o">=</span> <span class="bp">False</span>
 
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">potentials</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="n">active</span> <span class="o">&amp;=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">training_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="bp">True</span><span class="p">)</span>
+            <span class="n">active</span> <span class="o">|=</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_active_potential</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">value</span>
 
         <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">():</span>
-            <span class="n">dead</span> <span class="o">&amp;=</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
+            <span class="n">alive</span> <span class="o">|=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">train_process</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">is_alive</span><span class="p">()</span>
 
-        <span class="k">if</span> <span class="n">dead</span><span class="p">:</span>
-            <span class="n">active</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">active</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">alive</span><span class="p">:</span>
+            <span class="n">active</span> <span class="o">=</span> <span class="bp">False</span>
 
         <span class="k">return</span> <span class="n">active</span>
 </div>
@@ -679,8 +624,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

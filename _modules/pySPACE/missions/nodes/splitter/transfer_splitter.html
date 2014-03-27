@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -69,497 +67,496 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <h1>Source code for pySPACE.missions.nodes.splitter.transfer_splitter</h1><pre>
-# This Python file uses the following encoding: utf-8
-""" Splits data into training and test data
+  <h1>Source code for pySPACE.missions.nodes.splitter.transfer_splitter</h1><div class="highlight"><pre>
+<span class="c"># This Python file uses the following encoding: utf-8</span>
+<span class="sd">&quot;&quot;&quot; Splits data into training and test data</span>
 
-.. todo:: Divide the node into splitting and data set filtering node.
-"""
-import random
+<span class="sd">.. todo:: Divide the node into splitting and data set filtering node.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">random</span>
 
-from pySPACE.missions.nodes.base_node import BaseNode
-from pySPACE.tools.memoize_generator import MemoizeGenerator
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
 
-<div class="viewcode-block" id="TransferSplitterNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode">[docs]</a>class TransferSplitterNode(BaseNode):
-    """ Allow to split data into training and test data sets according to different window definitions
-    
-    Splits the available data into disjunct training and test sets. The transfer
-    of different training and test window definitions is supported. The node 
-    was implemented with several use cases in mind:
-    
-    - The training set contains instances of 'Standard' and 'Target' stimuli 
-      but the test set of 'Target' and 'MissedTarget' stimuli.
-      
-    - The training set contains instances of 'LRP' with different training times
-      and 'NoLRPs', but the test set should contain sliding windows. Cross
-      validation should be supported to use the node together with parameter
-      optimization node.
-      
-    - The use of merged data sets should be possible.
-      
-    **Parameters**
-    
-     :wdefs_train:
-         A list with window definition names (specified in the window spec file
-         when the raw data was segmented). All windows that belong to one of the
-         window definition are considered when the training set(s) is(/are)
-         determined.
-         
-     :wdefs_test:
-         A list with window definition names (specified in the window spec file
-         when the raw data was segmented). All windows that belong to one of the
-         window definition are considered when the testing set(s) is(/are)
-         determined.
-         
-     :split_method:
-         One of the following Strings: 'all_data', 'time', 'count', 'set_flag'.
-         
-         - all_data    :
-                             All possible data is used in every split. This 
-                             results in splitting only window definitions that
-                             occur in both, *wdefs_train* AND *wdefs_test*. 
-                             Window definitions that only occur in either 
-                             *wdefs_train* or *wdefs_test* are retained in every
-                             split.
+<div class="viewcode-block" id="TransferSplitterNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode">[docs]</a><span class="k">class</span> <span class="nc">TransferSplitterNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Allow to split data into training and test data sets according to different window definitions</span>
+<span class="sd">    </span>
+<span class="sd">    Splits the available data into disjunct training and test sets. The transfer</span>
+<span class="sd">    of different training and test window definitions is supported. The node </span>
+<span class="sd">    was implemented with several use cases in mind:</span>
+<span class="sd">    </span>
+<span class="sd">    - The training set contains instances of &#39;Standard&#39; and &#39;Target&#39; stimuli </span>
+<span class="sd">      but the test set of &#39;Target&#39; and &#39;MissedTarget&#39; stimuli.</span>
+<span class="sd">      </span>
+<span class="sd">    - The training set contains instances of &#39;LRP&#39; with different training times</span>
+<span class="sd">      and &#39;NoLRPs&#39;, but the test set should contain sliding windows. Cross</span>
+<span class="sd">      validation should be supported to use the node together with parameter</span>
+<span class="sd">      optimization node.</span>
+<span class="sd">      </span>
+<span class="sd">    - The use of merged data sets should be possible.</span>
+<span class="sd">      </span>
+<span class="sd">    **Parameters**</span>
+<span class="sd">    </span>
+<span class="sd">     :wdefs_train:</span>
+<span class="sd">         A list with window definition names (specified in the window spec file</span>
+<span class="sd">         when the raw data was segmented). All windows that belong to one of the</span>
+<span class="sd">         window definition are considered when the training set(s) is(/are)</span>
+<span class="sd">         determined.</span>
+<span class="sd">         </span>
+<span class="sd">     :wdefs_test:</span>
+<span class="sd">         A list with window definition names (specified in the window spec file</span>
+<span class="sd">         when the raw data was segmented). All windows that belong to one of the</span>
+<span class="sd">         window definition are considered when the testing set(s) is(/are)</span>
+<span class="sd">         determined.</span>
+<span class="sd">         </span>
+<span class="sd">     :split_method:</span>
+<span class="sd">         One of the following Strings: &#39;all_data&#39;, &#39;time&#39;, &#39;count&#39;, &#39;set_flag&#39;.</span>
+<span class="sd">         </span>
+<span class="sd">         - all_data    :</span>
+<span class="sd">                             All possible data is used in every split. This </span>
+<span class="sd">                             results in splitting only window definitions that</span>
+<span class="sd">                             occur in both, *wdefs_train* AND *wdefs_test*. </span>
+<span class="sd">                             Window definitions that only occur in either </span>
+<span class="sd">                             *wdefs_train* or *wdefs_test* are retained in every</span>
+<span class="sd">                             split.</span>
 
-         - time        :
-                             The data is sorted and split according to time.
-                             For that (*start_time* of last window - 
-                             *start_time* of first window)/*nr_of_splits*) is 
-                             determined. Since time in eeg data is relative for 
-                             every set, ensure that each input collection 
-                             consists only of one data set (is not a merge of 
-                             several sets) or that the change_option has been
-                             used.
+<span class="sd">         - time        :</span>
+<span class="sd">                             The data is sorted and split according to time.</span>
+<span class="sd">                             For that (*start_time* of last window - </span>
+<span class="sd">                             *start_time* of first window)/*nr_of_splits*) is </span>
+<span class="sd">                             determined. Since time in eeg data is relative for </span>
+<span class="sd">                             every set, ensure that each input collection </span>
+<span class="sd">                             consists only of one data set (is not a merge of </span>
+<span class="sd">                             several sets) or that the change_option has been</span>
+<span class="sd">                             used.</span>
 
-         - count      :
-                             The data is split according to 
-                             *num_split_instances*. By default only windows 
-                             specified in both, *wdefs_train* and *wdefs_test*,
-                             are count. With the parameter *wdefs_split* window
-                             definition that are count can be specified.
-                             If *num_split_instances* is not specified, *splits*
-                             determines how many instances of *wdefs_split* are
-                             in one split.
+<span class="sd">         - count      :</span>
+<span class="sd">                             The data is split according to </span>
+<span class="sd">                             *num_split_instances*. By default only windows </span>
+<span class="sd">                             specified in both, *wdefs_train* and *wdefs_test*,</span>
+<span class="sd">                             are count. With the parameter *wdefs_split* window</span>
+<span class="sd">                             definition that are count can be specified.</span>
+<span class="sd">                             If *num_split_instances* is not specified, *splits*</span>
+<span class="sd">                             determines how many instances of *wdefs_split* are</span>
+<span class="sd">                             in one split.</span>
 
-        - set_flag    :
-                             When the data has been merged with the concatenate
-                             operation before, a flag 'new_set' has been inserted
-                             to the time series specs. Splits are based on this
-                             flag, i.e. the splits behave like a inter-set
-                             cross validation. For example you merged 3 sets: 
-                             'A', 'B', 'C', then there are 3 splits generated:
-                             'A'+'B' vs 'C', 'A'+'C' vs 'B' and 'B'+'C' vs 'A'.
+<span class="sd">        - set_flag    :</span>
+<span class="sd">                             When the data has been merged with the concatenate</span>
+<span class="sd">                             operation before, a flag &#39;new_set&#39; has been inserted</span>
+<span class="sd">                             to the time series specs. Splits are based on this</span>
+<span class="sd">                             flag, i.e. the splits behave like a inter-set</span>
+<span class="sd">                             cross validation. For example you merged 3 sets: </span>
+<span class="sd">                             &#39;A&#39;, &#39;B&#39;, &#39;C&#39;, then there are 3 splits generated:</span>
+<span class="sd">                             &#39;A&#39;+&#39;B&#39; vs &#39;C&#39;, &#39;A&#39;+&#39;C&#39; vs &#39;B&#39; and &#39;B&#39;+&#39;C&#39; vs &#39;A&#39;.</span>
 
-     :random:
-         If True, the data is randomized before splitting.
-         
-         .. note:: It is not guaranteed that overlapping windows will be in the
-                   same split for split methods 'time' and 'all_data'!
-                  
-         (*optional, default: False*)
-                  
-     :splits:
-         The number of splits created internally and the number of train-test
-         pairs.
-         
-         (*optional, default: 10*)
-         
-     :num_split_instances:
-         If *split_method* is 'count', *num_split_instances* specifies how many
-         instances will be in one split. After splitting one split is evaluated
-         according to *wdefs_test* for the test data set and the remaining 
-         splits according to *wdefs_train*. The test split is iterated. If
-         the total number of instances that are count is not divisible by 
-         *num_split_instances* the last split will contain the remaining
-         instances.
-         If in addition *splits* is set to 1, only one train-test pair is 
-         created with *num_split_instances* in the training set.
-         
-         (*optional, default: None*)
-         
-     :wdefs_split:
-         A list with window definition names (specified in the window spec file
-         when the raw data was segmented). All windows that belong to one of the
-         window definition are counted when *split_method* was set to 'count'.
-         
-         (*optional, default: None*)
-         
-     :reverse:
-         If this option is True, the data is split in reverse ordering.
-         
-         (*optional, default: False*)
+<span class="sd">     :random:</span>
+<span class="sd">         If True, the data is randomized before splitting.</span>
+<span class="sd">         </span>
+<span class="sd">         .. note:: It is not guaranteed that overlapping windows will be in the</span>
+<span class="sd">                   same split for split methods &#39;time&#39; and &#39;all_data&#39;!</span>
+<span class="sd">                  </span>
+<span class="sd">         (*optional, default: False*)</span>
+<span class="sd">                  </span>
+<span class="sd">     :splits:</span>
+<span class="sd">         The number of splits created internally and the number of train-test</span>
+<span class="sd">         pairs.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: 10*)</span>
+<span class="sd">         </span>
+<span class="sd">     :num_split_instances:</span>
+<span class="sd">         If *split_method* is &#39;count&#39;, *num_split_instances* specifies how many</span>
+<span class="sd">         instances will be in one split. After splitting one split is evaluated</span>
+<span class="sd">         according to *wdefs_test* for the test data set and the remaining </span>
+<span class="sd">         splits according to *wdefs_train*. The test split is iterated. If</span>
+<span class="sd">         the total number of instances that are count is not divisible by </span>
+<span class="sd">         *num_split_instances* the last split will contain the remaining</span>
+<span class="sd">         instances.</span>
+<span class="sd">         If in addition *splits* is set to 1, only one train-test pair is </span>
+<span class="sd">         created with *num_split_instances* in the training set.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: None*)</span>
+<span class="sd">         </span>
+<span class="sd">     :wdefs_split:</span>
+<span class="sd">         A list with window definition names (specified in the window spec file</span>
+<span class="sd">         when the raw data was segmented). All windows that belong to one of the</span>
+<span class="sd">         window definition are counted when *split_method* was set to &#39;count&#39;.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: None*)</span>
+<span class="sd">         </span>
+<span class="sd">     :reverse:</span>
+<span class="sd">         If this option is True, the data is split in reverse ordering.</span>
+<span class="sd">         </span>
+<span class="sd">         (*optional, default: False*)</span>
+<span class="sd">    </span>
+<span class="sd">    **Exemplary Call**    </span>
+<span class="sd">    </span>
+<span class="sd">    .. code-block:: yaml</span>
+<span class="sd">    </span>
+<span class="sd">        -</span>
+<span class="sd">            node : TransferSplitter</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                wdefs_train : [&#39;s2&#39;, &#39;s1&#39;]</span>
+<span class="sd">                wdefs_test : [&#39;s5&#39;, &#39;s2&#39;]</span>
+<span class="sd">                split_method : &quot;all_data&quot;</span>
+<span class="sd">                splits : 5</span>
+<span class="sd">    </span>
+<span class="sd">    :Author: Anett Seeland (anett.seeland@dfki.de)</span>
+<span class="sd">    :Created: 2011/04/10</span>
+<span class="sd">    :LastChange: 2011/11/14 (traintest functionality)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     
-    **Exemplary Call**    
-    
-    .. code-block:: yaml
-    
-        -
-            node : TransferSplitter
-            parameters :
-                wdefs_train : ['s2', 's1']
-                wdefs_test : ['s5', 's2']
-                split_method : "all_data"
-                splits : 5
-    
-    :Author: Anett Seeland (anett.seeland@dfki.de)
-    :Created: 2011/04/10
-    :LastChange: 2011/11/14 (traintest functionality)
-    """
-    
-<div class="viewcode-block" id="TransferSplitterNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.__init__">[docs]</a>    def __init__(self, wdefs_train, wdefs_test, split_method, wdefs_train_test = None,
-                 splits=10, random=False, num_split_instances=None, wdefs_split=None,
-                 reverse=False, sort=False, *args, **kwargs):
-        super(TransferSplitterNode, self).__init__(*args, **kwargs)
+<div class="viewcode-block" id="TransferSplitterNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wdefs_train</span><span class="p">,</span> <span class="n">wdefs_test</span><span class="p">,</span> <span class="n">split_method</span><span class="p">,</span> <span class="n">wdefs_train_test</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                 <span class="n">splits</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">num_split_instances</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">wdefs_split</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">reverse</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TransferSplitterNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         
-        if wdefs_train_test == None:
-            wdefs_train_test = [wdef for wdef in \
-                wdefs_train if wdef in wdefs_test],
+        <span class="k">if</span> <span class="n">wdefs_train_test</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">wdefs_train_test</span> <span class="o">=</span> <span class="p">[</span><span class="n">wdef</span> <span class="k">for</span> <span class="n">wdef</span> <span class="ow">in</span> \
+                <span class="n">wdefs_train</span> <span class="k">if</span> <span class="n">wdef</span> <span class="ow">in</span> <span class="n">wdefs_test</span><span class="p">],</span>
             
-        self.set_permanent_attributes(wdefs_train = wdefs_train, 
-                                       wdefs_test = wdefs_test, 
-                                     split_method = split_method,
-                                           splits = splits, 
-                                           random = random, 
-                              num_split_instances = num_split_instances,
-                                      wdefs_split = wdefs_split,
-                                          reverse = reverse,
-                                             sort = sort,
-                                    current_split = 0,
-                                 wdefs_train_test = wdefs_train_test,
-                              split_indices_train = None,
-                               split_indices_test = None)
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">wdefs_train</span> <span class="o">=</span> <span class="n">wdefs_train</span><span class="p">,</span> 
+                                       <span class="n">wdefs_test</span> <span class="o">=</span> <span class="n">wdefs_test</span><span class="p">,</span> 
+                                     <span class="n">split_method</span> <span class="o">=</span> <span class="n">split_method</span><span class="p">,</span>
+                                           <span class="n">splits</span> <span class="o">=</span> <span class="n">splits</span><span class="p">,</span> 
+                                           <span class="n">random</span> <span class="o">=</span> <span class="n">random</span><span class="p">,</span> 
+                              <span class="n">num_split_instances</span> <span class="o">=</span> <span class="n">num_split_instances</span><span class="p">,</span>
+                                      <span class="n">wdefs_split</span> <span class="o">=</span> <span class="n">wdefs_split</span><span class="p">,</span>
+                                          <span class="n">reverse</span> <span class="o">=</span> <span class="n">reverse</span><span class="p">,</span>
+                                             <span class="n">sort</span> <span class="o">=</span> <span class="n">sort</span><span class="p">,</span>
+                                    <span class="n">current_split</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                                 <span class="n">wdefs_train_test</span> <span class="o">=</span> <span class="n">wdefs_train_test</span><span class="p">,</span>
+                              <span class="n">split_indices_train</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+                               <span class="n">split_indices_test</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span>
 </div>
-<div class="viewcode-block" id="TransferSplitterNode.is_split_node"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.is_split_node">[docs]</a>    def is_split_node(self):
-        """ Returns whether this is a split node. """
-        return True
+<div class="viewcode-block" id="TransferSplitterNode.is_split_node"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.is_split_node">[docs]</a>    <span class="k">def</span> <span class="nf">is_split_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this is a split node. &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
 </div>
-<div class="viewcode-block" id="TransferSplitterNode.use_next_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.use_next_split">[docs]</a>    def use_next_split(self):
-        """ Use the next split of the data into training and test data.
-        
-        Returns True if more splits are available, otherwise False.
-        
-        This method is useful for benchmarking
-        """
-        if self.current_split + 1 &lt; self.splits:
-            self.current_split = self.current_split + 1
-            self._log("Benchmarking with split %s/%s" % (self.current_split + 1,
-                                                         self.splits))
-            return True
-        else:
-            return False
+<div class="viewcode-block" id="TransferSplitterNode.use_next_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.use_next_split">[docs]</a>    <span class="k">def</span> <span class="nf">use_next_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Use the next split of the data into training and test data.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns True if more splits are available, otherwise False.</span>
+<span class="sd">        </span>
+<span class="sd">        This method is useful for benchmarking</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Benchmarking with split </span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                                         <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
 
     </div>
-<div class="viewcode-block" id="TransferSplitterNode.train_sweep"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.train_sweep">[docs]</a>    def train_sweep(self, use_test_data):
-        """ Performs the actual training of the node.
-        
-        .. note:: Split nodes cannot be trained
-        """
-        raise Exception("Split nodes cannot be trained")
+<div class="viewcode-block" id="TransferSplitterNode.train_sweep"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.train_sweep">[docs]</a>    <span class="k">def</span> <span class="nf">train_sweep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Performs the actual training of the node.</span>
+<span class="sd">        </span>
+<span class="sd">        .. note:: Split nodes cannot be trained</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;Split nodes cannot be trained&quot;</span><span class="p">)</span>
     </div>
-<div class="viewcode-block" id="TransferSplitterNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.request_data_for_training">[docs]</a>    def request_data_for_training(self, use_test_data):
-        # Create split lazily when required
-        if self.split_indices_train == None:
-            self._create_split()
+<div class="viewcode-block" id="TransferSplitterNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
+        <span class="c"># Create split lazily when required</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_train</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_split</span><span class="p">()</span>
             
-        # Create training data generator
-        self.data_for_training = MemoizeGenerator(
-             self.data[i] for i in self.split_indices_train[self.current_split])
+        <span class="c"># Create training data generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_train</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">])</span>
         
-        return self.data_for_training.fresh()
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
     </div>
-<div class="viewcode-block" id="TransferSplitterNode.request_data_for_testing"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.request_data_for_testing">[docs]</a>    def request_data_for_testing(self):
-        # Create split lazily when required
-        if self.split_indices_test == None:
-            self._create_split()
+<div class="viewcode-block" id="TransferSplitterNode.request_data_for_testing"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode.request_data_for_testing">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_testing</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Create split lazily when required</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_test</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_split</span><span class="p">()</span>
         
-        # Create test data generator
-        self.data_for_testing = MemoizeGenerator(
-              self.data[i] for i in self.split_indices_test[self.current_split])
+        <span class="c"># Create test data generator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_test</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">])</span>
         
-        return self.data_for_testing.fresh()
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
 </div>
-<div class="viewcode-block" id="TransferSplitterNode._create_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode._create_split">[docs]</a>    def _create_split(self):
-        """ Create the split of the data into training and test data. """
-        self._log("Splitting data into train and test data")
+<div class="viewcode-block" id="TransferSplitterNode._create_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.splitter.transfer_splitter.html#pySPACE.missions.nodes.splitter.transfer_splitter.TransferSplitterNode._create_split">[docs]</a>    <span class="k">def</span> <span class="nf">_create_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create the split of the data into training and test data. &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Splitting data into train and test data&quot;</span><span class="p">)</span>
                   
-        # Get training and test data
-        # note: return the data in a list can double the memory requirements!
-        train_data = list(self.input_node.request_data_for_training(
-                                                         use_test_data = False))
-        test_data = list(self.input_node.request_data_for_testing())
+        <span class="c"># Get training and test data</span>
+        <span class="c"># note: return the data in a list can double the memory requirements!</span>
+        <span class="n">train_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span>
+                                                         <span class="n">use_test_data</span> <span class="o">=</span> <span class="bp">False</span><span class="p">))</span>
+        <span class="n">test_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
         
-        # If there is already a  non-empty training set, 
-        # it means that we are not the first split node in the node chain.
-        if len(train_data) &gt; 0:
-            if len(test_data)==0:
-                # If there was an All_Train_Splitter before, filter according
-                # to wdef_train and return all training data
-                self.split_indices_train = \
-                            [[ind for ind, (win, lab) in enumerate(train_data) \
-                                 if win.specs['wdef_name'] in self.wdefs_train]]
-                self.split_indices_test = [[]]
-                self.splits = 1
-                self.data = train_data
-                self._log("Using all data for training.")
-                return
-            else:    
-                raise Exception("No iterated splitting of data sets allowed\n "
-                            "(Calling a splitter on a data set that is already "
-                            "splitted)")
+        <span class="c"># If there is already a  non-empty training set, </span>
+        <span class="c"># it means that we are not the first split node in the node chain.</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_data</span><span class="p">)</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+                <span class="c"># If there was an All_Train_Splitter before, filter according</span>
+                <span class="c"># to wdef_train and return all training data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_train</span> <span class="o">=</span> \
+                            <span class="p">[[</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">lab</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">train_data</span><span class="p">)</span> \
+                                 <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">]]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_test</span> <span class="o">=</span> <span class="p">[[]]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">train_data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Using all data for training.&quot;</span><span class="p">)</span>
+                <span class="k">return</span>
+            <span class="k">else</span><span class="p">:</span>    
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No iterated splitting of data sets allowed</span><span class="se">\n</span><span class="s"> &quot;</span>
+                            <span class="s">&quot;(Calling a splitter on a data set that is already &quot;</span>
+                            <span class="s">&quot;splitted)&quot;</span><span class="p">)</span>
         
-        # Remember all the data and store it in memory
-        # TODO: This might cause problems for large dataset
-        self.data = train_data + test_data
-        del train_data, test_data
-        if self.reverse:
-            self.data = self.data[::-1]
+        <span class="c"># Remember all the data and store it in memory</span>
+        <span class="c"># TODO: This might cause problems for large dataset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">train_data</span> <span class="o">+</span> <span class="n">test_data</span>
+        <span class="k">del</span> <span class="n">train_data</span><span class="p">,</span> <span class="n">test_data</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         
-        # sort the data according to the start time
-        if self.sort or self.split_method == 'time':
-            self.data.sort(key=lambda swindow: swindow[0].start_time)
-        # randomize the data if needed
-        if self.random:
-            r = random.Random(self.run_number)
-            if self.split_method == 'set_flag':
-                self.random = False
-                # TODO: log this
-            elif self.split_method == 'count':
-                if self.wdefs_split == None:
-                    self.wdefs_split = self.wdefs_train_test
-                # divide the data with respect to the time
-                data_time = dict()
-                marker = -1
-                last_window_endtime = 0
-                for ind, (win, lab) in enumerate(self.data):
-                    if win.start_time &lt; last_window_endtime:
-                        # overlapping windows or start of a new set
-                        if win.end_time &lt; last_window_endtime:
-                            # new set
-                            marker += 1
-                            data_time[marker]=[(win,lab)]
-                        else:
-                            # overlapping windows
-                            data_time[marker].append((win,lab))
-                    else:
-                        marker += 1
-                        data_time[marker]=[(win,lab)]
-                    last_window_endtime = win.end_time
-                # randomize order of events by simultaneously keep the order of
-                # sliding windows in each event
-                data_random = data_time.values()
-                r.shuffle(data_random)
-                self.data = []
-                for l in data_random: self.data.extend(l)
-                del data_random, data_time, l
-            else:
-                r.shuffle(self.data)
+        <span class="c"># sort the data according to the start time</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sort</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;time&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">swindow</span><span class="p">:</span> <span class="n">swindow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span><span class="p">)</span>
+        <span class="c"># randomize the data if needed</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">:</span>
+            <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;set_flag&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">random</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="c"># TODO: log this</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;count&#39;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train_test</span>
+                <span class="c"># divide the data with respect to the time</span>
+                <span class="n">data_time</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                <span class="n">marker</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+                <span class="n">last_window_endtime</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">lab</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">start_time</span> <span class="o">&lt;</span> <span class="n">last_window_endtime</span><span class="p">:</span>
+                        <span class="c"># overlapping windows or start of a new set</span>
+                        <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">end_time</span> <span class="o">&lt;</span> <span class="n">last_window_endtime</span><span class="p">:</span>
+                            <span class="c"># new set</span>
+                            <span class="n">marker</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="n">data_time</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span><span class="o">=</span><span class="p">[(</span><span class="n">win</span><span class="p">,</span><span class="n">lab</span><span class="p">)]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="c"># overlapping windows</span>
+                            <span class="n">data_time</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">win</span><span class="p">,</span><span class="n">lab</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">marker</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">data_time</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span><span class="o">=</span><span class="p">[(</span><span class="n">win</span><span class="p">,</span><span class="n">lab</span><span class="p">)]</span>
+                    <span class="n">last_window_endtime</span> <span class="o">=</span> <span class="n">win</span><span class="o">.</span><span class="n">end_time</span>
+                <span class="c"># randomize order of events by simultaneously keep the order of</span>
+                <span class="c"># sliding windows in each event</span>
+                <span class="n">data_random</span> <span class="o">=</span> <span class="n">data_time</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">data_random</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">data_random</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+                <span class="k">del</span> <span class="n">data_random</span><span class="p">,</span> <span class="n">data_time</span><span class="p">,</span> <span class="n">l</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
             
-        if self.split_method == 'all_data':
-            # divide the data with respect to *wdef_train*, *wdef_test* and
-            # *wdef_train_test*
-            wdef_data = {'wdef_train_test':[],'wdef_train':[],'wdef_test':[]}
-            class_labels = []
-            for (index, (window, label)) in enumerate(self.data):
-                if window.specs['wdef_name'] in self.wdefs_train_test:
-                    wdef_data['wdef_train_test'].append(index)
-                    if label not in class_labels:
-                        class_labels.append(label)
-                elif window.specs['wdef_name'] in self.wdefs_train:
-                    wdef_data['wdef_train'].append(index)
-                elif window.specs['wdef_name'] in self.wdefs_test:
-                    wdef_data['wdef_test'].append(index)
-                else:
-                    import warnings
-                    warnings.warn("Found window definition %s, which is " \
-                                  "neither in *wdefs_train* nor in " \
-                                  "*wdefs_test*. Window %s will be ignored!" \
-                                  % (window.specs['wdef_name'],window.tag))
-            # check if splitting makes sense
-            if wdef_data['wdef_train_test']==[] and self.splits&gt;1:
-                raise Exception('No instances to split, i.e train-test window'\
-                                ' definitions are disjunct!')
-            split_indices_train = [[] for i in range(self.splits)]
-            split_indices_test = [[] for i in range(self.splits)]
-            # calculate splits
-            if wdef_data['wdef_train_test']!=[]:
-                data_size = len(wdef_data['wdef_train_test'])
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;all_data&#39;</span><span class="p">:</span>
+            <span class="c"># divide the data with respect to *wdef_train*, *wdef_test* and</span>
+            <span class="c"># *wdef_train_test*</span>
+            <span class="n">wdef_data</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">:[],</span><span class="s">&#39;wdef_train&#39;</span><span class="p">:[],</span><span class="s">&#39;wdef_test&#39;</span><span class="p">:[]}</span>
+            <span class="n">class_labels</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">window</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train_test</span><span class="p">:</span>
+                    <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">class_labels</span><span class="p">:</span>
+                        <span class="n">class_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">window</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">:</span>
+                    <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">window</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">:</span>
+                    <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_test&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="kn">import</span> <span class="nn">warnings</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Found window definition </span><span class="si">%s</span><span class="s">, which is &quot;</span> \
+                                  <span class="s">&quot;neither in *wdefs_train* nor in &quot;</span> \
+                                  <span class="s">&quot;*wdefs_test*. Window </span><span class="si">%s</span><span class="s"> will be ignored!&quot;</span> \
+                                  <span class="o">%</span> <span class="p">(</span><span class="n">window</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">],</span><span class="n">window</span><span class="o">.</span><span class="n">tag</span><span class="p">))</span>
+            <span class="c"># check if splitting makes sense</span>
+            <span class="k">if</span> <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">]</span><span class="o">==</span><span class="p">[]</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&#39;No instances to split, i.e train-test window&#39;</span>\
+                                <span class="s">&#39; definitions are disjunct!&#39;</span><span class="p">)</span>
+            <span class="n">split_indices_train</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="n">split_indices_test</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="c"># calculate splits</span>
+            <span class="k">if</span> <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">]</span><span class="o">!=</span><span class="p">[]:</span>
+                <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">])</span>
 
-                # ensure stratified splits if there are several classes 
-                if len(class_labels)&gt;1:
-                    # divide the data with respect to the class_label 
-                    data_labeled = dict()
-                    for index in wdef_data['wdef_train_test']:
-                        if not data_labeled.has_key(self.data[index][1]):
-                            data_labeled[self.data[index][1]] = [index]
-                        else:
-                            data_labeled[self.data[index][1]].append(index)   
+                <span class="c"># ensure stratified splits if there are several classes </span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">class_labels</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="c"># divide the data with respect to the class_label </span>
+                    <span class="n">data_labeled</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">data_labeled</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]):</span>
+                            <span class="n">data_labeled</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">data_labeled</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>   
                     
-                    # have not more splits than instances of every class!
-                    min_nr_per_class = min([len(data) for data in \
-                                                         data_labeled.values()])
-                    if self.splits &gt; min_nr_per_class:
-                        self.splits = min_nr_per_class
-                        self._log("Reducing number of splits to %s since no " \
-                                  "more instances of one of the classes are " \
-                                  "available." % self.splits)
+                    <span class="c"># have not more splits than instances of every class!</span>
+                    <span class="n">min_nr_per_class</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> \
+                                                         <span class="n">data_labeled</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">&gt;</span> <span class="n">min_nr_per_class</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="n">min_nr_per_class</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reducing number of splits to </span><span class="si">%s</span><span class="s"> since no &quot;</span> \
+                                  <span class="s">&quot;more instances of one of the classes are &quot;</span> \
+                                  <span class="s">&quot;available.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span>
 
-                    # determine the splits of the data    
-                    for label, indices in data_labeled.iteritems():
-                        data_size = len(indices)
-                        for j in range(self.splits):
-                            split_start = \
-                                      int(round(float(j)*data_size/self.splits))
-                            split_end = \
-                                    int(round(float(j+1)*data_size/self.splits))
-                            split_indices_test[j].extend([i for i in indices[split_start: split_end]\
-                                                if self.data[i][0].specs['wdef_name'] in self.wdefs_test])
-                            split_indices_train[j].extend([i for i in indices \
-                                             if i not in split_indices_test[j]])
-                else: # len(class_labels) == 1
-                    # have not more splits than instances!
-                    if self.splits &gt; data_size:
-                        self.splits = data_size
-                        self._log("Reducing number of splits to %s since no " \
-                                  "more instances of one of the classes are " \
-                                  "available." % self.splits)
+                    <span class="c"># determine the splits of the data    </span>
+                    <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">indices</span> <span class="ow">in</span> <span class="n">data_labeled</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                        <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                            <span class="n">split_start</span> <span class="o">=</span> \
+                                      <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">*</span><span class="n">data_size</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+                            <span class="n">split_end</span> <span class="o">=</span> \
+                                    <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">data_size</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+                            <span class="n">split_indices_test</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span><span class="p">[</span><span class="n">split_start</span><span class="p">:</span> <span class="n">split_end</span><span class="p">]</span>\
+                                                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">])</span>
+                            <span class="n">split_indices_train</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">indices</span> \
+                                             <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">split_indices_test</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c"># len(class_labels) == 1</span>
+                    <span class="c"># have not more splits than instances!</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">&gt;</span> <span class="n">data_size</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="n">data_size</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reducing number of splits to </span><span class="si">%s</span><span class="s"> since no &quot;</span> \
+                                  <span class="s">&quot;more instances of one of the classes are &quot;</span> \
+                                  <span class="s">&quot;available.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span>
 
-                    # determine the splits of the data    
-                    for j in range(self.splits):
-                        split_start = \
-                                  int(round(float(j)*data_size/self.splits))
-                        split_end = \
-                                int(round(float(j+1)*data_size/self.splits))
-                        # means half-open interval [split_start, split_end)
-                        split_indices_test[j].extend(
-                            wdef_data['wdef_train_test'][split_start:split_end])
-                        split_indices_train[j].extend([i for i in \
-                                             wdef_data['wdef_train_test'] if i \
-                                                  not in split_indices_test[j]])
-            for i in range(self.splits):
-                split_indices_train[i].extend(wdef_data['wdef_train'])
-                split_indices_test[i].extend(wdef_data['wdef_test'])
+                    <span class="c"># determine the splits of the data    </span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                        <span class="n">split_start</span> <span class="o">=</span> \
+                                  <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">j</span><span class="p">)</span><span class="o">*</span><span class="n">data_size</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+                        <span class="n">split_end</span> <span class="o">=</span> \
+                                <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">data_size</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+                        <span class="c"># means half-open interval [split_start, split_end)</span>
+                        <span class="n">split_indices_test</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                            <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">][</span><span class="n">split_start</span><span class="p">:</span><span class="n">split_end</span><span class="p">])</span>
+                        <span class="n">split_indices_train</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> \
+                                             <span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train_test&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">i</span> \
+                                                  <span class="ow">not</span> <span class="ow">in</span> <span class="n">split_indices_test</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                <span class="n">split_indices_train</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_train&#39;</span><span class="p">])</span>
+                <span class="n">split_indices_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">wdef_data</span><span class="p">[</span><span class="s">&#39;wdef_test&#39;</span><span class="p">])</span>
                     
-        elif self.split_method == 'time': 
-            first_window_start = self.data[0][0].start_time
-            last_window_start = self.data[-1][0].start_time
-            # ensure, that time can never be greater than self.splits*time!
-            time = round((last_window_start-first_window_start)/self.splits+0.5)
-            # divide the data according to the time
-            data_time = {0: []}
-            time_fold = 0
-            for (index, (window, label)) in enumerate(self.data):
-                if window.start_time &gt; time_fold*time+time:
-                    time_fold += 1
-                    data_time[time_fold]=[index]
-                else:
-                    data_time[time_fold].append(index)
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;time&#39;</span><span class="p">:</span> 
+            <span class="n">first_window_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span>
+            <span class="n">last_window_start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span>
+            <span class="c"># ensure, that time can never be greater than self.splits*time!</span>
+            <span class="n">time</span> <span class="o">=</span> <span class="nb">round</span><span class="p">((</span><span class="n">last_window_start</span><span class="o">-</span><span class="n">first_window_start</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span>
+            <span class="c"># divide the data according to the time</span>
+            <span class="n">data_time</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="p">[]}</span>
+            <span class="n">time_fold</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">window</span><span class="o">.</span><span class="n">start_time</span> <span class="o">&gt;</span> <span class="n">time_fold</span><span class="o">*</span><span class="n">time</span><span class="o">+</span><span class="n">time</span><span class="p">:</span>
+                    <span class="n">time_fold</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">data_time</span><span class="p">[</span><span class="n">time_fold</span><span class="p">]</span><span class="o">=</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data_time</span><span class="p">[</span><span class="n">time_fold</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
                     
-            split_indices_train = [[] for i in range(self.splits)]
-            split_indices_test = [[] for i in range(self.splits)]
-            for i in range(self.splits):
-                split_indices_test[i].extend([index for index in data_time[i] \
-                                    if self.data[index][0].specs['wdef_name'] \
-                                                            in self.wdefs_test])
-                for j in range(self.splits):
-                    split_indices_train[i].extend([index for index in data_time[j] \
-                            if j != i and self.data[index][0].specs['wdef_name'] \
-                                                           in self.wdefs_train])
-        elif self.split_method == 'count':
-            if self.wdefs_split == None:
-                self.wdefs_split = self.wdefs_train_test
-            if self.num_split_instances == None:
-                l = len([ind for ind, (win, lab) \
-                             in enumerate(self.data) if win.specs['wdef_name'] \
-                             in self.wdefs_split])
-                self.num_split_instances = round(float(l)/self.splits)
-            # divide the data according to *num_split_instances*
-            data_count = {0:[]}
-            count = -1
-            count_fold = 0
-            if self.splits==1 and len([i for i in range(len(self.data)) \
-                    if self.data[i][0].specs['wdef_name'] in self.wdefs_split])\
-                        == self.num_split_instances:
-                train_end = len(self.data)
-            else:
-                for (ind, (win, lab)) in enumerate(self.data):
-                    #print ind, win.specs['wdef_name'], lab
-                    if win.specs['wdef_name'] in self.wdefs_split:
-                        count += 1
-                        if self.splits == 1 and \
-                                              count == self.num_split_instances:
-                            train_end = ind
-                            break
-                        if count != 0 and count % self.num_split_instances == 0:
-                            count_fold += 1
-                            data_count[count_fold] = [ind]
-                        else:
-                            data_count[count_fold].append(ind)
-                    else:
-                        data_count[count_fold].append(ind)
+            <span class="n">split_indices_train</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="n">split_indices_test</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                <span class="n">split_indices_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">index</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">data_time</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> \
+                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                                            <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                    <span class="n">split_indices_train</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">index</span> <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">data_time</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> \
+                            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">index</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                                           <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;count&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train_test</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">l</span> <span class="o">=</span> <span class="nb">len</span><span class="p">([</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">lab</span><span class="p">)</span> \
+                             <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                             <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span>
+            <span class="c"># divide the data according to *num_split_instances*</span>
+            <span class="n">data_count</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:[]}</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="n">count_fold</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="o">==</span><span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span> \
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span><span class="p">])</span>\
+                        <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span><span class="p">:</span>
+                <span class="n">train_end</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">lab</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+                    <span class="c">#print ind, win.specs[&#39;wdef_name&#39;], lab</span>
+                    <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_split</span><span class="p">:</span>
+                        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> \
+                                              <span class="n">count</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span><span class="p">:</span>
+                            <span class="n">train_end</span> <span class="o">=</span> <span class="n">ind</span>
+                            <span class="k">break</span>
+                        <span class="k">if</span> <span class="n">count</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">count</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">count_fold</span> <span class="o">+=</span> <span class="mi">1</span>
+                            <span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
                  
-            if self.splits != 1:
-                # self.num_split_instances*self.splits &lt; l, but in the case 
-                # when only num_split_instances is specified we can not trust 
-                # self.splits
-                if len(data_count.keys()) == self.splits+1 or \
-                        (len(data_count.keys())-1)*self.num_split_instances &gt; l:
-                    data_count[count_fold-1].extend(data_count[count_fold])
-                    del data_count[count_fold] 
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c"># self.num_split_instances*self.splits &lt; l, but in the case </span>
+                <span class="c"># when only num_split_instances is specified we can not trust </span>
+                <span class="c"># self.splits</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_count</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="o">+</span><span class="mi">1</span> <span class="ow">or</span> \
+                        <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data_count</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_split_instances</span> <span class="o">&gt;</span> <span class="n">l</span><span class="p">:</span>
+                    <span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="p">])</span>
+                    <span class="k">del</span> <span class="n">data_count</span><span class="p">[</span><span class="n">count_fold</span><span class="p">]</span> 
                 
-                self.splits = len(data_count.keys())
+                <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_count</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
                 
-                split_indices_train = [[] for i in range(self.splits)]
-                split_indices_test = [[] for i in range(self.splits)]
+                <span class="n">split_indices_train</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+                <span class="n">split_indices_test</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
             
-                for i in range(self.splits):
-                    split_indices_test[i].extend([ind for ind in data_count[i] \
-                                       if self.data[ind][0].specs['wdef_name'] \
-                                                            in self.wdefs_test])
-                    for j in range(self.splits):
-                        split_indices_train[i].extend([ind for ind in data_count[j]\
-                            if j != i and self.data[ind][0].specs['wdef_name'] \
-                                                           in self.wdefs_train])
-            else: # self.splits == 1
-                split_indices_train = \
-                    [[ind for ind in range(len(self.data[:train_end])) if \
-                      self.data[ind][0].specs['wdef_name'] in self.wdefs_train]]
-                split_indices_test = \
-                    [[ind for ind in range(train_end,len(self.data)) if \
-                       self.data[ind][0].specs['wdef_name'] in self.wdefs_test]]   
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                    <span class="n">split_indices_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">data_count</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> \
+                                       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                                            <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">])</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                        <span class="n">split_indices_train</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">data_count</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>\
+                            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                                           <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c"># self.splits == 1</span>
+                <span class="n">split_indices_train</span> <span class="o">=</span> \
+                    <span class="p">[[</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[:</span><span class="n">train_end</span><span class="p">]))</span> <span class="k">if</span> \
+                      <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">]]</span>
+                <span class="n">split_indices_test</span> <span class="o">=</span> \
+                    <span class="p">[[</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">train_end</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">))</span> <span class="k">if</span> \
+                       <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">]]</span>   
  
                     
-        elif self.split_method == 'set_flag':
-            # divide the data according to *new_set* flag in time series specs
-            data_set = {0:[]}
-            key_fold = 0
-            for (ind, (win, lab)) in enumerate(self.data):
-                if win.specs['new_set']:
-                    key_fold += 1
-                    data_set[key_fold]=[ind]
-                else:
-                    data_set[key_fold].append(ind)
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">split_method</span> <span class="o">==</span> <span class="s">&#39;set_flag&#39;</span><span class="p">:</span>
+            <span class="c"># divide the data according to *new_set* flag in time series specs</span>
+            <span class="n">data_set</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:[]}</span>
+            <span class="n">key_fold</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">ind</span><span class="p">,</span> <span class="p">(</span><span class="n">win</span><span class="p">,</span> <span class="n">lab</span><span class="p">))</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">win</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;new_set&#39;</span><span class="p">]:</span>
+                    <span class="n">key_fold</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">data_set</span><span class="p">[</span><span class="n">key_fold</span><span class="p">]</span><span class="o">=</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">data_set</span><span class="p">[</span><span class="n">key_fold</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span>
                     
-            self.splits = len(data_set.keys())
+            <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data_set</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
             
-            split_indices_train = [[] for i in range(self.splits)]
-            split_indices_test = [[] for i in range(self.splits)]
-            for i in range(self.splits):
-                split_indices_test[i].extend([ind for ind in data_set[i] \
-                                    if self.data[ind][0].specs['wdef_name'] \
-                                                            in self.wdefs_test])
-                for j in range(self.splits):
-                    split_indices_train[i].extend([ind for ind in data_set[j] \
-                            if j != i and self.data[ind][0].specs['wdef_name'] \
-                                          in self.wdefs_train])
+            <span class="n">split_indices_train</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="n">split_indices_test</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                <span class="n">split_indices_test</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> \
+                                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                                            <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_test</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                    <span class="n">split_indices_train</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">ind</span> <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> \
+                            <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="n">i</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">ind</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;wdef_name&#39;</span><span class="p">]</span> \
+                                          <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">wdefs_train</span><span class="p">])</span>
             
-        self.split_indices_train = split_indices_train
-        self.split_indices_test = split_indices_test
+        <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_train</span> <span class="o">=</span> <span class="n">split_indices_train</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">split_indices_test</span> <span class="o">=</span> <span class="n">split_indices_test</span>
         
-        self._log("Benchmarking with split %s/%s" % (self.current_split + 1,
-                                                     self.splits))
-</div></div>
-</pre>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Benchmarking with split </span><span class="si">%s</span><span class="s">/</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
+</pre></div></div></div>
 
           </div>
         </div>
@@ -581,8 +578,8 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

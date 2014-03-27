@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -156,6 +154,7 @@
 <span class="kn">import</span> <span class="nn">pySPACE</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.socket_utils</span> <span class="kn">import</span> <span class="n">talk</span><span class="p">,</span> <span class="n">inform</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.conversion</span> <span class="kn">import</span> <span class="n">python2yaml</span>
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
@@ -394,8 +393,21 @@
             <span class="n">errstr</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;The execute data iterator is empty.&quot;</span><span class="p">)</span>
             <span class="k">raise</span> <span class="n">NodeChainException</span><span class="p">(</span><span class="n">errstr</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">res</span>
-
-
+</div>
+<div class="viewcode-block" id="NodeChain._inc_train"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.NodeChain._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Iterate through the nodes to train them &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;_inc_train&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="p">:</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="o">=</span><span class="bp">True</span>
+                    <span class="n">node</span><span class="o">.</span><span class="n">start_retraining</span><span class="p">()</span>
+                <span class="n">node</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">class_label</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;buffering&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffering</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c"># workaround to inherit meta data</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffering</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">buffering</span> <span class="o">=</span> <span class="bp">True</span>
 </div>
 <div class="viewcode-block" id="NodeChain.save"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.NodeChain.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">protocol</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Save a pickled representation to *filename*</span>
@@ -1118,13 +1130,29 @@
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">)</span>
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span> <span class="c"># String replacement</span>
                 <span class="k">for</span> <span class="n">param_key</span><span class="p">,</span> <span class="n">param_value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                    <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">param_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">param_key</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">param_key</span><span class="p">,</span> <span class="n">python2yaml</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
-            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&quot;__iter__&quot;</span><span class="p">):</span> <span class="c"># Iterate over all items in sequence</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s">&quot;__iter__&quot;</span><span class="p">):</span>
+                <span class="c"># Iterate over all items in sequence</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">iter_item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">iter_item</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c"># Replacement</span>
                         <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parametrization</span><span class="p">[</span><span class="n">iter_item</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">iter_item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span>
+                            <span class="n">iter_item</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">))</span>
+                    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span> <span class="c"># String replacement</span>
+                        <span class="k">for</span> <span class="n">param_key</span><span class="p">,</span> <span class="n">param_value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                            <span class="k">try</span><span class="p">:</span>
+                                <span class="n">iter_item</span> <span class="o">=</span> <span class="n">iter_item</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">param_key</span><span class="p">,</span>
+                                                              <span class="nb">repr</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
+                            <span class="k">except</span><span class="p">:</span>
+                                <span class="n">iter_item</span> <span class="o">=</span> <span class="n">iter_item</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span>
+                                    <span class="n">param_key</span><span class="p">,</span> <span class="n">python2yaml</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
+                        <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">iter_item</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span> <span class="c"># Not parameterized</span>
@@ -1312,7 +1340,7 @@
                                                          <span class="n">subflow</span><span class="o">.</span><span class="n">id</span><span class="o">+</span><span class="s">&quot;.pickle&quot;</span><span class="p">),</span><span class="s">&quot;wb&quot;</span><span class="p">),</span>
                                      <span class="n">protocol</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
                     <span class="n">send_flows</span> <span class="o">=</span> <span class="n">subflows_to_compute</span>
-                <span class="k">else</span><span class="p">:</span> <span class="c"># backend_name == local</span>
+                <span class="k">else</span><span class="p">:</span> <span class="c"># backend_name == mcore</span>
                     <span class="c"># send pool_size to backend if not already done</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">already_send</span><span class="p">:</span>
                         <span class="n">client_socket</span> <span class="o">=</span> <span class="n">inform</span><span class="p">(</span><span class="s">&quot;subflow_poolsize;</span><span class="si">%d%s</span><span class="s">&quot;</span> <span class="o">%</span> \
@@ -1410,8 +1438,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

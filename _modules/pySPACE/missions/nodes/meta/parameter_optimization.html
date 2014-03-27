@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -85,6 +83,7 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+
 
 <div class="viewcode-block" id="ParameterOptimizationBase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase">[docs]</a><span class="k">class</span> <span class="nc">ParameterOptimizationBase</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Base class for parameter optimization nodes</span>
@@ -456,14 +455,7 @@
 <span class="sd">        the changed data is forwarded to the *next* node.</span>
 <span class="sd">        This is different to the normal offline retraining scheme.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> \
-                    <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;_inc_train&quot;</span><span class="p">):</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="p">:</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span> <span class="o">=</span> <span class="bp">True</span>
-                    <span class="n">node</span><span class="o">.</span><span class="n">start_retraining</span><span class="p">()</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">class_label</span><span class="p">)</span>
-            <span class="n">data</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="ParameterOptimizationBase.is_retrainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase.is_retrainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_retrainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retraining if one node in subflow is retrainable &quot;&quot;&quot;</span>
@@ -505,8 +497,19 @@
 <div class="viewcode-block" id="ParameterOptimizationBase.get_sensor_ranking"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase.get_sensor_ranking">[docs]</a>    <span class="k">def</span> <span class="nf">get_sensor_ranking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Get the sensor ranking from the optimized trained flow &quot;&quot;&quot;</span>
         <span class="c"># The last node is the irrelevant &#39;sink node&#39;. We need the previous one.</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">get_sensor_ranking</span><span class="p">()</span>
-    </div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_sensor_ranking</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ParameterOptimizationBase.get_previous_transformations"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase.get_previous_transformations">[docs]</a>    <span class="k">def</span> <span class="nf">get_previous_transformations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Recursively construct a list of (linear) transformations </span>
+<span class="sd">        </span>
+<span class="sd">        Overwrites BaseNode function, since meta node needs to get</span>
+<span class="sd">        transformations from subflow.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">transformations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">()</span>
+        <span class="n">own_transformations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">()</span>
+        <span class="n">transformations</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">own_transformations</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">transformations</span>
+</div>
 <div class="viewcode-block" id="ParameterOptimizationBase.re_init"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase.re_init">[docs]</a>    <span class="k">def</span> <span class="nf">re_init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reset optimization params</span>
 <span class="sd">        </span>
@@ -567,6 +570,7 @@
 <div class="viewcode-block" id="ParameterOptimizationBase.p2key"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.ParameterOptimizationBase.p2key">[docs]</a>    <span class="k">def</span> <span class="nf">p2key</span><span class="p">(</span><span class="n">parameters</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Map parameter dictionary to hashable tuple (key for dictionary) &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+
 </div></div>
 <div class="viewcode-block" id="GridSearchNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.parameter_optimization.html#pySPACE.missions.nodes.meta.parameter_optimization.GridSearchNode">[docs]</a><span class="k">class</span> <span class="nc">GridSearchNode</span><span class="p">(</span><span class="n">ParameterOptimizationBase</span><span class="p">,</span> <span class="n">SubflowHandler</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Grid search for optimizing the parameterization of a subflow</span>
@@ -1051,8 +1055,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -82,11 +80,13 @@
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
 
+
 <div class="viewcode-block" id="InstanceSelectionNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.InstanceSelectionNode">[docs]</a><span class="k">class</span> <span class="nc">InstanceSelectionNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Retain only a certain percentage of the instances</span>
 
-<span class="sd">    The node RandomInstanceSelectionNode forwards only *train_percentage_selected*</span>
-<span class="sd">    percent of the training instances passed to him to the successor node and only</span>
+<span class="sd">    The node InstanceSelectionNode forwards only</span>
+<span class="sd">    *train_percentage_selected* percent of the training instances passed to</span>
+<span class="sd">    him to the successor node and only</span>
 <span class="sd">    *test_percentage_selected* percent of the test instances. The forwarded </span>
 <span class="sd">    instances are selected randomly but so that the class ratio is kept.</span>
 
@@ -133,9 +133,10 @@
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">InstanceSelectionNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">train_percentage_selected</span> <span class="o">=</span> <span class="n">train_percentage_selected</span><span class="p">,</span>
-                                      <span class="n">test_percentage_selected</span> <span class="o">=</span> <span class="n">test_percentage_selected</span><span class="p">,</span>
-                                      <span class="n">reduce_class</span><span class="o">=</span><span class="n">reduce_class</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+            <span class="n">train_percentage_selected</span><span class="o">=</span><span class="n">train_percentage_selected</span><span class="p">,</span>
+            <span class="n">test_percentage_selected</span><span class="o">=</span><span class="n">test_percentage_selected</span><span class="p">,</span>
+            <span class="n">reduce_class</span><span class="o">=</span><span class="n">reduce_class</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="InstanceSelectionNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.InstanceSelectionNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns data for training of subsequent nodes</span>
@@ -148,53 +149,65 @@
 <span class="sd">              data are returned.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="o">&gt;</span><span class="mi">100</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Train percentage of </span><span class="si">%f</span><span class="s"> reduced to 100.&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="p">,</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Train percentage of </span><span class="si">%f</span><span class="s"> reduced to 100.&quot;</span> <span class="o">%</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="p">,</span>
                       <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="o">=</span><span class="mi">100</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training is requested.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-        
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training is requested.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InstanceSelectionNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span>
+                <span class="n">use_test_data</span><span class="p">)</span>
+
         <span class="c"># If we haven&#39;t computed the data for training yet</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for training.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for training.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
             <span class="c"># Train this node</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">train_sweep</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
             
             <span class="c"># Divide available instances according to label</span>
             <span class="n">all_instances</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span>
+                    <span class="n">use_test_data</span><span class="p">):</span>
                 <span class="n">all_instances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Keeping only </span><span class="si">%s</span><span class="s"> percent of training data&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="p">,</span>
-                      <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Keeping only </span><span class="si">%s</span><span class="s"> percent of training data&quot;</span> <span class="o">%</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="p">,</span>
+                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
             <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
             <span class="c"># Retain only *percentage_selected* percent of the data</span>
             <span class="n">retained_instances</span> <span class="o">=</span> <span class="p">[]</span>
 
             <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">instances</span> <span class="ow">in</span> <span class="n">all_instances</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c"># enable random choice of samples</span>
                 <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span><span class="o">==</span><span class="mi">100</span><span class="p">:</span>
-                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
-                <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span><span class="o">==</span><span class="n">label</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="ow">or</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="o">==</span> <span class="n">label</span><span class="p">):</span>
                     <span class="n">end_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span> <span class="c">#self.reduce_class==label--&gt; reduction needed</span>
-                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c"># self.reduce_class==label--&gt; reduction needed</span>
+                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">train_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
 
                 <span class="n">retained_instances</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">end_index</span><span class="p">],</span>
-                                              <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">end_index</span><span class="p">)]))</span>              
-            
+                                              <span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">*</span><span class="n">end_index</span><span class="p">))</span>
+            <span class="c"># mix up samples between the different labels</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">retained_instances</span><span class="p">)</span>
             <span class="c"># Compute a generator the yields the train data and</span>
             <span class="c"># encapsulate it in an object that memoizes its outputs and</span>
-            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that&#39;ll</span>
+            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that will</span>
             <span class="c"># yield the same sequence            </span>
-            <span class="n">train_data_generator</span> <span class="o">=</span> \
-                     <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span> 
+            <span class="n">train_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span>
                      
             <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">train_data_generator</span><span class="p">,</span>
                                                       <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span> 
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training finished&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training finished&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         <span class="c"># Return a fresh copy of the generator  </span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
     </div>
@@ -203,15 +216,19 @@
 
 <span class="sd">        .. todo:: to document</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="o">&gt;</span><span class="mi">100</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Test percentage of </span><span class="si">%f</span><span class="s"> reduced to 100.&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="p">,</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Test percentage of </span><span class="si">%f</span><span class="s"> reduced to 100.&quot;</span> <span class="o">%</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="p">,</span>
                       <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="o">=</span><span class="mi">100</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-        
+            <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">=</span> <span class="mi">100</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InstanceSelectionNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">()</span>
+
         <span class="c"># If we haven&#39;t computed the data for testing yet</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="c"># Assert  that this node has already been trained</span>
             <span class="k">assert</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="ow">or</span> 
                    <span class="bp">self</span><span class="o">.</span><span class="n">get_remaining_train_phase</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
@@ -221,49 +238,55 @@
             <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
                 <span class="n">all_instances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
                 
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Keeping only </span><span class="si">%s</span><span class="s"> percent of test data&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="p">,</span>
-                      <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Keeping only </span><span class="si">%s</span><span class="s"> percent of test data&quot;</span> <span class="o">%</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="p">,</span>
+                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
             <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
             
             <span class="c"># Retain only *percentage_selected* percent of the data</span>
             <span class="n">retained_instances</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">instances</span> <span class="ow">in</span> <span class="n">all_instances</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="c"># enable random choice of samples</span>
                 <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
-
-                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span><span class="o">==</span><span class="mi">100</span><span class="p">:</span>
-                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
-                <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span><span class="o">==</span><span class="n">label</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="ow">or</span> \
+                        <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">==</span> <span class="mi">100</span><span class="p">:</span>
+                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reduce_class</span> <span class="o">==</span> <span class="n">label</span><span class="p">):</span>
                     <span class="n">end_index</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span> <span class="c">#self.reduce_class==label--&gt; reduction needed</span>
-                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>  <span class="c"># self.reduce_class==label--&gt; reduction needed</span>
+                    <span class="n">end_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span> <span class="o">*</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">test_percentage_selected</span> <span class="o">/</span> <span class="mi">100</span><span class="p">))</span>
 
                 <span class="n">retained_instances</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">end_index</span><span class="p">],</span>
-                                              <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">end_index</span><span class="p">)]))</span>
-
+                                              <span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">*</span><span class="n">end_index</span><span class="p">))</span>
+            <span class="c"># mix up samples between the different labels</span>
+            <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">retained_instances</span><span class="p">)</span>
             <span class="c"># Compute a generator the yields the test data and</span>
             <span class="c"># encapsulate it in an object that memoizes its outputs and</span>
             <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that&#39;ll</span>
             <span class="c"># yield the same sequence</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-            <span class="n">test_data_generator</span> <span class="o">=</span> \
-                    <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">test_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span>
+                                   <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span>
                     
             <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">,</span>
                                                      <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing finished&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing finished&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         <span class="c"># Return a fresh copy of the generator</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
     </div>
 <div class="viewcode-block" id="InstanceSelectionNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.InstanceSelectionNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_series</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">time_series</span> <span class="c"># We don&#39;t do anything with the kept instances</span>
+        <span class="k">return</span> <span class="n">time_series</span>  <span class="c"># We don&#39;t do anything with the kept instances</span>
 
 </div></div>
 <div class="viewcode-block" id="ReduceOverrepresentedClassNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode">[docs]</a><span class="k">class</span> <span class="nc">ReduceOverrepresentedClassNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Reject instances to balance categories for classification</span>
 
 <span class="sd">    The node forwards only a reduced number </span>
-<span class="sd">    of the training and test instances of the bigger class to get a balanced ratio of the </span>
+<span class="sd">    of the training and test instances of the bigger class</span>
+<span class="sd">    to get a balanced ratio of the</span>
 <span class="sd">    classes. The forwarded instances are selected randomly.</span>
 <span class="sd">    All data of the underrepresented class is</span>
 <span class="sd">    forwarded.</span>
@@ -280,7 +303,7 @@
 <span class="sd">    :Created: 2010/09/22</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-<div class="viewcode-block" id="ReduceOverrepresentedClassNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random_seed</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="ReduceOverrepresentedClassNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">ReduceOverrepresentedClassNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="ReduceOverrepresentedClassNode.request_data_for_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode.request_data_for_training">[docs]</a>    <span class="k">def</span> <span class="nf">request_data_for_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
@@ -288,34 +311,35 @@
 <span class="sd">        </span>
 <span class="sd">        .. todo:: to document</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for training.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for training.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
             <span class="c"># Train this node</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">train_sweep</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
             
             <span class="c"># Divide available instances according to label</span>
             <span class="n">all_instances</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">instance</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span>
+                    <span class="n">use_test_data</span><span class="p">):</span>
                 <span class="n">all_instances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
             
             <span class="n">retained_instances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">balance_instances</span><span class="p">(</span><span class="n">all_instances</span><span class="p">)</span>
             
             <span class="c"># Compute a generator the yields the test data and</span>
             <span class="c"># encapsulate it in an object that memoizes its outputs and</span>
-            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that&#39;ll</span>
+            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that will</span>
             <span class="c"># yield the same sequence</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-            <span class="n">train_data_generator</span> <span class="o">=</span> \
-                    <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">train_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span>
                     
             <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">train_data_generator</span><span class="p">,</span>
-                                                     <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
+                                                      <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training finished&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for training finished&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         <span class="c"># Return a fresh copy of the generator  </span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_training</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
     </div>
@@ -324,12 +348,12 @@
 
 <span class="sd">        .. todo:: to document</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_node</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing is requested.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         
         <span class="c"># If we haven&#39;t computed the data for testing yet</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="c"># Assert  that this node has already been trained</span>
             <span class="k">assert</span><span class="p">(</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="ow">or</span> 
                    <span class="bp">self</span><span class="o">.</span><span class="n">get_remaining_train_phase</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
@@ -344,25 +368,23 @@
             
             <span class="c"># Compute a generator the yields the test data and</span>
             <span class="c"># encapsulate it in an object that memoizes its outputs and</span>
-            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that&#39;ll</span>
+            <span class="c"># provides a &quot;fresh&quot; method that returns a new generator that will</span>
             <span class="c"># yield the same sequence</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
-            <span class="n">test_data_generator</span> <span class="o">=</span> \
-                    <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Producing data for testing.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">test_data_generator</span> <span class="o">=</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">label</span><span class="p">)</span>
+                                   <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">retained_instances</span><span class="p">)</span>
                     
             <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span> <span class="o">=</span> <span class="n">MemoizeGenerator</span><span class="p">(</span><span class="n">test_data_generator</span><span class="p">,</span>
                                                      <span class="n">caching</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">caching</span><span class="p">)</span>
-        
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing finished&quot;</span><span class="p">,</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Data for testing finished&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
         <span class="c"># Return a fresh copy of the generator</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_for_testing</span><span class="o">.</span><span class="n">fresh</span><span class="p">()</span>
     </div>
 <div class="viewcode-block" id="ReduceOverrepresentedClassNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">time_series</span><span class="p">):</span>
         <span class="k">return</span> <span class="n">time_series</span> <span class="c"># We don&#39;t do anything with the kept instances</span>
-        
-        </div>
+</div>
 <div class="viewcode-block" id="ReduceOverrepresentedClassNode.balance_instances"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.data_selection.instance_selection.html#pySPACE.missions.nodes.data_selection.instance_selection.ReduceOverrepresentedClassNode.balance_instances">[docs]</a>    <span class="k">def</span> <span class="nf">balance_instances</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">all_instances</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Method that performs the rejections of the data in the oversized class.&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Method that performs the rejections of the data in the oversized class&quot;&quot;&quot;</span>
         <span class="n">retained_instances</span> <span class="o">=</span> <span class="p">[]</span>
             
         <span class="c"># it is supposed to have a binary classifier, e.g. to have exactly 2 classes</span>
@@ -372,19 +394,22 @@
         <span class="c"># count the number of instances per class </span>
         <span class="n">min_num_instances_per_class</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s">&quot;+inf&quot;</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">instances</span> <span class="ow">in</span> <span class="n">all_instances</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="n">min_num_instances_per_class</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">min_num_instances_per_class</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">))</span>
+            <span class="n">min_num_instances_per_class</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">min_num_instances_per_class</span><span class="p">,</span>
+                                              <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">))</span>
         <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
         <span class="c"># retain only the number of instances that corresponds </span>
         <span class="c"># to the size of smaller class </span>
         <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">instances</span> <span class="ow">in</span> <span class="n">all_instances</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">instances</span><span class="p">)</span>
-            <span class="n">retained_instances</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">min_num_instances_per_class</span><span class="p">],</span>
-                                          <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">min_num_instances_per_class</span><span class="p">)]))</span>
+            <span class="n">retained_instances</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                <span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">min_num_instances_per_class</span><span class="p">],</span>
+                    <span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">*</span><span class="n">min_num_instances_per_class</span><span class="p">))</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">retained_instances</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">retained_instances</span>
 
 </div></div>
 <span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;RandomInstanceSelection&quot;</span><span class="p">:</span> <span class="n">InstanceSelectionNode</span><span class="p">,</span>
-                <span class="s">&quot;Reduce_Overrepresented_Class&quot;</span><span class="p">:</span> <span class="n">ReduceOverrepresentedClassNode</span><span class="p">}</span>
+                 <span class="s">&quot;Reduce_Overrepresented_Class&quot;</span><span class="p">:</span> <span class="n">ReduceOverrepresentedClassNode</span><span class="p">}</span>
 </pre></div>
 
           </div>
@@ -407,8 +432,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

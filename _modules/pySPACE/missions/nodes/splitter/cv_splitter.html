@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -267,9 +265,10 @@
                     <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stratified</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">stratified_class</span><span class="p">)</span> <span class="ow">and</span> \
                                   <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">data_time</span><span class="p">[</span><span class="n">marker</span><span class="p">][</span><span class="mi">0</span><span class="p">]][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">label</span><span class="p">:</span>
                         <span class="kn">import</span> <span class="nn">warnings</span>
-                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Since there are several class labels&quot;</span> \
-                          <span class="s">&quot; for one marker stratification is set to False.&quot;</span><span class="p">,</span>
-                          <span class="ne">UserWarning</span><span class="p">)</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                            <span class="s">&quot;Since there are several class labels&quot;</span>
+                            <span class="s">&quot; for one marker stratification is set to False.&quot;</span><span class="p">,</span>
+                            <span class="ne">UserWarning</span><span class="p">)</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">stratified</span> <span class="o">=</span> <span class="bp">False</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">stratified_class</span> <span class="o">=</span> <span class="bp">None</span>
                 <span class="n">last_window_end_time</span> <span class="o">=</span> <span class="n">window</span><span class="o">.</span><span class="n">end_time</span>
@@ -277,8 +276,8 @@
 
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stratified</span><span class="p">:</span> <span class="c"># each marker has only one label</span>
                 <span class="c"># not more splits then markers of every class!</span>
-                <span class="k">assert</span><span class="p">(</span><span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span> <span class="k">for</span> <span class="n">markers</span> <span class="ow">in</span> \
-                                      <span class="n">label_marker</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span>
+                <span class="k">assert</span><span class="p">(</span><span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">markers</span><span class="p">)</span> <span class="k">for</span> <span class="n">markers</span> <span class="ow">in</span>
+                            <span class="n">label_marker</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span>
                 <span class="c"># extend result structure since we need it in the next block</span>
                 <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
                 <span class="c"># determine the splits of the data    </span>
@@ -294,7 +293,9 @@
                         <span class="c"># means half-open interval [split_start, split_end)</span>
                         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">split_start</span><span class="p">,</span> <span class="n">split_end</span><span class="p">):</span>
                             <span class="n">split_indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data_time</span><span class="p">[</span><span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">]])</span>
-                <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">split_list</span><span class="p">)</span> <span class="k">for</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">split_indices</span><span class="p">]</span>
+                <span class="c"># avoid sorted labels by sorting time dependent</span>
+                <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">split_list</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">split_indices</span><span class="p">]</span>
                 <span class="c">#print &quot;run_number:&quot;, self.run_number    </span>
                 <span class="c">#print &quot;time_dependent &amp;&amp; stratified:\n&quot;, split_indices</span>
             
@@ -322,9 +323,9 @@
                 <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">last_max_index</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)):</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stratified_class</span><span class="p">:</span>
                         <span class="n">split_indices</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
-
-                <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">split_list</span><span class="p">)</span> <span class="k">for</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">split_indices</span><span class="p">]</span>
-                    
+                <span class="c"># avoid sorted labels by sorting time dependent</span>
+                <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">split_list</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">split_indices</span><span class="p">]</span>
                 <span class="k">print</span> <span class="s">&quot;time_dependent &amp;&amp; stratified_class:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">split_indices</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c"># we should not have more splits then (marker)time points</span>
@@ -344,11 +345,13 @@
                     <span class="n">split_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">data_size</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
                     <span class="c"># means half-open interval [split_start, split_end)</span>
                     <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">split_start</span><span class="p">,</span><span class="n">split_end</span><span class="p">):</span>
-                        <span class="n">split_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data_time</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span> 
+                        <span class="n">split_indices</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">data_time</span><span class="p">[</span><span class="n">indices</span><span class="p">[</span><span class="n">j</span><span class="p">]])</span>
+                <span class="c"># avoid sorted labels by sorting time dependent</span>
+                <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">split_list</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">split_list</span> <span class="ow">in</span> <span class="n">split_indices</span><span class="p">]</span>
                 <span class="c">#for index, splitlist in enumerate(split_indices):</span>
                 <span class="c">#    print index, &quot;first: &quot;, self.data[splitlist[0]][0].start_time, &quot;, last: &quot;, self.data[splitlist[-1]][0].start_time, &quot;, Laenge: &quot;, len(data_time.keys()) </span>
                 <span class="c">#print &quot;time_dependent:\n&quot;, split_indices</span>
-
 
 
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">stratified</span><span class="p">:</span> <span class="c"># Stratified cross-validation</span>
@@ -364,9 +367,9 @@
             <span class="n">min_nr_per_class</span> <span class="o">=</span> <span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_labeled</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">&gt;</span> <span class="n">min_nr_per_class</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">splits</span> <span class="o">=</span> <span class="n">min_nr_per_class</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reducing number of splits to </span><span class="si">%s</span><span class="s"> since no more &quot;</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reducing number of splits to </span><span class="si">%s</span><span class="s"> since no more &quot;</span>
                           <span class="s">&quot;instances of one of the classes are available.&quot;</span> 
-                          <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+                          <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
             <span class="c"># extend result structure since we need it in the next block</span>
             <span class="n">split_indices</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)]</span>
             <span class="c"># determine the splits of the data    </span>
@@ -381,6 +384,10 @@
                     <span class="n">split_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">data_size</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">))</span>
                     <span class="c"># means half-open interval [split_start, split_end)</span>
                     <span class="n">split_indices</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">indices</span><span class="p">[</span><span class="n">split_start</span><span class="p">:</span> <span class="n">split_end</span><span class="p">])</span>
+            <span class="c"># avoid sorted labels</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">):</span>
+                <span class="n">r</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+                <span class="n">r</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">split_indices</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
             <span class="c"># print &quot;stratified:\n&quot;, split_indices</span>
 
             <span class="c"># old trunk version</span>
@@ -429,7 +436,7 @@
             <span class="c">#     else: </span>
             <span class="c">#         indices.append(class2_indices.pop())</span>
 
-        <span class="k">else</span><span class="p">:</span> <span class="c"># Non-stratified cross-validation</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c"># Non-stratified cross-validation</span>
             <span class="n">data_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
             <span class="c"># We cannot have more splits than data points</span>
             <span class="k">assert</span><span class="p">(</span><span class="n">data_size</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">splits</span><span class="p">)</span> 
@@ -476,8 +483,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

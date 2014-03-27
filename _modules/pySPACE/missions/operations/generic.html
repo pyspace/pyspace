@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -171,76 +169,78 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">imp</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
 <span class="c"># processing was renamed in Python 2.6 to multiprocessing</span>
 <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">processing</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="kn">as</span> <span class="nn">processing</span>
 
-<span class="kn">import</span> <span class="nn">pySPACE</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.operations.base</span> <span class="kn">import</span> <span class="n">Operation</span><span class="p">,</span> <span class="n">Process</span>
-    
+
+
 <div class="viewcode-block" id="GenericOperation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericOperation">[docs]</a><span class="k">class</span> <span class="nc">GenericOperation</span><span class="p">(</span><span class="n">Operation</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Generic operation performing computation based on external module</span>
-<span class="sd">    </span>
+
 <span class="sd">    A GenericOperation consists of a set of GenericProcess instances. Each of</span>
-<span class="sd">    these processes consists of calling a function &quot;process&quot; defined in an </span>
+<span class="sd">    these processes consists of calling a function &quot;process&quot; defined in an</span>
 <span class="sd">    external module for a specific parametrization.</span>
-<span class="sd">    </span>
+
 <span class="sd">    The results of this operation are collected using the</span>
 <span class="sd">    consolidate method that produces a consistent representation</span>
 <span class="sd">    of the result. Especially it collects not only the data,</span>
 <span class="sd">    but also saves information of the in and out coming files and the used</span>
 <span class="sd">    specification files.</span>
-<span class="sd">    </span>
-<span class="sd">    Objects of this class are typically create using the *create* factory </span>
+
+<span class="sd">    Objects of this class are typically create using the *create* factory</span>
 <span class="sd">    method based on a operation_spec dictionary. This dictionary in turn is</span>
 <span class="sd">    typically create based on a configuration file in YAML syntax. Which</span>
 <span class="sd">    parameters need to be specified in this configuration file are listed below.</span>
 <span class="sd">    See example_generic_operation.yaml for an example.</span>
-<span class="sd">    &quot;&quot;&quot;</span>   
-<div class="viewcode-block" id="GenericOperation.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericOperation.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> 
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="GenericOperation.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericOperation.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
                  <span class="n">code_string</span><span class="p">,</span> <span class="n">number_processes</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">GenericOperation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
                                                <span class="n">result_directory</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">code_string</span> <span class="o">=</span> <span class="n">code_string</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">number_processes</span> <span class="o">=</span> <span class="n">number_processes</span>
-        
+
         <span class="c"># we add this since some backends assume that this attribute exists</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="bp">None</span> 
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="bp">None</span>
+</div>
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="GenericOperation.create"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericOperation.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_paths</span><span class="o">=</span><span class="p">[]):</span>
         <span class="sd">&quot;&quot;&quot; Factory method for creating a :class:`GenericOperation`.</span>
-<span class="sd">        </span>
-<span class="sd">        Factory method for creating a GenericOperation based on the </span>
+
+<span class="sd">        Factory method for creating a GenericOperation based on the</span>
 <span class="sd">        information given in the operation specification *operation_spec*.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;generic&quot;</span><span class="p">)</span>
-        
+
         <span class="n">configuration_template</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;configuration_template&quot;</span><span class="p">]</span>
 
-        <span class="c"># Compute all possible parameter combinations </span>
+        <span class="c"># Compute all possible parameter combinations</span>
         <span class="n">parameter_settings</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_parameter_space</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">)</span>
         <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">process_id</span><span class="p">,</span> <span class="n">parameter_setting</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">):</span>                        
+        <span class="k">for</span> <span class="n">process_id</span><span class="p">,</span> <span class="n">parameter_setting</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">):</span>
             <span class="n">process</span> <span class="o">=</span> <span class="n">GenericProcess</span><span class="p">(</span><span class="n">process_id</span><span class="o">=</span><span class="n">process_id</span><span class="p">,</span>
                                      <span class="n">configuration_template</span><span class="o">=</span><span class="n">configuration_template</span><span class="p">,</span>
                                      <span class="n">parameter_setting</span><span class="o">=</span><span class="n">parameter_setting</span><span class="p">,</span>
                                      <span class="n">result_directory</span><span class="o">=</span><span class="n">result_directory</span><span class="p">,</span>
                                      <span class="n">code_string</span><span class="o">=</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;code&quot;</span><span class="p">])</span>
-            
+
             <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
-         
+
         <span class="c"># Indicate that we are at then end of the process queue and no more jobs</span>
-        <span class="c"># will be added              </span>
+        <span class="c"># will be added</span>
         <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-         
+
         <span class="c"># create and return the operation object</span>
         <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
                     <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;code&quot;</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">))</span>
-         </div>
+</div>
 <div class="viewcode-block" id="GenericOperation.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericOperation.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform cleanup / consolidation at the end of operation. &quot;&quot;&quot;</span>
         <span class="c"># Write the specification of this operation to the result directory in</span>
@@ -250,112 +250,116 @@
                                                   <span class="s">&quot;source_operation.yaml&quot;</span><span class="p">),</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
         <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">,</span> <span class="n">source_operation_file</span><span class="p">)</span>
         <span class="n">source_operation_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        
+
         <span class="c"># First execute module to get function definitions</span>
         <span class="c"># Create pseudo module</span>
         <span class="n">tempmodule</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">new_module</span><span class="p">(</span><span class="s">&#39;tempmodule&#39;</span><span class="p">)</span>
         <span class="k">exec</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_string</span> <span class="ow">in</span> <span class="n">tempmodule</span><span class="o">.</span><span class="n">__dict__</span>
-        
+
         <span class="c"># Call consolidate function</span>
         <span class="n">tempmodule</span><span class="o">.</span><span class="n">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
                       <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;configuration_template&quot;</span><span class="p">]))</span>
-    
-    </div></div>
+
+</div></div>
 <div class="viewcode-block" id="GenericProcess"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericProcess">[docs]</a><span class="k">class</span> <span class="nc">GenericProcess</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Generic process performing computation specified in external module.</span>
-<span class="sd">    </span>
-<span class="sd">    This process calls the function &quot;process&quot; defined </span>
-<span class="sd">    </span>
+
+<span class="sd">    This process calls the function &quot;process&quot; defined</span>
+
 <span class="sd">    **Parameters**</span>
 <span class="sd">        :process_id:</span>
 <span class="sd">            Globally unique id of this process. Might be used e.g. for</span>
 <span class="sd">            creating a file into which the results of this process are stored.</span>
-<span class="sd">            </span>
+
 <span class="sd">            (*obligatory*)</span>
-<span class="sd">            </span>
+
 <span class="sd">        :configuration_template:</span>
-<span class="sd">            Template (string) which determines the parameters that are passed </span>
-<span class="sd">            to the &quot;process&quot; function contained in the code_string via the </span>
+<span class="sd">            Template (string) which determines the parameters that are passed</span>
+<span class="sd">            to the &quot;process&quot; function contained in the code_string via the</span>
 <span class="sd">            *config*  parameter. The template is instantiated based on the given</span>
 <span class="sd">            parameter_setting (see below). It must adhere the YAML standard and</span>
 <span class="sd">            correspond to a dictionary mapping parameter name to value.</span>
-<span class="sd">            </span>
+
 <span class="sd">            (*obligatory*)</span>
-<span class="sd">            </span>
+
 <span class="sd">        :parameter_setting:</span>
-<span class="sd">            Dictionary containing the mapping from parameter name (must be </span>
+<span class="sd">            Dictionary containing the mapping from parameter name (must be</span>
 <span class="sd">            contained in configuration_template string) to parameter value.</span>
 <span class="sd">            The specific parameter values define this particular computation.</span>
-<span class="sd">            </span>
+
 <span class="sd">            (*obligatory*)</span>
-<span class="sd">        </span>
+
 <span class="sd">        :result_directory:</span>
 <span class="sd">            Directory into which the results of the computation of this</span>
 <span class="sd">            function are stored.</span>
-<span class="sd">            </span>
+
 <span class="sd">            (*obligatory*)</span>
-<span class="sd">            </span>
+
 <span class="sd">        :code_string:</span>
 <span class="sd">            A string containing a definition of a python function with the name</span>
-<span class="sd">            &quot;process&quot;. Note: We pass the string-definition of the function </span>
+<span class="sd">            &quot;process&quot;. Note: We pass the string-definition of the function</span>
 <span class="sd">            instead of the function itself since GenericProcess objects are</span>
 <span class="sd">            often serializes using pickle. This wouldn&#39;t work when the object</span>
 <span class="sd">            would contain a reference to a function object.</span>
-<span class="sd">            </span>
+
 <span class="sd">            (*obligatory*)</span>
-<span class="sd">                                </span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
-    
+
 <div class="viewcode-block" id="GenericProcess.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericProcess.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">process_id</span><span class="p">,</span> <span class="n">configuration_template</span><span class="p">,</span> <span class="n">parameter_setting</span><span class="p">,</span>
                  <span class="n">result_directory</span><span class="p">,</span> <span class="n">code_string</span><span class="p">):</span>
-        
+
         <span class="nb">super</span><span class="p">(</span><span class="n">GenericProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">process_id</span> <span class="o">=</span> <span class="n">process_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">configuration_template</span> <span class="o">=</span> <span class="n">configuration_template</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span> <span class="o">=</span> <span class="n">parameter_setting</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span> <span class="o">=</span> <span class="n">result_directory</span>      
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span> <span class="o">=</span> <span class="n">result_directory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">code_string</span> <span class="o">=</span> <span class="n">code_string</span>
-        
-        <span class="c"># Instantiate the configuration_template for the specific </span>
+
+        <span class="c"># Instantiate the configuration_template for the specific</span>
         <span class="c"># parametrization defined in parameter_setting.</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="c"># Parameters framed by &quot;#&quot; are considered to be escaped</span>
-            <span class="k">if</span> <span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span> <span class="ow">in</span>  <span class="n">configuration_template</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span> <span class="ow">in</span> <span class="n">configuration_template</span><span class="p">:</span>
                 <span class="n">configuration_template</span> <span class="o">=</span> \
-                        <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span><span class="p">,</span> <span class="s">&quot;##&quot;</span><span class="p">)</span>
-            
+                    <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span><span class="p">,</span> <span class="s">&quot;##&quot;</span><span class="p">)</span>
+
             <span class="c"># Apply replacement of key-value pairs</span>
             <span class="n">configuration_template</span> <span class="o">=</span> \
-                    <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
 
             <span class="c"># Reinsert escaped parameters</span>
-            <span class="k">if</span> <span class="s">&quot;##&quot;</span> <span class="ow">in</span>  <span class="n">configuration_template</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s">&quot;##&quot;</span> <span class="ow">in</span> <span class="n">configuration_template</span><span class="p">:</span>
                 <span class="n">configuration_template</span> <span class="o">=</span> \
-                        <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;##&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-        
+                    <span class="n">configuration_template</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;##&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
         <span class="c"># Evaluate instantiated configuration template string</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">configuration_template</span><span class="p">)</span>
-    </div>
+</div>
 <div class="viewcode-block" id="GenericProcess.__call__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.generic.html#pySPACE.missions.operations.generic.GenericProcess.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Executes this process on the respective modality. &quot;&quot;&quot;</span>
         <span class="c">############## Prepare benchmarking ##############</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pre_benchmarking</span><span class="p">()</span>
-        
+
         <span class="c">##### Execute computation specified in external python module #########</span>
-        
-        <span class="c"># Create pseudo module</span>
+
         <span class="n">tempmodule</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">new_module</span><span class="p">(</span><span class="s">&#39;tempmodule&#39;</span><span class="p">)</span>
-        <span class="k">exec</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_string</span> <span class="ow">in</span> <span class="n">tempmodule</span><span class="o">.</span><span class="n">__dict__</span>
-        
-        <span class="c"># Perform actual computation</span>
-        <span class="n">retval</span> <span class="o">=</span> <span class="n">tempmodule</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
-                                    <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">)</span>
-        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c"># Create pseudo module</span>
+            <span class="k">exec</span> <span class="bp">self</span><span class="o">.</span><span class="n">code_string</span> <span class="ow">in</span> <span class="n">tempmodule</span><span class="o">.</span><span class="n">__dict__</span>
+
+            <span class="c"># Perform actual computation</span>
+            <span class="n">tempmodule</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">process_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="c"># Send exception to Logger</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+            <span class="k">raise</span>
+
         <span class="c">############## Clean up after benchmarking ##############</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span> 
-        
-</pre></div></div></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span></div></div>
+</pre></div>
 
           </div>
         </div>
@@ -377,8 +381,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>

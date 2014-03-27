@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
@@ -94,6 +92,7 @@
 
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.meta.flow_node</span> <span class="kn">import</span> <span class="n">FlowNode</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">locate</span>
+
 
 <div class="viewcode-block" id="SameInputLayerNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.SameInputLayerNode">[docs]</a><span class="k">class</span> <span class="nc">SameInputLayerNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Encapsulates a set of other nodes that are executed in parallel in the flow. </span>
@@ -311,8 +310,10 @@
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="n">node</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SameInputLayerNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
+
 </div></div>
 <div class="viewcode-block" id="EnsembleNotFoundException"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.EnsembleNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">EnsembleNotFoundException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
+
 </div>
 <div class="viewcode-block" id="ClassificationFlowsLoaderNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoaderNode">[docs]</a><span class="k">class</span> <span class="nc">ClassificationFlowsLoaderNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Combine an ensemble of pretrained node chains</span>
@@ -331,7 +332,7 @@
 <span class="sd">        </span>
 <span class="sd">     :ensemble_pattern:</span>
 <span class="sd">         Pickled flows must match the given pattern to be included into the</span>
-<span class="sd">         ensemble.             </span>
+<span class="sd">         ensemble.</span>
 <span class="sd">    </span>
 <span class="sd">     :flow_select_list:</span>
 <span class="sd">         This optional parameter allows to select only a subset of the flows </span>
@@ -424,8 +425,8 @@
 <div class="viewcode-block" id="ClassificationFlowsLoaderNode._load_ensemble"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoaderNode._load_ensemble">[docs]</a>    <span class="k">def</span> <span class="nf">_load_ensemble</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Loading ensemble&quot;</span><span class="p">)</span>
         <span class="c"># Create a flow node for each  flow pickle</span>
-        <span class="n">flow_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">FlowNode</span><span class="p">(</span><span class="n">subflow_path</span> <span class="o">=</span> <span class="n">flow_path</span><span class="p">)</span> 
-                                <span class="k">for</span> <span class="n">flow_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_pathes</span><span class="p">]</span>
+        <span class="n">flow_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="n">FlowNode</span><span class="p">(</span><span class="n">load_path</span><span class="o">=</span><span class="n">flow_path</span><span class="p">)</span>
+                      <span class="k">for</span> <span class="n">flow_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_pathes</span><span class="p">]</span>
 
         <span class="c"># Create an SameInputLayer node that executes all flows independently</span>
         <span class="c"># with the same input</span>
@@ -602,8 +603,6 @@
         <span class="n">node_obj</span> <span class="o">=</span> <span class="n">MultiClassLayerNode</span><span class="p">(</span><span class="n">nodes</span> <span class="o">=</span> <span class="n">layer_nodes</span><span class="p">,</span><span class="o">**</span><span class="n">layer_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
 
         <span class="k">return</span> <span class="n">node_obj</span>
-
-
 </div></div>
 <span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Ensemble_Node&quot;</span><span class="p">:</span> <span class="n">ClassificationFlowsLoaderNode</span><span class="p">,</span>
                  <span class="s">&quot;Same_Input_Layer&quot;</span><span class="p">:</span> <span class="n">SameInputLayerNode</span><span class="p">,</span>
@@ -630,8 +629,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Dec 17, 2013.
-      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+      Last updated on Mar 27, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
 </html>
