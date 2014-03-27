@@ -9,6 +9,7 @@ import time
 import xmlrpclib
 import subprocess
 import random
+import warnings
 
 file_path = os.path.dirname(os.path.abspath(__file__))
 pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
@@ -19,20 +20,25 @@ import pySPACE
 
 from pySPACE.missions.support.windower import MarkerWindower, WindowFactory
 from pySPACE.tools.live import eeg_stream
+from pySPACE.environments.live.recorder import Recorder
 
 class LiveEegStreamManager(object):
     """ This module controls the eegmanager related configuration
     and provides a meaningful interface of the eegmanager for pyspace live.
     """
-    def __init__(self, logger, configuration=dict()):
+    def __init__(self, logger):
         self.logger = logger
-        self.configuration = configuration
-        self.server_process = None
-        self.eeg_client = list()
-        self.remote = None
+        self.configuration = pySPACE.configuration
+        self.eeg_client = None
 
+        # tools for eegmanager subprocess
+        self.server_process = None
+        self.remote = None
         self.ip = None
         self.port = None
+
+        # tools for python based recorder
+        self.recorder = None
 
         # create a new eeg server process
         # it is needed either for streaming of local data
@@ -65,12 +71,14 @@ class LiveEegStreamManager(object):
 
 
     def __del__(self):
-        # self.remote.shut_down()
-        pass
+        if self.remote is not None:
+            self.remote.shut_down()
 
     def stream_local_file(self, filename):
         # start streaming of file filename using
         # the local eegmanager process
+
+        self.ip = ip = "127.0.0.1"
 
         if self.remote.get_state()[0] is not "IDLE":
             self.remote.stop()
@@ -85,7 +93,7 @@ class LiveEegStreamManager(object):
             ret = self.remote.add_module("FILEAcquisition", str("--blocksize 100 --filename %s" % filename))
             if ret < 0:
                 self.remote.stop()
-                self.logger.error(str("failed to adding fileacquisition for file %s" % filename))
+                self.logger.error(str("failed to add fileacquisition for file %s" % filename))
                 self.logger.error(str(self.remote.stdout()))
                 self.remote.shut_down()
                 raise Exception, "Check your paths!"
@@ -103,75 +111,38 @@ class LiveEegStreamManager(object):
         self.remote.start()
         self.logger.debug(str("started local streaming of file %s" % filename))
 
-    def receive_remote_stream(self, ip, port):
-        # set the ip/port which is used during the
-        # request window stream function
-        self.port = port
+    def initialize_eeg_server(self, ip=None, port=None, usb=None):
         self.ip = ip
-
+        self.port = port
+        self.usb = usb
 
     def record_with_options(self, subject, experiment, online=False):
-        # use local eegmanager process for
-        # raw-data-recording of incoming data
+        # create new Recorder instance to handle raw data storage
 
-        if self.port is None or self.ip is None:
-            raise Exception, "Dont know how to record without remote info!"
-
-        if self.remote.get_state()[0] is not "IDLE":
-            self.remote.stop()
-
-        self.remote.stop() # clear possible dangling setup
-
-        directory = self.configuration.storage
-
-        ret = self.remote.add_module("NETAcquisition", str("--host %s --port %d" % (self.ip, self.port)))
-        if ret < 0:
-            self.remote.stop()
-            self.logger.error(str("failed to add netacquisition with host(%s) and ip(%d)" % \
-                        (self.ip, self.port)))
-            self.logger.error(str(self.remote.stdout()))
-            self.remote.shut_down()
-            raise Exception, "Connection failed!"
-
-        if online:
-            ret = self.remote.add_module("FILEOutput", str("--subject %s --trial %s --dir %s --online" % \
-                    (subject, experiment, directory)))
-        else:
-            ret = self.remote.add_module("FILEOutput", str("--subject %s --trial %s --dir %s" % \
-                    (subject, experiment, directory)))
-        if ret < 0:
-            self.remote.stop()
-            self.logger.error(str("failed to add fileoutput with directory %s" % directory))
-            self.logger.error(str(self.remote.stdout()))
-            raise Exception, "Check if this directory exists!"
-
-        self.remote.start()
+        self.recorder = Recorder(client=self.eeg_client, folder=None,
+                                 subject=subject, task=experiment, online=online)
         self.logger.info("started raw-data-recording")
 
-    def request_window_stream(self, window_spec, nullmarker_stride_ms = 1000, no_overlap = False):
-        # function to connect a client to a running
-        # remote streaming server or local process
-        if self.ip is None:
-            self.ip = "127.0.0.1" # for the local mode
-
-        if self.port is None:
-            # without a port we cannot do anything
-            raise Exception, "Port for stream reception is not set!"
-
-        # connect and start client
-        eeg_client = eeg_stream.EEGClient(host=self.ip,
-                                               port=self.port)
-        eeg_client.connect()
-        self.logger.info( "Started EEG-Client")
-        self.eeg_client.append(eeg_client)
+    def request_window_stream(self, window_spec=None, nullmarker_stride_ms=1000, no_overlap=True):
 
         # load windower spec file
-        windower_spec_file = open(window_spec, 'r')
-        window_definitions = \
-            WindowFactory.window_definitions_from_yaml(windower_spec_file)
-        windower_spec_file.close()
-        self.logger.info( "Finished loading windower spec file")
-        self.logger.info(window_definitions)
+        if window_spec is None:
+            window_definitions = WindowFactory.default_windower_spec()
+            no_overlap = True
+            self.logger.info("Using default windower spec %s" % window_definitions)
+        else:
+            windower_spec_file = open(window_spec, 'r')
+            window_definitions = \
+                WindowFactory.window_definitions_from_yaml(windower_spec_file)
+            windower_spec_file.close()
+            self.logger.info(str("Finished loading windower spec file from %s" % window_spec))
+
+        if nullmarker_stride_ms != window_definitions[0].endoffsetms:
+            warnings.warn("defined nullmarker stride (%d) is different from "
+                          "endoffset (%d) in window-definitions[0]!" %
+                          (nullmarker_stride_ms, window_definitions[0].endoffsetms))
+
+        eeg_client = self.setup_client()
 
         # create windower
         self.marker_windower = MarkerWindower(eeg_client,
@@ -186,14 +157,32 @@ class LiveEegStreamManager(object):
 
         return window_stream
 
-    def initialize_eeg_server(self, eeg_server_ip,
-                              eeg_server_port):
-        self.ip = eeg_server_ip
-        self.port = eeg_server_port
-        self.eeg_client = list()
 
+    def setup_client(self):
 
+        # connect and start client
+        if self.ip is not None and self.port is not None:
+            eeg_client = eeg_stream.EEGClient(host=self.ip, port=self.port)
+        elif self.usb is not None:
+            self.logger.info("Using USB Client")
+            eeg_client = eeg_stream.EEGClientUsb()
+        eeg_client.connect()
+
+        if self.eeg_client is None:
+            self.eeg_client = eeg_client
+
+        if self.recorder is not None:
+            if not self.recorder.has_client():
+                self.recorder.set_eeg_client(eeg_client)
+
+        self.logger.info("Started EEG-Client")
+
+        return eeg_client
 
     def stop(self):
-        self.remote.stop()
+        self.eeg_client.disconnect()
+        del self.eeg_client
 
+        if self.remote is not None:
+            self.remote.stop()
+            self.remote.shut_down()

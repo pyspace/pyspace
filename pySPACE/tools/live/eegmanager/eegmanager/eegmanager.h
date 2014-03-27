@@ -16,13 +16,16 @@
 #include "global.h"
 #include "glob_module.h"
 #include "util_thread.h"
+#include "util_basebuffer.h"
 #include "util_ringbuffer.h"
+#include "util_filebuffer.h"
 
-#ifdef __windows__
+#include "acq_net.h"
 #include "acq_bp.h"
-#endif
 #include "acq_file.h"
+
 #include "out_net.h"
+#include "out_file.h"
 
 
 
@@ -56,7 +59,7 @@ private:
 	// list of current modules
 	std::vector<Module*> modules;
 	// IPC-Buffers
-	std::vector<RingBuffer*> buffers;
+	std::vector<BaseBuffer*> buffers;
 	// setup of the current flow
 	std::vector< std::pair<std::string, std::string> > setup;
 

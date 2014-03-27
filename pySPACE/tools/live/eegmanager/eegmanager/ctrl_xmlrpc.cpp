@@ -363,17 +363,23 @@ stdoutReadCallback::stdoutReadCallback(XmlRpc::XmlRpcServer* s, CRTLXmlrpc* ctrl
 	sprintf(name, ".%d.stdout", GetCurrentProcessId());
 #else
 	sprintf(name, ".%d.stdout", getpid());
-	//sprintf(name, ".%d.stdout", 42);
+//	sprintf(name, ".%d.stdout", 42);
 #endif
 }
 
 void stdoutReadCallback::execute(XmlRpc::XmlRpcValue& params, XmlRpc::XmlRpcValue& result)
 {
-	FILE* stdout_handle = fopen(name, "r");
-	fseek(stdout_handle, position, SEEK_SET);
-
+	FILE* stdout_handle = NULL;
 	std::string output;
 	char line[512];
+    
+    stdout_handle = fopen(name, "r");
+    if(stdout_handle == NULL) {
+        output = "NO STDOUT!";
+        return;
+    }
+    
+	fseek(stdout_handle, position, SEEK_SET);
 
 	while(!feof(stdout_handle)) {
 		memset(line, 0, 512);
@@ -697,9 +703,10 @@ int main (int argc, char *argv[])
 	sprintf(name, ".%d.stdout", GetCurrentProcessId());
 #else
 	sprintf(name, ".%d.stdout", getpid());
-	//sprintf(name, ".%d.stdout", 42);
+//	sprintf(name, ".%d.stdout", 42);
 #endif
-	freopen(name, "w", stdout);
+    printf("stdout is redirected to '%s' \n", name);
+    freopen(name, "w", stdout);
 
 	const char* BUILD_DATE = __DATE__;
 	const char* BUILD_TIME = __TIME__;

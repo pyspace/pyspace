@@ -14,6 +14,7 @@ try:
 except:
     pass
 
+
 class NaiveBayesClassifierNode(BaseNode):
     """ NaiveBayes Classifier Algorithm"""
     def __init__(self, class_labels = [],**kwargs):
@@ -147,6 +148,7 @@ class FDAClassifierNode(BaseNode):
         if self.MDPflow is None:
             self.MDPflow=mdp.Flow([FDANode()])
         self.MDPflow.train([self.data])
+
 
 class BayesianLinearDiscriminantAnalysisClassifierNode(BaseNode):
     """ Classify with the bayesian linear discriminant analysis

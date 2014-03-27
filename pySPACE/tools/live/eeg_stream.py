@@ -6,23 +6,18 @@ EEG client module.
 Created by Timo Duchrow on 2008-08-26.
 """
 
-__version__ = "$Revision: 456 $"
-__all__ = ['EEGClient']
-
 import sys
 import socket
 import struct
 import numpy
 import scipy
-import cProfile
-import pstats
+import Queue
 import signal
 import subprocess
 import os
 import time
 import xmlrpclib
 import random
-import time
 import glob
 import warnings
 
@@ -31,11 +26,19 @@ pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
 if not pyspace_path in sys.path:
     sys.path.append(pyspace_path)
 
+import pySPACE
+from ipmarkers import MarkerServer
+
+usb_warning = True
 try:
-    from pySPACE.missions.support.CPP.shared_memory_access.build import shmaccess
-    import_error = False
-except Exception, e:
-    import_error = e
+    if hasattr(pySPACE.configuration, "eeg_modules_dir"):
+        sys.path.append(pySPACE.configuration.eeg_modules_dir)
+        from eeg_acquisition.pybrainamp import BUASubprocess
+        usb_warning = False
+except:
+    pass
+
+from pySPACE.missions.support.WindowerInterface import AbstractStreamReader
 
 verbose = False
 
@@ -55,40 +58,54 @@ T_RDA_MessageData32 = 9
 T_ReadyMessage = 10
 
 
-class EEGClient(object):
+class EEGClient(AbstractStreamReader):
     """EEG stream client for EEG stream protocol"""
-    def __init__(self, host='127.0.0.1', port=51244, prio=1000, **kwargs):
+    def __init__(self, host='127.0.0.1', port=51244, **kwargs):
         super(EEGClient, self).__init__()
-        # variable names with capitalization correspond to structures members
-        # defined in RecorderRDA.h
+
+        # containers for abstract properties
+        self._dSamplingInterval = None   # sampling interval
+        self._channelNames = None        # list of channel names
+        self._stdblocksize = None        # standard number of paints in one data block
+        self._markerids= dict()
+        self._markerNames = dict()       # dictionary with marker names
+
         self.host = host
         self.port = port
         self.nChannels = None           # number of channels
         self.sample_size = None
         self.protocol_version = None
-        self.dSamplingInterval = None   # sampling interval
         self.resolutions = None         # list of resolutions / channel
-        self.channelNames = None        # list of channel names
         self.channelids = dict()
-        
         self.abs_start_time = 0
-
-        self.priority = prio
-        
-        self.stdblocksize = None        # standard number of paints in one data block
-        
         self.callbacks = list()
-        self.meta = dict()        
-
+        self.meta = dict()
         self.ndsamples = None           # last sample block read
         self.ndmarkers = None         # last marker block read
-        self.markerids= dict()
-        self.markerNames = dict()       # dictionary with marker names
         self.nmarkertypes = 0           # number of different marker types
-
         self.lostmarker = False         # for two markers corresponding to one sample in last sample of a block
         self.lostmarkertypedesc = None
         self.running = True
+
+    @property
+    def dSamplingInterval(self):
+        return self._dSamplingInterval
+
+    @property
+    def stdblocksize(self):
+        return self._stdblocksize
+
+    @property
+    def markerids(self):
+        return self._markerids
+
+    @property
+    def channelNames(self):
+        return self._channelNames
+
+    @property
+    def markerNames(self):
+        return self._markerNames
         
         
     def connect(self, verbose=False):
@@ -125,12 +142,7 @@ class EEGClient(object):
         
         if verbose:
             print "connected to server"
-            
-    
-    def syncread(self):
-        """Perform synchronous read of one data block"""
-        pass
-    
+
     def regcallback(self, func):
         """Register callback function"""
         self.callbacks.append(func)
@@ -255,7 +267,7 @@ class EEGClient(object):
         # read number of channels and sampling interval
         fmt = 'IIIII'
         nread = struct.calcsize(fmt)
-        (self.nChannels, self.stdblocksize, self.dSamplingInterval, self.sample_size, self.protocol_version) = \
+        (self.nChannels, self._stdblocksize, self._dSamplingInterval, self.sample_size, self.protocol_version) = \
             struct.unpack_from(fmt, payload, offset)
         offset += nread
         # offset += 4 
@@ -307,7 +319,7 @@ class EEGClient(object):
         namesbuf = struct.unpack_from(fmt, payload, offset)
         nread = struct.calcsize(fmt)
         # build list of channel names
-        self.channelNames = list()
+        self._channelNames = list()
         nstr = ''
         for c in namesbuf[0]:
             if c == '\x00':
@@ -343,8 +355,8 @@ class EEGClient(object):
         namesbuf = struct.unpack_from(fmt, payload, offset)
 
         # build list of marker names
-        self.markerNames = dict()
-        self.markerids = dict()
+        self._markerNames = dict()
+        self._markerids = dict()
         nstr = ''
         for c in namesbuf[0]:
             if c == '\x00':
@@ -502,95 +514,33 @@ class EEGClient(object):
         self.socket.close()
         sys.exit(1)
 
-class EEGClientShm(EEGClient):
-    """ Acquire raw streamed eeg-data from shared memory.
-
-        This implementation uses a custom c-extension located
-        in pySPACE/missions/support/CPP/shared_memory_access.
-        Please follow instruction on how to build etc. in the
-        corresponding README file. (TODO:!)
-    """
-    
-    def __init__(self, shm_name=None, **kwargs):
-        """
-
-        :param shm_name:
-            the name of the shared memory segment - usually
-            a 32-bit integer.
-        """
-        super(EEGClientShm, self).__init__(*kwargs)
-
-        if import_error:
-            raise import_error
-        if shm_name is None:
-            raise IOError, str("please specify shared memory name!")
-
-        self.connect()
-
-    def connect(self, verbose=False):
-        try:
-            shmaccess.connect(22)
-        except Exception as e:
-            raise e
-
-    def _readmsg(self, msg_type='all', verbose=False):
-        while True:
-            try:
-                read = shmaccess.read()
-            except shmaccess.StreamGap as e:
-                # print e
-                continue
-            except shmaccess.StopIteration:
-                print "dataset completely streamed.."
-                break
-
-            break
-
-        (nSize, nType) = struct.unpack(fmt_RDA_MessageHeader, read[:struct.calcsize(fmt_RDA_MessageHeader)])
-
-        payload = read[struct.calcsize(fmt_RDA_MessageHeader):]
-
-        # invoke appropiate handler for decoding
-        if nType == T_RDA_MessageStart:
-            self._getstartmsg(payload, verbose=False)
-        elif nType == T_RDA_MessageData:
-            self._getdatamsg(payload)
-        elif nType == T_RDA_MessageMuxData:
-            self._getmuxdatamsg(payload, verbose=False)
-        elif nType == T_RDA_MessageStop:
-            self._getstopmsg(payload)
-        elif nType == T_RDA_MessageData32:
-            self._getdata32msg(payload)
-
-        return nType
-
 class EEGServer(object):
     """EEG stream server for EEG stream protocol"""
     def __init__(self, absolute_data_path, block_size=4, port=51244):
         self.port = port
         self.data_path = absolute_data_path
-        
+
         self.block_size = block_size
         self.server_process = None
         self.server_proxy = None
-        self.executable = os.path.join("eegmanager", "release", "eegmanager") 
-        
+        self.executable = os.path.join("eegmanager", "release", "eegmanager")
+
     def __del__(self):
         if self.server_process != None:
             self.server_proxy.shut_down()
         else:
             warnings.warn('EEG-Server could not be started. Did you compile it correctly?')
-        
+
     def start(self):
         """ Starts the EEG server"""
-        
-                    
+
+
         if None == self.server_process:
             server_out_log = open("server_out_log", 'w')
-            server_err_log = open("server_err_log", 'w') 
-        
+            server_err_log = open("server_err_log", 'w')
+
             eeg_acq_root = os.sep.join(sys.modules[__name__].__file__.split(os.sep)[:-1])
-        
+
             # Workaround for finding Free XML-Ports
             freeport = False
             call = list()
@@ -601,45 +551,45 @@ class EEGServer(object):
                 raise Exception("There is no existing executable in %s. Please compile!" % (os.path.join(eeg_acq_root, self.executable)))
 
             while not freeport:
-                # Add Port number, create test-ProxyServer, 
+                # Add Port number, create test-ProxyServer,
                 # XMLRPC-Port range: 16253..26253
                 xmlport = 16253 + random.randint(0,10000)
                 call.append(str(xmlport))
                 test_proxy = xmlrpclib.ServerProxy("http://127.0.0.1:%s" % call[1])
-                
+
                 try:
                     test_proxy.system.listMethods()
                 except socket.error, (value, message):
                     freeport = True
-                    
+
                 del test_proxy
-                    
+
                 # Remove Portnumber
                 if not freeport:
                     call.pop()
-              
-            self.server_process = subprocess.Popen(call, 
+
+            self.server_process = subprocess.Popen(call,
                                        cwd=eeg_acq_root,
                                        stdin=None,
                                        stderr=server_err_log,
                                        stdout=server_out_log)
-                      
+
             self.server_proxy = xmlrpclib.ServerProxy("http://127.0.0.1:%s" % call[1])
 
-        
+
         mysocket = None
-        
+
         # wait for the server to startup...
         # TODO: check this! Time depends on number of started processes!
         time.sleep(3)
-        
-        try: 
+
+        try:
             #try to get a socket connection and start the server
             self.server_proxy.start(self.data_path, self.port, self.block_size)
-            
+
             time.sleep(5)
-            
-            # check if the server process is still running? 
+
+            # check if the server process is still running?
             # returncode:   None -> still running
             #               Numeric -> terminated
             self.server_process.poll()
@@ -647,58 +597,297 @@ class EEGServer(object):
                 ret = self.server_process.returncode
                 self.server_process = None
                 raise SystemError, "Server Process should run but exited with status %d" % (ret)
-            
+
             mysocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  
+
             connected = mysocket.connect(("127.0.0.1", self.port))
-       
+
         except socket.error, (value,message):
             # failure in connection
-            if mysocket: 
-                mysocket.close() 
-                
-            # could not open connection -> kill server    
+            if mysocket:
+                mysocket.close()
+
+            # could not open connection -> kill server
             os.kill(self.server_process.pid, signal.SIGKILL)
-            
+
             raise IOError, "error: %d could not open socket(%d): %s" % (value, self.port, message)
-            
+
         time.sleep(1)
-    
+
         #Create a method which handles the tear down of the server
         def kill():
-            """ Kills the running EEG server """    
+            """ Kills the running EEG server """
             self.server_proxy.stop()
             time.sleep(.3)
             self.server_proxy.shut_down()
-            
+
         #Add signal handler
         signals = (signal.SIGHUP, signal.SIGINT, signal.SIGTERM, signal.SIGQUIT)
         for sig in signals:
             signal.signal(sig, kill)
-            
+
     def reset(self):
         """ Reset the EEG server so that he points again to the beginning"""
         self.server_proxy.stop()
         time.sleep(1)
         self.server_proxy.shut_down()
         time.sleep(1)
-        
+
         self.start()
 
+class EEGClientUsb(AbstractStreamReader):
+    """ Acquire raw streamed eeg-data from usb-acquisition submodule
 
+        This implementation uses the usb1 module, available from
+        Pip/easy_install. usb1 is used to wrap calls to the libusbx c-library.
+    """
+    
+    def __init__(self, ipmarker_server=None, **kwargs):
+        """ currently no parameter
+        """
+        if usb_warning:
+            warnings.warn("The usb_acquisition Module could not be imported!")
+        super(EEGClientUsb, self).__init__(**kwargs)
+
+        self.all_channels = ['Fp1', 'Fp2', 'F7', 'F3', 'Fz', 'F4', 'F8', 'FC5',\
+                            'FC1', 'FC2', 'FC6', 'T7', 'C3', 'Cz', 'C4', 'T8',\
+                            'TP9', 'CP5', 'CP1', 'CP2', 'CP6', 'TP10', 'P7',\
+                            'P3', 'Pz', 'P4', 'P8', 'PO9', 'O1', 'Oz', 'O2',\
+                            'PO10', 'AF7', 'AF3', 'AF4', 'AF8', 'F5', 'F1',\
+                            'F2', 'F6', 'FT9', 'FT7', 'FC3', 'FC4', 'FT8',\
+                            'FT10', 'C5', 'C1', 'C2', 'C6', 'TP7', 'CP3',\
+                            'CPz', 'CP4', 'TP8', 'P5', 'P1', 'P2', 'P6',\
+                            'PO7', 'PO3', 'POz', 'PO4', 'PO8', 'Fpz', 'F9',\
+                            'AFF5h', 'AFF1h', 'AFF2h', 'AFF6h', 'F10', 'FTT9h',\
+                            'FTT7h', 'FCC5h', 'FCC3h', 'FCC1h', 'FCC2h',\
+                            'FCC4h', 'FCC6h', 'FTT8h', 'FTT10h', 'TPP9h',\
+                            'TPP7h', 'CPP5h', 'CPP3h', 'CPP1h', 'CPP2h',\
+                            'CPP4h', 'CPP6h', 'TPP8h', 'TPP10h', 'POO9h',\
+                            'POO1', 'POO2', 'POO10h', 'Iz', 'AFp1', 'AFp2',\
+                            'FFT9h', 'FFT7h', 'FFC5h', 'FFC3h', 'FFC1h',\
+                            'FFC2h', 'FFC4h', 'FFC6h', 'FFT8h', 'FFT10h',\
+                            'TTP7h', 'CCP5h', 'CCP3h', 'CCP1h', 'CCP2h',\
+                            'CCP4h', 'CCP6h', 'TTP8h', 'P9', 'PPO9h', 'PPO5h',\
+                            'PPO1h', 'PPO2h', 'PPO6h', 'PPO10h', 'P10', 'I1',\
+                            'OI1h', 'OI2h', 'I2']
+
+        self.ipmarker_server = ipmarker_server
+        self.ip_lastmarker = (None, None)
+
+        self._dSamplingInterval = 5000
+        self._channelNames = None
+        self._markerids = dict()
+        self._markerNames = dict()
+        self.marker_id_counter = 0
+        self._stdblocksize = 100
+
+        self.fmt = None
+        self.channelids = None
+        self.resolutions = None
+        self.nChannels = None
+        self.callbacks = list()
+        self.raw_data = list()
+        self.timestamp = 0
+        self.dig_lastmarker = 0
+
+        self.acquisition = BUASubprocess()
+        self.acquisition.start()
+
+        self.connect()
+
+    @property
+    def dSamplingInterval(self):
+        return self._dSamplingInterval
+
+    @property
+    def stdblocksize(self):
+        return self._stdblocksize
+
+    @property
+    def markerids(self):
+        return self._markerids
+
+    @property
+    def channelNames(self):
+        return self._channelNames
+
+    @property
+    def markerNames(self):
+        return self._markerNames
+
+    def regcallback(self, func):
+        self.callbacks.append(func)
+
+    def block_length_ms(self):
+        return (self.stdblocksize*1000)/self.dSamplingInterval
+
+    def disconnect(self):
+        if self.ipmarker_server is not None:
+            self.ipmarker_server.stop()
+            self.ipmarker_server.join()
+        self.acquisition.stop()
+        self.acquisition.join(timeout=5)
+        del self.acquisition
+
+    def new_marker_id(self):
+        self.marker_id_counter += 1
+        return self.marker_id_counter
+
+    def connect(self, verbose=False):
+
+        while self.acquisition.nchannels.value < 0:
+            if not self.acquisition.is_alive():
+                raise IOError, "Acquisition quit early!"
+            time.sleep(.1)
+
+        self.nChannels = self.acquisition.nchannels.value
+
+        if self.nChannels == 0:
+            raise IOError, "No Amplifiers found! Switch them on?"
+
+        # generate all possible marker names and ids
+        self._markerids['null'] = 0
+        for s in range(1,256,1):
+                self._markerids[str('S%d' % s)] = self.new_marker_id()
+        for r in range(1,256,1):
+            self._markerids[str('R%d' % r)] = self.new_marker_id()
+        # generate reverse mapping
+        for k,v in zip(self._markerids.iterkeys(), self._markerids.itervalues()):
+            self._markerNames[v] = k
+
+        # select channelnames
+        self._channelNames = self.all_channels[:self.nChannels]
+
+        # calculate raw-data threshold
+        while self.acquisition.nextra_channels.value < 0 \
+            or self.acquisition.nall_channels < 0:
+            time.sleep(.1)
+        self.nextra_channels = self.acquisition.nextra_channels.value
+        self.nall_channels = self.acquisition.nall_channels.value
+        self.min_raw_data = self.stdblocksize * self.nall_channels
+
+    def read(self, nblocks=1, verbose=False):
+
+        readblocks = 0
+        while (readblocks < nblocks or nblocks == -1):
+            # get enough raw data blocks
+            self.gather_enough_data()
+
+            # split data and marker in seperate arrays
+            ndsamples, ndmarkers = self.separate()
+
+            for f in self.callbacks:
+                f(ndsamples, ndmarkers)
+
+            readblocks += 1
+        return readblocks
+
+    def gather_enough_data(self):
+        """ gets enough data to generate a block
+            of size stdblocksize in channel and markers
+        """
+        while len(self.raw_data) < self.min_raw_data:
+            data, timestamp = self.acquisition.read()
+
+            if self.fmt is None:
+                self.fmt = str("%dh" % (len(data)/2))
+
+            values = struct.unpack(self.fmt, data)
+            self.raw_data.extend(values)
+            self.timestamp = timestamp-self.block_length_ms()
+
+    def separate(self):
+        """ separates the raw-data into the data- and marker-channels
+        """
+        packet = self.raw_data[0:self.min_raw_data]
+        self.raw_data[0:self.min_raw_data] = []
+
+        # example block-layout for 32 channels:
+        # [marker:1][reserved:4][nchannels data:32] :||
+
+        data = list()
+        mark = list()
+
+        for i in range(self.stdblocksize):
+            mark.append(self.digital_marker(packet[0]))
+            data.extend(packet[self.nextra_channels:self.nextra_channels+self.nChannels])
+            packet[0:self.nall_channels] = []
+
+        if self.ipmarker_server is not None:
+            mark = self.insert_ip_markers(mark)
+
+        ndata = numpy.array(data)
+        ndata = ndata.reshape((self.stdblocksize,self.nChannels))
+
+        return ndata, mark
+
+    def insert_ip_markers(self, mark):
+        while True:
+            if not None in self.ip_lastmarker:
+                m, t = self.ip_lastmarker
+                self.ip_lastmarker = (None, None)
+            else:
+                m, t = self.ipmarker_server.read()
+                if m is None or t is None:
+                    break
+
+            time_index = self.time2index(t)
+            mark_index = self.mark2index(m)
+
+            if time_index > len(mark)-1:
+                self.ip_lastmarker = (m, t)
+                break
+            elif time_index >= 0 and time_index < len(mark):
+                mark[time_index] = mark_index
+            else:
+                warnings.warn("Index did not fit: %d (%d, %s)" %
+                    (time_index, mark_index, self.markerNames[mark_index]))
+
+        return mark
+
+    def mark2index(self, m):
+        if not self.markerids.has_key(m):
+            new = self.new_marker_id()
+            self.markerids[m] = new
+            self.markerNames[new] = m
+            # print("added new marker %s with id %d" % (m, new))
+        return self.markerids[m]
+
+    def time2index(self, t):
+        index = ((t-self.timestamp)*self.stdblocksize)/self.block_length_ms()
+        # make sure its not negative!
+        # (a negative index means that the marker was delayed!)
+        return max(0, index)
+
+    def digital_marker(self, raw_value):
+        if raw_value == self.dig_lastmarker:
+            value = -1
+        else:
+            m = raw_value & (self.dig_lastmarker^0xffff)
+            smarker = (m & 0xff)
+            rmarker = (m & 0xff00) >> 8
+            if smarker != 0:
+                value = self.markerids[str("S%d" % smarker)]
+            elif rmarker != 0:
+                value = self.markerids[str("R%d" % rmarker)]
+            else:
+                value = -1
+            self.dig_lastmarker = raw_value
+        return value
 
 def dummylisten1(samples, markers):
     sys.stdout.write("*")
     sys.stdout.flush()
     
-def dummylisten2(samples, markers, meta=dict()):
-    #print "samples:", samples
-    print "markers:", markers
+def dummylisten2(samples, markers):
+    print samples[:32]
     
-def dummylisten3(samples, markers, meta=dict()):
+def dummylisten3(samples, markers):
+    # print markers
     pass
 
-if __name__ == '__main__':      
+if __name__ == '__main__':
+
     if len(sys.argv) > 2:
         try:
             host = str(sys.argv[1])
@@ -716,23 +905,33 @@ if __name__ == '__main__':
     else:
         # Setup for Localhost  
         # c = EEGClient(host='127.0.0.1', port=51244)
-        c = EEGClientShm(shm_name = 22)
+        s = MarkerServer(port=55555)
+        s.start()
+        c = EEGClientUsb(ipmarker_server=s)
 
-    c.connect(verbose=True)
-    c.regcallback(dummylisten1)
+    def marker_listen(samples, markers):
+        for i,m in enumerate(markers):
+            if m != -1:
+                print c.markerNames[m], i
+
+    c.regcallback(marker_listen)
+
+    print("running with %d channels" % c.nChannels)
     
     n = c.read(nblocks=1, verbose=True)
     start = time.time()
-    n += c.read(nblocks=10000)
-    # n += c.read(nblocks=1, verbose=True)
-    # n += c.read(nblocks=-1)
+    n += c.read(nblocks=2500)
     stop = time.time()
+
+    c.disconnect()
     
     total_b  = n*c.stdblocksize*c.nChannels*c.sample_size
     total_kb = float(total_b)/1000.0
     total_mb = float(total_kb)/1000.0
     total_gb = float(total_mb)/1000.0
-    
+
+    del c
+
     rate_mb_s = float(total_mb)/(stop-start)
     
     print "received %06f MB in %04f Seconds := %f MB/s" % (total_mb, (stop-start), rate_mb_s)

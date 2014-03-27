@@ -32,7 +32,7 @@ public:
 
 	int32_t setup(std::string opts);
 	
-	virtual int32_t putMessage(MessageHeader* pHeader);
+	virtual int32_t putMessage(MessageHeader* header);
 
 protected:
 
@@ -61,6 +61,7 @@ private:
 	struct sockaddr_in server_address;
 
 	int blocking;
+    bool first_packet_on_blocking;
 
 	REGISTER_DEC_TYPE(NETOutput);
 

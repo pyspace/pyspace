@@ -208,9 +208,11 @@ class PerformanceResultSummary(BaseDataset):
             # first occurrence
             if result_dict is None:
                 result_dict = csv_analysis.csv2dict(input_file_name)
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(result_dict, input_file_name)#
             else:
                 result = csv_analysis.csv2dict(input_file_name)
-                csv_analysis.extend_dict(result_dict,result)
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(result, input_file_name)
+                csv_analysis.extend_dict(result_dict,result,retain_unique_items = True)
         
         PerformanceResultSummary.translate_weka_key_schemes(result_dict)
         PerformanceResultSummary.tranfer_Key_Dataset_to_parameters(result_dict)
@@ -252,12 +254,12 @@ class PerformanceResultSummary(BaseDataset):
                 else:
                     continue
                 main_directory = dir_path.split(os.sep)[-3]
-                # needed in tranfer_Key_Dataset_to_parameters
+                # needed in transfer_Key_Dataset_to_parameters
                 temp_key_dict = defaultdict(list)
                 # add a temporal Key_Dataset, deleted in next step 
                 temp_key_dict["Key_Dataset"] = [main_directory]
                 # read parameters from key dataset
-                PerformanceResultSummary.tranfer_Key_Dataset_to_parameters(temp_key_dict)
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(temp_key_dict)
                 key_dict=dict([(key,value[0]) for key,value in temp_key_dict.items()])
                 # add run/split identifiers
                 split_number = int(filename[8:-7]) # from trace_spX.pickle
@@ -577,7 +579,7 @@ class PerformanceResultSummary(BaseDataset):
                 os.remove(temp_result_file)
 
     @staticmethod
-    def tranfer_Key_Dataset_to_parameters(data_dict):
+    def transfer_Key_Dataset_to_parameters(data_dict, input_file_name=None):
         if not data_dict.has_key("Key_Dataset"):
             return data_dict
         
@@ -1095,9 +1097,10 @@ class PerformanceResultSummary(BaseDataset):
                         alpha=0.5)
         axes.set_axisbelow(True)
 
-        prop = matplotlib.font_manager.FontProperties(size='xx-small')
+        # prop = matplotlib.font_manager.FontProperties(size='xx-small')
+        prop = matplotlib.font_manager.FontProperties(size='small')
         if not nominal_key=="None":
-            lg=axes.legend(prop=prop, loc=0,fancybox=True,title=nominal_key.strip("_"))
+            lg=axes.legend(prop=prop, loc=0,fancybox=True,title=nominal_key.strip("_").replace("_", " "))
             lg.get_frame().set_facecolor('0.90')
             lg.get_frame().set_alpha(.3)
         # axes.set_xscale('log')

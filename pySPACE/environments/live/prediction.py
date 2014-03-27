@@ -5,13 +5,18 @@ import logging.handlers
 import multiprocessing
 import time
 import numpy
-import warnings
 import cPickle
 import xmlrpclib
 import sys
 
 online_logger = logging.getLogger("OnlineLogger")
 
+file_path = os.path.dirname(os.path.realpath(__file__))
+pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
+if not pyspace_path in sys.path:
+    sys.path.append(pyspace_path)
+
+import pySPACE
 from pySPACE.environments.live import eeg_stream_manager
 import pySPACE.environments.live.communication.socket_messenger
 from pySPACE.tools.logging_stream_colorer import ColorFormatter, COLORS
@@ -140,7 +145,7 @@ class ConfusionMatrix(SimpleResultCollection):
                 elif self.last_result == self.params["negative_event"]:
                     self.result[1,1] += 1
                 elif self.last_result is not None:
-                    online_logger.info(str("unknwon event type: event_str=%s last_result=%s" % (event_str, self.last_result[key])))
+                    online_logger.info(str("unknwon event type: event_str=%s last_result=%s" % (event_str, self.last_result)))
 
                 # store it
                 self.last_result = event_str
@@ -168,9 +173,9 @@ class Predictor(object):
     """ Class that is responsible to perform the actual predictions.
     """
 
-    def __init__(self, live_processing = None, configuration = None):
+    def __init__(self, live_processing = None):
 
-        self.configuration = configuration
+        self.configuration = pySPACE.configuration
 
         self.predicting_active_potential = {}
         self.abri_flow = {}
@@ -205,6 +210,8 @@ class Predictor(object):
         self.stream_manager = None
 
         self.window_stream = {}
+        
+        self.nullmarker_stride_ms = None
 
     def __del__(self):
         self.messenger.end_transmission()
@@ -275,9 +282,7 @@ class Predictor(object):
                 flh_2[key] = open("%s/%s.pickle" % (directory , "prewindowed_train_flow_"+ key), 'r')
                 self.prewindowing_flow[key] = cPickle.load(flh_1[key])
                 self.prewindowing_flow[key].pop(-1)
-                self.prewindowing_flow[key].pop(-1)
                 self.postprocessing_flow[key] = cPickle.load(flh_2[key])
-                self.postprocessing_flow[key].pop(0)
                 self.postprocessing_flow[key].pop(0)
                 self.abri_flow[key] = self.prewindowing_flow[key] + self.postprocessing_flow[key]
                 flh_1[key].close()
@@ -288,11 +293,19 @@ class Predictor(object):
         online_logger.info( "Reloading learned models ... Done!")
         return 0
 
-    def prepare_predicting(self, datasets, testing_data=None):
+    def prepare_predicting(self, datasets, testing_data=None, nullmarker_stride_ms = None):
         """Prepares the trained aBRI-DP flows to classify new instances.
         """
 
         self.messenger.register()
+        
+        self.nullmarker_stride_ms = nullmarker_stride_ms
+        
+        if self.nullmarker_stride_ms == None:
+            online_logger.warn( 'Nullmarker stride interval is %s. You can specify it in your parameter file.' % self.nullmarker_stride_ms)
+        else:
+            online_logger.info( 'Nullmarker stride interval is set to %s ms' % self.nullmarker_stride_ms)
+        
 
         if testing_data is not None:
             if self.stream_manager is not None:
@@ -308,12 +321,12 @@ class Predictor(object):
         for key in self.datasets.keys():
             online_logger.info( "Creating " + key + " windower stream")
             window_spec = os.path.join(spec_base,"node_chains","windower", self.datasets[key]["windower_spec_path_prediction"])
-            if self.datasets[key].has_key("stream") and self.datasets[key]["stream"] == True:
-                self.window_stream[key] = \
-                    self.stream_manager.request_window_stream(window_spec, nullmarker_stride_ms=50, no_overlap = True)
-            else:
-                self.window_stream[key] = \
-                    self.stream_manager.request_window_stream(window_spec, nullmarker_stride_ms=50)
+
+            self.window_stream[key] = \
+                self.stream_manager.request_window_stream(window_spec, \
+                                                   nullmarker_stride_ms=nullmarker_stride_ms, \
+                                                   no_overlap=True)
+
         # Classification is done in separate threads, we send the time series
         # windows to these threads via two queues
         for key in self.datasets.keys():
@@ -383,11 +396,11 @@ class Predictor(object):
                     self.messenger.send_message((key,result[0].prediction))
 
                     if str(result[0].label) == self.datasets[key]["positive_event"]:
-                        self.lrp_logger.info("Classified movement window as "
+                        self.pos_logger.info("Classified window as "
                                               + str(result[0].label) + " with score " + str(result[0].prediction))
                         self.event_queue[key].put(self.datasets[key]["positive_prediction"])
                     else:
-                        self.no_lrp_logger.info("Classified movement window as "
+                        self.neg_logger.info("Classified window as "
                                                + str(result[0].label) + " with score " + str(result[0].prediction))
                         self.event_queue[key].put(self.datasets[key]["negative_prediction"])
 
@@ -517,10 +530,10 @@ class Predictor(object):
         # Setting up log level
         # create a logger
         # create logger for test output
-        self.lrp_logger = logging.getLogger('abriOnlineProcessorLoggerForLrps')
-        self.lrp_logger.setLevel(logging.DEBUG)
-        self.no_lrp_logger = logging.getLogger('abriOnlineProcessorLoggerForNoLrps')
-        self.no_lrp_logger.setLevel(logging.DEBUG)
+        self.pos_logger = logging.getLogger('positiveEventLogger')
+        self.pos_logger.setLevel(logging.DEBUG)
+        self.neg_logger = logging.getLogger('negativeEventLogger')
+        self.neg_logger.setLevel(logging.DEBUG)
 
         formatterResultsStreamNoLrp = ColorFormatter("%(asctime)s - %(name)s: %(message)s",
                                                 color = COLORS.RED)
@@ -542,8 +555,8 @@ class Predictor(object):
         loggingStreamHandlerResultsNoLrp.setLevel(logging.DEBUG)
         loggingFileHandlerResults.setLevel(logging.DEBUG)
 
-        self.lrp_logger.addHandler(loggingStreamHandlerResultsLrp)
-        self.no_lrp_logger.addHandler(loggingStreamHandlerResultsNoLrp)
-        self.lrp_logger.addHandler(loggingFileHandlerResults)
-        self.no_lrp_logger.addHandler(loggingFileHandlerResults)
+        self.pos_logger.addHandler(loggingStreamHandlerResultsLrp)
+        self.neg_logger.addHandler(loggingStreamHandlerResultsNoLrp)
+        self.pos_logger.addHandler(loggingFileHandlerResults)
+        self.neg_logger.addHandler(loggingFileHandlerResults)
 

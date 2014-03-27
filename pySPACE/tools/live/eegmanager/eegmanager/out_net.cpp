@@ -22,6 +22,8 @@ NETOutput::NETOutput()
 	socket_manager_should_work = false;
 	socket_manager = NULL;
 
+    first_packet_on_blocking = true;
+
     pthread_mutex_init(&server_mutex, NULL);
 }
 
@@ -164,6 +166,12 @@ int32_t NETOutput::setup(std::string opts)
 
 void NETOutput::run()
 {
+
+#ifdef PROFILE
+	pre_profile();
+#endif
+
+	uint32_t t1;
 	working = true;
 
 	getMessage(1);
@@ -216,22 +224,31 @@ error:
 	working = false;
 
 	return;
+
+#ifdef PROFILE
+	post_profile();
+#endif
 }
 
 
-int32_t NETOutput::putMessage(MessageHeader* pHeader)
+int32_t NETOutput::putMessage(MessageHeader* header)
 {
-	if(pHeader == NULL || working == false) return 1;
+	if(header == NULL || working == false) return 1;
 
-	if(pHeader->message_type == 3) working = false;
+	if(header->message_type == 3) working = false;
 
 	if(num_clients == 0) {
 		if(blocking) {
 			return 0;
 		} else {
-			return pHeader->message_size;
+			return header->message_size;
 		}
 	}
+
+    if(blocking && first_packet_on_blocking) {
+        msleep(5000);
+        first_packet_on_blocking = false;
+    }
 
 	while(0 != pthread_mutex_trylock(&server_mutex)) {
 		FYI("trylock failed!");
@@ -251,9 +268,9 @@ int32_t NETOutput::putMessage(MessageHeader* pHeader)
 
 	// if we are on microblaze
 	if(_e32((int32_t)1) != (int32_t)1) {
-		endianflip(&pHeader, TO_NETWORK);
-		pHeader->message_size = _e32(pHeader->message_size);
-		pHeader->message_type = _e32(pHeader->message_type);
+		endianflip(&header, TO_NETWORK);
+		header->message_size = _e32(header->message_size);
+		header->message_type = _e32(header->message_type);
 	}
 
 	for(uint32_t i = 0; i<num_clients; i++) {
@@ -271,10 +288,10 @@ int32_t NETOutput::putMessage(MessageHeader* pHeader)
 			buffer[b++] = i;
 		} else {
 			sent = 0;
-			msgp = (char*)pHeader;
+			msgp = (char*)header;
 			current_length = 0;
-			while(sent < pHeader->message_size) {
-				current_length = std::min(pHeader->message_size - sent, (uint32_t)1500);
+			while(sent < header->message_size) {
+				current_length = std::min(header->message_size - sent, (uint32_t)1500);
 				ret = send(*c, msgp, current_length, 0);
 				if(0 > ret) {
 					OMG("Error %d during send", ret);
@@ -293,7 +310,11 @@ int32_t NETOutput::putMessage(MessageHeader* pHeader)
 	// cleanup list of clients due to possible errors
 	for(int i=0; i<b; i++) _disconnect(buffer[i]);
 
-	if(pHeader->message_type == 3) working = false;
+	if(header->message_type == 3) working = false;
+
+#ifdef PROFILE
+	PROF(prof);
+#endif
 
 	return (int32_t)sent;
 }
@@ -472,7 +493,9 @@ int32_t NETOutput::process(void)
 	}
 
 	out_data_message = in_data_message;
-
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return 0;
 }
 

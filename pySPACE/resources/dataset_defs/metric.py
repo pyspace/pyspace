@@ -309,36 +309,32 @@ class BinaryClassificationDataset(BaseDataset):
         up the confusion matrix entries.
         The other metrics are averaged.
         """
-        TP = 0
-        TN = 0
-        FP = 0
-        FN = 0
-        P  = 0
-        N  = 0
-        train_TP = 0
-        train_TN = 0
-        train_FP = 0
-        train_FN = 0
-        train_P  = 0
-        train_N  = 0
-        for p in p_list:
-            TP += p["True_positives"]
-            TN += p["True_negatives"]
-            FP += p["False_positives"]
-            FN += p["False_negatives"]
-            P  += p["Positives"]
-            N  += p["Negatives"]
-            train_TP += p["train_True_positives"]
-            train_TN += p["train_True_negatives"]
-            train_FP += p["train_False_positives"]
-            train_FN += p["train_False_negatives"]
-            train_P  += p["train_Positives"]
-            train_N  += p["train_Negatives"]
-        old_p_keys = p.keys()
         new_p_dict = dict()
-        weight     = 0.5
-        BinaryClassificationDataset.calculate_confusion_metrics(new_p_dict,"",TP,FP,FN,TN,P,N,weight)
-        BinaryClassificationDataset.calculate_confusion_metrics(new_p_dict,"train_",train_TP,train_FP,train_FN,train_TN,train_P,train_N,weight)
+        new_p_dict["True_positives"] = 0
+        new_p_dict["True_negatives"] = 0
+        new_p_dict["False_positives"] = 0
+        new_p_dict["False_negatives"] = 0
+
+        new_p_dict["train_True_positives"] = 0
+        new_p_dict["train_True_negatives"] = 0
+        new_p_dict["train_False_positives"] = 0
+        new_p_dict["train_False_negatives"] = 0
+
+        for p in p_list:
+            new_p_dict["True_positives"] += p["True_positives"]
+            new_p_dict["True_negatives"] += p["True_negatives"]
+            new_p_dict["False_positives"] += p["False_positives"]
+            new_p_dict["False_negatives"] += p["False_negatives"]
+
+            new_p_dict["train_True_positives"] += p["train_True_positives"]
+            new_p_dict["train_True_negatives"] += p["train_True_negatives"]
+            new_p_dict["train_False_positives"] += p["train_False_positives"]
+            new_p_dict["train_False_negatives"] += p["train_False_negatives"]
+
+        old_p_keys = p.keys()
+        
+        BinaryClassificationDataset.calculate_confusion_metrics(new_p_dict,"")
+        BinaryClassificationDataset.calculate_confusion_metrics(new_p_dict,"train_")
         new_p_dict["__Key_Fold__"] = 1
         new_p_dict["__Split__"] = "Split_1"
         new_p_dict["__Key_Run__"] = p_list[0]["__Key_Run__"]

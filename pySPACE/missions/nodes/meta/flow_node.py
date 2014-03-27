@@ -281,6 +281,16 @@ class FlowNode(BaseNode):
         """ Returns whether this node requires supervised training """
         return self.supervised
 
+    def set_run_number(self, run_number):
+        """ Forward run number to flow """
+        self._get_flow()[-1].set_run_number(run_number)
+        super(FlowNode, self).set_run_number(run_number)
+
+    def set_temp_dir(self, temp_dir):
+        """ Forward temp_dir to flow """
+        self._get_flow()[-1].set_temp_dir(temp_dir)
+        super(FlowNode, self).set_semp_dir(temp_dir)
+
     def _get_flow(self):
         """ Return flow (load flow lazily if not yet loaded).
     
@@ -305,14 +315,14 @@ class FlowNode(BaseNode):
                 import warnings
                 warnings.warn("Could not change change set: "+str(changeset)+"!")
                 continue
-            i=1
+            i = 1
             for node in self.flow:
                 if pySPACE.missions.nodes.NODE_MAPPING[changeset["node"]]==type(node):
-                    if i==number:
+                    if i == number:
                         node._change_parameters(changeset["parameters"])
                         break
                     else:
-                        i+=1
+                        i += 1
 
     def _execute(self, data):
         """ Executes the flow on the given data vector *data* """
@@ -330,14 +340,8 @@ class FlowNode(BaseNode):
 
     def _inc_train(self, data, class_label=None):
         """ Iterate through the nodes to train them """
-        for node in self._get_flow():
-            if node.is_retrainable() and not node.buffering and hasattr(node, "_inc_train"):
-                if not node.retraining_phase:
-                    node.retraining_phase=True
-                    node.start_retraining()
-                node._inc_train(data,class_label)
-            data = node._execute(data)
-            
+        self._get_flow()._inc_train(data, class_label)
+
     def _batch_retrain(self,data_list, label_list):
         """ Batch retraining for node chains
         

@@ -142,7 +142,7 @@ class FrequencyBandFeatureNode(BaseNode):
         -
             node : Frequency_Band_Features
             parameters :
-                frequency_bands: [(7.0, 10.0), (13.0,26.0)]
+                frequency_bands: '[(7.0, 10.0), (13.0,26.0)]'
                 criterion : "all"
                 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)

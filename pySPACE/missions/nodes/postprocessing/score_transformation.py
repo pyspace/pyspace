@@ -333,7 +333,8 @@ class PlattsSigmoidFitNode(BaseNode):
     
     def store_state(self, result_dir, index=None):
         """ Stores plots of score distribution and sigmoid fit or/and 
-            the calculated probabilities with the corresponding label.
+        the calculated probabilities with the corresponding label.
+
         .. todo:: change plot calculations to upper if else syntax
         .. todo:: add the corresponding data point to the saved probabilities
         """

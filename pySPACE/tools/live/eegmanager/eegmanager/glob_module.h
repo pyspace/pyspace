@@ -11,6 +11,7 @@
 #include "util_thread.h"
 #include "utils.h"
 #include "util_ringbuffer.h"
+#include "util_filebuffer.h"
 
 class Module : public Thread
 {
@@ -26,8 +27,8 @@ public:
 	std::string usage();
 
 	// setting IPC-pointers
-	void setPrev(RingBuffer* p);
-	void setNext(RingBuffer* n);
+	void setPrev(BaseBuffer* p);
+	void setNext(BaseBuffer* n);
 
 	float i_bandwith();
 	float o_bandwith();
@@ -41,16 +42,16 @@ public:
 
 	void stop();
 
-protected:
-
-	// pointer to shared memories
-	RingBuffer* prev;
-	RingBuffer* next;
-
 	EEGStartMessage* in_data_description;
 	EEGStartMessage* out_data_description;
 	MessageHeader* in_data_message;
 	MessageHeader* out_data_message;
+
+protected:
+
+	// pointer to shared memories
+	BaseBuffer* prev;
+	BaseBuffer* next;
 
 	virtual int32_t getMessage(uint32_t type);
 	virtual int32_t process(void);
@@ -76,6 +77,12 @@ protected:
 	uint64_t abs_start_time;
 
 	int meta; // flag for the gui to trigger extra buttons etc.
+
+#ifdef PROFILE
+	FILE* prof;
+	void pre_profile();
+	void post_profile();
+#endif
 
 };
 

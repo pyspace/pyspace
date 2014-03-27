@@ -37,7 +37,7 @@ BPAcquisition::BPAcquisition()
 {
 
 	// Options this module understands
-	struct option long_options[6] =
+	struct option long_options[] =
 	{
 		{"calibrate",	no_argument,      &calibration, 1},
 //		{"devicename",	required_argument,   0, 'd'},
@@ -45,7 +45,6 @@ BPAcquisition::BPAcquisition()
 		{"resolution",	required_argument,   0, 'r'},
 		{0, 0, 0, 0}
 	};
-
 
 	merge_options(long_options, sizeof(long_options));
 
@@ -108,11 +107,14 @@ int32_t BPAcquisition::setup(std::string opts)
 	// Parse Arguments
 	while (1) {
 
-		c = getopt_long(argc, argv, "b:r:", module_options, &option_index);
+		c = getopt_long(argc, argv, "d:b:r:", module_options, &option_index);
 		if(c == -1) break;
 
 
 		switch (c) {
+		case 'd':
+			devicename = new std::string(optarg);
+			break;
 		case 'b':
 			blocksize = atoi(optarg);
 			break;
@@ -158,7 +160,7 @@ int32_t BPAcquisition::setup(std::string opts)
 #ifdef __windows__
 	bp_device = INVALID_HANDLE_VALUE;	// Amplifier device
 	std::wstring wdevicename = std::wstring(devicename->begin(), devicename->end());
-	bp_device = CreateFile(wdevicename.c_str(),
+	bp_device = CreateFile((char*)wdevicename.c_str(),
 							GENERIC_READ | GENERIC_WRITE,
 							0,
 							NULL,
@@ -173,7 +175,7 @@ int32_t BPAcquisition::setup(std::string opts)
 		devicename->append(DEVICE_PCI);
 		wdevicename.erase();
 		wdevicename = std::wstring(devicename->begin(), devicename->end());
-		bp_device = CreateFile(wdevicename.c_str(),
+		bp_device = CreateFile((char*)wdevicename.c_str(),
 								GENERIC_READ | GENERIC_WRITE,
 								0,
 								NULL,
@@ -208,6 +210,60 @@ int32_t BPAcquisition::setup(std::string opts)
 		FYI("DriverVersion: %d.%d.%d", nMajor, nMinor, nModule);
 
 	}
+
+// #elif __linux__
+// 	if(!_exists(devicename->c_str())) {
+// 		WTF("Error %d when opening file %s.", errno, devicename->c_str());
+// 		return -1;
+// 	}
+
+// 	bp_device = open(devicename->c_str(), O_RDWR);
+
+// 	if(!bp_device) {
+// 		WTF("unable to open device %s! (ERR %d)\n", devicename->c_str(), errno);
+// 		return -1;
+// 	} else {
+// 		FYI("found %s", devicename->c_str());
+// 		int ret = ioctl(bp_device, IOCTL_BA_DRIVERVERSION, &driverversion);
+// 		if(ret != SUCCESS) {
+// 			FYI("unable to read driver version number");
+// 		} else {
+// 			if((driverversion >> 31 & 0x1) == 1) {
+// 				FYI("DriverVersion: %02lu.%02lu.%04lu (TEST-VERSION)\n", (driverversion & 0x7F000000)>>24, (driverversion & 0xFF0000)>>16, (driverversion & 0xFFFF));
+// 			} else {
+// 				FYI("DriverVersion: %02lu.%02lu.%04lu\n", (driverversion & 0x7F000000)>>24, (driverversion & 0xFF0000)>>16, (driverversion & 0xFFFF));
+// 			}
+// 		}
+// 	}
+#else
+	bua = new BUAWrapper(BUA_VENDOR, BUA_DEVICE);
+	if(bua == NULL) {
+		WTF("Error creating bua-wrapper!");
+		return -1;
+	}
+	FYI("Using LibUSB Device Wrapper. Version: %s", bua->get_version());
+	// create device and check for adapters
+	if(bua->open_device() != 0) {
+		return -1;
+	}
+	
+	uint16_t amps[4];
+	bua->find_amplifiers(amps);
+	// determine type of found amplifiers
+	for (int32_t i = 0; i < 4; i++)
+	{
+		amplifiers[i] = (AmpType)amps[i];
+		if (amplifiers[i] == eNoAmp && i < number_of_amps) {
+			number_of_amps = i;
+		}
+	}
+	if(number_of_amps == 0) {
+		WTF("Amp(s) not connected or switched off!");
+		working = false;
+		return -1;
+	}
+    FYI("Found %d Amps connected and switched on", number_of_amps);
+	
 #endif
 	return 0;
 }
@@ -235,6 +291,9 @@ int32_t BPAcquisition::getMessage(uint32_t type)
 		ret = _get_data_message();
 	}
 
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return ret;
 }
 
@@ -270,6 +329,10 @@ int32_t BPAcquisition::_get_data_description()
 					sizeof(amps),
 					&dwBytesReturned,
 					NULL);
+// #elif __linux__
+// 	ioctl(bp_device, IOCTL_BA_AMPLIFIER_TYPE, &amps);
+#else
+	bua->find_amplifiers(amps);
 #endif
 
 	// determine type of found amplifiers
@@ -320,6 +383,22 @@ int32_t BPAcquisition::_get_data_description()
 		WTF("Cannot set pulldown resistors, Error code: %u\n", errno);
 		return -1;
 	}
+// #elif __linux__
+// 	// bp_setup
+// 	ret = ioctl(bp_device, IOCTL_BA_SETUP, &bp_setup);
+// 	if(errno < 0) {
+// 		WTF("Setup failed, Error code: %u\n", errno);
+// 		return -1;
+// 	}
+// 	// Pulldown input resistors for trigger input, (active high)
+// 	ret = ioctl(bp_device, IOCTL_BA_DIGITALINPUT_PULL_UP, &pullup);
+// 	if(errno < 0) {
+// 		WTF("Cannot set pulldown resistors, Error code: %u\n", errno);
+// 		return -1;
+// 	}
+#else
+	bua->setup(&bp_setup);
+	bua->pullup(0);
 #endif
 
 
@@ -429,6 +508,28 @@ int32_t BPAcquisition::_get_data_description()
 		return -1;
 	}
 
+// #elif __linux__
+// 	if(calibration) {
+// 		if (0 > ioctl(bp_device, IOCTL_BA_CALIBRATION_SETTINGS, &bp_calibration))
+// 		{
+// 			WTF("Calibration sending failed, error-code: %u\n", errno);
+// 			return -1;
+// 		}
+// 	} else {
+// 		acquisitiontype = 1;
+// 	}
+
+// 	if (0 > ioctl(bp_device, IOCTL_BA_START, &acquisitiontype)) {
+// 		WTF("Start failed, error-code: %u\n", errno);
+// 		return -1;
+// 	}
+#else
+	// in case it is internally setting the acquisition-type to 2
+	if(calibration)	bua->calibration(&bp_calibration);
+	// apply everything..
+	bua->init();
+	// if nothing went wrong go for it!
+	if(bua->ready_to_start) bua->start();
 #endif
 	return 1;
 }
@@ -464,6 +565,22 @@ int32_t BPAcquisition::_get_data_message()
 		}
 		if (dwBytesReturned == 0) {
 			msleep(0);
+			continue;
+		}
+// #elif __linux__
+// 		dwBytesReturned = read(bp_device, p_data, transfersize);
+// 		if(errno < 0) {
+// 			WTF("an error occured while reading data!");
+// 			return -1;
+// 		}
+// 		if(dwBytesReturned == 0){
+// 			msleep(0);
+// 			continue;
+// 		}
+#else
+		dwBytesReturned = bua->read(p_data, &(idm->time_code));
+		if(dwBytesReturned == 0 && working){
+			msleep(1);
 			continue;
 		}
 #endif // __windows__
@@ -502,8 +619,19 @@ int32_t BPAcquisition::_get_data_message()
 	idm->time_code = (uint32_t)getTimeDiff(abs_start_time, lasttime);
 #endif
 
+	// graveyard of time-stamp generation methods:
+//	idm->time_code = ((2*(position*1000)/idd->frequency) + (2*(uint32_t)getTimeDiff(abs_start_time, lasttime)))/4;
+//	idm->time_code = (uint32_t)getTimeDiff(abs_start_time, lasttime);
+//	idm->time_code = (position*1000)/idd->frequency;
+//	idm->time_code = std::min(idm->time_code+block_length_ms_in(), std::max((uint32_t)getTimeDiff(abs_start_time), (uint32_t)0));
+//	idm->time_code = std::max((uint32_t)(position*1000)/idd->frequency, (uint32_t)getTimeDiff(abs_start_time));
+//	idm->time_code = (position*1000)/idd->frequency;
+
 	position += idd->n_observations;
 
+#ifdef PROFILE
+	PROF(prof);
+#endif
 	return 0;
 }
 
@@ -524,6 +652,19 @@ int32_t BPAcquisition::_stop_acquisition()
 	}
 	CloseHandle(bp_device);
 	bp_device = INVALID_HANDLE_VALUE;
+// #elif __linux__
+// 	// something running?
+// 	if(bp_device == NULL) return 0;
+// 	if(0 > ioctl(bp_device, IOCTL_BA_STOP)) {
+// 		WTF("Error while stopping the Amps: %d\n", errno);
+// 		ret = errno;
+// 	}
+// 	close(bp_device);
+#else
+	if(bua == NULL) return 0;
+	FYI("stopping bua-wrapper!");
+	bua->stop();
+	while(bua->isRunning()) {msleep(10);}
 #endif
 
 	// forward stopmessage
@@ -538,6 +679,11 @@ int32_t BPAcquisition::_stop_acquisition()
 
 void BPAcquisition::run(void)
 {
+
+#ifdef PROFILE
+	pre_profile();
+#endif
+
 	int32_t ret;
 	working = true;
 
@@ -554,7 +700,8 @@ void BPAcquisition::run(void)
 		getMessage(4);
 	}
 
-	in_data_description->abs_start_time = abs_start_time;
+    in_data_description->abs_start_time[0] = (uint32_t)((abs_start_time&0xffffffff00000000)>>32);
+    in_data_description->abs_start_time[1] = (uint32_t)(abs_start_time&0xffffffff);
 
 	// we do not change data properties
 	out_data_description = in_data_description;
@@ -576,6 +723,10 @@ void BPAcquisition::run(void)
 	if(in_data_message != NULL) putMessage((MessageHeader*)in_data_message);
 
 	working = false;
+
+#ifdef PROFILE
+	post_profile();
+#endif
 
 	return;
 }

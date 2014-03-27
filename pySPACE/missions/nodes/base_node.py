@@ -1506,9 +1506,12 @@ class BaseNode(object):
             mode = 'wb' if protocol != 0 else 'w'
             with open(filename, mode) as flh:
                 cPickle.dump(self, flh, protocol)
-                
+
     def getMetadata(self, key):
-        return self.input_node.getMetadata(key)
+        if not self.input_node is None:
+            return self.input_node.getMetadata(key)
+        else:
+            return None
 
 
 # Specify special node names, different to standard names

@@ -111,9 +111,10 @@ class StreamWindowingNode(BaseNode):
                 # Return the test data as there is no additional data that
                 # was dedicated for training
                 self.data_for_training = self.request_data_for_testing()
-                return self.data_for_training.fresh()
+                return self.data_for_training
         else: 
             return self.data_for_training.fresh()
+            
 
     def request_data_for_testing(self):
         """ Returns the data for testing of subsequent nodes
@@ -140,7 +141,7 @@ class StreamWindowingNode(BaseNode):
             # Return a fresh copy of the generator
             return self.data_for_testing.fresh()
         else: 
-            return  self.data_for_testing.fresh()
+            return self.data_for_testing.fresh()
     
     
     def process(self):
@@ -154,17 +155,29 @@ class StreamWindowingNode(BaseNode):
         assert(not self.is_trainable() or
                self.get_remaining_train_phase() == 0), "Node not trained!"
                
+        if self.window_definition is None:
+            if self.is_training() and self.windower_spec_file_train is not None:
+                self.window_definition = \
+                    Windower._load_window_spec(self.windower_spec_file_train,
+                                                    self.local_window_conf)
+            else:
+                self.window_definition = \
+                    Windower._load_window_spec(self.windower_spec_file,
+                                                    self.local_window_conf)
+     
+
         data_generator = \
                 itertools.imap(lambda (data, label):
                                (self.execute(data), label),
                                self.input_node.process())
                 
         self.client = TimeSeriesClient(ts_stream = data_generator)
+        self.client.set_window_defs(self.window_definition)
         
         self.client.connect()
         self.marker_windower = MarkerWindower(data_client=self.client,
                                               windowdefs=self.window_definition,
-                                              stridems=self.nullmarker_stride_ms)
+                                              nullmarker_stride_ms=self.nullmarker_stride_ms)
         
         if self.marker_windower == None:
             self.window_stream()
@@ -185,9 +198,16 @@ class StreamWindowingNode(BaseNode):
         self.client = TimeSeriesClient(ts_stream = iter(data))
         
         self.client.connect()
+        self.client.set_window_defs(self.window_definition)
         self.marker_windower = MarkerWindower(data_client=self.client,
                                               windowdefs=self.window_definition,
-                                              stridems=self.nullmarker_stride_ms)
+                                              nullmarker_stride_ms=self.nullmarker_stride_ms)
+
+
+    def __getstate__(self):
+        """ Return a pickable state for this object """
+        self.window_definition = None
+        return super(StreamWindowingNode, self).__getstate__()
         
 
 

@@ -485,13 +485,14 @@ class NodeChainOperation(Operation):
                                                                  hide_parameters)
                     # Create the respective process and put it to the
                     # executing-queue of processes
-                    process = NodeChainProcess(node_chain_spec= node_chain_spec,
-                                          parameter_setting   = parameter_setting_cp,
-                                          rel_dataset_dir  = input_dataset_dir,
-                                          run = run, split    = split,
-                                          storage_format      = storage_format,
-                                          result_dataset_directory = result_dataset_directory,
-                                          store_node_chain          = store_node_chain)
+                    process = NodeChainProcess(
+                        node_chain_spec=node_chain_spec,
+                        parameter_setting=parameter_setting_cp,
+                        rel_dataset_dir=input_dataset_dir,
+                        run=run, split=split,
+                        storage_format=storage_format,
+                        result_dataset_directory=result_dataset_directory,
+                        store_node_chain=store_node_chain)
 
                     processes.put(process)
 
@@ -864,10 +865,17 @@ class NodeChainProcess(Process):
                 # node_chain_spec = node_chain_spec.replace("'%s'" % str(key),
                 #                                           str(value))
                 # parameter as component in eval syntax not marked as string
-                if type(value) == float:
-                    value = "%.42e" % value
-                node_chain_spec = node_chain_spec.replace("%s" % str(key),
-                                                          str(value))
+                try:
+                    if type(value)==str:
+                        node_chain_spec = node_chain_spec.replace("%s" % str(key),
+                                                          value)
+                    else:
+                        node_chain_spec = node_chain_spec.replace("%s" % str(key),
+                                                          repr(value))
+
+                except:
+                    node_chain_spec = node_chain_spec.replace("%s" % str(key),
+                                                          python2yaml(value))
             else:
                 # node_chain_spec = node_chain_spec.replace("'%s'" % str(key),
                 #                                           str(value))
@@ -907,8 +915,6 @@ class NodeChainProcess(Process):
             import TimeSeriesDataset
         from pySPACE.resources.dataset_defs.feature_vector \
             import FeatureVectorDataset
-        from pySPACE.resources.dataset_defs.bci_competition \
-            import BciCompetitionDataset
 
         if isinstance(node_chain[0], DataGenerationTimeSeriesSourceNode):
             # the test node does not care about the dataset type
@@ -920,10 +926,9 @@ class NodeChainProcess(Process):
               "Node chain with input node of type %s cannot process dataset of type %s" \
                         % (type(node_chain[0]), type(dataset))
         elif isinstance(node_chain[0], TimeSeriesSourceNode):
-            assert(isinstance(dataset, TimeSeriesDataset) or
-                   isinstance(dataset, BciCompetitionDataset)), \
-             "Node chain with input node of type %s cannot process dataset of type %s" \
-                        % (type(node_chain[0]), type(dataset))
+            assert(isinstance(dataset, TimeSeriesDataset)), \
+                   "Node chain with input node of type %s cannot process dataset of type %s" \
+                   % (type(node_chain[0]), type(dataset))
         elif isinstance(node_chain[0], FeatureVectorSourceNode):
             assert(isinstance(dataset, FeatureVectorDataset)), \
              "Node chain with input node of type %s cannot process dataset of type %s" \

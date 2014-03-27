@@ -138,25 +138,6 @@ class TimeSeriesSourceNode(BaseNode):
         self.dataset = None
 
 
-class BCICompetitionSourceNode(TimeSeriesSourceNode):
-    """ The source node for a BCI Competition data set 
-
-    The data of the .mat file is transferred to :class:`~pySPACE.resources.data_types.time_series.TimeSeries` objects.
-    
-    **Parameters**
-    
-    **Exemplary Call**
-    
-    .. code-block:: yaml
-    
-        - 
-            node : BCICompetitionSource
-    
-    :Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)
-    """
-    pass
-
-
 class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     """ Transformation of streaming data to windowed time series
 
@@ -422,7 +403,7 @@ class TimeSeries2TimeSeriesSourceNode(Stream2TimeSeriesSourceNode):
         pass
 
 _NODE_MAPPING = {"Time_Series_Source": TimeSeriesSourceNode,
-                "BCI_Competition_Source": BCICompetitionSourceNode,
+                "BCI_Competition_Source": TimeSeriesSourceNode,
                 "EEG_Source": Stream2TimeSeriesSourceNode,
                 "Offline_EEG_Source": Stream2TimeSeriesSourceNode,
                 "Time_Series_Stream_Source": TimeSeries2TimeSeriesSourceNode,

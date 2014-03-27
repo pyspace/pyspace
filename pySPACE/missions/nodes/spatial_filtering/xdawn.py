@@ -321,11 +321,10 @@ class XDAWNNode(SpatialFilteringNode):
                     self._plotTimeSeriesInEC(complete_signal,
                                              file_name="%s%ssignal_complete.png" % (node_dir, os.sep))
                     pylab.savefig("%s%ssignal_complete.png" % (node_dir, os.sep))
-                
-            except:
-                self._log("To many channels chosen for the retained channels! "
-                      "Replaced by maximum number.", level=logging.WARNING)
-            
+
+            except Exception as e:
+                print e
+                raise
         super(XDAWNNode,self).store_state(result_dir)
  
 

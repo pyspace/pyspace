@@ -23,6 +23,7 @@ from collections import defaultdict
 from pySPACE.missions.nodes.meta.flow_node import FlowNode
 from pySPACE.tools.filesystem import locate
 
+
 class SameInputLayerNode(BaseNode):
     """ Encapsulates a set of other nodes that are executed in parallel in the flow. 
     
@@ -240,7 +241,9 @@ class SameInputLayerNode(BaseNode):
             node.set_run_number(run_number)
         super(SameInputLayerNode, self).set_run_number(run_number)
 
+
 class EnsembleNotFoundException(Exception): pass
+
 
 class ClassificationFlowsLoaderNode(BaseNode):
     """ Combine an ensemble of pretrained node chains
@@ -259,7 +262,7 @@ class ClassificationFlowsLoaderNode(BaseNode):
         
      :ensemble_pattern:
          Pickled flows must match the given pattern to be included into the
-         ensemble.             
+         ensemble.
     
      :flow_select_list:
          This optional parameter allows to select only a subset of the flows 
@@ -352,8 +355,8 @@ class ClassificationFlowsLoaderNode(BaseNode):
     def _load_ensemble(self):
         self._log("Loading ensemble")
         # Create a flow node for each  flow pickle
-        flow_nodes = [FlowNode(subflow_path = flow_path) 
-                                for flow_path in self.flow_pathes]
+        flow_nodes = [FlowNode(load_path=flow_path)
+                      for flow_path in self.flow_pathes]
 
         # Create an SameInputLayer node that executes all flows independently
         # with the same input
@@ -530,8 +533,6 @@ class MultiClassLayerNode(SameInputLayerNode):
         node_obj = MultiClassLayerNode(nodes = layer_nodes,**layer_spec["parameters"])
 
         return node_obj
-
-
 
 _NODE_MAPPING = {"Ensemble_Node": ClassificationFlowsLoaderNode,
                  "Same_Input_Layer": SameInputLayerNode,

@@ -4,8 +4,8 @@ import numpy
 import math
 import scipy.signal
 import scipy.fftpack
-
 import warnings
+import logging
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.time_series import TimeSeries
@@ -759,7 +759,7 @@ class VarianceFilterNode(BaseNode):
                 var_tools = False
 
         self.set_permanent_attributes(ringbuffer = None,    # List with ringbuffers for the last n samples used for calculating the variance
-                                      variables = None,     # List with the variables needed to calculate
+                                      variables = None,     # List with the variables needed to calculate (0=variance, 1=mean)
                                       index = None,         # List with the current indices for the ringbuffers
                                       width = width,        # Window size of the variance
                                       standardization = standardization, # Use standardization?
@@ -780,7 +780,8 @@ class VarianceFilterNode(BaseNode):
         x = data.view(numpy.ndarray).astype(numpy.double)
         # Initialize the result data array
         filtered_data = numpy.zeros(x.shape)
-        # Lists which are passed to the standardization
+        # Lists which are passed to the standadization
+        # TODO: make self
         processing_filtered_data = None
         processing_ringbuffer = None
         processing_variables = None
@@ -802,6 +803,7 @@ class VarianceFilterNode(BaseNode):
                 # Copy the processing lists back to the local variables
                 filtered_data[:,channel_index] = processing_filtered_data
                 self.ringbuffer[:,channel_index] = processing_ringbuffer
+                self.variables[:,channel_index] = processing_variables
         else:
             for channel_index in range(self.nChannels):
                 # Copy the different data to the processing listst
@@ -854,7 +856,6 @@ class VarianceFilterNode(BaseNode):
 
             #Calculate the standardization
             outData[i] = variables[0]/(ww)
-
         return index
 
     def standardisation(self, outData, inData, ringbuffer, variables, width, index):
@@ -865,6 +866,8 @@ class VarianceFilterNode(BaseNode):
 
         ringbufferValue=0.0
         variable1 = 0.0
+        invalidValue = False
+        invalidValueOccured = False
 
         for i in range(len(inData)):
             #Speedup for array entries which are needed several times
@@ -875,6 +878,12 @@ class VarianceFilterNode(BaseNode):
             #Calculating the new variance
             variables[0] = variables[0] + (inDataValue - ringbufferValue) * ( ((wm1) * inDataValue) + ((wp1) * ringbufferValue) - (2.0*variable1));
 
+            if variables[0] <= 0.0:
+                variablesInvalidValueBuffer = variables[0]
+                variables[0] = 1.0
+                invalidValue = True
+                invalidValueOccured = True
+
             #Calculating the new mean value
             variables[1] = variable1 + (inDataValue-ringbufferValue);
 
@@ -883,10 +892,15 @@ class VarianceFilterNode(BaseNode):
 
             #Increment the ringbuffer index
             index = index + 1 if (index < wm1) else 0
-            print index
             #Calculate the standardization
-
             outData[i] = (inDataValue-(variables[1]/(width))) / math.sqrt(variables[0]/(ww)) if (math.sqrt(variables[0]/(ww)) != 0.0) else 0.0
+
+            if invalidValue == True:
+                variables[0] = variablesInvalidValueBuffer
+                invalidValue = False
+
+        if invalidValueOccured:
+            self._log("OnlineStandardization:: Warning: Prevented division by zero during standardization!", level=logging.WARNING)
 
         return index
 

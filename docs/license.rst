@@ -30,7 +30,7 @@ When using our software, we request you to cite the following paper::
     @article{krell2013:pySPACE,
     author = {Krell, Mario Michael and Straube, Sirko and Seeland, Anett and W{\"o}hrle, Hendrik and Teiwes, Johannes and Metzen, Jan Hendrik and Kirchner, Elsa Andrea and Kirchner, Frank},
     journal = {Frontiers in Neuroinformatics},
-    title = {{pySPACE — A Signal Processing and Classification Environment in Python}},
+    title = {{pySPACE} — a signal processing and classification environment in {Python}},
     year = {2013},
     volume = {7},
     number = {40},
@@ -41,7 +41,7 @@ When using our software, we request you to cite the following paper::
 
     Krell, M. M., Straube, S., Seeland, Anett,  Wöhrle, H., Teiwes, J.,
     Metzen, J. H., Kirchner, E. A., Kirchner, F. (2013).
-    pySPACE — A Signal Processing and Classification Environment in Python,
+    pySPACE — a signal processing and classification environment in Python,
     Frontiers in Neuroinformatics 7(40), doi: 10.3389/fninf.2013.00040.
 
 Furthermore, when using special algorithms of pySPACE we request you to also

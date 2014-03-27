@@ -7,7 +7,7 @@ TARGET = eegmanager
 DEPENDPATH += .
 INCLUDEPATH += .
 
-CONFIG += release console
+CONFIG += release console debug
 CONFIG -= app_bundle qt
 
 # Input
@@ -23,6 +23,8 @@ HEADERS += glob_module.h \
            out_file.h \
            util_mutex.h \
            util_thread.h \
+           util_basebuffer.h \
+           util_filebuffer.h \
 		   util_ringbuffer.h \
            utils.h 
 SOURCES += glob_module.cpp \
@@ -36,6 +38,8 @@ SOURCES += glob_module.cpp \
            out_file.cpp \
            util_mutex.cpp \
            util_thread.cpp \
+           util_basebuffer.cpp \
+           util_filebuffer.cpp \
 		   util_ringbuffer.cpp 
 
 unix:!macx {

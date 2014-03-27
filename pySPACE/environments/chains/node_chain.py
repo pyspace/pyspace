@@ -323,7 +323,20 @@ class NodeChain(object):
             raise NodeChainException(errstr)
         return res
 
-
+    def _inc_train(self, data, class_label=None):
+        """ Iterate through the nodes to train them """
+        for node in self:
+            if node.is_retrainable() and not node.buffering and hasattr(node, "_inc_train"):
+                if not node.retraining_phase:
+                    node.retraining_phase=True
+                    node.start_retraining()
+                node._inc_train(data,class_label)
+            if not (hasattr(self, "buffering") and self.buffering):
+                data = node.execute(data)
+            else: # workaround to inherit meta data
+                self.buffering = False
+                data = node.execute(data)
+                self.buffering = True
 
     def save(self, filename, protocol = -1):
         """ Save a pickled representation to *filename*
@@ -1046,13 +1059,29 @@ class NodeChainFactory(object):
                 instance[key] = NodeChainFactory.instantiate(value, parametrization)
             elif isinstance(value, basestring): # String replacement
                 for param_key, param_value in parametrization.iteritems():
-                    value = value.replace(param_key, str(param_value))
+                    try:
+                        value = value.replace(param_key, repr(param_value))
+                    except:
+                        value = value.replace(param_key, python2yaml(param_value))
                 instance[key] = value
-            elif hasattr(value, "__iter__"): # Iterate over all items in sequence
+            elif hasattr(value, "__iter__"):
+                # Iterate over all items in sequence
                 instance[key] = []
                 for iter_item in value:
                     if iter_item in parametrization.keys(): # Replacement
                         instance[key].append(parametrization[iter_item])
+                    elif isinstance(iter_item, dict):
+                        instance[key].append(NodeChainFactory.instantiate(
+                            iter_item, parametrization))
+                    elif isinstance(value, basestring): # String replacement
+                        for param_key, param_value in parametrization.iteritems():
+                            try:
+                                iter_item = iter_item.replace(param_key,
+                                                              repr(param_value))
+                            except:
+                                iter_item = iter_item.replace(
+                                    param_key, python2yaml(param_value))
+                        instance[key] = value
                     else:
                         instance[key].append(iter_item)
             else: # Not parameterized
@@ -1240,7 +1269,7 @@ class SubflowHandler(object):
                                                          subflow.id+".pickle"),"wb"),
                                      protocol=cPickle.HIGHEST_PROTOCOL)
                     send_flows = subflows_to_compute
-                else: # backend_name == local
+                else: # backend_name == mcore
                     # send pool_size to backend if not already done
                     if not self.already_send:
                         client_socket = inform("subflow_poolsize;%d%s" % \

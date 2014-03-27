@@ -73,6 +73,32 @@ module_pattern = re.compile("[a-zA-Z0-9_][a-zA-Z0-9_]*.py$")
 # The root of the search (should be the nodes directory)
 root = os.sep.join(__file__.split(os.sep)[:-1])
 
+
+# load module import list
+try:
+    # get list of nodes that should be imported
+    # if the list is empty, by default all nodes are imported
+    _module_import_white_list_temp = \
+        pySPACE.configuration.module_import_white_list
+    # None is allowed -> map to empty list
+    if _module_import_white_list_temp is None:
+        _module_import_white_list_temp = []
+    # if file names rather than module names are specified,
+    # strip the file extension
+    _module_import_white_list = []
+    for module_or_filename in _module_import_white_list_temp:
+        if module_or_filename.endswith(".py"):
+            _module_import_white_list.append(module_or_filename.split(".")[0])
+        else:
+            _module_import_white_list.append(module_or_filename)
+
+    # TODO: by default, all nodes specified under "external" are also imported
+    # -> this is ugly, because it changes the semantics, find a better solution
+    # without code duplication
+    _module_import_white_list.append("external")
+except:
+    _module_import_white_list = []
+
 # The global dict of nodes
 try:
     NODE_MAPPING = pySPACE.configuration.NODE_MAPPING
@@ -80,75 +106,84 @@ try:
 except:
     NODE_MAPPING = {}
     DEFAULT_NODE_MAPPING = {}
+    pySPACE.configuration.NODE_MAPPING = NODE_MAPPING
+    pySPACE.configuration.DEFAULT_NODE_MAPPING = DEFAULT_NODE_MAPPING
 
-# search all modules in the directory subtree rooted here
-for dir_path, dir_names, file_names in os.walk(root, topdown=True):
-    # Compute the package path for the current directory
-    dir_path = dir_path[dir_path.rfind("pySPACE"):]
-    package_path = dir_path.replace(os.sep, ".")
+    # search all modules in the directory subtree rooted here
+    for dir_path, dir_names, file_names in os.walk(root, topdown=True):
+        # Compute the package path for the current directory
+        dir_path = dir_path[dir_path.rfind("pySPACE"):]
+        package_path = dir_path.replace(os.sep, ".")
 
-    if package_path == "pySPACE.missions.nodes":
-        if "Noop" in NODE_MAPPING.keys():  # do not visit the base module twice
-            continue
-        else: # templates are no real nodes, other components get extra treatment
-            for file_name in ["templates.py",
-                              "templates.pyc"]:
-                try:
-                    file_names.remove(file_name)
-                except:
-                    pass
-    # Check all files if they are Python modules
-    filtered_file_names = []
-    for file_name in file_names:
-        if module_pattern.match(file_name):
-            filtered_file_names.append(file_name)
-    for file_name in filtered_file_names:
-        # Import the module
-        module_name = file_name.split(".")[0]
-        module_path = package_path + '.' + module_name
-        module = __import__(module_path, {}, {}, ["dummy"])
-        module_nodes = inspect.getmembers(module, \
-            lambda x: inspect.isclass(x) and x.__name__.endswith("Node") \
-                and x.__module__==module.__name__)
-        # If this module exports nodes
-        if hasattr(module, "_NODE_MAPPING"):
-            if module_path == "pySPACE.missions.nodes.external":
-                # Replace wrong value with new fitting one
-                for key, value in module._NODE_MAPPING.iteritems():
-                    assert(key not in NODE_MAPPING.keys()), \
-                        "Node with name %s has already been defined!" % key
-                    for new_key, new_value in module_nodes:
-                        if new_value.__name__ == value.__name__:
-                            NODE_MAPPING[key] = new_value
-                            break
+        if package_path == "pySPACE.missions.nodes":
+            if "Noop" in NODE_MAPPING.keys():
+                continue # do not visit the base module twice
             else:
-                # Add them to the global dict of nodes
-                for key, value in module._NODE_MAPPING.iteritems():
-                    assert(key not in NODE_MAPPING.keys()), \
-                        "Node with name %s has already been defined!" % key
-                    NODE_MAPPING[key] = value
-        for key, value in module_nodes:
-            # Nodes added the step before are allowed,
-            # but no other double entries
-            if key in NODE_MAPPING.keys():
-                assert(str(value)==str(NODE_MAPPING[key])), \
-                    "Node (%s) with name %s has already been defined as %s!" % (str(value),key,str(NODE_MAPPING[key]))
-            if key[:-4] in NODE_MAPPING.keys():
-                assert(str(value)==str(NODE_MAPPING[str(key[:-4])])), \
-                    "Node (%s) with name %s has already been defined as %s!" % (str(value),key[:-4],str(NODE_MAPPING[key[:-4]]))
-            DEFAULT_NODE_MAPPING[key] = value
-            NODE_MAPPING[key] = value
-            NODE_MAPPING[key[:-4]] = value
-            # import each node to shorten import path
-            exec "from %s import %s" % (module_path,key)
-# If sklearn is available, add wrapper-nodes for sklearn estimators.
-try:
-    import scikit_nodes
-except ImportError:
-    pass
+                # templates are no real nodes,
+                # other components get extra treatment
+                for file_name in ["templates.py",
+                                  "templates.pyc"]:
+                    try:
+                        file_names.remove(file_name)
+                    except:
+                        pass
+        # Check all files if they are Python modules
+        filtered_file_names = []
+        for file_name in file_names:
+            if module_pattern.match(file_name):
+                filtered_file_names.append(file_name)
+        for file_name in filtered_file_names:
+            # Import the module
+            module_name = file_name.split(".")[0]
+            if len(_module_import_white_list) > 0 and \
+                    module_name not in _module_import_white_list:
+                continue
+            module_path = package_path + '.' + module_name
+            module = __import__(module_path, {}, {}, ["dummy"])
+            module_nodes = inspect.getmembers(module, \
+                lambda x: inspect.isclass(x) and x.__name__.endswith("Node") \
+                    and x.__module__==module.__name__)
+            # If this module exports nodes
+            if hasattr(module, "_NODE_MAPPING"):
+                if module_path == "pySPACE.missions.nodes.external":
+                    # Replace wrong value with new fitting one
+                    for key, value in module._NODE_MAPPING.iteritems():
+                        assert(key not in NODE_MAPPING.keys()), \
+                            "Node with name %s at %s has already been defined at %s!" % (key, value, NODE_MAPPING[key])
+                        for new_key, new_value in module_nodes:
+                            if new_value.__name__ == value.__name__:
+                                NODE_MAPPING[key] = new_value
+                                break
+                else:
+                    # Add them to the global dict of nodes
+                    for key, value in module._NODE_MAPPING.iteritems():
+                        assert(key not in NODE_MAPPING.keys()), \
+                            "Node with name %s at %s has already been defined at %s!" % (key, value, NODE_MAPPING[key])
+                        NODE_MAPPING[key] = value
+            for key, value in module_nodes:
+                # Nodes added the step before are allowed,
+                # but no other double entries
+                if key in NODE_MAPPING.keys():
+                    assert(str(value)==str(NODE_MAPPING[key])), \
+                        "Node (%s) with name %s has already been defined as %s!" % (str(value),key,str(NODE_MAPPING[key]))
+                if key[:-4] in NODE_MAPPING.keys():
+                    assert(str(value)==str(NODE_MAPPING[str(key[:-4])])), \
+                        "Node (%s) with name %s has already been defined as %s!" % (str(value),key[:-4],str(NODE_MAPPING[key[:-4]]))
+                DEFAULT_NODE_MAPPING[key] = value
+                NODE_MAPPING[key] = value
+                NODE_MAPPING[key[:-4]] = value
+                # import each node to shorten import path
+                exec "from %s import %s" % (module_path,key)
+    # If sklearn is available, add wrapper-nodes for sklearn estimators.
+    try:
+        import scikit_nodes
+    except ImportError:
+        pass
+    # Clean up...
+    del(module_pattern, root, dir_path, dir_names, file_names,
+        package_path, module_name, module_path, module, key, value, file_name)
 
 # Clean up...
-del(sys, os, re, module_pattern, root, dir_path, dir_names, file_names,
-    package_path, module_name, module_path, module, key, value, file_name)
+del(sys, os, re, inspect,pySPACE)
 
 

@@ -1,7 +1,10 @@
 #ifndef __GLOBAL_H__
 #define __GLOBAL_H__
 
-
+#ifndef __STDC_FORMAT_MACROS
+#define __STDC_FORMAT_MACROS
+#endif
+#include <inttypes.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +33,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/select.h>
 #include <errno.h>
 #endif
 
@@ -37,13 +41,27 @@
 #include "util_mutex.h"
 #include "utils.h"
 
+//#define PROFILE 1
+
 #define DEBUG 1
 #define WARN 1
 
 #define TO_MICROBLAZE 1
 #define TO_NETWORK 2
 
-#define FIFO_SIZE (uint32_t)256000
+#define FIFO_SIZE (size_t)128000 // 512Kb
+
+struct shm_ringbuffer {
+	Mutex m;
+	uint32_t in;
+	uint32_t out;
+	uint32_t used;
+	char data[FIFO_SIZE];
+};
+
+#ifdef PROFILE
+#define PROF(f, ...) fprintf(f, "%s ", __PRETTY_FUNCTION__);fprintf(f, "%" PRIu64 "\n", getTime());
+#endif
 
 #define WTF(...) printf("\nFATAL: %s\n\t",__PRETTY_FUNCTION__);printf(__VA_ARGS__);printf("\n")
 

@@ -14,6 +14,7 @@ import os
 import cPickle
 import logging
 
+
 class ParameterOptimizationBase(BaseNode):
     """ Base class for parameter optimization nodes
     
@@ -384,14 +385,7 @@ class ParameterOptimizationBase(BaseNode):
         the changed data is forwarded to the *next* node.
         This is different to the normal offline retraining scheme.
         """
-        for node in self._get_flow():
-            if node.is_retrainable() and not node.buffering and \
-                    hasattr(node, "_inc_train"):
-                if not node.retraining_phase:
-                    node.retraining_phase = True
-                    node.start_retraining()
-                node._inc_train(data,class_label)
-            data = node._execute(data)
+        self._get_flow()._inc_train(data, class_label)
 
     def is_retrainable(self):
         """ Retraining if one node in subflow is retrainable """
@@ -433,8 +427,19 @@ class ParameterOptimizationBase(BaseNode):
     def get_sensor_ranking(self):
         """ Get the sensor ranking from the optimized trained flow """
         # The last node is the irrelevant 'sink node'. We need the previous one.
-        return self.flow[-2].get_sensor_ranking()
-    
+        return self.flow[-1].get_sensor_ranking()
+
+    def get_previous_transformations(self):
+        """ Recursively construct a list of (linear) transformations 
+        
+        Overwrites BaseNode function, since meta node needs to get
+        transformations from subflow.
+        """
+        transformations = self.input_node.get_previous_transformations()
+        own_transformations = self.flow[-1].get_previous_transformations()
+        transformations.extend(own_transformations)
+        return transformations
+
     def re_init(self):
         """ Reset optimization params
         
@@ -495,6 +500,7 @@ class ParameterOptimizationBase(BaseNode):
     def p2key(parameters):
         """ Map parameter dictionary to hashable tuple (key for dictionary) """
         return tuple(sorted(parameters.items()))
+
 
 class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
     """ Grid search for optimizing the parameterization of a subflow

@@ -284,10 +284,16 @@ class SensorSelectionRankingNode(SensorSelectionBase):
         """
         if ranking_name == "Remove_One_Performance_Ranking":
             return RemoveOnePerformanceRanker(ranking_spec=ranking_spec)
-        if ranking_name == "Coefficient_Ranking":
-            return CoefficientRanker(ranking_spec=ranking_spec,run_number = self.run_number)
-        if ranking_name == "Add_One_Performance_Ranking":
+        elif ranking_name == "Coefficient_Ranking":
+            return CoefficientRanker(ranking_spec=ranking_spec,
+                                     run_number=self.run_number)
+        elif ranking_name == "Add_One_Performance_Ranking":
             return AddOnePerformanceRanker(ranking_spec=ranking_spec)
+        else:
+            self._log("Ranking algorithm '%s' is not available!" % ranking_name,
+                      level=logging.CRITICAL)
+            raise NotImplementedError(
+                "Ranking algorithm '%s' is not available!" % ranking_name)
 
     def _train(self, data, label):
         """ Save the *data*
@@ -847,7 +853,8 @@ class CoefficientRanker(object):
     
     This ranking is given by this node,
     by adding up channel weights of linear classifiers or spatial filters.
-    The details remain to the used node.
+    The details remain to the used node (last one in the node chain before
+    sink node) and its method *get_sensor_ranking*.
     
     **Parameters**
 

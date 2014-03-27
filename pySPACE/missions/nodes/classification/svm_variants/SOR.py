@@ -116,6 +116,11 @@ class SorSvmNode(RegularizedClassifierBase):
 
             (*optional, default: True*)
 
+        :squared_loss:
+            Use L2 loss (optional) instead of L1 loss (default).
+
+            (*optional, default: False*)
+
     In the implementation we do not use the name alpha but dual_solution for the
     variables of the dual optimization problem,
     which is optimized with this algorithm.
@@ -137,13 +142,13 @@ class SorSvmNode(RegularizedClassifierBase):
 
     :input:    FeatureVector
     :output:   PredictionVector
-    :Author:   Mario Krell (mario.krell@dfki.de)
+    :Author:   Mario Michael Krell (mario.krell@dfki.de)
     :Created:  2012/06/27
     """
-    def __init__(self, random = False, omega = 1.0,
-                 max_iterations = numpy.inf,
-                 version = "samples", reduce_non_zeros = True,
-                 calc_looCV = False, use_offset=True,
+    def __init__(self, random=False, omega=1.0,
+                 max_iterations=numpy.inf,
+                 version="samples", reduce_non_zeros=True,
+                 calc_looCV=False, use_offset=True, squared_loss=False,
                  **kwargs):
         self.old_difference=numpy.inf
         # instead of lists, arrays are concatenated in training
@@ -151,42 +156,50 @@ class SorSvmNode(RegularizedClassifierBase):
 
         if not(version in ["samples", "matrix"]):
             self._log("Version %s is not available. Default to 'samples'!"%version, level=logging.WARNING)
-            version="samples"
-        if not self.kernel_type=='LINEAR' and not version=="matrix":
+            version = "samples"
+        if not self.kernel_type == 'LINEAR' and not version == "matrix":
             self._log("Version %s is not available for nonlinear kernel. Default to 'matrix'!"%version, level=logging.WARNING)
-            version="matrix"
-        if self.tolerance>0.1*self.complexity:
+            version = "matrix"
+        if self.tolerance > 0.1 * self.complexity:
             self.set_permanent_attributes(tolerance=0.1*self.complexity)
-            warnings.warn("Using to high tolerance. Reduced to 0.1 times complexity (tolerance=%f)."%self.tolerance)
-            # mapping of the binary variable to {0,1}
+            warnings.warn("Using to high tolerance." +
+                          " Reduced to 0.1 times complexity (tolerance=%f)."
+                          % self.tolerance)
+        # mapping of the binary variable to {0,1}
         if not use_offset:
             offset_factor = 0
         else:
             offset_factor = 1
-            
+
+        if not squared_loss:
+            squ_factor = 0.0
+        else:
+            squ_factor = 1.0
+
         # Weights for soft margin (dependent on class or time)
         ci = []
         # Mapping from class to value of classifier (-1,1)
         bi = []
 
-        self.set_permanent_attributes(  random= random,
-                                        omega = omega,
-                                        max_iterations_factor = max_iterations,
-                                        max_sub_iterations = numpy.inf,
-                                        iterations = 0,
-                                        sub_iterations = 0,
-                                        version = version,
-                                        M = None,
-                                        reduce_non_zeros = reduce_non_zeros,
-                                        calc_looCV = calc_looCV,
-                                        offset_factor = offset_factor,
-                                        ci = ci,
-                                        bi = bi,
-                                        num_samples = 0,
-                                        dual_solution = None,
-                                        max_iterations = 42,
-                                        b = 0
-                                        )
+        self.set_permanent_attributes(random=random,
+                                      omega=omega,
+                                      max_iterations_factor=max_iterations,
+                                      max_sub_iterations=numpy.inf,
+                                      iterations=0,
+                                      sub_iterations=0,
+                                      version=version,
+                                      M=None,
+                                      reduce_non_zeros=reduce_non_zeros,
+                                      calc_looCV=calc_looCV,
+                                      offset_factor=offset_factor,
+                                      squ_factor=squ_factor,
+                                      ci=ci,
+                                      bi=bi,
+                                      num_samples=0,
+                                      dual_solution=None,
+                                      max_iterations=42,
+                                      b=0
+                                      )
 
     def _execute(self, x):
         """ Executes the classifier on the given data vector in the linear case
@@ -198,12 +211,13 @@ class SorSvmNode(RegularizedClassifierBase):
             # else:
         data = x.view(numpy.ndarray)
         data = data[0,:]
-        prediction=self.b
+        prediction = self.b
         for i in range(self.num_samples):
             dual = self.dual_solution[i]
-            if not dual==0:
-                prediction += dual*self.kernel_func(data,self.samples[i])*self.bi[i]
-            # Look up class label
+            if not dual == 0:
+                prediction += dual * self.bi[i] * \
+                    self.kernel_func(data, self.samples[i])
+        # Look up class label
         # prediction --> {-1,1} --> {0,1} --> Labels
         if prediction >0:
             label = self.classes[1]
@@ -214,9 +228,10 @@ class SorSvmNode(RegularizedClassifierBase):
 
 
     def _stop_training(self, debug=False):
-        """ Train the SVM with the SOR algorithm on the collected training data """
+        """ Train the SVM with the SOR algorithm on the collected training data
+        """
         self._log("Preprocessing of SOR SVM")
-        self._log("Instances of Class %s: %s, %s: %s" \
+        self._log("Instances of Class %s: %s, %s: %s"
                   % (self.classes[0],
                      self.labels.count(self.classes.index(self.classes[0])),
                      self.classes[1],
@@ -227,26 +242,34 @@ class SorSvmNode(RegularizedClassifierBase):
         self.max_iterations = self.max_iterations_factor*self.num_samples
         self.dual_solution = numpy.zeros(self.num_samples)
 
-        if self.version == "matrix" and self.kernel_type=="LINEAR":
+        if self.version == "matrix" and self.kernel_type == "LINEAR":
             self.A = numpy.array(self.samples)
             self.D = numpy.diag(self.bi)
-            self.M = dot(self.D,dot(dot(self.A,self.A.T)+self.offset_factor*numpy.ones((self.num_samples,self.num_samples)),self.D))
-        elif self.version=="samples" and self.kernel_type=="LINEAR":
-            self.M = [1.0/(numpy.linalg.norm(sample)**2.0 + self.offset_factor) for sample in self.samples]
+            self.M = dot(self.D,
+                         dot(dot(self.A, self.A.T) + self.offset_factor *
+                             numpy.ones((self.num_samples, self.num_samples)),
+                             self.D))
+        elif self.version == "samples" and self.kernel_type == "LINEAR":
+            self.M = [1 / (numpy.linalg.norm(self.samples[i])**2.0
+                      + self.offset_factor
+                      + self.squ_factor / self.ci[i])
+                      for i in range(self.num_samples)]
             # changes of w and b are tracked in the samples version
-            self.w = numpy.zeros(self.dim,dtype=numpy.float)
+            self.w = numpy.zeros(self.dim, dtype=numpy.float)
             self.b = 0.0
         else: # kernel case
             ## iterative calculation of M
-            self.M = numpy.zeros((self.num_samples,self.num_samples))
+            self.M = numpy.zeros((self.num_samples, self.num_samples))
             for i in range(self.num_samples):
-                bi=self.bi[i]
-                si=self.samples[i]
+                bi = self.bi[i]
+                si = self.samples[i]
                 for j in range(self.num_samples):
                     if i>j:
                         self.M[i][j] = self.M[j][i]
                     else:
-                        self.M[i][j] = bi*self.bi[j]*(self.kernel_func(si,self.samples[j])+self.offset_factor)
+                        self.M[i][j] = bi * self.bi[j] * (
+                            self.kernel_func(si, self.samples[j])
+                            + self.offset_factor)
 
         ## SOR Algorithm ##
         self.iteration_loop(self.M)
@@ -266,7 +289,7 @@ class SorSvmNode(RegularizedClassifierBase):
         sort_dual = self.dual_solution
         # sort indices --> zero weights do not need any changing and
         # low weights are less relevant for changes
-        sorted_indices = map(list,[numpy.argsort(sort_dual)])[0]
+        sorted_indices = map(list, [numpy.argsort(sort_dual)])[0]
         sorted_indices.reverse()
 
         prediction_vectors = []
@@ -289,9 +312,9 @@ class SorSvmNode(RegularizedClassifierBase):
                 self._execute(numpy.atleast_2d(self.samples[index])),
                                     self.classes[self.labels[index]]))
         self.loo_metrics = BinaryClassificationDataset.calculate_metrics(
-                                                prediction_vectors,
-                                                ir_class=self.classes[1],
-                                                sec_class=self.classes[0])
+            prediction_vectors,
+            ir_class=self.classes[1],
+            sec_class=self.classes[0])
         #undo changes
         self.b = optimal_b
         self.w = optimal_w
@@ -299,9 +322,9 @@ class SorSvmNode(RegularizedClassifierBase):
 
     def reduce_dual_weight(self,index):
         """ Change weight at index to zero """
-        if self.version=="sample":
+        if self.version == "sample":
             old_weight = self.dual_solution[index]
-            self.update_classification_function(delta=-old_weight,index=index)
+            self.update_classification_function(delta=-old_weight, index=index)
         else:
             # the matrix algorithm doesn't care for the old weights
             pass
@@ -311,7 +334,7 @@ class SorSvmNode(RegularizedClassifierBase):
         """ Calculate weights in the loss term and map label to -1 and 1 """
         self.num_samples=0
         for label in self.labels:
-            self.num_samples+=1
+            self.num_samples += 1
             self.append_weights_and_class_factors(label)
             #care for zero sum
 
@@ -340,7 +363,8 @@ class SorSvmNode(RegularizedClassifierBase):
         self.iterations = 0
         self.difference = numpy.inf
         ## outer iteration loop ##
-        while (self.difference>self.tolerance and self.iterations <= self.max_iterations):
+        while (self.difference > self.tolerance and
+               self.iterations <= self.max_iterations):
             # inner iteration loop only on active vectors/alpha (non zero) ##
             self.sub_iterations = 0
             # sorting or randomizing non zero indices
@@ -348,8 +372,10 @@ class SorSvmNode(RegularizedClassifierBase):
             sort_dual = self.dual_solution
 
             num_non_zeros = len(map(list,sort_dual.nonzero())[0])
-            max_values = len(map(list,numpy.where(sort_dual==sort_dual.max()))[0])
-            # sort the entries of the current dual and get the corresponding indices
+            max_values = len(map(list,
+                                 numpy.where(sort_dual == sort_dual.max()))[0])
+            # sort the entries of the current dual
+            # and get the corresponding indices
             sorted_indices = map(list,[numpy.argsort(sort_dual)])[0]
             if num_non_zeros == 0 or num_non_zeros==max_values:
                 # skip sub iteration if everything is zero or maximal
@@ -363,12 +389,13 @@ class SorSvmNode(RegularizedClassifierBase):
                     pass
             if self.random:
                 random.shuffle(non_zero_indices)
-            self.max_sub_iterations = self.max_iterations_factor*len(non_zero_indices)*0.5
-            while (self.difference>self.tolerance
-                   and self.sub_iterations < self.max_sub_iterations
-                   and self.iterations     < self.max_iterations):
+            self.max_sub_iterations = self.max_iterations_factor * \
+                len(non_zero_indices) * 0.5
+            while (self.difference > self.tolerance and
+                   self.sub_iterations < self.max_sub_iterations
+                   and self.iterations < self.max_iterations):
                 ## iteration step ##
-                self.reduced_descent(self.dual_solution,M,non_zero_indices)
+                self.reduced_descent(self.dual_solution, M, non_zero_indices)
                 ## outer loop ##
             if not (self.iterations < self.max_iterations):
                 break
@@ -377,21 +404,23 @@ class SorSvmNode(RegularizedClassifierBase):
             # to have first the small loop, since normally, this is sufficient.
             # Furthermore having it at the end simplifies the stop criterion
             self.max_sub_iterations = numpy.inf
-            self.total_descent(self.dual_solution,M,reduced_indices)
+            self.total_descent(self.dual_solution, M, reduced_indices)
             ## Final solution ##
         # in the case without kernels, we have to calculate the result
         # by hand new for each incoming sample
-        if self.version=="matrix":
-            self.b = self.offset_factor*dot(self.dual_solution,self.bi)
-            #            self.w = self.samples[0]*self.dual_solution[0]*self.bi[0]
-            #            for i in range(self.num_samples-1):
-            #                self.w = self.w+self.bi[i+1]*self.samples[i+1]*self.dual_solution[i+1]
-            if self.kernel_type=="LINEAR":
-                self.w = numpy.array([dot(dot(self.A.T,self.D),self.dual_solution)]).T
-        elif self.version=="samples" and self.kernel_type=="LINEAR":
+        if self.version == "matrix":
+            self.b = self.offset_factor * dot(self.dual_solution, self.bi)
+            # self.w = self.samples[0]*self.dual_solution[0]*self.bi[0]
+            # for i in range(self.num_samples-1):
+            #     self.w = self.w + self.bi[i+1] * self.samples[i+1] *
+            #         self.dual_solution[i+1]
+            if self.kernel_type == "LINEAR":
+                self.w = numpy.array([dot(dot(self.A.T, self.D),
+                                          self.dual_solution)]).T
+        elif self.version == "samples" and self.kernel_type == "LINEAR":
             # w and b are pre-computed in the loop
-            #transferring of 1-d array to 2d array
-            #self.w = numpy.array([self.w]).T
+            # transferring of 1-d array to 2d array
+            # self.w = numpy.array([self.w]).T
             pass
 
     def reduced_descent(self,current_dual,M,relevant_indices):
@@ -430,41 +459,45 @@ class SorSvmNode(RegularizedClassifierBase):
 
             w=w+(\\alpha_i-o)y_i x_i
         """
-        self.irrelevant_indices=[]
+        self.irrelevant_indices = []
         self.difference = 0
         for i in relevant_indices:
             old_dual = current_dual[i]
             ### Main Function ###
             ### elemental update step of SOR algorithm ###
 
-            # update_dual(dual=current_dual, index=i, M=M)
-            if self.version=="matrix":
+            if self.version == "matrix":
                 # this step is kernel independent
-                x = old_dual-self.omega/(M[i][i])*(dot(M[i],current_dual)-1)
-            elif self.version=="samples":
+                x = old_dual - self.omega / (M[i][i] +
+                                             self.squ_factor/self.ci[i]) * \
+                    (dot(M[i], current_dual) - 1)
+            elif self.version == "samples":
                 xi = self.samples[i]
                 bi = self.bi[i]
-                x = old_dual-self.omega*(M[i])*(bi*(dot(xi.T,self.w)+self.b)-1)
+                x = old_dual-self.omega * (M[i]) * \
+                    (bi * (dot(xi.T, self.w) + self.b) - 1)
             # map dual solution to the interval [0,C]
-            if x<=0:
+            if x <= 0:
                 self.irrelevant_indices.append(i)
                 current_dual[i] = 0
-            else:
+            elif not self.squ_factor:
                 current_dual[i] = min(x, self.ci[i])
-            if self.version=="matrix":
+            else:
+                current_dual[i] = x
+            if self.version == "matrix":
                 delta = (current_dual[i] - old_dual)
                 # update w and b in samples case
-            if self.version=="samples":
-                delta = (current_dual[i] - old_dual)*bi
+            if self.version == "samples":
+                delta = (current_dual[i] - old_dual) * bi
                 # update classification function parameter w and b
                 # self.update_classification_function(delta=delta, index=i)
-                self.b = self.b+self.offset_factor*(delta)
-                self.w = self.w+(delta)*xi
+                self.b = self.b + self.offset_factor * delta
+                self.w = self.w + delta * xi
             current_difference = numpy.abs(delta)
-            if current_difference>self.difference:
+            if current_difference > self.difference:
                 self.difference = current_difference
-            self.sub_iterations+=1
-            self.iterations+=1
+            self.sub_iterations += 1
+            self.iterations += 1
             if not (self.sub_iterations < self.max_sub_iterations
                     and self.iterations < self.max_iterations):
                 break
@@ -474,35 +507,22 @@ class SorSvmNode(RegularizedClassifierBase):
                     relevant_indices.remove(index)
                 except:
                     # special mapping for RMM case
-                    if index<self.num_samples:
+                    if index < self.num_samples:
                         relevant_indices.remove(index+self.num_samples)
                     else:
                         relevant_indices.remove(index-self.num_samples)
         if self.random:
             random.shuffle(relevant_indices)
 
-    def update_dual(self,dual,index,M):
-        """ elemental update step of SOR algorithm
-
-        Currently not used, because the RMM version needs to update several parts.
-        Furthermore, the calculation of the stopping criterion on also needed.
-        """
-        if self.version=="matrix":
-            x = dual[index] - self.omega/M[index][index]*(dot(M[index],dual)-1)
-        elif self.version=="samples":
-            x = dual[index] - self.omega * M[index] * (self.bi[index] \
-                              * (dot(self.samples[index].T,self.w)+self.b) - 1)
-        dual[index]=self.project(x,index=index)
-
     def update_classification_function(self,delta, index):
         """ update classification function parameter w and b """
-        bi=self.bi[index]
-        self.b = self.b+self.offset_factor*(delta) * bi
-        self.w = self.w+(delta) * bi*self.samples[index]
+        bi = self.bi[index]
+        self.b = self.b + self.offset_factor * delta * bi
+        self.w = self.w + delta * bi * self.samples[index]
 
     def project(self,value,index):
         """ Projection method of *soft_relax* """
-        if value<=0:
+        if value <= 0:
             self.irrelevant_indices.append(index)
             return 0
         else:
@@ -517,7 +537,7 @@ class SorSvmNode(RegularizedClassifierBase):
             sort_dual = current_dual
             # sort the entries of the current dual
             # and get the corresponding indices
-            sorted_indices = map(list,[numpy.argsort(sort_dual)])[0]
+            sorted_indices = map(list, [numpy.argsort(sort_dual)])[0]
             # highest first
             sorted_indices.reverse()
         else:

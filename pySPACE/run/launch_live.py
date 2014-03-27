@@ -18,6 +18,8 @@ import yaml
 import datetime
 import optparse
 import multiprocessing
+from collections import defaultdict
+from select import select
 
 file_path = os.path.dirname(os.path.realpath(__file__))
 pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
@@ -42,65 +44,48 @@ class LiveController(object):
     and additional parameter files for scenario/task specific parameterization.
 
     """
-    def __init__(self,
-                    parameters,
-                    configuration,
-                    live_processing = None):
+    def __init__(self, parameters_, live_processing=None):
 
-        # fetch mandatory parameters
+        # create two level defaultdict for parameters!
+        parameters = defaultdict(lambda : defaultdict(lambda:None))
+        for key,value in parameters_.items():
+ 
+            #if the dict value is also a dict, convert this also to a defaultdict
+            if type(value) is dict:
+                value = self.convert_dict_to_defaultdict(value)    
+            parameters[key] = value     
+
+        # fetch parameters that would be nice to have
         datafile_info = parameters["data_files"]
-        eeg_server_info = parameters["eeg_server"]
-        live_server_info = parameters["live_server"]
+        data_source = parameters["data_source"]
+
         potentials = parameters["potentials"]
-        flow_persistency_directory = parameters["flow_persistency_directory"]
+
+        self.flow_persistency_directory = parameters["flow_persistency_directory"]
+        self.prewindowed_data_directory = parameters["prewindowed_data_directory"]
+
+        self.datafile_train = datafile_info["eeg_data_file_train"]
+        self.datafile_test = datafile_info["eeg_data_file_test"]
+
+        self.eeg_server_nullmarker_stride_ms = data_source["nullmarker_stride_ms"]
+        self.eeg_server_eeg_port = data_source["default_port"]
+        self.eeg_server_offline_predict_ip = data_source["predict_offline"]["ip"]
+        self.eeg_server_predict_ip = data_source["predict"]["ip"]
+        self.eeg_server_train_ip = data_source["train"]["ip"]
+        self.eeg_server_prewindow_ip = data_source["prewindow"]["ip"]
+        self.eeg_server_record = data_source["record"]
+
+        # settings for recording
+        self.subject = parameters["record"]["subject"]
+        self.experiment = parameters["record"]["experiment"]
 
         # try to fetch optional parameters, set them to None if not present
-        try:
-            prewindowed_data_directory = parameters["prewindowed_data_directory"]
-        except:
-            prewindowed_data_directory = None
 
-        self.datafile_train = \
-            datafile_info["eeg_data_file_train"]
-        self.datafile_test = \
-            datafile_info["eeg_data_file_test"]
+        # live_server_info = parameters["live_server"]
+        # self.live_server_ip = live_server_info["live_server_ip"]
+        # self.live_xmlrpc_port = live_server_info["live_xmlrpc_port"]
 
-        self.eeg_server_train_ip = \
-            eeg_server_info["eeg_server_train_ip"]
-        self.eeg_server_predict_ip = \
-            eeg_server_info["eeg_server_predict_ip"]
-        self.eeg_server_offline_predict_ip = \
-            eeg_server_info["eeg_server_offline_predict_ip"]
-        self.eeg_server_eeg_port = \
-            eeg_server_info["eeg_server_eeg_port"]
-
-        # check if recording data is set
-        try:
-            self.subject = parameters["record"]["subject"]
-            self.experiment = parameters["record"]["experiment"]
-        except:
-            self.subject = None
-            self.experiment = None
-
-
-        # try to fetch optional parameters, set them to None if not present
-        try:
-            self.eeg_server_prewindow_ip = \
-                eeg_server_info["eeg_server_prewindow_ip"]
-        except:
-            self.eeg_server_prewindow_ip = None
-
-        self.live_server_ip = \
-            live_server_info["live_server_ip"]
-        self.live_xmlrpc_port = \
-            live_server_info["live_xmlrpc_port"]
-
-        self.flow_persistency_directory = \
-            flow_persistency_directory
-        self.prewindowed_data_directory = \
-            prewindowed_data_directory
-
-        self.configuration = configuration
+        self.configuration = pySPACE.configuration
 
         self.label = None
 
@@ -108,23 +93,50 @@ class LiveController(object):
         self.live_processing = None
         self.live_prewindower = None
 
-        if live_processing == None:
-            self.messenger = pySPACE.environments.live.communication.log_messenger.LogMessenger()
-        else:
-            self.messenger = live_processing
 
         # figure out all potentials and
         # store all relevant information
         self.erps = dict()
         if not isinstance(potentials, list):
             for (_, potential) in potentials.iteritems():
-                potential["configuration"] = self.configuration
+                if type(potential) is dict:
+                    potential = self.convert_dict_to_defaultdict(potential) 
+                potential["configuration"] = self.configuration 
                 self.erps[potential["flow_id"]] = potential
         else:
             for potential in potentials:
+                if type(potential) is dict:
+                    potential = self.convert_dict_to_defaultdict(potential) 
                 potential["configuration"] = self.configuration
-                online_logger.info(potential)
+                # online_logger.info(potential)
                 self.erps[potential["flow_id"]] = potential
+                
+        results_to_send = []
+        for key in self.erps:
+            if self.erps[key].has_key('online_result_messenger') and self.erps[key]['online_result_messenger']:
+                results_to_send.append(key)
+
+        if live_processing == None:
+            if len(results_to_send) > 0:
+                self.messenger = pySPACE.environments.live.communication.socket_messenger.SocketMessenger(key=results_to_send)
+                online_logger.info('Prediction results from %s will be send via socket.', ' and '.join(results_to_send))
+            else:
+                self.messenger = pySPACE.environments.live.communication.log_messenger.LogMessenger()
+            # self.messenger = pySPACE.environments.live.communication.socket_messenger.SocketMessenger(key="P3")
+            # self.messenger = pySPACE.environments.live.communication.socket_messenger.EmbeddedSocketManager(key="P3")
+        else:
+            self.messenger = live_processing
+
+    def convert_dict_to_defaultdict(self, dict_to_convert):
+        if type(dict_to_convert) is not dict:
+            online_logger.warn( str('CARE: trying to convert a %s to defaultdict') % type(dict_to_convert))
+            return dict_to_convert
+        mydefaultdict = defaultdict(lambda:None)
+        for key in dict_to_convert:
+            mydefaultdict[key] = dict_to_convert[key]
+        return mydefaultdict
+            
+                
 
 
     def prewindowing(self, online = True):
@@ -140,9 +152,9 @@ class LiveController(object):
 
         if online:
             # create the stream manager
-            stream_manager = eeg_stream_manager.LiveEegStreamManager(online_logger, self.configuration)
-            stream_manager.initialize_eeg_server(self.eeg_server_prewindow_ip,
-                                                 self.eeg_server_eeg_port)
+            stream_manager = eeg_stream_manager.LiveEegStreamManager(online_logger)
+            stream_manager.initialize_eeg_server(ip=self.eeg_server_prewindow_ip,
+                                                 port=self.eeg_server_eeg_port)
             # setup recording if option is set
             if self.subject is not None and \
                     self.experiment is not None:
@@ -156,7 +168,9 @@ class LiveController(object):
             # in online case just connect to the streaming server
             self.live_prewindower.prepare_training(prewindowing_files,
                                                    self.erps,
-                                                   "prewindowing")
+                                                   "prewindowing",
+                                                   nullmarker_stride_ms = self.eeg_server_nullmarker_stride_ms)
+
 
 
 
@@ -178,7 +192,8 @@ class LiveController(object):
 
             self.live_prewindower.prepare_training(prewindowing_files,
                                           self.erps,
-                                          "prewindowing_offline")
+                                          "prewindowing_offline",
+                                          nullmarker_stride_ms = self.eeg_server_nullmarker_stride_ms)
         self.start_prewindowing(online)
 
     def start_prewindowing(self, online = True):
@@ -199,7 +214,8 @@ class LiveController(object):
         postprocessing_files = []
         pw_trainer.prepare_training(postprocessing_files,
                                   self.erps,
-                                  "prewindowed_train")
+                                  "prewindowed_train",
+                                  nullmarker_stride_ms = self.eeg_server_nullmarker_stride_ms)
 
         # Let pyspace live train on this data
         online_logger.info("Start pyspace live training")
@@ -216,8 +232,8 @@ class LiveController(object):
         stream_manager = \
             eeg_stream_manager.LiveEegStreamManager(online_logger)
 
-        stream_manager.initialize_eeg_server(self.eeg_server_train_ip,
-                                             self.eeg_server_eeg_port)
+        stream_manager.initialize_eeg_server(ip=self.eeg_server_train_ip,
+                                             port=self.eeg_server_eeg_port)
 
         # Prepare trainer for training
         online_trainer.set_eeg_stream_manager(stream_manager)
@@ -242,7 +258,8 @@ class LiveController(object):
         online_logger.info("#"*30)
         online_trainer.prepare_training(training_files,
                                       self.erps,
-                                      "train")
+                                      "train",
+                                      nullmarker_stride_ms = self.eeg_server_nullmarker_stride_ms)
 
         # Let pyspace live train on this data
         online_logger.info("Start pyspace live training")
@@ -265,8 +282,8 @@ class LiveController(object):
         stream_manager = \
             eeg_stream_manager.LiveEegStreamManager(online_logger)
 
-        stream_manager.initialize_eeg_server(self.eeg_server_train_ip,
-                                             self.eeg_server_eeg_port)
+        stream_manager.initialize_eeg_server(ip=self.eeg_server_train_ip,
+                                             port=self.eeg_server_eeg_port)
 
         # Prepare live_adaptor for adaptation
         live_adaptor.set_eeg_stream_manager(stream_manager)
@@ -325,7 +342,7 @@ class LiveController(object):
         if self.live_processing == None:
 
             # create pyspace live processing server
-            self.live_processing = prediction.Predictor(self.messenger, self.configuration)
+            self.live_processing = prediction.Predictor(self.messenger)
             self.live_processing.set_controller(self)
             self.prediction_process = self.live_processing
 
@@ -338,22 +355,21 @@ class LiveController(object):
             if online:
 
                 # init eeg streaming and recording
-                stream_manager = eeg_stream_manager.LiveEegStreamManager(online_logger, self.configuration)
-                stream_manager.initialize_eeg_server(self.eeg_server_predict_ip,
-                                                     self.eeg_server_eeg_port)
-
-                # setup recording if option is set
-                if self.subject is not None and \
-                        self.experiment is not None:
-                    stream_manager.record_with_options(self.subject, self.experiment, online=True)
-                else:
-                    online_logger.warn("RAW DATA IS NOT RECORDED!")
+                stream_manager = eeg_stream_manager.LiveEegStreamManager(online_logger)
+                stream_manager.initialize_eeg_server(ip=self.eeg_server_predict_ip,
+                                                     port=self.eeg_server_eeg_port)
 
                 # set teht stream manager into the trainger object
                 self.live_processing.set_eeg_stream_manager(stream_manager)
 
                 # prepare the prediction
-                self.live_processing.prepare_predicting(self.erps)
+                self.live_processing.prepare_predicting(self.erps, nullmarker_stride_ms=self.eeg_server_nullmarker_stride_ms)
+
+                # setup recording if option is set
+                if self.subject is not None and self.experiment is not None:
+                    stream_manager.record_with_options(self.subject, self.experiment, online=True)
+                else:
+                    online_logger.warn("RAW DATA IS NOT RECORDED!")
 
             else:
                 # when running offline prepare local streaming
@@ -367,11 +383,11 @@ class LiveController(object):
                     raise Exception, "could not determine testing data!"
 
                 online_logger.info(str("testing file: %s " % testing_file))
-                self.live_processing.prepare_predicting(self.erps, testing_file)
+                self.live_processing.prepare_predicting(self.erps, testing_file, nullmarker_stride_ms = self.eeg_server_nullmarker_stride_ms)
 
             online_logger.info("Finished")
 
-            if not remote:
+            if not remote and not online:
                 raw_input("\nPress Enter to start predicting ")
 
         # Let pyspace live classify the test data
@@ -382,20 +398,28 @@ class LiveController(object):
 
 
     def stop_prediction(self):
-        # Create pyspace live processing server
+        # stop running prediction
         self.live_processing.process_external_command("STOP")
 
+    def record(self):
+        # just record incoming data - press enter to stop
+        online_logger.info("recording .. (press enter to stop)")
 
-    def get_live_flow (self):
+        data_stream = eeg_stream_manager.LiveEegStreamManager(online_logger)
+        data_stream.initialize_eeg_server(**self.eeg_server_record)
 
-        f = open("%s/abri_flow_P3.yaml" % self.flow_persistency_directory, 'r')
-        abri_flow_p3 = f.read()
-        f.close()
-        f = open("%s/abri_flow_LRP.yaml" % self.flow_persistency_directory, 'r')
-        abri_flow_lrp = f.read()
-        f.close()
+        window_stream = data_stream.request_window_stream(window_spec=None, no_overlap=True)
+        data_stream.record_with_options(subject=self.subject,
+                                        experiment=self.experiment,
+                                        online=False)
 
-        return abri_flow_p3, abri_flow_lrp
+        for window, label in window_stream:
+            if select([sys.stdin], [], [], 0) == ([sys.stdin], [], []):
+                break
+            online_logger.info("Received window with label %s" % label)
+
+        data_stream.stop()
+        online_logger.info("stopped recording!")
 
 def parse_arguments():
     """ Parses the command line arguments to create options object"""
@@ -452,6 +476,11 @@ def parse_arguments():
                       help="Start remote control",
                       action="store_true",
                       dest="remote",
+                      default=False)
+    parser.add_option("--record",
+                      help="Just record data into the specified storage dir",
+                      action="store_true",
+                      dest="record",
                       default=False)
 
 
@@ -568,9 +597,7 @@ if __name__ == "__main__":
                     # starting controller
                     cfg = adrf.get_config()
                     online_logger.info( "Constructing Controller...")
-                    liveControl = LiveController(cfg,
-                                                       conf,
-                                                       adrf)
+                    liveControl = LiveController(cfg, adrf)
 
                     online_logger.info( "Constructing Controller finished")
                     if server_process == None:
@@ -639,8 +666,7 @@ if __name__ == "__main__":
         online_logger.info( "Constructing Controller...")
 
 
-        liveControl = LiveController(parameters,
-                                           conf)
+        liveControl = LiveController(parameters)
 
         online_logger.info( "Constructing Controller finished")
 
@@ -666,8 +692,6 @@ if __name__ == "__main__":
         parameters = read_parameter_file(param_file_name)
 
 
-
-        from pySPACE.environments import big_bang
         from pySPACE.environments.live import eeg_stream_manager, prediction, adaptation, communication, trainer
         import pySPACE.environments.live.communication.log_messenger
 
@@ -675,7 +699,7 @@ if __name__ == "__main__":
         online_logger.info( "Constructing Controller...")
 
 
-        liveControl = LiveController(parameters, conf)
+        liveControl = LiveController(parameters)
 
         online_logger.info( "Constructing Controller finished")
 
@@ -688,33 +712,25 @@ if __name__ == "__main__":
             # first start eegclient
             liveControl.prewindowing(online=True)
             create_backup(liveControl, options)
-            server_process.terminate()
-            server_process.join()
         elif options.prewindowing_offline:
             liveControl.prewindowing(online=False)
             create_backup(liveControl, options)
-            server_process.terminate()
-            server_process.join()
         elif options.prewindowed_train:
             liveControl.prewindowed_train()
             create_backup(liveControl, options)
-            server_process.terminate()
-            server_process.join()
         elif options.train:
             liveControl.train()
             create_backup(liveControl, options)
-            server_process.terminate()
-            server_process.join()
         elif options.adapt:
             liveControl.adapt_classification_threshold()
             create_backup(liveControl, options)
-            server_process.terminate()
-            server_process.join()
         elif options.predict:
             liveControl.predict(online=True)
-            server_process.terminate()
-            server_process.join()
         elif options.predict_offline:
             liveControl.predict(online=False)
-            server_process.terminate()
-            server_process.join()
+        elif options.record:
+            liveControl.record()
+
+        server_process.terminate()
+        server_process.join()
+

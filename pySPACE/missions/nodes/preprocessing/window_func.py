@@ -126,11 +126,13 @@ class WindowFuncNode(BaseNode):
             result_time_series = TimeSeries.replace_data(data, windowed_data)
             
             # Adjust start and end time when chopping was done
-            result_time_series.start_time = data.start_time + \
-                self.window_not_equal_zero[0] * 1000.0 / data.sampling_frequency
-            result_time_series.end_time = \
-                data.end_time - (data.shape[0] - self.window_not_equal_zero[-1]
-                                 - 1) * 1000.0 / data.sampling_frequency
+            if data.start_time != None:
+                result_time_series.start_time = data.start_time + \
+                                      self.window_not_equal_zero[0] * 1000.0 / \
+                                                         data.sampling_frequency
+                result_time_series.end_time = data.end_time - \
+                        (data.shape[0] - self.window_not_equal_zero[-1] - 1) * \
+                                                1000.0 / data.sampling_frequency
         else:
             result_time_series = TimeSeries.replace_data(data, windowed_data)
                     

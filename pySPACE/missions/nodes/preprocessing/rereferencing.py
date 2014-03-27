@@ -111,11 +111,14 @@ class AverageReferenceNode(BaseNode):
 #        for i in range(channels_names.shape[0]):
 #            print 'channel %d: %s\n', i, channel_names[i]
             
-        # Create new time series object and return it
-        result_time_series = TimeSeries(avg_referenced_data, channel_names,
+            # Create new time series object and return it
+            result_time_series = TimeSeries(avg_referenced_data, channel_names,
                                         data.sampling_frequency, data.start_time,
                                         data.end_time, data.name,
                                         data.marker_name)
+        else:
+            result_time_series = TimeSeries.replace_data(data, 
+                                                            avg_referenced_data)
         
         return result_time_series
 

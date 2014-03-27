@@ -10,7 +10,6 @@
 
 #ifndef __windows__
 #include <sys/ioctl.h>
-#include "util_bua.h"
 #endif
 
 #include "global.h"
@@ -89,9 +88,6 @@ private:
 #ifdef __windows__
 	HANDLE	bp_device; 				// Amplifier device
 #else
-	int bp_device;					// Amplifier device
-	// bua-wrapper
-	BUAWrapper* bua;
 #endif
 
 

@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "util_basebuffer.h"
 #include "util_mutex.h"
 #include "global.h"
 #include "utils.h"
 
-class RingBuffer {
+class RingBuffer : public BaseBuffer {
     
 public:
     RingBuffer(size_t size);
@@ -26,8 +27,8 @@ public:
     float bandwidth();
     float fill();
 
-    uint32_t get_size(void);
-    uint32_t get_used(void);
+    uint32_t bytes_used(void);
+    uint32_t bytes_left(void);
     
     void reset();
 
@@ -38,7 +39,6 @@ private:
     uint32_t in;
     uint32_t out;
     uint32_t used;
-    uint32_t buffer_size;
 
     float total_data;
     
