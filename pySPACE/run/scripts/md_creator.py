@@ -52,10 +52,16 @@ def get_user_input(msg):
     """ Request input """
     return raw_input(msg)
 
+
 def parse_list(input_list):
     """ Replace range by explicit numbers """
     info = []
     for index in input_list:
+        if type(index) == int:
+            info.append(index)
+        if not type(index) == str:
+            info.append(int(index))
+        # zero is not an accepted index
         if index == '0' or index == '':
             continue
         # replacing '-' with actual indices
@@ -64,16 +70,17 @@ def parse_list(input_list):
             # to handle -1 input
             if index_split[0] == '':
                 info.append(int(index))
-                break
+                continue
             low = int(index_split[0])
             high = int(index_split[1])
             rnge = high - low
-            new_index = [int(low)]
+            new_index = [low]
             for i in range(rnge):
-                new_index.append(int(low + i + 1))
-            info = info + new_index
+                new_index.append(low + i + 1)
+            info = info.extend(new_index)
         else:
             info.append(int(index))
+
     return info
 
 def check_delimiter(data):

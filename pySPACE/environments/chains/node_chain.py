@@ -84,6 +84,7 @@ import yaml
 import pySPACE
 from pySPACE.tools.filesystem import create_directory
 from pySPACE.tools.socket_utils import talk, inform
+from pySPACE.tools.conversion import python2yaml
 
 import warnings
 import traceback

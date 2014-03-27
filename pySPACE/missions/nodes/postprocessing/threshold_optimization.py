@@ -165,12 +165,8 @@ class ThresholdOptimizationNode(BaseNode):
                                       inverse_metric=inverse_metric)
         
     def balanced_accuracy(self,TP, FP, TN, FN):
-#       if (TP+FN) == 0 or (TN+FP) == 0:
-#            return 0.5
-        if (TP+FN) == 0:
-            FN = 1
-        if (TN+FP) == 0:
-            FP = 1
+        if (TP+FN) == 0 or (TN+FP) == 0:
+            return 0.5
         return (0.5*TP/(TP+FN) + 0.5*TN/(TN+FP))
 
     def is_trainable(self):

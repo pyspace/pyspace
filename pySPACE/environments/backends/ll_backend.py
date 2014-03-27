@@ -112,7 +112,8 @@ class LoadLevelerBackend(Backend):
         handler_args = {"host" : self.host, "port" : self.port}
         # the communication properties to talk to LoadLevelerComHandler
         backend_com = (self.SERVER_IP, self.SERVER_PORT)
-        print('--> Loadleveler Communication : \n\t\t host:%s, port:%s'%(self.host,self.port))
+        print('--> Loadleveler Communication : \n\t\t host:%s, port:%s' % \
+                                            (self.SERVER_IP, self.SERVER_PORT))
         # Prepare the directory where processes are stored before submitted
         # to LoadLeveler
         self.process_dir = os.sep.join([self.current_operation.result_directory,

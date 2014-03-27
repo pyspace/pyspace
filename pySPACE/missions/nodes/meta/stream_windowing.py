@@ -59,7 +59,7 @@ class StreamWindowingNode(BaseNode):
                  windower_spec_file,
                  windower_spec_file_train = None,
                  local_window_conf=False,
-                 nullmarker_stride_ms=None,
+                 nullmarker_stride_ms=1000,
                  *args,
                  **kwargs):
         super(StreamWindowingNode, self).__init__(*args, **kwargs)
@@ -121,7 +121,6 @@ class StreamWindowingNode(BaseNode):
 
         .. todo:: to document
         """
-
         if self.data_for_testing is None:
             # set window definition for test phase windower file
             self.window_definition = \
@@ -190,6 +189,7 @@ class StreamWindowingNode(BaseNode):
 
         # Return a fresh copy of the generator
         return self.data_for_testing.fresh()
+        
         
     def window_stream(self, data):
         # Creates a windower that splits the given data data into windows
