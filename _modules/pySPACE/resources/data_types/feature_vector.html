@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.resources.data_types.feature_vector &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.resources.data_types.feature_vector &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -68,31 +68,90 @@
           <div class="body">
             
   <h1>Source code for pySPACE.resources.data_types.feature_vector</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; 1d array of feature values with some additional properties (e.g. feature names)</span>
-
-<span class="sd">This type is collected as</span>
-<span class="sd">:class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`,</span>
-<span class="sd">loaded with :mod:`~pySPACE.missions.nodes.source.feature_vector_source`</span>
-<span class="sd">and saved with :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink`.</span>
-
-<span class="sd">.. todo:: Implement a method _generate_tag for inherited data type (if desired)</span>
-
-<span class="sd">:Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)</span>
-<span class="sd">:Created: 2009/01/30</span>
-<span class="sd">&quot;&quot;&quot;</span>
-
+<span class="sd">&quot;&quot;&quot; Extend array of feature values with some additional properties &quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types</span> <span class="kn">import</span> <span class="n">base</span>
 
+
 <div class="viewcode-block" id="FeatureVector"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector">[docs]</a><span class="k">class</span> <span class="nc">FeatureVector</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">BaseData</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Represent a feature vector.</span>
-<span class="sd">    </span>
-<span class="sd">    Refer to http://docs.scipy.org/doc/numpy/user/basics.subclassing.html</span>
-<span class="sd">    for information about subclassing ndarray</span>
+    <span class="sd">&quot;&quot;&quot; Represent a feature vector (including meta information)</span>
+
+<span class="sd">    This type is collected as</span>
+<span class="sd">    :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`.</span>
+<span class="sd">    This type of dataset can be also used to create sets from FeatureVectors,</span>
+<span class="sd">    e.g., from csv files.</span>
+<span class="sd">    For data access in a node chain, data is</span>
+<span class="sd">    loaded with the</span>
+<span class="sd">    :class:`~pySPACE.missions.nodes.source.feature_vector_source.FeatureVectorSourceNode`</span>
+<span class="sd">    as first node</span>
+<span class="sd">    and saved with a</span>
+<span class="sd">    :class:`~pySPACE.missions.nodes.sink.feature_vector_sink.FeatureVectorSinkNode`</span>
+<span class="sd">    as the last node.</span>
+<span class="sd">    For creating feature vectors from</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.time_series.TimeSeries`</span>
+<span class="sd">    objects in a processing chain, the nodes in the</span>
+<span class="sd">    :mod:`~pySPACE.missions.nodes.feature_generation` module can be used.</span>
+
+<span class="sd">    For historical reasons, the FeatureVector  object is a</span>
+<span class="sd">    2d array where the first axes is not actively used.</span>
+
+<span class="sd">    When creating a feature vector, the first mandatory argument with the data</span>
+<span class="sd">    (*input_array*) can be any object,</span>
+<span class="sd">    which can be cast to a two dimensional array,</span>
+<span class="sd">    including lists and one-dimensional arrays.</span>
+
+<span class="sd">    The second (recommended) argument are the *feature_names*.</span>
+<span class="sd">    This is a list of strings which becomes an additional property of</span>
+<span class="sd">    the feature vector class. For the MNIST dataset, feature names like</span>
+<span class="sd">    ``Pixel001`` are used.</span>
+<span class="sd">    For mappings between feature vectors and</span>
+<span class="sd">    :class:`~pySPACE.resources.data_types.time_series.TimeSeries` objects,</span>
+<span class="sd">    certain naming conventions should be met.</span>
+<span class="sd">    The name parts should be separated with an underscore.</span>
+<span class="sd">    The first part denotes an abbreviation of the feature type.</span>
+<span class="sd">    The second part denotes the sensor/channel, the data was taken from.</span>
+<span class="sd">    The third part is an information on the time part in seconds.</span>
+<span class="sd">    the feature was taken from.</span>
+<span class="sd">    An example of such a feature name is ``TD_C3_0.080sec``.</span>
+
+<span class="sd">    If no feature names are given, the default name is</span>
+<span class="sd">    ``feature_INDEX_0.000sec`` where INDEX is replaced by the respective index</span>
+<span class="sd">    of the feature in the data array.</span>
+
+<span class="sd">    .. note:: For memory issues, the feature_names are hashed and not stored</span>
+<span class="sd">              individually for every samples.</span>
+
+<span class="sd">    Additionally, a FeatureVector comes with the metadata from its</span>
+<span class="sd">    :class:`base type &lt;pySPACE.resources.data_types.base.BaseData&gt;`.</span>
+
+<span class="sd">    For accessing the array only without the meta information,</span>
+<span class="sd">    please use the command</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        x = data.view(numpy.ndarray)</span>
+
+<span class="sd">    which hides this information.</span>
+<span class="sd">    This is especially necessary, if you do not want to forward certain</span>
+<span class="sd">    information. For example the feature names will not make any sense,</span>
+<span class="sd">    when accessing only a subpart of the array.</span>
+
+<span class="sd">    .. todo:: Implement a method _generate_tag for inherited data type (if desired)</span>
+
+<span class="sd">    .. todo:: Change 2d-concept to 1d-concept.</span>
+<span class="sd">              This includes modifying every node, which handles FeatureVector</span>
+<span class="sd">              data.</span>
+
+<span class="sd">    :Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2009/01/30</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
 <div class="viewcode-block" id="FeatureVector.__new__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.__new__">[docs]</a>    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">subtype</span><span class="p">,</span> <span class="n">input_array</span><span class="p">,</span> <span class="n">feature_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create FeatureVector object</span>
+
+<span class="sd">        Refer to general class documentation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c"># Input array is an already formed ndarray instance</span>
         <span class="c"># We first cast to be our class type</span>
         <span class="n">obj</span> <span class="o">=</span> <span class="n">base</span><span class="o">.</span><span class="n">BaseData</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">subtype</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">input_array</span><span class="p">))</span>
@@ -116,19 +175,21 @@
             <span class="n">obj</span><span class="o">.</span><span class="n">tag</span> <span class="o">=</span> <span class="n">tag</span>
         <span class="c"># Finally, we must return the newly created object:</span>
         <span class="k">return</span> <span class="n">obj</span>
-    </div>
+</div>
 <div class="viewcode-block" id="FeatureVector.__array_finalize__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.__array_finalize__">[docs]</a>    <span class="k">def</span> <span class="nf">__array_finalize__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Inherit feature names from obj &quot;&quot;&quot;</span>
         <span class="c"># reset the attributes from passed original object</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVector</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__array_finalize__</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">obj</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span><span class="o">==</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">obj</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s">&#39;feature_names_hash&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># TODO: Do we need this?</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span> <span class="o">=</span> <span class="bp">None</span>
         </div>
 <div class="viewcode-block" id="FeatureVector.__str__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.__str__">[docs]</a>    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">str_repr</span> <span class="o">=</span>  <span class="s">&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Connect array values and feature names for good string representation &quot;&quot;&quot;</span>
+        <span class="n">str_repr</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
         <span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">feature_name</span><span class="p">,</span> <span class="n">feature_value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span>
                                                <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]):</span>
@@ -151,37 +212,49 @@
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">object_state</span><span class="p">)</span>
     </div>
 <div class="viewcode-block" id="FeatureVector.__setstate__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.__setstate__">[docs]</a>    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span> <span class="c"># For compatibility with old FV implementation</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">state</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>  <span class="c"># For compatibility with old FV implementation</span>
             <span class="n">nd_state</span><span class="p">,</span> <span class="n">own_state</span> <span class="o">=</span> <span class="n">state</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nd_state</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c">#len == 3: new feature vector. TODO: catch weird cases?</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c"># len == 3: new feature vector. TODO: catch weird cases?</span>
             <span class="n">nd_state</span><span class="p">,</span> <span class="n">base_state</span><span class="p">,</span> <span class="n">own_state</span> <span class="o">=</span> <span class="n">state</span>
             <span class="nb">super</span><span class="p">(</span><span class="n">FeatureVector</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">((</span><span class="n">nd_state</span><span class="p">,</span> <span class="n">base_state</span><span class="p">))</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">own_state</span>
 
-    
-    <span class="c"># In order to reduce the memory footprint, we do not store the feature names </span>
-    <span class="c"># once per instance but only once per occurrence. Instead we store a unique </span>
+
+    <span class="c"># In order to reduce the memory footprint, we do not store the feature names</span>
+    <span class="c"># once per instance but only once per occurrence. Instead we store a unique</span>
     <span class="c"># hash once per instance that allows to retrieve the feature names.</span></div>
     <span class="n">feature_names_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
 <div class="viewcode-block" id="FeatureVector.get_feature_names"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.get_feature_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_feature_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">feature_names_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span><span class="p">]</span></div>
+        <span class="sd">&quot;&quot;&quot; Extract feature names from hash &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">feature_names_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span><span class="p">]</span>
+</div>
 <div class="viewcode-block" id="FeatureVector.set_feature_names"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.set_feature_names">[docs]</a>    <span class="k">def</span> <span class="nf">set_feature_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_names</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Set feature names, using the hash and store hash if needed &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;The feature names must be of type list. &quot;</span> <span class="o">+</span>
+                          <span class="s">&quot;The current input is of type &quot;</span> <span class="o">+</span>
+                          <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">feature_names</span><span class="p">))</span> <span class="o">+</span><span class="s">&quot;. Switching to list.&quot;</span><span class="p">)</span>
+            <span class="n">feature_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span> <span class="o">=</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">feature_names</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">feature_names_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span><span class="p">):</span>
             <span class="n">FeatureVector</span><span class="o">.</span><span class="n">feature_names_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names_hash</span><span class="p">]</span> \
-                                                                <span class="o">=</span> <span class="n">feature_names</span></div>
+                                                                <span class="o">=</span> <span class="n">feature_names</span>
+</div>
 <div class="viewcode-block" id="FeatureVector.del_feature_names"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.del_feature_names">[docs]</a>    <span class="k">def</span> <span class="nf">del_feature_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span></div>
+        <span class="sd">&quot;&quot;&quot; Nothing happens, when feature names are deleted &quot;&quot;&quot;</span>
+        <span class="k">pass</span>
+</div>
     <span class="n">feature_names</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">get_feature_names</span><span class="p">,</span> <span class="n">set_feature_names</span><span class="p">,</span> 
                              <span class="n">del_feature_names</span><span class="p">,</span> 
                              <span class="s">&quot;Property feature_names of FeatureVector.&quot;</span><span class="p">)</span>
     
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="FeatureVector.replace_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.replace_data">[docs]</a>    <span class="k">def</span> <span class="nf">replace_data</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Create new feature vector with the given data but the old metadata.</span>
-<span class="sd">        </span>
+        <span class="sd">&quot;&quot;&quot; Create new feature vector with the given data but the old metadata</span>
+
 <span class="sd">        A factory method which creates a feature vector object with the given</span>
 <span class="sd">        data and the metadata from the old feature vector</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -193,7 +266,7 @@
         <span class="k">return</span> <span class="n">data</span>
 </div>
 <div class="viewcode-block" id="FeatureVector.__eq__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.feature_vector.html#pySPACE.resources.data_types.feature_vector.FeatureVector.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Same features (names) and values &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Test for same type, dimensions, features names, and array values &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span><span class="o">==</span><span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">feature_names</span><span class="p">):</span>
@@ -201,14 +274,12 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">==</span><span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">==</span><span class="n">other</span><span class="o">.</span><span class="n">feature_names</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span><span class="o">-</span><span class="n">other</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
-                <span class="k">return</span> <span class="bp">False</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">return</span> <span class="bp">True</span>
+            <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span> <span class="n">other</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># Comparison by hand</span>
             <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feature</span><span class="p">)]</span><span class="o">==</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">other</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feature</span><span class="p">)]:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feature</span><span class="p">)],</span>
+                                      <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">other</span><span class="o">.</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">feature</span><span class="p">)]):</span>
                     <span class="k">return</span> <span class="bp">False</span>
             <span class="k">return</span> <span class="bp">True</span></div></div>
 </pre></div>
@@ -227,13 +298,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

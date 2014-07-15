@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.environments.chains.node_chain &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.environments.chains.node_chain &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -135,6 +135,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">os</span>
+
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="c"># add root of the code to system path</span>
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
@@ -154,7 +155,8 @@
 <span class="kn">import</span> <span class="nn">pySPACE</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.socket_utils</span> <span class="kn">import</span> <span class="n">talk</span><span class="p">,</span> <span class="n">inform</span>
-<span class="kn">from</span> <span class="nn">pySPACE.tools.conversion</span> <span class="kn">import</span> <span class="n">python2yaml</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.conversion</span> <span class="kn">import</span> <span class="n">python2yaml</span><span class="p">,</span> <span class="n">replace_parameters_and_convert</span><span class="p">,</span> <span class="n">replace_parameters</span>
+<span class="kn">import</span> <span class="nn">copy</span>
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
@@ -437,7 +439,7 @@
         <span class="n">remove_keys</span><span class="o">=</span><span class="p">[]</span>
         <span class="n">k</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">odict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&quot;input_node&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&quot;input_node&quot;</span> <span class="ow">or</span> <span class="n">key</span> <span class="o">==</span> <span class="s">&quot;flow&quot;</span><span class="p">:</span>
                 <span class="k">continue</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
@@ -449,10 +451,6 @@
             <span class="n">odict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="n">odict</span>
-
-
-        <span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
-
         <span class="k">if</span> <span class="n">filename</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
@@ -465,7 +463,6 @@
             <span class="n">flh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span> <span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
             <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flh</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
             <span class="n">flh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-
 
 <span class="c">#################</span>
 <span class="c"># MDP Code copy #</span>
@@ -988,6 +985,8 @@
 </div>
 <div class="viewcode-block" id="BenchmarkNodeChain.store_node_chain"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.BenchmarkNodeChain.store_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">store_node_chain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">store_node_chain</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Pickle this flow into *result_dir* for later usage&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">store_node_chain</span><span class="p">,</span><span class="nb">basestring</span><span class="p">):</span>
+            <span class="n">store_node_chain</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">store_node_chain</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">store_node_chain</span><span class="p">,</span><span class="nb">tuple</span><span class="p">):</span>
             <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">store_node_chain</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
             <span class="c"># Keep only subflow starting at the i1-th node and ending at the</span>
@@ -1007,7 +1006,6 @@
         <span class="n">input_node</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_node</span>
         <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_node</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="n">flow</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span>
-        <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_node</span> <span class="o">=</span> <span class="n">input_node</span>
 </div>
 <div class="viewcode-block" id="BenchmarkNodeChain.prepare_logging"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.BenchmarkNodeChain.prepare_logging">[docs]</a>    <span class="k">def</span> <span class="nf">prepare_logging</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Set up logging</span>
@@ -1124,11 +1122,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">instance</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">template</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c"># Replacement</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c"># Replacement</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">parametrization</span><span class="p">[</span><span class="n">value</span><span class="p">]</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span> <span class="c"># Recursive call</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>  <span class="c"># Recursive call</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span> <span class="c"># String replacement</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span>  <span class="c"># String replacement</span>
                 <span class="k">for</span> <span class="n">param_key</span><span class="p">,</span> <span class="n">param_value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
                     <span class="k">try</span><span class="p">:</span>
                         <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">param_key</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">param_value</span><span class="p">))</span>
@@ -1139,7 +1137,7 @@
                 <span class="c"># Iterate over all items in sequence</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">iter_item</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">iter_item</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span> <span class="c"># Replacement</span>
+                    <span class="k">if</span> <span class="n">iter_item</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c"># Replacement</span>
                         <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parametrization</span><span class="p">[</span><span class="n">iter_item</span><span class="p">])</span>
                     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">iter_item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
                         <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span>
@@ -1158,7 +1156,20 @@
             <span class="k">else</span><span class="p">:</span> <span class="c"># Not parameterized</span>
                 <span class="n">instance</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
         <span class="k">return</span> <span class="n">instance</span>
-
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="NodeChainFactory.replace_parameters_in_node_chain"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.NodeChainFactory.replace_parameters_in_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">replace_parameters_in_node_chain</span><span class="p">(</span><span class="n">node_chain_template</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">):</span>
+        <span class="n">node_chain_template</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">node_chain_template</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">parametrization</span> <span class="o">==</span> <span class="p">{}:</span>
+            <span class="k">return</span> <span class="n">node_chain_template</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">node_chain_template</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span>
+                <span class="n">template</span><span class="o">=</span><span class="n">node</span><span class="p">,</span><span class="n">parametrization</span><span class="o">=</span><span class="n">parametrization</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_chain_template</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain_template</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span>
+            <span class="n">node_chain_template</span> <span class="o">=</span> \
+                <span class="n">replace_parameters</span><span class="p">(</span><span class="n">node_chain_template</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">node_chain_template</span>
 </div></div>
 <div class="viewcode-block" id="SubflowHandler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.SubflowHandler">[docs]</a><span class="k">class</span> <span class="nc">SubflowHandler</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Interface for nodes to generate and execute subflows (subnode-chains)</span>
@@ -1239,8 +1250,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">modality</span> <span class="o">=</span> <span class="s">&#39;serial&#39;</span>
 </div>
     <span class="nd">@staticmethod</span>
-<div class="viewcode-block" id="SubflowHandler.generate_subflow"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.SubflowHandler.generate_subflow">[docs]</a>    <span class="k">def</span> <span class="nf">generate_subflow</span><span class="p">(</span><span class="n">flow_template</span><span class="p">,</span> <span class="n">parametrization</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                                  <span class="n">flow_class</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="SubflowHandler.generate_subflow"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.SubflowHandler.generate_subflow">[docs]</a>    <span class="k">def</span> <span class="nf">generate_subflow</span><span class="p">(</span><span class="n">flow_template</span><span class="p">,</span> <span class="n">parametrization</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">flow_class</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a *flow_class* object of the given *flow_template*</span>
 
 <span class="sd">        This methods wraps two function calls (NodeChainFactory.instantiate and</span>
@@ -1249,7 +1259,9 @@
 <span class="sd">        **Parameters**</span>
 
 <span class="sd">            :flow_template:</span>
-<span class="sd">                List of dicts - a valid representation of a node chain</span>
+<span class="sd">                List of dicts - a valid representation of a node chain.</span>
+<span class="sd">                Alternatively, a YAML-String representation could be used,</span>
+<span class="sd">                which simplifies parameter replacement.</span>
 
 <span class="sd">            :parametrization:</span>
 <span class="sd">                A dictionary with parameter names as keys and exact one value for</span>
@@ -1265,12 +1277,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">flow_class</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">flow_class</span> <span class="o">=</span> <span class="n">BenchmarkNodeChain</span>
-        <span class="c"># check whether params are given</span>
-        <span class="k">if</span> <span class="n">parametrization</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">flow_spec</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">node_templ</span><span class="p">,</span> <span class="n">parametrization</span><span class="p">)</span> \
-                                                <span class="k">for</span> <span class="n">node_templ</span> <span class="ow">in</span> <span class="n">flow_template</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">flow_spec</span> <span class="o">=</span> <span class="n">flow_template</span>
+        <span class="n">flow_spec</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">replace_parameters_in_node_chain</span><span class="p">(</span>
+            <span class="n">flow_template</span><span class="p">,</span><span class="n">parametrization</span><span class="p">)</span>
         <span class="c"># create a new Benchmark flow</span>
         <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span><span class="n">flow_class</span><span class="p">,</span> <span class="n">flow_spec</span><span class="p">)</span>
 
@@ -1432,13 +1440,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

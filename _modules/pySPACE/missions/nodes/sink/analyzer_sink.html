@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.nodes.sink.analyzer_sink &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.missions.nodes.sink.analyzer_sink &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -121,6 +121,7 @@
 
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
 
 
 <div class="viewcode-block" id="AnalyzerCollection"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.analyzer_sink.html#pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerCollection">[docs]</a><span class="k">class</span> <span class="nc">AnalyzerCollection</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
@@ -131,6 +132,9 @@
 <span class="sd">    the BrainVision Analyzer. Remaining spaces in front and between the single</span>
 <span class="sd">    windows are filled with zeros.</span>
 
+<span class="sd">    The input can be a TimeSeries collection or a single time series resulted from </span>
+<span class="sd">    merging the datasets. </span>
+<span class="sd">    </span>
 <span class="sd">    **Parameters**</span>
 
 <span class="sd">        :dataset_md:</span>
@@ -138,15 +142,21 @@
 
 <span class="sd">            (*optional, default: None*)</span>
 
+<span class="sd">    .. todo:: Move to storage_format in TimeSeriesDataset</span>
+
 <span class="sd">    :Author: Johannes Teiwes (Johannes.Teiwes@dfki.de)</span>
 <span class="sd">    :Created: 2010/05/09</span>
+<span class="sd">    :Modified: Foad Ghaderi 2014/04/15</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="AnalyzerCollection.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.analyzer_sink.html#pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerCollection.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span> <span class="o">=</span>  <span class="bp">None</span><span class="p">):</span>
           <span class="nb">super</span><span class="p">(</span><span class="n">AnalyzerCollection</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">)</span>
     </div>
 <div class="viewcode-block" id="AnalyzerCollection.store"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.analyzer_sink.html#pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerCollection.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">s_format</span> <span class="o">=</span> <span class="s">&quot;BrainVision&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">merged</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">scale</span> <span class="o">=</span> <span class="mf">10.0</span> <span class="c"># is used to scale up the eeg sample values.  The data samples are converted to int16</span>
+                    <span class="c"># when saving, so scaling is necessary to keep maintain the resolutions. </span>
         <span class="c"># Keep original file name, depends on the AnalyserSinkNode, see it&#39;s documentation.</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">]</span>
         <span class="c"># or use default name from this collection</span>
         <span class="k">else</span><span class="p">:</span>
@@ -170,6 +180,8 @@
         <span class="n">slices</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">slices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[]</span>
+        
+
         
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">time_series</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="c"># Sort the Times-Series Array</span>
@@ -220,6 +232,9 @@
             <span class="n">sampling_int</span> <span class="o">=</span> <span class="mi">0</span>
             
             <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">:</span>
+                <span class="n">ts0</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">scale</span> 
+                <span class="n">ts0</span> <span class="o">=</span> <span class="n">ts0</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+                
                 <span class="k">if</span> <span class="n">padding</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
                     <span class="n">padding</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s">&#39;int16&#39;</span><span class="p">)</span>
                     <span class="n">num_ch</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
@@ -227,15 +242,34 @@
                     <span class="n">sampling_int</span> <span class="o">=</span> <span class="mi">1000000</span><span class="o">/</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sampling_frequency</span>
                     <span class="c">#print &quot;writing %d channels..&quot; % len(ts[0].channel_names)</span>
                 <span class="c"># Write Padding (zeros)</span>
-                <span class="k">while</span> <span class="n">result_file_ms</span> <span class="o">&lt;</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span><span class="p">:</span>
+                <span class="k">while</span> <span class="n">result_file_ms</span> <span class="o">&lt;</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span> <span class="o">-</span> <span class="n">sampling_int</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">:</span>
                     <span class="n">result_file_eeg</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">padding</span><span class="o">.</span><span class="n">tostring</span><span class="p">())</span>
                     <span class="n">result_file_ms</span> <span class="o">+=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_samples_to_ms</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
                 <span class="c"># Write window</span>
-                <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">result_file_eeg</span><span class="p">)</span>
-                <span class="n">result_file_ms</span> <span class="o">+=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span>
+                <span class="n">ts0</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">result_file_eeg</span><span class="p">)</span>
+                <span class="n">result_file_ms</span> <span class="o">+=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">end_time</span> <span class="o">-</span> <span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span> <span class="o">-</span> <span class="n">sampling_int</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">)</span>
                 <span class="c"># Write Marker</span>
-                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Mk</span><span class="si">%d</span><span class="s">=Label,</span><span class="si">%s</span><span class="s">,</span><span class="si">%d</span><span class="s">,1,0</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count_mrk</span><span class="p">,</span><span class="n">ts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">_ms_to_samples</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span><span class="p">)))</span>
-                <span class="n">count_mrk</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">markers</span> <span class="o">=</span> <span class="p">[]</span>
+                
+                <span class="k">if</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="n">mk_keys</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                    <span class="n">mk_values</span> <span class="o">=</span> <span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">mk</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mk_keys</span><span class="p">)):</span>
+                        <span class="k">for</span> <span class="n">mv</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mk_values</span><span class="p">[</span><span class="n">mk</span><span class="p">])):</span>
+                            <span class="n">markers</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">mk_keys</span><span class="p">[</span><span class="n">mk</span><span class="p">],</span> <span class="n">mk_values</span><span class="p">[</span><span class="n">mk</span><span class="p">][</span><span class="n">mv</span><span class="p">]))</span>
+                    <span class="n">markers</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">markers</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">tup</span><span class="p">:</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">markers</span><span class="p">)):</span>
+                        <span class="k">if</span> <span class="s">&#39;R&#39;</span> <span class="ow">in</span> <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span> 
+                            <span class="n">event_type</span> <span class="o">=</span> <span class="s">&#39;Response&#39;</span> 
+                        <span class="k">elif</span> <span class="s">&#39;S&#39;</span> <span class="ow">in</span> <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="n">event_type</span> <span class="o">=</span> <span class="s">&#39;Stimulus&#39;</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">event_type</span> <span class="o">=</span> <span class="s">&#39;Label&#39;</span>
+                            
+                        <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Mk</span><span class="si">%d</span><span class="s">=</span><span class="si">%s</span><span class="s">,</span><span class="si">%s</span><span class="s">,</span><span class="si">%d</span><span class="s">,1,0</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count_mrk</span><span class="p">,</span> <span class="n">event_type</span><span class="p">,</span> <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="p">(</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">start_time</span> <span class="o">+</span> <span class="n">markers</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="n">ts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">))</span>                                                     
+                        <span class="n">count_mrk</span> <span class="o">+=</span> <span class="mi">1</span>
+
             <span class="c"># WRITE HEADERFILE</span>
             <span class="c"># Keep original name</span>
             <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;eeg_src_file_name&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">):</span>
@@ -247,11 +281,12 @@
                 <span class="n">result_file_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">header_hdr</span> <span class="o">%</span> <span class="p">((</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span><span class="p">),</span> <span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span><span class="p">),</span> <span class="n">num_ch</span><span class="p">,</span> <span class="n">sampling_int</span><span class="p">))</span>
             <span class="c"># Format: Ch1=Fp1,,0.1,\xB5V</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_ch</span><span class="p">):</span>
-                <span class="n">result_file_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Ch</span><span class="si">%d</span><span class="s">=</span><span class="si">%s</span><span class="s">,,0.1,</span><span class="se">\xB5</span><span class="s">V</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+                <span class="n">result_file_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;Ch</span><span class="si">%d</span><span class="s">=</span><span class="si">%s</span><span class="s">,,</span><span class="si">%.2f</span><span class="s">,</span><span class="se">\xB5</span><span class="s">V</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mf">1.</span><span class="o">/</span><span class="n">scale</span><span class="p">))</span>
 
             <span class="n">result_file_hdr</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="n">result_file_eeg</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
 </div></div>
 <div class="viewcode-block" id="AnalyzerSinkNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.analyzer_sink.html#pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerSinkNode">[docs]</a><span class="k">class</span> <span class="nc">AnalyzerSinkNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Store all TimeSeries that are passed to it in an collection of type AnalyzerCollection</span>
@@ -266,20 +301,23 @@
 <span class="sd">        are saved with the name of the original file.</span>
 <span class="sd">    </span>
 <span class="sd">        (*optional, default: False*)</span>
-<span class="sd">        </span>
+
 <span class="sd">    **Exemplary Call**</span>
 
 <span class="sd">    .. code-block:: yaml</span>
 
 <span class="sd">        - </span>
-<span class="sd">            node: Analyzer_Sink</span>
+<span class="sd">            node : Analyzer_Sink</span>
 <span class="sd">            parameters :</span>
 <span class="sd">                original_name : True</span>
 
+<span class="sd">    .. todo:: Move to TimeSeriesSink/ implement storage format</span>
+
 <span class="sd">    :Author: Johannes Teiwes (Johannes.Teiwes@dfki.de)</span>
 <span class="sd">    :Created: 2010/05/09</span>
-
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;TimeSeries&quot;</span><span class="p">]</span>
+
 <div class="viewcode-block" id="AnalyzerSinkNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.analyzer_sink.html#pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerSinkNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_name</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">AnalyzerSinkNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">analyzer_collection</span> <span class="o">=</span> \
@@ -375,13 +413,13 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

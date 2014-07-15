@@ -1,0 +1,297 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Unit testing &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.1 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Frequently Asked Questions and pySPACE Troubleshooting" href="../faq.html" />
+    <link rel="prev" title="HOWTO: Data Handling" href="data_handling.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions and pySPACE Troubleshooting"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="data_handling.html" title="HOWTO: Data Handling"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Unit testing</a><ul>
+<li><a class="reference internal" href="#the-generic-unittest">The <tt class="docutils literal"><span class="pre">generic_unittest</span></tt></a><ul>
+<li><a class="reference internal" href="#implementation-example">Implementation Example</a></li>
+<li><a class="reference internal" href="#easy-going-unit-tests-by-defining-the-output-of-the-generic-unit-test">Easy going unit tests by defining the output of the generic unit test</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="data_handling.html"
+                        title="previous chapter">HOWTO: Data Handling</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../faq.html"
+                        title="next chapter">Frequently Asked Questions and pySPACE Troubleshooting</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/tutorials/tutorial_unittesting.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="unit-testing">
+<span id="tutorial-unittesting"></span><h1>Unit testing<a class="headerlink" href="#unit-testing" title="Permalink to this headline">¶</a></h1>
+<p>Best practices, when writing a new node, include building a unit test.
+A unit test is a quick and easy way of checking whether the code compiles
+and yields the desired results. To aid this process, the
+<a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a> module should be used.
+It enables the user to easily implement his own class-specific unittest.</p>
+<div class="section" id="the-generic-unittest">
+<h2>The <tt class="docutils literal"><span class="pre">generic_unittest</span></tt><a class="headerlink" href="#the-generic-unittest" title="Permalink to this headline">¶</a></h2>
+<p>The general idea behind the generic unit test is that all nodes,
+regardless of their intended purpose must:</p>
+<ol class="arabic simple">
+<li>have some sort of documentation</li>
+<li>have an exemplary call</li>
+<li>initialize without errors</li>
+<li>execute without errors (regardless of the result)</li>
+</ol>
+<div class="figure align-center" style="width: 400px">
+<a class="reference internal image-reference" href="../_images/parametrized.png"><img alt="../_images/parametrized.png" src="../_images/parametrized.png" style="width: 600px;" /></a>
+<p class="caption">Conceptual design of the generic unittest.
+Note that this is <em>not an inheritance diagram</em>!</p>
+</div>
+<p>These four core tests must be passed by any node. Whether the node outputs
+the correct result or not, is something that can be tested at a later point
+using a node-specific script. In order to run the above tests, the
+<a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a> module must be imported. The module
+contains an implementation of a parametrized unittest which can be used in order
+to test different nodes against the four cases mentioned above.</p>
+<p>In short, the testing method starts with probing the node for the presence of
+documentation. If the documentation is present, the node is subject to the next
+test which checks whether the documentation contains a YAML code block which
+serves as an exemplary call. If this block is present, the testing suite moves
+to the next step which involves testing whether the node can be initialized
+with the help of this exemplary call.
+If this test also succeeds, the next (and last) step in the generic unittest
+is to execute the node using the default data (as defined in
+<a class="reference internal" href="../api/generated/pySPACE.tests.utils.data.test_default_data.html#module-pySPACE.tests.utils.data.test_default_data" title="pySPACE.tests.utils.data.test_default_data"><tt class="xref py py-mod docutils literal"><span class="pre">test_default_data</span></tt></a>).
+This execution is run without a check of the results since the output of each
+node is different and, as such, requires node-specific testing methods.</p>
+<p>Running the <a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a> script from the command line
+will execute the generic unittests on all the available nodes. The results in
+this case will be saved in a log file named <tt class="docutils literal"><span class="pre">generic_unittest.log</span></tt> and
+plotted in a pie-chart saved under <tt class="docutils literal"><span class="pre">generic_unittest_plot.pdf</span></tt>.
+An example of such a plot is given below</p>
+<div class="figure align-center" style="width: 800px">
+<a class="reference internal image-reference" href="../_images/generic_unittest_plot.png"><img alt="../_images/generic_unittest_plot.png" src="../_images/generic_unittest_plot.png" style="width: 800px;" /></a>
+<p class="caption">Example output of running the <tt class="docutils literal"><span class="pre">generic_unittest.py</span></tt> script from the command line</p>
+</div>
+<div class="section" id="implementation-example">
+<h3>Implementation Example<a class="headerlink" href="#implementation-example" title="Permalink to this headline">¶</a></h3>
+<p>An example where the <tt class="docutils literal"><span class="pre">generic_unittest</span></tt> was implemented is the
+<a class="reference internal" href="../api/generated/pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features.html#module-pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features" title="pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features"><tt class="xref py py-mod docutils literal"><span class="pre">test_time_domain_features</span></tt></a>
+unit test. The testing in this case has two components:</p>
+<ol class="arabic simple">
+<li>The generic unit testing whereby each node is tested with the four testing
+categories mentioned above.</li>
+<li>The node-specific unit testing whereby specific inputs are fed to the node
+and the output is compared with an analytically computed output.</li>
+</ol>
+<p>The first part of the unit testing involved the <tt class="docutils literal"><span class="pre">generic_unittest</span></tt> module
+that is explained above. First, the module to be tested as well as the
+<tt class="docutils literal"><span class="pre">generic_unittest</span></tt> module needs to be imported.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.feature_generation.time_domain_features</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">pySPACE.tests.generic_unittest</span> <span class="kn">as</span> <span class="nn">gen_test</span>
+</pre></div>
+</div>
+<p>Since the script tests multiple nodes (that are defined as classes in the same
+script), the generic testing must be done for each node separately.
+Thus, in this case, we will have 6 <tt class="docutils literal"><span class="pre">generic_unittest</span></tt> suites, namely:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">TimeDomainFeaturesNode</span><span class="p">))</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">TimeDomainDifferenceFeatureNode</span><span class="p">))</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">SimpleDifferentiationFeatureNode</span><span class="p">))</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">LocalStraightLineFeatureNode</span><span class="p">))</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">LocalPolynomialFeatureNode</span><span class="p">))</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">CustomChannelWiseFeatureNode</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>By this, we have just implemented the generic unittests that we talked about
+earlier! All that is left to do now is write the node-specific unittests
+(which we will not explain here), add them to the testing suite and run the tests.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="s">&#39;test_time_domain_features&#39;</span><span class="p">)</span>
+<span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="easy-going-unit-tests-by-defining-the-output-of-the-generic-unit-test">
+<h3>Easy going unit tests by defining the output of the generic unit test<a class="headerlink" href="#easy-going-unit-tests-by-defining-the-output-of-the-generic-unit-test" title="Permalink to this headline">¶</a></h3>
+<p>The <tt class="docutils literal"><span class="pre">generic_unittest</span></tt> module also provides the user with the possibility of
+building on-the-fly unittests in which the output is evaluated.
+This can be done in one of the following two ways:</p>
+<ul class="simple">
+<li>if the user wants to use the default data set and check the output of
+executing the node on it, the class
+<a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.OutputTestCase" title="pySPACE.tests.generic_unittest.OutputTestCase"><tt class="xref py py-class docutils literal"><span class="pre">OutputTestCase</span></tt></a> can be implemented;</li>
+<li>if the user wants the test to use a user-defined input set and compare this
+against a user-defined output set, the class
+<a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.InputOutputTestCase" title="pySPACE.tests.generic_unittest.InputOutputTestCase"><tt class="xref py py-class docutils literal"><span class="pre">InputOutputTestCase</span></tt></a>
+can be implemented.</li>
+</ul>
+<p>Both of the classes mentioned will raise errors if the output
+-respectively input and output- variables are not defined.
+Sample implementations of the InputOutputTestCase can be found in the
+unittests for
+<a class="reference internal" href="../api/generated/pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features.html#module-pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features" title="pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features"><tt class="xref py py-mod docutils literal"><span class="pre">test_time_domain_features</span></tt></a>
+and <a class="reference internal" href="../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_normalization.html#module-pySPACE.tests.unittests.nodes.preprocessing.test_normalization" title="pySPACE.tests.unittests.nodes.preprocessing.test_normalization"><tt class="xref py py-mod docutils literal"><span class="pre">test_normalization</span></tt></a>.</p>
+<p>In the case of the first test
+(<a class="reference internal" href="../api/generated/pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features.html#module-pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features" title="pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features"><tt class="xref py py-mod docutils literal"><span class="pre">test_time_domain_features</span></tt></a>),
+the source code for the sample implementation is</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># initiate the two channels</span>
+<span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;a&#39;</span><span class="p">,</span> <span class="s">&#39;b&#39;</span><span class="p">]</span>
+<span class="n">array</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="c"># fill in the data points according to a pre set equation</span>
+<span class="k">for</span> <span class="n">counter</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">100</span><span class="p">):</span>
+    <span class="n">array</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="mi">4</span><span class="o">*</span><span class="n">counter</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="mf">4.36</span><span class="o">*</span><span class="n">counter</span><span class="o">-</span><span class="mf">23.4</span><span class="p">])</span>
+<span class="n">initial_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">InputOutputTestCase</span><span class="p">,</span>
+    <span class="n">node</span><span class="o">=</span><span class="n">LocalStraightLineFeatureNode</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="p">[[[</span><span class="n">initial_data</span><span class="p">]]],</span>
+    <span class="n">output</span><span class="o">=</span><span class="n">FeatureVector</span><span class="p">([</span><span class="mf">4.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span>  <span class="o">-</span><span class="mf">23.4</span><span class="p">,</span> <span class="mf">4.36</span><span class="p">],</span>
+                         <span class="n">feature_names</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;LSFSlope_a_0.000sec_1.000sec&#39;</span><span class="p">,</span>
+                                        <span class="s">&#39;LSFOffset_a_0.000sec_1.000sec&#39;</span><span class="p">,</span>
+                                        <span class="s">&#39;LSFOffset_b_0.000sec_1.000sec&#39;</span><span class="p">,</span>
+                                        <span class="s">&#39;LSFSlope_b_0.000sec_1.000sec&#39;</span><span class="p">])</span>
+<span class="p">))</span>
+</pre></div>
+</div>
+<p>This particular node performs a linear regression on <tt class="docutils literal"><span class="pre">TimeSeries</span></tt> data
+and returns <tt class="docutils literal"><span class="pre">FeatureVectors</span></tt> containing the slope and offset yielded by the
+regression. In order to test the node, we build a data set which obeys a
+linear formula and perform the linear regression on it.</p>
+<p>The second example, located at
+<a class="reference internal" href="../api/generated/pySPACE.tests.unittests.nodes.preprocessing.test_normalization.html#module-pySPACE.tests.unittests.nodes.preprocessing.test_normalization" title="pySPACE.tests.unittests.nodes.preprocessing.test_normalization"><tt class="xref py py-mod docutils literal"><span class="pre">test_normalization</span></tt></a>
+involves the localized Z-score normalization of a <tt class="docutils literal"><span class="pre">TimeSeries</span></tt> object.
+The source code for the implementation of the <tt class="docutils literal"><span class="pre">InputOutputTestCase</span></tt> is</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># the following is an example of how the InputOutputTestCase can be implemented</span>
+<span class="c"># for a TimeSeriesOutput in the case of the LocalStandardizationNode</span>
+<span class="n">initial_data</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">([[</span><span class="mf">1.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="mf">1.</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">],</span> <span class="p">[</span><span class="o">-</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]],</span>
+                   <span class="n">channel_names</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;C3&quot;</span><span class="p">,</span> <span class="s">&quot;C4&quot;</span><span class="p">],</span> <span class="n">sampling_frequency</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                   <span class="n">start_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">end_time</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+
+<span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">gen_test</span><span class="o">.</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+    <span class="n">current_testcase</span><span class="o">=</span><span class="n">gen_test</span><span class="o">.</span><span class="n">InputOutputTestCase</span><span class="p">,</span>
+    <span class="n">node</span><span class="o">=</span><span class="n">normalization</span><span class="o">.</span><span class="n">LocalStandardizationNode</span><span class="p">,</span>
+    <span class="nb">input</span><span class="o">=</span><span class="p">[[[</span><span class="n">initial_data</span><span class="p">]]],</span>
+    <span class="n">output</span><span class="o">=</span><span class="n">initial_data</span>
+<span class="p">))</span>
+</pre></div>
+</div>
+<p>The principle behind this particular test is that the input is already
+normalized and as such should be the same as the output.
+In both cases, the dimensions of the input are of particular importance,
+hence the square brackets surrounding the input <tt class="docutils literal"><span class="pre">[[[initial_data]]]</span></tt>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../faq.html" title="Frequently Asked Questions and pySPACE Troubleshooting"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="data_handling.html" title="HOWTO: Data Handling"
+             >previous</a> |</li>
+        <li><a href="../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

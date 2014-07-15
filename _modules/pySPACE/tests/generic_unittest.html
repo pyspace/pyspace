@@ -1,0 +1,586 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.generic_unittest &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.1 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.generic_unittest</h1><div class="highlight"><pre>
+<span class="c">#!/usr/bin/env python</span>
+
+<span class="sd">&quot;&quot;&quot; Provides a class to implement a generic unittest</span>
+
+<span class="sd">The unittests will only instantiate the given class with either</span>
+<span class="sd">a default input set (see :mod:`~pySPACE.tests.utils.data.test_default_data`)</span>
+<span class="sd">or will interpret the data given by the user. In the case that there</span>
+<span class="sd">already is a specialized unittest available, this class will not be</span>
+<span class="sd">called for that specific node.</span>
+
+<span class="sd">:Author: Andrei Ignat, Mario Michael Krell</span>
+<span class="sd">:Created: 2014/05/02</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">unittest</span> <span class="kn">import</span> <span class="n">TestCase</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="n">YAML_START</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;(.. code-block:: yaml)&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">MULTILINE</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;../../../pyspace&#39;</span><span class="p">)</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;Correct the location of the pyspace repo in this script&quot;</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">pySPACE.missions.nodes</span>
+<span class="kn">import</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">as</span> <span class="nn">bn</span>
+<span class="kn">from</span> <span class="nn">utils.data.test_default_data</span> <span class="kn">import</span> <span class="n">all_inputs</span>
+
+
+<div class="viewcode-block" id="ParametrizedTestCase"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase">[docs]</a><span class="k">class</span> <span class="nc">ParametrizedTestCase</span><span class="p">(</span><span class="n">TestCase</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class acts as a wrapper such that different parameters can</span>
+<span class="sd">    be passed on to the test case. It is adapted from the example</span>
+<span class="sd">    found here:</span>
+
+<span class="sd">    http://eli.thegreenplace.net/2011/08/02/python-unit-testing-parametrized-test-cases/</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :methodName:</span>
+<span class="sd">            The name of the test to be run</span>
+<span class="sd">        :current_node:</span>
+<span class="sd">            A reference to the node. Should reference the node object and</span>
+<span class="sd">            NOT A STRING with the same name</span>
+<span class="sd">        :specific_input:</span>
+<span class="sd">            If a specific input is to be used, it should be defined here</span>
+
+<span class="sd">    The reason behind the existence of this class is that passing parameters</span>
+<span class="sd">    to a class that extends :class:`GenericTestCase` is close to impossible.</span>
+<span class="sd">    If the user does not want to implement an external unittesting package such</span>
+<span class="sd">    as `nose-parametrized &lt;https://github.com/wolever/nose-parameterized&gt;`_,</span>
+<span class="sd">    one must &#39;fool&#39; python and use a wrapper class such that the unit testing</span>
+<span class="sd">    is done in a different class. The end result is that the unittest</span>
+<span class="sd">    implementation is done within a class that has an initialization method</span>
+<span class="sd">    which obviously accepts external parameters(such as different nodes) and</span>
+<span class="sd">    which takes the actual tests from a class that inherits from</span>
+<span class="sd">    :class:`GenericTestCase`.</span>
+
+<span class="sd">    While this is not the most elegant solution, it was preferred over</span>
+<span class="sd">    importing a new module which would have just enlarged the list of</span>
+<span class="sd">    the framework dependencies.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ParametrizedTestCase.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">methodName</span><span class="o">=</span><span class="s">&#39;runTest&#39;</span><span class="p">,</span>
+                 <span class="n">current_node</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">specific_input</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">desired_output</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ParametrizedTestCase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">methodName</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">the_node</span> <span class="o">=</span> <span class="n">current_node</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="n">specific_input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="n">desired_output</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">longMessage</span> <span class="o">=</span> <span class="bp">True</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ParametrizedTestCase.parametrize"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase.parametrize">[docs]</a>    <span class="k">def</span> <span class="nf">parametrize</span><span class="p">(</span><span class="n">current_testcase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">input</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Instantiate a new testcase for current_node &quot;&quot;&quot;</span>
+        <span class="n">testloader</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span>
+        <span class="n">testnames</span> <span class="o">=</span> <span class="n">testloader</span><span class="o">.</span><span class="n">getTestCaseNames</span><span class="p">(</span><span class="n">current_testcase</span><span class="p">)</span>
+        <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestSuite</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">testnames</span><span class="p">:</span>
+            <span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">current_testcase</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                           <span class="n">current_node</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
+                                           <span class="n">specific_input</span><span class="o">=</span><span class="nb">input</span><span class="p">,</span>
+                                           <span class="n">desired_output</span><span class="o">=</span><span class="n">output</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">suite</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._nspaces"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._nspaces">[docs]</a>    <span class="k">def</span> <span class="nf">_nspaces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; returns the indentation</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :line:</span>
+<span class="sd">                string representation of the current line</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">lstrip</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._look_for_yaml"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._look_for_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">_look_for_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">the_docstring</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; takes a string as an argument and looks for a YAML</span>
+<span class="sd">        code block inside the string</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :the_docstring:</span>
+<span class="sd">                the string in which the method should look for YAML code</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">inside_yaml</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">first_after</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">yaml_indentation</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">the_yaml</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">the_docstring</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">YAML_START</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+                <span class="n">inside_yaml</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">first_after</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">yaml_indentation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspaces</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">first_after</span><span class="p">:</span>
+                <span class="n">first_after</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">inside_yaml</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_nspaces</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">yaml_indentation</span><span class="p">:</span>
+                <span class="n">the_yaml</span> <span class="o">+=</span> <span class="n">line</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">inside_yaml</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="k">return</span> <span class="n">the_yaml</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._get_the_call"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._get_the_call">[docs]</a>    <span class="k">def</span> <span class="nf">_get_the_call</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; wrapper to get the YAML call &quot;&quot;&quot;</span>
+        <span class="n">yaml</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_look_for_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">the_node</span><span class="o">.</span><span class="n">__doc__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">yaml</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._initialize_node"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._initialize_node">[docs]</a>    <span class="k">def</span> <span class="nf">_initialize_node</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; initializes the node with the parameters from YAML &quot;&quot;&quot;</span>
+        <span class="n">node_content</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_the_call</span><span class="p">())</span>
+        <span class="n">the_node</span> <span class="o">=</span> <span class="n">bn</span><span class="o">.</span><span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">node_content</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">the_node</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._which_input"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._which_input">[docs]</a>    <span class="k">def</span> <span class="nf">_which_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;  queries the node to find out what type of input it takes</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :node:</span>
+<span class="sd">                Reference to the node that is currently tested</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">node</span><span class="o">.</span><span class="n">get_input_types</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._trainable_execute"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._trainable_execute">[docs]</a>    <span class="k">def</span> <span class="nf">_trainable_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Execution call for trainable nodes &quot;&quot;&quot;</span>
+        <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="c"># select only the input that the node accepts and run with it</span>
+        <span class="n">input_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_which_input</span><span class="p">(</span><span class="n">the_node</span><span class="p">)</span>
+        <span class="c"># check if a specific input was defined</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">all_inputs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">input_keys</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">input_set</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">single_input</span> <span class="ow">in</span> <span class="n">input_set</span><span class="p">:</span>
+                <span class="c"># distinguish between supervised and unsupervised execution</span>
+                <span class="c"># and train the node</span>
+                <span class="k">if</span> <span class="n">the_node</span><span class="o">.</span><span class="n">is_supervised</span><span class="p">():</span>
+                    <span class="n">the_node</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">single_input</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">the_node</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">the_node</span><span class="o">.</span><span class="n">stop_training</span><span class="p">()</span>
+
+            <span class="k">for</span> <span class="n">single_input</span> <span class="ow">in</span> <span class="n">input_set</span><span class="p">:</span>
+                <span class="c"># execute the node on the data</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">the_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+                                 <span class="n">the_node</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span>
+                                     <span class="nb">type</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                     <span class="n">as_string</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                                 <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Output type does not correspond to node&quot;</span>
+                                     <span class="s">&quot;specifications!&quot;</span><span class="p">)</span>
+                <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result_list</span>
+</div>
+<div class="viewcode-block" id="ParametrizedTestCase._non_trainable_execute"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.ParametrizedTestCase._non_trainable_execute">[docs]</a>    <span class="k">def</span> <span class="nf">_non_trainable_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Execution call for non-trainable nodes &quot;&quot;&quot;</span>
+        <span class="n">result_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="n">input_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_which_input</span><span class="p">(</span><span class="n">the_node</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">input</span><span class="p">]</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">inputs</span> <span class="o">=</span> <span class="p">[</span><span class="n">all_inputs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">input_keys</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">input_set</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">single_input</span> <span class="ow">in</span> <span class="n">input_set</span><span class="p">:</span>
+                <span class="n">the_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+            <span class="n">input_keys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_which_input</span><span class="p">(</span><span class="n">the_node</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">input_set</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">single_input</span> <span class="ow">in</span> <span class="n">input_set</span><span class="p">:</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">the_node</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+                                     <span class="n">the_node</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span>
+                                         <span class="nb">type</span><span class="p">(</span><span class="n">single_input</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                         <span class="n">as_string</span><span class="o">=</span><span class="bp">False</span><span class="p">),</span>
+                                     <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Output type does not correspond&quot;</span> <span class="o">+</span>
+                                         <span class="s">&quot; to node specifications!&quot;</span><span class="p">)</span>
+                    <span class="n">result_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+                <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result_list</span>
+
+</div></div>
+<div class="viewcode-block" id="OutputTestCase"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.OutputTestCase">[docs]</a><span class="k">class</span> <span class="nc">OutputTestCase</span><span class="p">(</span><span class="n">ParametrizedTestCase</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot; Serves as a wrapper  to test the output given the default input set</span>
+
+<span class="sd">    **Principle**</span>
+
+<span class="sd">        The OutputTestCase serves as a framework for quick checks of a node</span>
+<span class="sd">        whereby, for the default input set, which can be found in ,</span>
+<span class="sd">        :mod:`~pySPACE.tests.utils.data.test_default_data` , a user defined</span>
+<span class="sd">        output is expected</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="OutputTestCase.test_output"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.OutputTestCase.test_output">[docs]</a>    <span class="k">def</span> <span class="nf">test_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;compare the output with the expected output&quot;&quot;&quot;</span>
+        <span class="c"># first we check whether the input/output were defined by the user</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;This test is designed to work with the default &quot;</span> <span class="o">+</span>
+                          <span class="s">&quot;input set. Switching to default input set&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;The output was not defined.&quot;</span><span class="p">)</span>
+
+        <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">the_node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainable_execute</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_trainable_execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+                             <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Computed output does not match&quot;</span> <span class="o">+</span>
+                                 <span class="s">&quot; desired output&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">),</span>
+                             <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Different dimensions between computed&quot;</span> <span class="o">+</span>
+                                 <span class="s">&quot; and desired output&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                 <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Computed output does not match &quot;</span> <span class="o">+</span>
+                                     <span class="s">&quot;desired output at index:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="InputOutputTestCase"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.InputOutputTestCase">[docs]</a><span class="k">class</span> <span class="nc">InputOutputTestCase</span><span class="p">(</span><span class="n">ParametrizedTestCase</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot; Serves as a wrapper for an easy way to test the input-output relation</span>
+
+<span class="sd">    **Principle**</span>
+
+<span class="sd">        The InputOutputTestCase serves as a framework for quick checks of a</span>
+<span class="sd">        node whereby, for a user defined input, a user defined output is</span>
+<span class="sd">        desired.</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="InputOutputTestCase.test_input_output"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.InputOutputTestCase.test_input_output">[docs]</a>    <span class="k">def</span> <span class="nf">test_input_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;obtain output for given input and compare it with desired output&quot;&quot;&quot;</span>
+        <span class="c"># first we check whether the input/output were defined by the user</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;The input was not defined.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;The output was not defined.&quot;</span><span class="p">)</span>
+
+        <span class="c"># now, we just run the same methods</span>
+
+        <span class="c"># test the execution of the node</span>
+        <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">the_node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainable_execute</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_trainable_execute</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="ow">is</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">,</span>
+                             <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Computed output does not match&quot;</span> <span class="o">+</span>
+                                 <span class="s">&quot; desired output&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">),</span>
+                             <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Different dimensions between computed&quot;</span> <span class="o">+</span>
+                                 <span class="s">&quot; and desired output&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                 <span class="n">msg</span><span class="o">=</span><span class="s">&quot;Computed output does not match &quot;</span> <span class="o">+</span>
+                                     <span class="s">&quot;desired output at index:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+</div></div>
+<div class="viewcode-block" id="GenericTestCase"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase">[docs]</a><span class="k">class</span> <span class="nc">GenericTestCase</span><span class="p">(</span><span class="n">ParametrizedTestCase</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot; Contains the methods and submethods needed to run the tests</span>
+
+<span class="sd">        - whether the node has some sort of documentation</span>
+<span class="sd">        - whether an exemplary call is present in the documentation</span>
+<span class="sd">        - whether the node can be initialized with the default data set</span>
+<span class="sd">        - whether the node can execute on the default data set</span>
+
+<span class="sd">    An example of how to implement the generic tests in a node specific</span>
+<span class="sd">    manner can be found under</span>
+<span class="sd">    :mod:`~pySPACE.tests.unittests.nodes.feature_generation.test_time_domain_features`</span>
+
+<span class="sd">    This example is also explained in detail in the tutorial file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GenericTestCase.shortDescription"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase.shortDescription">[docs]</a>    <span class="k">def</span> <span class="nf">shortDescription</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; overwritten method that will display the node name as output&quot;&quot;&quot;</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_testMethodDoc</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">the_node</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
+        <span class="n">message</span> <span class="o">+=</span> <span class="n">doc</span> <span class="ow">and</span> <span class="n">doc</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">or</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">message</span>
+</div>
+<div class="viewcode-block" id="GenericTestCase.test_has_documentation"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase.test_has_documentation">[docs]</a>    <span class="k">def</span> <span class="nf">test_has_documentation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; check if the node has some sort of documentation &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertIsNot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">the_node</span><span class="o">.</span><span class="n">__doc__</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenericTestCase.test_has_exemplary_call"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase.test_has_exemplary_call">[docs]</a>    <span class="k">def</span> <span class="nf">test_has_exemplary_call</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; check if there is an exemplary call in the documentation &quot;&quot;&quot;</span>
+        <span class="c"># if there is no YAML code, the string will be empty and thus False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertNotEqual</span><span class="p">(</span><span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_the_call</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()),</span> <span class="s">&quot;&quot;</span><span class="p">,</span>
+                            <span class="n">msg</span><span class="o">=</span><span class="s">&quot;The node does not have an exemplary call&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="GenericTestCase.test_initialize"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase.test_initialize">[docs]</a>    <span class="k">def</span> <span class="nf">test_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; check if the node can be initialized using the default data &quot;&quot;&quot;</span>
+        <span class="c"># test if the node can be initialized</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assertRaises</span><span class="p">(</span><span class="ne">Exception</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="GenericTestCase.test_execution"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.generic_unittest.html#pySPACE.tests.generic_unittest.GenericTestCase.test_execution">[docs]</a>    <span class="k">def</span> <span class="nf">test_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; execute the node using the default data</span>
+
+<span class="sd">        **Principle**</span>
+
+<span class="sd">            The test_execution method runs the node on the default data set</span>
+<span class="sd">            and then checks whether the type of the output corresponds to the</span>
+<span class="sd">            according output type from the theoretical point of view</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># test the execution of the node</span>
+        <span class="n">the_node</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialize_node</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">the_node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_trainable_execute</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_trainable_execute</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">result</span>
+
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="c"># the following are needed to redirect the output to file</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="kn">import</span> <span class="nn">warnings</span>
+
+    <span class="c"># If the script is called from the command line, it will run the generic</span>
+    <span class="c"># unittest on all the available nodes</span>
+    <span class="n">list_of_nodes</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">missions</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">DEFAULT_NODE_MAPPING</span>
+
+    <span class="c"># we define a list of nodes that we do not want to test</span>
+    <span class="n">skipped_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;pySPACE.missions.nodes.sink&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.source&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.scikits_nodes&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.splitter&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.meta&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.debug.subflow_timing_node&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.classification.ensemble&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.classification.svm_variants.sparse&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.spatial_filtering.sensor_selection&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.visualization.ensemble_vis&#39;</span><span class="p">,</span>
+                    <span class="s">&#39;pySPACE.missions.nodes.classification.svm_variants.RMM&#39;</span>
+                    <span class="p">]</span>
+
+    <span class="n">skipped_nodes</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;FeatureNormalizationNode&#39;</span><span class="p">,</span>
+                     <span class="c"># this exemplary call has a hardcoded path in it</span>
+                     <span class="s">&#39;ElectrodeCoordinationPlotNode&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;AverageFeatureVisNode&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;AlamgirMultiTaskClassifierNode&#39;</span><span class="p">,</span>
+                     <span class="s">&#39;ICAWrapperNode&#39;</span><span class="p">,</span>
+                     <span class="c"># The iteration does not converge on the test data</span>
+                     <span class="c"># TODO:Build converging iteration</span>
+                     <span class="s">&#39;JunctionNode&#39;</span><span class="p">,</span>  <span class="c"># requires private modules</span>
+                     <span class="s">&#39;LaplacianReferenceNode&#39;</span><span class="p">,</span>
+                     <span class="c"># node has hardcoded values</span>
+                     <span class="s">&#39;PissfNode&#39;</span><span class="p">,</span>  <span class="c"># TODO:needs specialized training data</span>
+                     <span class="c"># does not apply to default data</span>
+                     <span class="s">&#39;MonoTimeSeries2FeatureNode&#39;</span>
+                     <span class="p">]</span>
+    <span class="c"># initialize some counters and log the results to a txt file</span>
+    <span class="n">total_tests</span><span class="p">,</span> <span class="n">docu</span><span class="p">,</span> <span class="n">exemplary</span><span class="p">,</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">execution</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+
+    <span class="c"># everything is logged to a file</span>
+    <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;generic_unittest.log&#39;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s">&#39;w&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">customwarn</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">lineno</span><span class="p">,</span> <span class="nb">file</span><span class="o">=</span><span class="nb">file</span><span class="p">,</span> <span class="n">line</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">warnings</span><span class="o">.</span><span class="n">formatwarning</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">category</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">lineno</span><span class="p">))</span>
+
+    <span class="n">warnings</span><span class="o">.</span><span class="n">showwarning</span> <span class="o">=</span> <span class="n">customwarn</span>
+    <span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="nb">file</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">list_of_nodes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="c"># we want to skip the nodes defined above</span>
+        <span class="n">skiptest</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="o">.</span><span class="n">__module__</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">skipped_dirs</span><span class="p">]</span>
+        <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\r</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="c"># the exact output you&#39;re looking for:</span>
+        <span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&quot;&gt;&gt;&gt;&gt;&gt; Nodes tested already: </span><span class="si">%d</span><span class="s"> &lt;&lt;&lt;&lt;&lt;&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">count</span><span class="p">))</span>
+        <span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">True</span> <span class="ow">in</span> <span class="n">skiptest</span> <span class="ow">or</span> <span class="n">item</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">in</span> <span class="n">skipped_nodes</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;*&#39;</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="s">&#39;*&#39;</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+        <span class="n">total_tests</span> <span class="o">+=</span> <span class="mi">4</span>
+        <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestSuite</span><span class="p">()</span>
+        <span class="n">suite</span><span class="o">.</span><span class="n">addTest</span><span class="p">(</span><span class="n">ParametrizedTestCase</span><span class="o">.</span><span class="n">parametrize</span><span class="p">(</span>
+            <span class="n">current_testcase</span><span class="o">=</span><span class="n">GenericTestCase</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">item</span><span class="p">))</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="nb">file</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+        <span class="c"># check which tests failed</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">failures</span><span class="p">:</span>
+            <span class="n">failed_test</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_has_documentation&#39;</span><span class="p">):</span>
+                <span class="n">docu</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_has_exemplary_call&#39;</span><span class="p">):</span>
+                <span class="n">exemplary</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_initialize&#39;</span><span class="p">):</span>
+                <span class="n">initialize</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_execution&#39;</span><span class="p">):</span>
+                <span class="n">execution</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">errors</span><span class="p">:</span>
+            <span class="n">failed_test</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_has_documentation&#39;</span><span class="p">):</span>
+                <span class="n">docu</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_has_exemplary_call&#39;</span><span class="p">):</span>
+                <span class="n">exemplary</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_initialize&#39;</span><span class="p">):</span>
+                <span class="n">initialize</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">failed_test</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;test_execution&#39;</span><span class="p">):</span>
+                <span class="n">execution</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c"># plot the results</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="n">total_tests</span> <span class="o">-</span> <span class="n">docu</span> <span class="o">-</span> <span class="n">exemplary</span> <span class="o">-</span> <span class="n">initialize</span> <span class="o">-</span> <span class="n">execution</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">clf</span><span class="p">()</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="mi">125</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">15</span><span class="p">))</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">prism</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+
+    <span class="n">patches</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">pie</span><span class="p">([</span><span class="n">success</span><span class="p">,</span> <span class="n">docu</span><span class="p">,</span> <span class="n">exemplary</span><span class="p">,</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">execution</span><span class="p">],</span>
+                      <span class="n">autopct</span><span class="o">=</span><span class="s">&#39;</span><span class="si">%2.2f%%</span><span class="s">&#39;</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">,</span>
+                      <span class="n">pctdistance</span><span class="o">=</span><span class="mf">1.1</span><span class="p">,</span> <span class="n">labeldistance</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                      <span class="n">explode</span><span class="o">=</span><span class="p">[</span><span class="mf">0.03</span><span class="p">,</span> <span class="mf">0.10</span><span class="p">,</span> <span class="mf">0.15</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">])</span>
+
+    <span class="n">l</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">patches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                   <span class="p">[</span><span class="s">&quot;Successful (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;No documentation (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">docu</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;No exemplary call (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">exemplary</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;Initialization failed (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">initialize</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span><span class="p">,</span>
+                    <span class="s">&quot;Execution failed (&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">execution</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span><span class="p">],</span>
+                   <span class="n">loc</span><span class="o">=</span><span class="s">&quot;best&quot;</span><span class="p">)</span>
+
+    <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s">&quot;Total number of tests:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">total_tests</span><span class="p">))</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s">&quot;generic_unittest_plot.pdf&quot;</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c"># some print statements with the results of the tests</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout</span>
+    <span class="k">print</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="s">&#39;*&#39;</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="s">&quot;Test results&quot;</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> <span class="s">&#39;*&#39;</span> <span class="o">*</span> <span class="mi">70</span>
+    <span class="k">print</span> <span class="s">&quot;Successful tests: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">success</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> \
+          <span class="s">&#39;-&#39;</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span> <span class="o">+</span> \
+          <span class="s">&quot;No documentation: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">docu</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> \
+          <span class="s">&quot;No exemplary call: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">exemplary</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> \
+          <span class="s">&quot;Initialization failed: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">initialize</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> \
+          <span class="s">&quot;Execution failed: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">execution</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> \
+          <span class="s">&#39;-&#39;</span> <span class="o">*</span> <span class="mi">70</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+    </div>
+  </body>
+</html>

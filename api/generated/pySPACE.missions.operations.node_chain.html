@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>node_chain &mdash; pySPACE 1.0 release documentation</title>
+    <title>node_chain &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../index.html" />
     <link rel="up" title="operations Package" href="pySPACE.missions.operations.html" />
     <link rel="next" title="shuffle" href="pySPACE.missions.operations.shuffle.html" />
     <link rel="prev" title="mmlf" href="pySPACE.missions.operations.mmlf.html" /> 
@@ -45,7 +45,7 @@
         <li class="right" >
           <a href="pySPACE.missions.operations.mmlf.html" title="mmlf"
              accesskey="P">previous</a> |</li>
-        <li><a href="../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../content.html" >Table of Contents</a> &raquo;</li>
           <li><a href="pySPACE.html" >pySPACE Package</a> &raquo;</li>
           <li><a href="pySPACE.missions.html" >missions Package</a> &raquo;</li>
@@ -237,9 +237,19 @@ dataset is used.</p>
 </div>
 <div class="section" id="store-node-chain">
 <h4>store_node_chain<a class="headerlink" href="#store-node-chain" title="Permalink to this headline">¶</a></h4>
-<p>option to save as pickle file the total state of
-the node chain after the processing;
-separately for each split in cross validation if existing</p>
+<p>If True, the total state of the node chain after the processing is stored to disk.
+This is done separately for each split and run.
+If <em>store_node_chain</em> is a tuple of length 2&#8212;lets say (i1,i2)&#8212;only the 
+subflow starting at the i1-th node and ending at the (i2-1)-th node is stored. 
+This may be useful when the stored flow should be used in an ensemble.
+If <em>store_node_chain</em> is a list with indices, all nodes in the chain with the
+corresponding indices are stored. This might be useful to exclude specific nodes
+that do not change the data dimension / type, like e.g. visualization nodes.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Since yaml cannot recognize tuples, string parameters are evaluated
+before type testing (if boolean, tuple, list) is done.</p>
+</div>
 <p>(<em>optional, default: False</em>)</p>
 </div>
 <div class="section" id="compression">
@@ -454,7 +464,7 @@ input_dataset_dir, the node_chain_name and the parameter setting.</p>
 <p>This is an atomic task,which takes
 a dataset (EEG-data, time series data, feature vector data in different formats)
 as input and produces a certain
-output (e.g. ARFF , pickle files, performance tabular).
+output (e.g. ARFF, pickle files, performance tabular).
 The execution of
 this process consists of applying a  given NodeChain
 on an input for a certain configuration.</p>
@@ -465,10 +475,9 @@ on an input for a certain configuration.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name" colspan="2">node_chain_spec:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">name of the file, lying in the spec file
-folder, specified in the configuration file.</td>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">String in YAML syntax of the node chain.</td>
 </tr>
-<tr class="field-even field"><th class="field-name" colspan="2">parameter setting:</th></tr>
+<tr class="field-even field"><th class="field-name" colspan="2">parameter_setting:</th></tr>
 <tr class="field-even field"><td>&nbsp;</td><td class="field-body">parameters chosen for this process</td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">rel_dataset_dir:</th></tr>
@@ -512,9 +521,6 @@ existing</td>
 <tr class="row-even"><td><a class="reference internal" href="#pySPACE.missions.operations.node_chain.NodeChainProcess._check_node_chain_dataset_consistency" title="pySPACE.missions.operations.node_chain.NodeChainProcess._check_node_chain_dataset_consistency"><tt class="xref py py-obj docutils literal"><span class="pre">_check_node_chain_dataset_consistency</span></tt></a>(...)</td>
 <td>Checks that the given node_chain can process the given dataset</td>
 </tr>
-<tr class="row-odd"><td><a class="reference internal" href="#pySPACE.missions.operations.node_chain.NodeChainProcess.replace_parameters" title="pySPACE.missions.operations.node_chain.NodeChainProcess.replace_parameters"><tt class="xref py py-obj docutils literal"><span class="pre">replace_parameters</span></tt></a>(node_chain_spec,&nbsp;...)</td>
-<td>Replace parameters of parameter_setting in node_chain_spec</td>
-</tr>
 </tbody>
 </table>
 <dl class="method">
@@ -526,12 +532,6 @@ existing</td>
 <dt id="pySPACE.missions.operations.node_chain.NodeChainProcess.__call__">
 <tt class="descname">__call__</tt><big>(</big><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/operations/node_chain.html#NodeChainProcess.__call__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.operations.node_chain.NodeChainProcess.__call__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Executes this process on the respective modality</p>
-</dd></dl>
-
-<dl class="classmethod">
-<dt id="pySPACE.missions.operations.node_chain.NodeChainProcess.replace_parameters">
-<em class="property">classmethod </em><tt class="descname">replace_parameters</tt><big>(</big><em>node_chain_spec</em>, <em>parameter_setting</em><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/operations/node_chain.html#NodeChainProcess.replace_parameters"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.operations.node_chain.NodeChainProcess.replace_parameters" title="Permalink to this definition">¶</a></dt>
-<dd><p>Replace parameters of parameter_setting in node_chain_spec</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -569,7 +569,7 @@ source node to the dataset type</p>
         <li class="right" >
           <a href="pySPACE.missions.operations.mmlf.html" title="mmlf"
              >previous</a> |</li>
-        <li><a href="../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../content.html" >Table of Contents</a> &raquo;</li>
           <li><a href="pySPACE.html" >pySPACE Package</a> &raquo;</li>
           <li><a href="pySPACE.missions.html" >missions Package</a> &raquo;</li>
@@ -577,8 +577,8 @@ source node to the dataset type</p>
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

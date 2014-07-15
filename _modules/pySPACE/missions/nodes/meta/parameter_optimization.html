@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.nodes.meta.parameter_optimization &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.missions.nodes.meta.parameter_optimization &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -343,15 +343,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">runs</span> <span class="o">=</span> <span class="p">[</span><span class="mi">10</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_number</span> <span class="o">+</span> <span class="n">run</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runs</span><span class="p">)]</span>
         <span class="n">original_flow_template</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span><span class="p">)</span>
         <span class="c"># Fill in validation parameters in the template</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_parameter_settings</span><span class="o">==</span><span class="p">{}:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">template</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
-                             <span class="n">parametrization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">validation_parameter_settings</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">original_flow_template</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">replace_parameters_in_node_chain</span><span class="p">(</span>
+            <span class="n">original_flow_template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_parameter_settings</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nom_rng</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">prepare_optimization</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span> <span class="o">=</span> \
-                                                 <span class="bp">self</span><span class="o">.</span><span class="n">get_best_parametrization</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">get_best_parametrization</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">performance_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p2key</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">)]</span> <span class="o">=</span> \
-                              <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">)</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">nom_grid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_grid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nom_rng</span><span class="p">)</span>
             <span class="n">iterations</span> <span class="o">=</span> <span class="mi">0</span>
@@ -361,12 +360,13 @@
             <span class="k">for</span> <span class="n">nom_par</span> <span class="ow">in</span> <span class="n">nom_grid</span><span class="p">:</span>
                 <span class="c"># for getting the best parameterization,</span>
                 <span class="c"># the class attribute flow_template must be overwritten</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">template</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
-                             <span class="n">parametrization</span><span class="o">=</span><span class="n">nom_par</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">flow_template</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> \
+                    <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">replace_parameters_in_node_chain</span><span class="p">(</span>
+                        <span class="n">flow_template</span><span class="p">,</span> <span class="n">nom_par</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">prepare_optimization</span><span class="p">()</span>
                 <span class="n">parametrization</span><span class="p">,</span> <span class="n">performance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_best_parametrization</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">performance_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">p2key</span><span class="p">(</span><span class="n">nom_par</span><span class="p">)]</span> <span class="o">=</span> <span class="p">(</span><span class="n">performance</span><span class="p">,</span> 
-                                                                <span class="n">parametrization</span><span class="p">)</span>
+                                                              <span class="n">parametrization</span><span class="p">)</span>
                 <span class="n">iterations</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
                 <span class="n">search_history</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">nom_par</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">search_history</span><span class="p">))</span>
                 <span class="c"># reinitialize optimization parameters</span>
@@ -379,26 +379,23 @@
             <span class="n">best_key</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">performance_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()),</span>
                                                           <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span> <span class="o">=</span> \
-                                                 <span class="bp">self</span><span class="o">.</span><span class="n">performance_dict</span><span class="p">[</span><span class="n">best_key</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">performance_dict</span><span class="p">[</span><span class="n">best_key</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">best_key</span><span class="p">))</span>
         <span class="c"># when best parameter dict is calculated, this has to be logged</span>
         <span class="c"># or saved and the chosen parameter is used for training on the</span>
         <span class="c"># whole data set, independent of the chosen algorithm</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Using parameterization </span><span class="si">%s</span><span class="s"> with optimal performance </span><span class="si">%s</span><span class="s"> for &quot;</span> \
                   <span class="s">&quot;metric </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">,</span> 
-                                            <span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">))</span>
+                                  <span class="bp">self</span><span class="o">.</span><span class="n">best_performance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">))</span>
         <span class="c"># Fill in the final parameters in the flow template</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_training_parameter_settings</span><span class="o">==</span><span class="p">{}:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">instantiate</span><span class="p">(</span><span class="n">template</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
-                             <span class="n">parametrization</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">final_training_parameter_settings</span><span class="p">)</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">original_flow_template</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="n">original_flow_template</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">replace_parameters_in_node_chain</span><span class="p">(</span>
+            <span class="n">original_flow_template</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">final_training_parameter_settings</span><span class="p">)</span>
         <span class="n">best_flow_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow_template</span>
         <span class="n">best_flow_template</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;node&#39;</span><span class="p">:</span> <span class="s">&#39;All_Train_Splitter&#39;</span><span class="p">}</span>
         <span class="c">#delete last node</span>
         <span class="n">best_flow_template</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generate_subflow</span><span class="p">(</span><span class="n">best_flow_template</span><span class="p">,</span> 
-                                            <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">,</span> <span class="n">NodeChain</span><span class="p">)</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">best_parametrization</span><span class="p">,</span> <span class="n">NodeChain</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
@@ -607,7 +604,7 @@
 <span class="sd">            parameters :</span>
 <span class="sd">                optimization:</span>
 <span class="sd">                    ranges : {~~OUTLIERS~~ : [0, 5, 10],</span>
-<span class="sd">                              ~~COMPLEXITY~~: [0.01, 0.1, 1.0]}</span>
+<span class="sd">                              ~~COMPLEXITY~~ : [0.01, 0.1, 1.0]}</span>
 <span class="sd">                parallelization:</span>
 <span class="sd">                    processing_modality : &#39;backend&#39;</span>
 <span class="sd">                    pool_size : 2</span>
@@ -628,10 +625,8 @@
 <span class="sd">                            classes_names : [&#39;NoMovement&#39;,&#39;Movement&#39;]</span>
 <span class="sd">                            uncertain_area : &#39;eval([(-600,-350)])&#39;</span>
 <span class="sd">                            calc_soft_metrics : True</span>
-<span class="sd">                            save_score_plot : True</span>
-<span class="sd">                    </span>
+<span class="sd">                            save_score_plot : True </span>
 <span class="sd">                variables: [~~OUTLIERS~~, ~~COMPLEXITY~~]</span>
-<span class="sd">                </span>
 <span class="sd">                nodes :</span>
 <span class="sd">                    -</span>
 <span class="sd">                        node : Feature_Normalization</span>
@@ -780,7 +775,7 @@
 
 <span class="sd">        -</span>
 <span class="sd">            node : Pattern_Search</span>
-<span class="sd">            parameters :</span>
+<span class="sd">            parameters : </span>
 <span class="sd">                parallelization :</span>
 <span class="sd">                    processing_modality : &#39;local&#39;</span>
 <span class="sd">                    pool_size : 4</span>
@@ -803,9 +798,7 @@
 <span class="sd">                    metric : &quot;Balanced_accuracy&quot;</span>
 <span class="sd">                    std_weight: 1</span>
 <span class="sd">                    ir_class : &quot;Target&quot; </span>
-<span class="sd">    </span>
 <span class="sd">                variables: [~~W1~~, ~~W2~~]</span>
-<span class="sd">                </span>
 <span class="sd">                nodes :</span>
 <span class="sd">                    -</span>
 <span class="sd">                        node: LibSVM_Classifier</span>
@@ -1049,13 +1042,13 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

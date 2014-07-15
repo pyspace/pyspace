@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.operations.node_chain &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.missions.operations.node_chain &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -206,9 +206,17 @@
 <span class="sd">store_node_chain</span>
 <span class="sd">----------------</span>
 
-<span class="sd">option to save as pickle file the total state of</span>
-<span class="sd">the node chain after the processing;</span>
-<span class="sd">separately for each split in cross validation if existing</span>
+<span class="sd">If True, the total state of the node chain after the processing is stored to disk.</span>
+<span class="sd">This is done separately for each split and run.</span>
+<span class="sd">If *store_node_chain* is a tuple of length 2---lets say (i1,i2)---only the </span>
+<span class="sd">subflow starting at the i1-th node and ending at the (i2-1)-th node is stored. </span>
+<span class="sd">This may be useful when the stored flow should be used in an ensemble.</span>
+<span class="sd">If *store_node_chain* is a list with indices, all nodes in the chain with the</span>
+<span class="sd">corresponding indices are stored. This might be useful to exclude specific nodes</span>
+<span class="sd">that do not change the data dimension / type, like e.g. visualization nodes.</span>
+
+<span class="sd">.. note:: Since yaml cannot recognize tuples, string parameters are evaluated</span>
+<span class="sd">          before type testing (if boolean, tuple, list) is done.</span>
 
 <span class="sd">(*optional, default: False*)</span>
 
@@ -312,7 +320,7 @@
 <span class="kn">from</span> <span class="nn">pySPACE.missions.operations.base</span> <span class="kn">import</span> <span class="n">Operation</span><span class="p">,</span> <span class="n">Process</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
-<span class="kn">from</span> <span class="nn">pySPACE.tools.conversion</span> <span class="kn">import</span> <span class="n">python2yaml</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.conversion</span> <span class="kn">import</span> <span class="n">extract_key_str</span><span class="p">,</span> <span class="n">replace_parameters_and_convert</span>
 <span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> \
     <span class="kn">import</span> <span class="n">BenchmarkNodeChain</span><span class="p">,</span> <span class="n">NodeChainFactory</span>
 
@@ -336,8 +344,13 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="NodeChainOperation.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
                  <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c"># temporary replacement of template keyword for better layout when</span>
+        <span class="c"># source_operation.yaml file is saved to result folder</span>
+        <span class="n">templates</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;templates&quot;</span><span class="p">)</span>
+        <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">templates</span><span class="p">]</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainOperation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
                                                  <span class="n">result_directory</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span> <span class="o">=</span> <span class="n">templates</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="n">create_process</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">number_processes</span> <span class="o">=</span> <span class="n">number_processes</span>
 
@@ -374,10 +387,12 @@
         <span class="c">## Use node_chain parameter if no templates are given ##</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;templates&quot;</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">):</span>
-                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">)]</span>
+                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">extract_key_str</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;base_file&quot;</span><span class="p">],</span>
+                                    <span class="n">keyword</span><span class="o">=</span><span class="s">&quot;node_chain&quot;</span><span class="p">)]</span>
+                <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Specify parameter &#39;templates&#39; or &#39;node_chain&#39; in your operation spec!&quot;</span><span class="p">)</span>
-                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span><span class="o">=</span><span class="p">[</span><span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;flow&quot;</span><span class="p">)]</span>
         <span class="k">elif</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">):</span>
             <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">)</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;node_chain parameter is ignored. Templates are used.&quot;</span><span class="p">)</span>
@@ -387,15 +402,16 @@
                 <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])):</span>
                 <span class="n">rel_node_chain_file</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
-                <span class="n">abs_node_chain_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
+                <span class="n">abs_node_chain_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
                     <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span> <span class="s">&quot;node_chains&quot;</span><span class="p">,</span>
-                    <span class="n">rel_node_chain_file</span><span class="p">]),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
-                <span class="n">node_chain</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">abs_node_chain_file</span><span class="p">)</span>
-                <span class="n">abs_node_chain_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                    <span class="n">rel_node_chain_file</span><span class="p">])</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">abs_node_chain_file_name</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+                    <span class="n">node_chain</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                    <span class="c">#node_chain = yaml.load(read_file)</span>
                 <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_chain</span>
 
         <span class="n">storage</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">input_paths</span> <span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">input_paths</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No input datasets found in input_path </span><span class="si">%s</span><span class="s"> in </span><span class="si">%s</span><span class="s">!&quot;</span>
                             <span class="o">%</span> <span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;input_path&quot;</span><span class="p">],</span><span class="n">storage</span><span class="p">))</span>
 
@@ -780,16 +796,15 @@
 <span class="sd">    This is an atomic task,which takes</span>
 <span class="sd">    a dataset (EEG-data, time series data, feature vector data in different formats)</span>
 <span class="sd">    as input and produces a certain</span>
-<span class="sd">    output (e.g. ARFF , pickle files, performance tabular).</span>
+<span class="sd">    output (e.g. ARFF, pickle files, performance tabular).</span>
 <span class="sd">    The execution of</span>
 <span class="sd">    this process consists of applying a  given NodeChain</span>
 <span class="sd">    on an input for a certain configuration.</span>
 
 <span class="sd">    **Parameters**</span>
-<span class="sd">        :node_chain_spec:   name of the file, lying in the spec file</span>
-<span class="sd">                                folder, specified in the configuration file.</span>
+<span class="sd">        :node_chain_spec:       String in YAML syntax of the node chain.</span>
 
-<span class="sd">        :parameter setting:     parameters chosen for this process</span>
+<span class="sd">        :parameter_setting:     parameters chosen for this process</span>
 <span class="sd">        :rel_dataset_dir:       location of input file relative to the pySPACE</span>
 <span class="sd">                                *storage*, specified in the configuration file</span>
 <span class="sd">        :run:                   When process is started repeatedly, to deal</span>
@@ -842,9 +857,8 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">console_log_level</span><span class="p">,</span><span class="n">file_log_level</span><span class="p">)</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span>
-
-        <span class="c"># Replace parameters iin spec file</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">NodeChainProcess</span><span class="o">.</span><span class="n">replace_parameters</span><span class="p">(</span>
+        <span class="c"># Replace parameters in spec file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">replace_parameters_and_convert</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">)</span>
         <span class="c"># Create node chain</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span>
@@ -941,56 +955,6 @@
 
         <span class="c">############## Clean up after benchmarking ##############</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span>
-
-
-</div>
-    <span class="nd">@classmethod</span>
-<div class="viewcode-block" id="NodeChainProcess.replace_parameters"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess.replace_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">replace_parameters</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">node_chain_spec</span><span class="p">,</span> <span class="n">parameter_setting</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Replace parameters of parameter_setting in node_chain_spec &quot;&quot;&quot;</span>
-        <span class="c"># we have not specified a template file but a complete</span>
-        <span class="c"># node chain instead</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
-            <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Wrong format of template (</span><span class="si">%s</span><span class="s">).&quot;</span>
-                          <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">))</span>
-        <span class="c"># Instantiate the template</span>
-        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-
-
-            <span class="c"># Parameters framed by &quot;#&quot; are considered to be escaped</span>
-            <span class="k">if</span> <span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span> <span class="ow">in</span> <span class="n">node_chain_spec</span><span class="p">:</span>
-                <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;#&quot;</span><span class="o">+</span><span class="n">key</span><span class="o">+</span><span class="s">&quot;#&quot;</span><span class="p">,</span> <span class="s">&quot;##&quot;</span><span class="p">)</span>
-            <span class="c">#chek for optimization and normal parameter rule</span>
-            <span class="k">elif</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;_&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;~&quot;</span><span class="p">):</span>
-                <span class="c"># single parameter in dictionary, marked as string</span>
-                <span class="c"># later on the string is read as yaml file and so</span>
-                <span class="c"># has to use proper inverted commas</span>
-                <span class="c"># node_chain_spec = node_chain_spec.replace(&quot;&#39;%s&#39;&quot; % str(key),</span>
-                <span class="c">#                                           str(value))</span>
-                <span class="c"># parameter as component in eval syntax not marked as string</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">==</span><span class="nb">str</span><span class="p">:</span>
-                        <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span>
-                                                          <span class="n">value</span><span class="p">)</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span>
-                                                          <span class="nb">repr</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
-
-                <span class="k">except</span><span class="p">:</span>
-                    <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span>
-                                                          <span class="n">python2yaml</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="c"># node_chain_spec = node_chain_spec.replace(&quot;&#39;%s&#39;&quot; % str(key),</span>
-                <span class="c">#                                           str(value))</span>
-                <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span>
-                                                          <span class="n">python2yaml</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;The parameter </span><span class="si">%s</span><span class="s"> is no regular parameter.&quot;</span> <span class="o">+</span>
-                              <span class="s">&quot;Better use one starting with &#39;_&#39; or &#39;~&#39;. &quot;</span> <span class="o">+</span>
-                              <span class="s">&quot;Replacing despite.&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
-            <span class="k">if</span> <span class="s">&quot;##&quot;</span> <span class="ow">in</span> <span class="n">node_chain_spec</span><span class="p">:</span>
-                <span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">node_chain_spec</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;##&quot;</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">)</span>
 </div>
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="NodeChainProcess._check_node_chain_dataset_consistency"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess._check_node_chain_dataset_consistency">[docs]</a>    <span class="k">def</span> <span class="nf">_check_node_chain_dataset_consistency</span><span class="p">(</span><span class="n">node_chain</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
@@ -1053,13 +1017,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

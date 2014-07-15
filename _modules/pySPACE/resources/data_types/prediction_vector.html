@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.resources.data_types.prediction_vector &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.resources.data_types.prediction_vector &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -70,28 +70,87 @@
   <h1>Source code for pySPACE.resources.data_types.prediction_vector</h1><div class="highlight"><pre>
 <span class="sd">&quot;&quot;&quot; 1d array of prediction values with properties (labels, reference to the predictor)</span>
 
-
-<span class="sd">.. todo:: Implement a method _generate_tag for BaseData type (if desired)</span>
-
-<span class="sd">:Author: Mario Krell  (Mario.Krell@dfki.de)</span>
-<span class="sd">:Created: 2010/07/28</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types</span> <span class="kn">import</span> <span class="n">base</span>
 
+
 <div class="viewcode-block" id="PredictionVector"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.prediction_vector.html#pySPACE.resources.data_types.prediction_vector.PredictionVector">[docs]</a><span class="k">class</span> <span class="nc">PredictionVector</span><span class="p">(</span><span class="n">base</span><span class="o">.</span><span class="n">BaseData</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Represents a prediction vector </span>
+    <span class="sd">&quot;&quot;&quot; Represents a prediction vector</span>
 <span class="sd">    </span>
-<span class="sd">    Contains a label, a prediction and a reference to the predictor.</span>
+<span class="sd">    It contains a label, a prediction and a reference to the predictor.</span>
 <span class="sd">    I doesn&#39;t matter if it uses one or multiple predictions.</span>
+<span class="sd">    The object might be even used for regression, where no label is needed.</span>
+<span class="sd">    In contrast to :class:`~pySPACE.resources.data_types.time_series.TimeSeries`</span>
+<span class="sd">    or :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`</span>
+<span class="sd">    objects, prediction vectors are currently generated in a node chain</span>
+<span class="sd">    with classifiers for example and not loaded.</span>
+<span class="sd">    For evaluation the</span>
+<span class="sd">    :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode`</span>
+<span class="sd">    can be used to evaluate the predictions.</span>
+
+<span class="sd">    For multiple predictions, nodes from the</span>
+<span class="sd">    :mod:`~pySPACE.missions.nodes.classification.ensemble`</span>
+<span class="sd">    module can be used.</span>
+
+<span class="sd">    For creating a prediction vector, there are four</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :input_array:</span>
+<span class="sd">            The prediction vector is (for historical reasons) a 2d numpy array</span>
+<span class="sd">            with some additional (mode important parameters).</span>
+<span class="sd">            The content of the input_array should be/is the same</span>
+<span class="sd">            as used in  the *prediction* parameter.</span>
+<span class="sd">            If you do not specify this parameter, it is generated from</span>
+<span class="sd">            the *prediction* and vice versa.</span>
+<span class="sd">            Any object, which can be converted to a 2d-numpy array can be</span>
+<span class="sd">            used to specify this parameter.</span>
+
+<span class="sd">        :label:</span>
+<span class="sd">            The label normally gives a semantic meaning to the prediction value</span>
+<span class="sd">            and is a string, e.g., &quot;ill&quot; or &quot;Target&quot;.</span>
+<span class="sd">            For regression this parameter can be ignored and is set to None.</span>
+<span class="sd">            For multiple predictions, it is a list.</span>
+
+<span class="sd">        :prediction:</span>
+<span class="sd">            For regression, this is the regression value and</span>
+<span class="sd">            for binary classification it is the prediction value.</span>
+<span class="sd">            For SVMs it can be any real value and for algorithms</span>
+<span class="sd">            with probabilistic output it should be the probability</span>
+<span class="sd">            of the respective data belonging to the second and not the first</span>
+<span class="sd">            class or vice versa.</span>
+<span class="sd">            For multiple predictions this is not a single number,</span>
+<span class="sd">            but a list of floats.</span>
+<span class="sd">            The prediction value is used to generate the *input_array*</span>
+<span class="sd">            parameter or vice versa.</span>
+
+<span class="sd">        :predictor:</span>
+<span class="sd">            For accessing special parameters of the decision algorithm,</span>
+<span class="sd">            this parameter is used (default: None).</span>
+<span class="sd">            It is typically a pointer to the Node, which created the vector.</span>
+<span class="sd">            For multiple predictions, a list might be used, which might be</span>
+<span class="sd">            replaced during the processing by an ensemble classifier.</span>
+<span class="sd">            One main usage is when reading out additional metrics in the</span>
+<span class="sd">            evaluation process like convergence behaviour or weights of</span>
+<span class="sd">            a linear classifier.</span>
+
+<span class="sd">    The last 3 parameters are directly to object variables with the same name.</span>
+<span class="sd">    Currently, the object is by default like an array, with access to</span>
+<span class="sd">    the different other parameters.</span>
+<span class="sd">    For future developments, only these parameters should be used.</span>
+
+<span class="sd">    .. todo:: Implement a method _generate_tag for BaseData type (if desired)</span>
+
+<span class="sd">    .. todo:: Eliminate 2d-array behaviour incl. modifications in some nodes</span>
+
+<span class="sd">    :Author: Mario Micheal Krell</span>
+<span class="sd">    :Created: 2010/07/28</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="PredictionVector.__new__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.prediction_vector.html#pySPACE.resources.data_types.prediction_vector.PredictionVector.__new__">[docs]</a>    <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">subtype</span><span class="p">,</span> <span class="n">input_array</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">prediction</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                 <span class="n">predictor</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Refer to </span>
-<span class="sd">        http://docs.scipy.org/doc/numpy/user/basics.subclassing.html</span>
-<span class="sd">        for infos about subclassing ndarray</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Create the object including several type mappings &quot;&quot;&quot;</span>
         <span class="c"># Input array is not an already formed ndarray instance</span>
         <span class="c"># We first cast to be our class type</span>
         <span class="k">if</span> <span class="n">input_array</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
@@ -104,9 +163,10 @@
                     <span class="s">&quot;You should at least give a prediction value &quot;</span> <span class="o">+</span>
                     <span class="s">&quot;of 1 or -1 in the input array or the prediction component&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span> <span class="ow">or</span> \
-                        <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">:</span>
                     <span class="k">pass</span>
+                <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="nb">float</span><span class="p">:</span>
+                    <span class="n">prediction</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int64</span><span class="p">:</span>
                     <span class="n">prediction</span> <span class="o">*=</span> <span class="mf">1.0</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -186,13 +246,13 @@
         
         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">predictor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span> <span class="o">=</span> <span class="n">own_state</span>
 </div>
-<div class="viewcode-block" id="PredictionVector.__eq__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.prediction_vector.html#pySPACE.resources.data_types.prediction_vector.PredictionVector.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
+<div class="viewcode-block" id="PredictionVector.__eq__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.prediction_vector.html#pySPACE.resources.data_types.prediction_vector.PredictionVector.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Same label and prediction value &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">label</span> <span class="ow">and</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">prediction</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">prediction</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">False</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">True</span></div></div>
+
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">label</span> <span class="ow">and</span>
+                <span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prediction</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">prediction</span><span class="p">))</span></div></div>
 </pre></div>
 
           </div>
@@ -209,13 +269,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

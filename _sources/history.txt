@@ -6,8 +6,9 @@ History of pySPACE
 pySPACE was founded in December 2012 as a unification and renewal of
 its two predecessors BOR (``Benchmarking on Rails``) and aBRI
 (``adaptive Brain Reading Interface``). These two frameworks
-originated during the `VI-Bot project <http://robotik.dfki-bremen.de/de/forschung/projekte/vi-bot.html>`_
-in 2008.
+originated during the `VI-Bot project <http://robotik.dfki-bremen.de/en/research/projects/vi-bot.html>`_
+in 2008 at the `German Research Center for Artificial Intelligence (DFKI GmbH),
+Robotics Innovation Center, Bremen (DFKI RIC) <http://robotik.dfki-bremen.de/en/>`_.
 Still today these two foundations of pySPACE are clearly visible in its functionality.
 
 Both, aBRI and BOR, were started by Jan Hendrik Metzen and Timo Duchrow.
@@ -36,7 +37,10 @@ its familiarity to MDP and the online mode (which is now pySPACE-live) comes fro
 
 With the ending of the project `VI-Bot <http://robotik.dfki-bremen.de/en/research/projects/vi-bot.html>`_
 and the beginning of the project
-`IMMI <http://robotik.dfki-bremen.de/de/forschung/projekte/immi.html>`_ in May 2010,
+`IMMI <http://robotik.dfki-bremen.de/en/research/projects/immi.html>`_
+at the DFKI RIC and the
+`Robotics Group at the University of Bremen <http://www.informatik.uni-bremen.de/robotik/index_en.php>`_
+in May 2010,
 more and more nodes and operations were added, classification algorithms introduced to
 aBRI, and documentation and usability enhanced. Both frameworks were more and more connected
 and structure and style were constantly changing (even diverging in some parts).
@@ -71,17 +75,23 @@ main pySPACE paper:
 Journal Publications
 --------------------
 
+comparison of evaluation metrics for classification on data with imbalanced class ratio:
+
+  | Sirko Straube, Mario Michael Krell (2014),
+  | `How to evaluate an agent's behaviour to infrequent events? — Reliable performance estimation insensitive to class distribution <http://dx.doi.org/10.3389/fncom.2014.00043>`_,
+  | In Frontiers in Computational Neuroscience 8(43), doi:10.3389/fncom.2014.00043
+
+evaluations of Balanced Relative Margin Machine (BRMM) classifier:
+
+  | Mario Michael Krell, David Feess, Sirko Straube (2014)
+  | `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
+  | In Pattern Recognition Letters, Elsevier, doi: 10.1016/j.patrec.2013.09.018, in press
+
 comparison of eye artifact removal methods:
 
   | Foad Ghaderi, Su Kyoung Kim, Elsa Andrea Kirchner (2014)
   | `Effects of eye artifact removal methods on single trial P300 detection, a comparative study <http://www.sciencedirect.com/science/article/pii/S0165027013003038>`_
   | In Journal of Neuroscience Methods 221(0): 41-47, doi: 10.1016/j.jneumeth.2013.08.025
-
-evaluations of Balanced Relative Margin Machine (BRMM) classifier:
-
-  | Mario Michael Krell, David Feess, Sirko Straube (2013)
-  | `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
-  | In Pattern Recognition Letters, Elsevier, doi: 10.1016/j.patrec.2013.09.018, in press
 
 applications for brain-computer interfaces:
 

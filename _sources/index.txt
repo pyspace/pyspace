@@ -76,7 +76,7 @@ the Modular toolkit for Data Processing
 `LIBLINEAR <http://www.csie.ntu.edu.tw/~cjlin/liblinear/>`_.
 
 This software can be used to analyze and compare the performance
-(e.g. classification accuracy) of different methods and parameter settings, respectively.
+(e.g., classification accuracy) of different methods and parameter settings, respectively.
 It allows to estimate these quantities based on different validation schemes
 (including crossvalidation) and several
 independent runs. Furthermore, it allows to make use of the fact that most of
@@ -155,7 +155,7 @@ add yourself to the user mailing list.
 For development discussions and requests or if you want to share with us
 successful software usage, contact us via the developer mailing list.
 
-We are thankful for everybody who wants to contribute and you can feel free
+We are thankful for everybody who wants to :ref:`contribute<CLA>` and you can feel free
 to join the developer mailing list to support us.
 
 Both lists are moderated.

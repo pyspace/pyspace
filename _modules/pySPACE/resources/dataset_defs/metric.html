@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.resources.dataset_defs.metric &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.resources.dataset_defs.metric &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -88,7 +88,6 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
 
 <div class="viewcode-block" id="metricdict"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.metric.html#pySPACE.resources.dataset_defs.metric.metricdict">[docs]</a><span class="k">class</span> <span class="nc">metricdict</span><span class="p">(</span><span class="n">defaultdict</span><span class="p">):</span>
@@ -214,6 +213,15 @@
 
 <span class="sd">            .. math:: \\frac{TP*TN-FP*FN}{\\sqrt{((TP+FN)*(TP+FP)*(TN+FN)*(TN+FP))}}</span>
 
+<span class="sd">        :Cohen&#39;s kappa-Kappa:</span>
+<span class="sd">            Measures the agreement between classifier and true class</span>
+<span class="sd">            with a correction for guessing</span>
+
+<span class="sd">            .. math:: \\frac{TP+TN-\\left(</span>
+<span class="sd">                    \\frac{P(TP+FP)}{P+N}+\\frac{N(TN+FN)}{P+N}</span>
+<span class="sd">                \\right)}{P+N-\\left(</span>
+<span class="sd">                    \\frac{P(TP+FP)}{P+N}+\\frac{N(TN+FN)}{P+N}</span>
+<span class="sd">                \\right)}</span>
 
 <span class="sd">    **K-metrics**</span>
 <span class="sd">        These metrics expect classification values between zero and one.</span>
@@ -466,11 +474,14 @@
         <span class="n">metrics</span> <span class="o">=</span> <span class="n">metricdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="c">#{&quot;TP&quot;:0,&quot;FP&quot;:0,&quot;TN&quot;:0,&quot;FN&quot;:0}</span>
         <span class="c"># loss values are collected for each class</span>
         <span class="c"># there are numerous different losses</span>
-        <span class="n">loss_dict</span><span class="o">=</span><span class="n">metricdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">prediction_vector</span><span class="p">,</span><span class="n">label</span> <span class="ow">in</span> <span class="n">classification_results</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">sec_class</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">label</span><span class="o">==</span><span class="n">ir_class</span><span class="p">:</span>
+        <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">metricdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">prediction_vector</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classification_results</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sec_class</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">label</span> <span class="o">==</span> <span class="n">ir_class</span><span class="p">:</span>
                 <span class="n">sec_class</span> <span class="o">=</span> <span class="n">label</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span><span class="o">==</span><span class="n">ir_class</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">label</span><span class="o">==</span><span class="n">sec_class</span><span class="p">:</span>
+            <span class="c"># special treatment for one vs REST evaluation</span>
+            <span class="k">if</span> <span class="n">sec_class</span> <span class="o">==</span> <span class="s">&quot;REST&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">label</span> <span class="o">==</span> <span class="n">ir_class</span><span class="p">:</span>
+                <span class="n">label</span> <span class="o">=</span> <span class="s">&quot;REST&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span> <span class="o">==</span> <span class="n">ir_class</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">label</span> <span class="o">==</span> <span class="n">sec_class</span><span class="p">:</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Binary metrics &quot;</span> \
                         <span class="s">&quot;require exactly two classes. At least &quot;</span> \
                         <span class="s">&quot;three are used:&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">ir_class</span><span class="p">)</span> <span class="o">+</span> \
@@ -889,18 +900,18 @@
 
 <span class="sd">        .. note:: If the input is a metricdict the new calculated entries are added to it.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">TN</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;True_negatives&quot;</span><span class="p">]</span>
-        <span class="n">TP</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;True_positives&quot;</span><span class="p">]</span>
-        <span class="n">FP</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;False_positives&quot;</span><span class="p">]</span>
-        <span class="n">FN</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;False_negatives&quot;</span><span class="p">]</span>
+        <span class="n">TN</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;True_negatives&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
+        <span class="n">TP</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;True_positives&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
+        <span class="n">FP</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;False_positives&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
+        <span class="n">FN</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;False_negatives&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">performance</span><span class="p">)</span> <span class="o">==</span> <span class="n">metricdict</span><span class="p">:</span>
             <span class="n">old_p</span> <span class="o">=</span> <span class="n">performance</span>
             <span class="n">performance</span> <span class="o">=</span> <span class="n">metricdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
             <span class="n">performance</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">old_p</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">P</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">P</span> <span class="o">=</span> <span class="n">TP</span><span class="o">+</span><span class="n">FN</span>
+            <span class="n">P</span> <span class="o">=</span> <span class="n">TP</span> <span class="o">+</span> <span class="n">FN</span>
         <span class="k">if</span> <span class="n">N</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">N</span> <span class="o">=</span> <span class="n">TN</span><span class="o">+</span><span class="n">FP</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">TN</span> <span class="o">+</span> <span class="n">FP</span>
 
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Positives&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">P</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Negatives&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">N</span>
@@ -910,19 +921,19 @@
             <span class="n">PPV</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># sensitivity, recall</span>
-            <span class="n">TPR</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">TP</span><span class="o">/</span><span class="p">(</span><span class="n">P</span><span class="p">)</span><span class="c">#(TP+FN) = Num of positive examples</span>
+            <span class="n">TPR</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">TP</span> <span class="o">/</span> <span class="n">P</span>  <span class="c">#(TP+FN) = Num of positive examples</span>
             <span class="c"># positive predictive value, precision</span>
-            <span class="n">PPV</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">TP</span><span class="o">/</span><span class="p">(</span><span class="n">TP</span><span class="o">+</span><span class="n">FP</span><span class="p">)</span>
+            <span class="n">PPV</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">TP</span> <span class="o">/</span> <span class="p">(</span><span class="n">TP</span> <span class="o">+</span> <span class="n">FP</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">TN</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">TNR</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">NPV</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">TNR</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">TN</span><span class="o">/</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="c"># specificity #  Num of negative examples</span>
-            <span class="n">NPV</span> <span class="o">=</span> <span class="mf">1.0</span><span class="o">*</span><span class="n">TN</span><span class="o">/</span><span class="p">(</span><span class="n">TN</span><span class="o">+</span><span class="n">FN</span><span class="p">)</span> <span class="c"># negative predictive value</span>
-        <span class="n">FPR</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">TNR</span> <span class="c"># 1.0*FP/(TN+FP) # 1-TNR</span>
-        <span class="n">FNR</span> <span class="o">=</span> <span class="mi">1</span><span class="o">-</span><span class="n">TPR</span> <span class="c"># 1.0*FN/(TP+FN) # 1-TPR</span>
+            <span class="n">TNR</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">TN</span> <span class="o">/</span> <span class="n">N</span>  <span class="c"># specificity #  Num of negative examples</span>
+            <span class="n">NPV</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">TN</span> <span class="o">/</span> <span class="p">(</span><span class="n">TN</span> <span class="o">+</span> <span class="n">FN</span><span class="p">)</span>  <span class="c"># negative predictive value</span>
+        <span class="n">FPR</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">TNR</span>  <span class="c"># 1.0*FP/(TN+FP) # 1-TNR</span>
+        <span class="n">FNR</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">TPR</span>  <span class="c"># 1.0*FN/(TP+FN) # 1-TPR</span>
 
-        <span class="k">if</span> <span class="n">P</span><span class="o">+</span><span class="n">N</span> <span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">P</span><span class="o">+</span><span class="n">N</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">accuracy</span> <span class="o">=</span> <span class="mf">0.0</span>
             <span class="n">missclassification_rate</span> <span class="o">=</span> <span class="mf">1.0</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;No examples given for performance calculation!&quot;</span><span class="p">)</span>
@@ -933,16 +944,22 @@
         <span class="k">if</span> <span class="p">(</span><span class="n">PPV</span><span class="o">+</span><span class="n">TPR</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">F_measure</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">F_measure</span> <span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="n">PPV</span><span class="o">*</span><span class="n">TPR</span><span class="o">/</span><span class="p">(</span><span class="n">PPV</span><span class="o">+</span><span class="n">TPR</span><span class="p">)</span>
+            <span class="n">F_measure</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">PPV</span> <span class="o">*</span> <span class="n">TPR</span> <span class="o">/</span> <span class="p">(</span><span class="n">PPV</span> <span class="o">+</span> <span class="n">TPR</span><span class="p">)</span>
         <span class="k">if</span> <span class="p">(</span><span class="n">NPV</span><span class="o">+</span><span class="n">TNR</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">F_neg_measure</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">F_neg_measure</span> <span class="o">=</span> <span class="mf">2.0</span><span class="o">*</span><span class="n">NPV</span><span class="o">*</span><span class="n">TNR</span><span class="o">/</span><span class="p">(</span><span class="n">NPV</span><span class="o">+</span><span class="n">TNR</span><span class="p">)</span>
+            <span class="n">F_neg_measure</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">NPV</span> <span class="o">*</span> <span class="n">TNR</span> <span class="o">/</span> <span class="p">(</span><span class="n">NPV</span> <span class="o">+</span> <span class="n">TNR</span><span class="p">)</span>
 
-        <span class="n">den</span> <span class="o">=</span> <span class="p">(</span><span class="n">TP</span><span class="o">+</span><span class="n">FN</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">TP</span><span class="o">+</span><span class="n">FP</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">TN</span><span class="o">+</span><span class="n">FN</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">TN</span><span class="o">+</span><span class="n">FP</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">den</span><span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
-            <span class="n">den</span><span class="o">=</span><span class="mi">1</span>
-        <span class="n">MCC</span> <span class="o">=</span> <span class="p">(</span><span class="n">TP</span><span class="o">*</span><span class="n">TN</span><span class="o">-</span><span class="n">FP</span><span class="o">*</span><span class="n">FN</span><span class="p">)</span><span class="o">/</span><span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">den</span><span class="p">)</span>
+        <span class="n">den</span> <span class="o">=</span> <span class="p">(</span><span class="n">TP</span> <span class="o">+</span> <span class="n">FN</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">TP</span> <span class="o">+</span> <span class="n">FP</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">TN</span> <span class="o">+</span> <span class="n">FN</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">TN</span> <span class="o">+</span> <span class="n">FP</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">den</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">den</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">MCC</span> <span class="o">=</span> <span class="p">(</span><span class="n">TP</span> <span class="o">*</span> <span class="n">TN</span> <span class="o">-</span> <span class="n">FP</span> <span class="o">*</span> <span class="n">FN</span><span class="p">)</span> <span class="o">/</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">den</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">guessing</span> <span class="o">=</span> <span class="p">(</span><span class="n">P</span> <span class="o">*</span> <span class="p">(</span><span class="n">TP</span> <span class="o">+</span> <span class="n">FP</span><span class="p">)</span> <span class="o">+</span> <span class="n">N</span> <span class="o">*</span> <span class="p">(</span><span class="n">TN</span> <span class="o">+</span> <span class="n">FN</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">N</span><span class="p">)</span>
+            <span class="n">kappa</span> <span class="o">=</span> <span class="p">(</span><span class="n">TP</span> <span class="o">+</span> <span class="n">TN</span> <span class="o">-</span> <span class="n">guessing</span><span class="p">)</span><span class="o">/</span><span class="p">(</span><span class="n">P</span> <span class="o">+</span> <span class="n">N</span> <span class="o">-</span> <span class="n">guessing</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">kappa</span> <span class="o">=</span> <span class="mi">0</span>
 
         <span class="c"># weighted_F_measure = lambda x: (1+x**2)*PPV*TPR/(x**2*PPV+TPR)</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;True_positive_rate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TPR</span>
@@ -955,20 +972,21 @@
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Non_IR_F_measure&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">F_neg_measure</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Non_IR_precision&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">NPV</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Percent_correct&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">accuracy</span><span class="o">*</span><span class="mi">100</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Percent_incorrect&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">missclassification_rate</span><span class="o">*</span><span class="mi">100</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Percent_incorrect&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">missclassification_rate</span> <span class="o">*</span> <span class="mi">100</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Weighted_accuracy(&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">weight</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;)&quot;</span><span class="p">]</span> <span class="o">=</span> \
-                                          <span class="n">weight</span> <span class="o">*</span> <span class="n">TPR</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">weight</span><span class="p">)</span><span class="o">*</span><span class="n">TNR</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;ROC-measure&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">TPR</span><span class="o">**</span><span class="mi">2</span><span class="o">+</span><span class="n">TNR</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Balanced_accuracy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">TNR</span> <span class="o">+</span> <span class="n">TPR</span><span class="p">)</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Gmean&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">TPR</span><span class="o">*</span><span class="n">TNR</span><span class="p">))</span>
+            <span class="n">weight</span> <span class="o">*</span> <span class="n">TPR</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">weight</span><span class="p">)</span> <span class="o">*</span> <span class="n">TNR</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;ROC-measure&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">TPR</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">TNR</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Balanced_accuracy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">TNR</span> <span class="o">+</span> <span class="n">TPR</span><span class="p">)</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Gmean&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sqrt</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">TPR</span> <span class="o">*</span> <span class="n">TNR</span><span class="p">))</span>
         <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Matthews_correlation_coefficient&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">MCC</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Correct_classified&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">TP</span><span class="o">+</span><span class="n">TN</span>
-        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Wrong_classified&quot;</span><span class="p">]</span><span class="o">=</span><span class="n">FP</span><span class="o">+</span><span class="n">FN</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Correct_classified&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">TP</span> <span class="o">+</span> <span class="n">TN</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Wrong_classified&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">FP</span> <span class="o">+</span> <span class="n">FN</span>
+        <span class="n">performance</span><span class="p">[</span><span class="n">pre</span><span class="o">+</span><span class="s">&quot;Kappa&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">kappa</span>
         <span class="k">return</span> <span class="n">performance</span>
 </div>
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="BinaryClassificationDataset.calculate_AUC"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.metric.html#pySPACE.resources.dataset_defs.metric.BinaryClassificationDataset.calculate_AUC">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_AUC</span><span class="p">(</span><span class="n">classification_outcome</span><span class="p">,</span> <span class="n">ir_class</span><span class="p">,</span> <span class="n">save_roc_points</span><span class="p">,</span>
-                            <span class="n">performance</span><span class="p">,</span><span class="n">inverse_ordering</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+                      <span class="n">performance</span><span class="p">,</span><span class="n">inverse_ordering</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; AUC and ROC points by an algorithm from Fawcett, &quot;An introduction to ROC analysis&quot;, 2005</span>
 <span class="sd">        Also possible would be to calculate the Mann-Whitney-U-Statistik</span>
 
@@ -1217,23 +1235,24 @@
         <span class="n">num_class_samples</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">num_class_predictions</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
         <span class="n">num_samples</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="n">n</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">classes</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">classes</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">weight</span><span class="o">==</span><span class="mf">0.5</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">weight</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">weight</span> <span class="o">==</span> <span class="mf">0.5</span><span class="p">:</span>
             <span class="n">weight</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
                 <span class="n">weight</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="n">n</span>
 
-        <span class="n">cm</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span><span class="n">truth</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">classes</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">j</span><span class="p">,</span><span class="n">prediction</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">classes</span><span class="p">):</span>
-                <span class="n">metric_str</span><span class="o">=</span><span class="s">&quot;T:&quot;</span><span class="o">+</span><span class="n">truth</span><span class="o">+</span><span class="s">&quot;_P:&quot;</span><span class="o">+</span><span class="n">prediction</span>
+        <span class="n">cm</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n</span><span class="p">,</span><span class="n">n</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">truth</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">classes</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">prediction</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">classes</span><span class="p">):</span>
+                <span class="n">metric_str</span> <span class="o">=</span> <span class="s">&quot;T:&quot;</span> <span class="o">+</span> <span class="n">truth</span> <span class="o">+</span> <span class="s">&quot;_P:&quot;</span> <span class="o">+</span> <span class="n">prediction</span>
                 <span class="n">num_samples</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
                 <span class="n">num_class_samples</span><span class="p">[</span><span class="n">truth</span><span class="p">]</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
                 <span class="n">num_class_predictions</span><span class="p">[</span><span class="n">prediction</span><span class="p">]</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
-                <span class="n">cm</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
+                <span class="n">cm</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
+        <span class="c"># setting number per default to one to void zero division errors</span>
         <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="n">b_a</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -1244,29 +1263,32 @@
         <span class="n">miF_den</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="c">#micro F-Measure denominator</span>
 
         <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
-            <span class="n">metric_str</span><span class="o">=</span><span class="s">&quot;T:&quot;</span><span class="o">+</span><span class="n">label</span><span class="o">+</span><span class="s">&quot;_P:&quot;</span><span class="o">+</span><span class="n">label</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">==</span><span class="mi">0</span><span class="p">:</span>
+            <span class="n">metric_str</span> <span class="o">=</span> <span class="s">&quot;T:&quot;</span> <span class="o">+</span> <span class="n">label</span> <span class="o">+</span> <span class="s">&quot;_P:&quot;</span> <span class="o">+</span> <span class="n">label</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">b_a</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">*</span><span class="n">n</span><span class="p">)</span>
-                <span class="n">w_a</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">])</span><span class="o">*</span><span class="n">weight</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                <span class="n">w_a</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">])</span>\
+                    <span class="o">*</span> <span class="n">weight</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
                 <span class="n">acc</span> <span class="o">+=</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="n">num_samples</span>
-                <span class="n">maF</span> <span class="o">+=</span> <span class="mi">2</span><span class="o">*</span><span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">n</span><span class="o">*</span><span class="p">(</span><span class="n">num_class_predictions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">+</span><span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]))</span>
-                <span class="n">miF_nom</span> <span class="o">+=</span> <span class="mi">2</span><span class="o">*</span><span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
-            <span class="n">miF_den</span> <span class="o">+=</span> <span class="n">num_class_predictions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span><span class="o">+</span><span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                <span class="n">maF</span> <span class="o">+=</span> \
+                    <span class="mi">2</span> <span class="o">*</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span><span class="o">/</span><span class="p">(</span><span class="n">n</span> <span class="o">*</span>
+                    <span class="p">(</span><span class="n">num_class_predictions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+</span> <span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]))</span>
+                <span class="n">miF_nom</span> <span class="o">+=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">performance</span><span class="p">[</span><span class="n">metric_str</span><span class="p">]</span>
+            <span class="n">miF_den</span> <span class="o">+=</span> <span class="n">num_class_predictions</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+</span> <span class="n">num_class_samples</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
         <span class="n">performance</span><span class="p">[</span><span class="s">&quot;Balanced_accuracy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">b_a</span>
         <span class="n">performance</span><span class="p">[</span><span class="s">&quot;Accuracy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">acc</span>
         <span class="n">performance</span><span class="p">[</span><span class="s">&quot;Weighted_accuracy&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">w_a</span>
         <span class="n">performance</span><span class="p">[</span><span class="s">&quot;macro_average_F_measure&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">maF</span>
         <span class="n">performance</span><span class="p">[</span><span class="s">&quot;micro_average_F_measure&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">miF_nom</span><span class="o">/</span><span class="n">miF_den</span>
 
-        <span class="n">MC_nom</span> <span class="o">=</span> <span class="n">num_samples</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span>
-        <span class="n">f1</span> <span class="o">=</span> <span class="n">num_samples</span><span class="o">**</span><span class="mi">2</span><span class="o">*</span><span class="mf">1.0</span>
+        <span class="n">MC_nom</span> <span class="o">=</span> <span class="n">num_samples</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="n">cm</span><span class="p">)</span>
+        <span class="n">f1</span> <span class="o">=</span> <span class="n">num_samples</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="mf">1.0</span>
         <span class="n">f2</span> <span class="o">=</span> <span class="n">f1</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
-                <span class="n">MC_nom</span> <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cm</span><span class="p">[</span><span class="n">k</span><span class="p">,:],</span><span class="n">cm</span><span class="p">[:,</span><span class="n">l</span><span class="p">])</span>
-                <span class="n">f1</span>     <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cm</span><span class="p">[</span><span class="n">k</span><span class="p">,:],(</span><span class="n">cm</span><span class="o">.</span><span class="n">T</span><span class="p">)[:,</span><span class="n">l</span><span class="p">])</span>
-                <span class="n">f2</span>     <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">cm</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="n">k</span><span class="p">,:],</span><span class="n">cm</span><span class="p">[:,</span><span class="n">l</span><span class="p">])</span>
-        <span class="k">if</span> <span class="n">f1</span><span class="o">&lt;=</span><span class="mi">0</span> <span class="ow">or</span> <span class="n">f2</span><span class="o">&lt;=</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">MC_nom</span> <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cm</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cm</span><span class="p">[:,</span> <span class="n">l</span><span class="p">])</span>
+                <span class="n">f1</span> <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">cm</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="p">:],</span> <span class="p">(</span><span class="n">cm</span><span class="o">.</span><span class="n">T</span><span class="p">)[:,</span> <span class="n">l</span><span class="p">])</span>
+                <span class="n">f2</span> <span class="o">-=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">((</span><span class="n">cm</span><span class="o">.</span><span class="n">T</span><span class="p">)[</span><span class="n">k</span><span class="p">,</span> <span class="p">:],</span> <span class="n">cm</span><span class="p">[:,</span> <span class="n">l</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">f1</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">f2</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">MCC</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">MCC</span> <span class="o">=</span> <span class="n">MC_nom</span><span class="o">/</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f1</span><span class="p">)</span><span class="o">*</span><span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">f1</span><span class="p">))</span>
@@ -1427,13 +1449,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>

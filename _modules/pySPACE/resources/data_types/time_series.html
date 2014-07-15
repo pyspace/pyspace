@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.resources.data_types.time_series &mdash; pySPACE 1.0 release documentation</title>
+    <title>pySPACE.resources.data_types.time_series &mdash; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.0 release',
+        VERSION:     '1.1 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE 1.0 release documentation" href="../../../../index.html" />
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
   <body>
@@ -37,7 +37,7 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
@@ -109,6 +109,29 @@
 <span class="sd">    list notation. The channels are on the second axes.</span>
 <span class="sd">    For example using the list ``[[1,2,3],[4,5,6]]`` would result in three</span>
 <span class="sd">    channels and two time points.</span>
+
+<span class="sd">    For accessing the array only without the meta information,</span>
+<span class="sd">    please use the command</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        x = data.view(numpy.ndarray)</span>
+
+<span class="sd">    which hides this information.</span>
+
+<span class="sd">    TimeSeries objects are normally organized/collected in a</span>
+<span class="sd">    :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset`.</span>
+<span class="sd">    This type of dataset can be also used to generate the objects,</span>
+<span class="sd">    e.g., from csv files.</span>
+<span class="sd">    For data access in a node chain, data is loaded with a node from the</span>
+<span class="sd">    :mod:`~pySPACE.missions.nodes.source.time_series_source` module</span>
+<span class="sd">    as first node</span>
+<span class="sd">    and saved with the</span>
+<span class="sd">    :class:`~pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode`</span>
+<span class="sd">    as the last node.</span>
+<span class="sd">    It is also possible to create time series data from</span>
+<span class="sd">    not segmented data streams as described in the</span>
+<span class="sd">    :class:`~pySPACE.resources.dataset_defs.stream.StreamDataset`.</span>
 
 <span class="sd">    :Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)</span>
 <span class="sd">    :Created: 2008/03/05</span>
@@ -312,21 +335,19 @@
 </div>
 <div class="viewcode-block" id="TimeSeries.__eq__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.data_types.time_series.html#pySPACE.resources.data_types.time_series.TimeSeries.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Same channels (names) and values &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">False</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">==</span><span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">False</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="o">==</span><span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">shape</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">False</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">==</span><span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
-            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span><span class="o">-</span><span class="n">other</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
-                <span class="k">return</span> <span class="bp">False</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">),</span> <span class="n">other</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="c"># Comparison by hand</span>
             <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">:</span>
-                <span class="k">if</span> <span class="p">((</span><span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)]</span><span class="o">-</span><span class="bp">self</span><span class="p">[</span><span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)])</span><span class="o">.</span><span class="n">any</span><span class="p">()):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">numpy</span><span class="o">.</span><span class="n">allclose</span><span class="p">((</span><span class="bp">self</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)],</span>
+                                       <span class="n">other</span><span class="p">[</span><span class="n">other</span><span class="o">.</span><span class="n">channel_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">channel</span><span class="p">)])):</span>
                     <span class="k">return</span> <span class="bp">False</span>
             <span class="k">return</span> <span class="bp">True</span></div></div>
 </pre></div>
@@ -345,13 +366,13 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE 1.0 release documentation</a> &raquo;</li>
+        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
           <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
-        &copy; Copyright 2013, pySPACE Developer Team.
-      Last updated on Mar 27, 2014.
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Jul 15, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
     </div>
   </body>
