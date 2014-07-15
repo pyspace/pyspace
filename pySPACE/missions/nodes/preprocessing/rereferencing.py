@@ -53,7 +53,7 @@ class AverageReferenceNode(BaseNode):
         -
             node : Average_Reference
             parameters : 
-                avg_channels : ["EMG1","EMG2"] 
+                avg_channels : ["C3","C4"]
                 keep_average : False
                 inverse : True
                 old_ref : "Fcz"
@@ -108,14 +108,6 @@ class AverageReferenceNode(BaseNode):
         if self.keep_average:
             avg_referenced_data = numpy.hstack((avg_referenced_data, ref_chen))
             channel_names = data.channel_names + [self.old_ref]
-#        for i in range(channels_names.shape[0]):
-#            print 'channel %d: %s\n', i, channel_names[i]
-            
-            # Create new time series object and return it
-            result_time_series = TimeSeries(avg_referenced_data, channel_names,
-                                        data.sampling_frequency, data.start_time,
-                                        data.end_time, data.name,
-                                        data.marker_name)
         else:
             result_time_series = TimeSeries.replace_data(data, 
                                                             avg_referenced_data)

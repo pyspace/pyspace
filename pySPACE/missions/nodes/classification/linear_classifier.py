@@ -16,11 +16,19 @@ except:
 
 
 class NaiveBayesClassifierNode(BaseNode):
-    """ NaiveBayes Classifier Algorithm"""
-    def __init__(self, class_labels = [],**kwargs):
+    """ NaiveBayes Classifier Algorithm
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        - node : NaiveBayesClassifier
+    """
+    def __init__(self, class_labels=[],**kwargs):
         super(NaiveBayesClassifierNode, self).__init__(**kwargs)
        
-        self.set_permanent_attributes(class_labels=class_labels, data = [] , mu=[],var=[], ap = [] )
+        self.set_permanent_attributes(
+            class_labels=class_labels, data=[], mu=[], var=[], ap=[])
 
     def is_trainable(self):
         """ Returns whether this node is trainable. """
@@ -33,21 +41,22 @@ class NaiveBayesClassifierNode(BaseNode):
     def _stop_training(self, debug=False):
 
         for d in self.data:
-            self.mu.append( d.mean(axis=0) )
-            self.var.append( d.var(axis=0) )
-            self.ap.append(len(d) )
+            self.mu.append(d.mean(axis=0))
+            self.var.append(d.var(axis=0))
+            self.ap.append(len(d))
 
         return
 
     def _execute(self, data):
         """ Executes the classifier on the given data vector x"""
         
-        res = numpy.zeros( len(self.ap) );
+        res = numpy.zeros(len(self.ap))
         for index, item in enumerate(self.ap):
-            fac =  1.0/ ( numpy.sqrt(2.0 * numpy.pi * self.var[index] ) )
-            term = numpy.exp( - 0.5* ( ( data - self.mu[index] )**2 / (self.var[index] ) ) )
-            c = fac*term
-            res[index] =  self.ap[index] * c.prod()
+            fac = 1.0 / (numpy.sqrt(2.0 * numpy.pi * self.var[index]))
+            term = numpy.exp(- 0.5 * ((data - self.mu[index]) ** 2 /
+                (self.var[index])))
+            c = fac * term
+            res[index] = self.ap[index] * c.prod()
         
         classifications = res.argmax();
         return PredictionVector(label = self.class_labels[classifications], prediction =classifications   , predictor = self)
@@ -58,10 +67,10 @@ class NaiveBayesClassifierNode(BaseNode):
         # Remember the labels
         if class_label not in self.class_labels: 
             self.class_labels.append(class_label)
-            self.data.append( numpy.array(data) ) 
+            self.data.append(numpy.array(data))
         else:
             index = self.class_labels.index(class_label)
-            self.data[index] = numpy.vstack((self.data[index],data))
+            self.data[index] = numpy.vstack((self.data[index], data))
 
 
 class FDAClassifierNode(BaseNode):
@@ -369,7 +378,6 @@ class BayesianLinearDiscriminantAnalysisClassifierNode(BaseNode):
         return PredictionVector(label = predicted_class, 
                                 prediction = m, 
                                 predictor = self)
-
 
 _NODE_MAPPING = {"FDA_Classifier": FDAClassifierNode,
                 "BLDA_Classifier": BayesianLinearDiscriminantAnalysisClassifierNode,

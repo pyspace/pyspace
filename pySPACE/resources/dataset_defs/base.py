@@ -132,7 +132,8 @@ class BaseDataset(object):
             warnings.warn(
                 "'collection.yaml' needs to be renamed to 'metadata.yaml'!")
             return meta_data
-        except IOError:
+        except IOError, e:
+            warnings.warn("IOError occurred: %s." % e)
             # check if we have a feature vector dataset with missing metadata.yaml
             csv_file = None
             for dirpath, dirnames,files in os.walk(dataset_dir):

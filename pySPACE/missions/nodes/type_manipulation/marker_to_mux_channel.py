@@ -6,6 +6,7 @@ import copy
 
 from pySPACE.missions.nodes.base_node import BaseNode
 
+
 class MarkerToMuxChannelNode(BaseNode):
     """Extract markers of time series object and convert them to a normal data channel.
 
@@ -22,6 +23,8 @@ class MarkerToMuxChannelNode(BaseNode):
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2012/04/25
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self,**kwargs):
         super(MarkerToMuxChannelNode, self).__init__(*kwargs)
 
@@ -53,5 +56,11 @@ class MarkerToMuxChannelNode(BaseNode):
         self.output_dim = mux_marker_data.shape[1]
 
         return mux_marker_data
+
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "TimeSeries"
+        else:
+            return self.string_to_class("TimeSeries")
 
 _NODE_MAPPING = {"Marker_To_Mux_Channel": MarkerToMuxChannelNode}

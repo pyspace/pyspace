@@ -138,7 +138,7 @@ class SorSvmNode(RegularizedClassifierBase):
                 weight : [1,3]
                 debug : True
                 store : True
-                class_labels : ['ill', 'healthy']
+                class_labels : ['Standard', 'Target']
 
     :input:    FeatureVector
     :output:   PredictionVector

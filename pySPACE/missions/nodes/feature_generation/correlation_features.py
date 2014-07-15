@@ -7,6 +7,7 @@ import numpy
 import scipy.stats
 import copy
 from matplotlib import mlab
+import warnings
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
@@ -330,7 +331,9 @@ class PearsonCorrelationFeatureNode(BaseNode):
     This node computes for all pairs of channels the Pearson product-moment 
     correlation coefficient of certain time segments and 
     returns each of correlation coefficient as feature.
-    
+
+    .. todo: Calculate maximum number of segments and catch wrong usage.
+
     **Parameters**
     
         :segments:
@@ -352,7 +355,7 @@ class PearsonCorrelationFeatureNode(BaseNode):
         -
             node : Pearson_Correlation_Features
             parameters :
-                segments : 10
+                segments : 3
                 max_segment_shift : 2
             
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
@@ -447,7 +450,7 @@ class ClassAverageCorrelationFeatureNode(BaseNode):
         -
             node : Class_Average_Correlation_Features
             parameters :
-                segments : 10
+                segments : 3
     
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2009/03/18
@@ -496,7 +499,7 @@ class ClassAverageCorrelationFeatureNode(BaseNode):
                     sample_seq = \
                        x[segment_borders[0]:segment_borders[1], channel_index]
                     correlation = scipy.corrcoef(channel_seg_avg,
-                                 sample_seq)[0, 1] # 0,1 or 1.0 doesn't matter
+                                 sample_seq) # 0,1 or 1.0 doesn't matter
                     features.append(correlation)
                     feature_names.append("Pearson_%s_Class%s_%ssec_%ssec"
                           % (channel_name,
@@ -566,9 +569,14 @@ class CoherenceFeatureNode(BaseNode):
         if frequency_band != None:
             min_frequency, max_frequency = frequency_band
         else:
-            
             min_frequency, max_frequency = (-numpy.inf, numpy.inf) 
-        
+
+        if frequency_resolution is None:
+            frequency_resolution = 1
+            warnings.warn("No initial frequency resolution set. Default"
+                          "value of 1 used!")
+
+
         self.set_permanent_attributes(min_frequency = min_frequency,
                                       max_frequency = max_frequency,
                                frequency_resolution = frequency_resolution)

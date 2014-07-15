@@ -101,7 +101,7 @@ class PrintDataNode(BaseNode):
 
         if issubclass(FeatureVector, type(data)):
             print "%04d: %s" % (self.item, data.tag)
-        else:
+        elif issubclass(TimeSeries, type(data)):
             print "%04d: %s %s" % (self.item, data.name, data.marker_name)
 
         # backup printoptions
@@ -150,9 +150,9 @@ class EstimateBandwidthNode(BaseNode):
     .. code-block:: yaml
 
         -
-            node : PrintData
+            node : EstimateBandwidth
             parameters :
-                print_bw = False
+                print_bw : False
 
 
     :Authors: Johannes Teiwes (johannes.teiwes@dfki.de)

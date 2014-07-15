@@ -11,7 +11,7 @@ APIGEN        = python api_autogen_files/call_apigen.py
 UNAME :=  $(shell uname)
 
 ifeq ($(UNAME), Darwin)
-	SPHINXBUILD  =  sphinx-build-2.7
+	SPHINXBUILD  =  sphinx-build
 	SPHINXAPI    = python api_autogen_files/apidoc.py #sphinx-apidoc-2.6
 endif
 

@@ -45,7 +45,7 @@ class SubflowTimingNode(FlowNode):
                             node : ChannelNameSelector
                             parameters :
                                 inverse : False
-                                selected_channels: ["EMG1","EMG2"]
+                                selected_channels : ["EMG1","EMG2"]
 
     :Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     """

@@ -1,6 +1,7 @@
 """ Generate random data for TimeSeries """
 
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.source.time_series_source import TimeSeriesSourceNode
 from pySPACE.tools.memoize_generator import MemoizeGenerator
 from pySPACE.resources.data_types.time_series import TimeSeries
 
@@ -8,7 +9,7 @@ import random
 import numpy
 
 
-class RandomTimeSeriesSourceNode(BaseNode):
+class RandomTimeSeriesSourceNode(TimeSeriesSourceNode):
     """ Generate random data and act as a source for windowed TimeSeries
     
     This node acts as a source for windowed TimeSeries. The TimeSeries
@@ -172,4 +173,3 @@ class RandomTimeSeriesSourceNode(BaseNode):
     def getMetadata(self, key):
         """ This source node does not contain collection meta data. """
         return None
-        

@@ -44,7 +44,7 @@ class SplitClassifierLayerNode(BaseNode):
     :Author: Mari Krell (mario.krell@dfki.de)
     
     """
-    
+    input_types=["FeatureVector"]
     def __init__(self, classifier, store = False, *args, **kwargs):
 
         super(SplitClassifierLayerNode, self).__init__(store, *args, **kwargs)

@@ -273,15 +273,14 @@ class ParameterOptimizationBase(BaseNode):
         self.runs = [10 * self.run_number + run for run in range(self.runs)]
         original_flow_template = copy.copy(self.flow_template)
         # Fill in validation parameters in the template
-        if not self.validation_parameter_settings=={}:
-            self.flow_template = [NodeChainFactory.instantiate(template=node,
-                             parametrization=self.validation_parameter_settings) for node in original_flow_template]
+        self.flow_template = NodeChainFactory.replace_parameters_in_node_chain(
+            original_flow_template, self.validation_parameter_settings)
         if self.nom_rng is None:
             self.prepare_optimization()
             self.best_parametrization, self.best_performance = \
-                                                 self.get_best_parametrization()
+                self.get_best_parametrization()
             self.performance_dict[self.p2key(self.best_parametrization)] = \
-                              (self.best_performance, self.best_parametrization)
+                (self.best_performance, self.best_parametrization)
         else:
             nom_grid = self.search_grid(self.nom_rng)
             iterations = 0
@@ -291,12 +290,13 @@ class ParameterOptimizationBase(BaseNode):
             for nom_par in nom_grid:
                 # for getting the best parameterization,
                 # the class attribute flow_template must be overwritten
-                self.flow_template = [NodeChainFactory.instantiate(template=node,
-                             parametrization=nom_par) for node in flow_template]
+                self.flow_template = \
+                    NodeChainFactory.replace_parameters_in_node_chain(
+                        flow_template, nom_par)
                 self.prepare_optimization()
                 parametrization, performance = self.get_best_parametrization()
                 self.performance_dict[self.p2key(nom_par)] = (performance, 
-                                                                parametrization)
+                                                              parametrization)
                 iterations += self.iterations
                 search_history.append((nom_par,self.search_history))
                 # reinitialize optimization parameters
@@ -309,26 +309,23 @@ class ParameterOptimizationBase(BaseNode):
             best_key = max(sorted(self.performance_dict.items()),
                                                           key=lambda t: t[1])[0]
             self.best_performance, self.best_parametrization = \
-                                                 self.performance_dict[best_key]
+                self.performance_dict[best_key]
             self.best_parametrization.update(dict(best_key))
         # when best parameter dict is calculated, this has to be logged
         # or saved and the chosen parameter is used for training on the
         # whole data set, independent of the chosen algorithm
         self._log("Using parameterization %s with optimal performance %s for " \
                   "metric %s." % (self.best_parametrization, 
-                                            self.best_performance, self.metric))
+                                  self.best_performance, self.metric))
         # Fill in the final parameters in the flow template
-        if not self.final_training_parameter_settings=={}:
-            self.flow_template = [NodeChainFactory.instantiate(template=node,
-                             parametrization=self.final_training_parameter_settings) for node in original_flow_template]
-        else:
-            self.flow_template = original_flow_template
+        self.flow_template = NodeChainFactory.replace_parameters_in_node_chain(
+            original_flow_template, self.final_training_parameter_settings)
         best_flow_template = self.flow_template
         best_flow_template[1] = {'node': 'All_Train_Splitter'}
         #delete last node
         best_flow_template.pop(-1)
         self.flow = self.generate_subflow(best_flow_template, 
-                                            self.best_parametrization, NodeChain)
+                                          self.best_parametrization, NodeChain)
         self.flow[-1].set_run_number(self.run_number)
         self.flow[0].set_generator(self.train_instances)
         self.flow.train()
@@ -537,7 +534,7 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
             parameters :
                 optimization:
                     ranges : {~~OUTLIERS~~ : [0, 5, 10],
-                              ~~COMPLEXITY~~: [0.01, 0.1, 1.0]}
+                              ~~COMPLEXITY~~ : [0.01, 0.1, 1.0]}
                 parallelization:
                     processing_modality : 'backend'
                     pool_size : 2
@@ -558,10 +555,8 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
                             classes_names : ['NoMovement','Movement']
                             uncertain_area : 'eval([(-600,-350)])'
                             calc_soft_metrics : True
-                            save_score_plot : True
-                    
+                            save_score_plot : True 
                 variables: [~~OUTLIERS~~, ~~COMPLEXITY~~]
-                
                 nodes :
                     -
                         node : Feature_Normalization
@@ -710,7 +705,7 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
 
         -
             node : Pattern_Search
-            parameters :
+            parameters : 
                 parallelization :
                     processing_modality : 'local'
                     pool_size : 4
@@ -733,9 +728,7 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
                     metric : "Balanced_accuracy"
                     std_weight: 1
                     ir_class : "Target" 
-    
                 variables: [~~W1~~, ~~W2~~]
-                
                 nodes :
                     -
                         node: LibSVM_Classifier

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """ Unittests which test subsampling nodes
 
 .. todo:: Implement tests for FftResamplingNode
@@ -12,40 +14,19 @@ import numpy
 import time
 import warnings
 
-import logging
-logger = logging.getLogger("TestLogger")
-
 if __name__ == '__main__':
     import sys
     import os
     # The root of the code
     file_path = os.path.dirname(os.path.abspath(__file__))
-    sys.path.append(file_path[:file_path.rfind('pySPACE')-1])
+    sys.path.append(file_path[:file_path.rfind('pySPACE') - 1])
 
-    # configure logger
-    # (TestLogger is not configured, since if main is called,
-    # we have a single test)
-    logger.setLevel(logging.DEBUG)
-    loggingFileHandler = logging.FileHandler("unittest_log.txt")
-    loggingStreamHandler = logging.StreamHandler()
-    loggingStreamHandler.setLevel(logging.DEBUG)
-
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s")
-    loggingFileHandler.setFormatter(formatter)
-    loggingStreamHandler.setFormatter(formatter)
-
-    logger.addHandler(loggingFileHandler)
-    logger.addHandler(loggingStreamHandler)
-
-    # load tests
-    suite = unittest.TestLoader().loadTestsFromName('test_subsampling')
-
-    # run tests
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
+import logging
+logger = logging.getLogger("TestLogger")
 
 from pySPACE.missions.nodes.preprocessing import subsampling
 import pySPACE.tests.utils.data.test_data_generation as test_data_generation
+import pySPACE.tests.generic_unittest as gen_test
 
 time_series_generator = test_data_generation.TestTimeSeriesGenerator()
 
@@ -219,5 +200,42 @@ class DownsamplingNodeTestCase(unittest.TestCase):
         self.assertEqual(new_data.shape[1],self.channels)
         self.assertEqual(new_data.sampling_frequency,self.target_frequency)
 
+     
+if __name__ == '__main__':
+    # configure logger
+    # (TestLogger is not configured, since if main is called,
+    # we have a single test)
+    logger.setLevel(logging.DEBUG)
+    loggingFileHandler = logging.FileHandler("unittest_log.txt")
+    loggingStreamHandler = logging.StreamHandler()
+    loggingStreamHandler.setLevel(logging.DEBUG)
 
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s")
+    loggingFileHandler.setFormatter(formatter)
+    loggingStreamHandler.setFormatter(formatter)
 
+    logger.addHandler(loggingFileHandler)
+    logger.addHandler(loggingStreamHandler)
+
+    # load tests
+    suite = unittest.TestLoader().loadTestsFromName('test_subsampling')
+        # Test the generic initialization of the class methods
+
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=subsampling.FFTResamplingNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=subsampling.DecimationFIRNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=subsampling.DecimationIIRNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=subsampling.SubsamplingNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=subsampling.DownsamplingNode))
+
+    # run tests
+    unittest.TextTestRunner(verbosity=2).run(suite)

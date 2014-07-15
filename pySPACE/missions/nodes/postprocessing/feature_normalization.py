@@ -85,9 +85,11 @@ class FeatureNormalizationNode(BaseNode):
         if self.feature_names == []:
             self.feature_names = data.feature_names
             self.dim=len(self.feature_names)
-        elif self.feature_names != data.feature_names:
+        elif type(self.feature_names != data.feature_names) is bool:
+            if self.feature_names != data.feature_names:
+                raise InconsistentFeatureVectorsException("Two feature vectors used during training do not contain the same features!")
+        elif (self.feature_names != data.feature_names).all():
             raise InconsistentFeatureVectorsException("Two feature vectors used during training do not contain the same features!")
-        
 
     def _execute(self, data):
         """ Normalizes the feature vector data.
@@ -107,6 +109,8 @@ class FeatureNormalizationNode(BaseNode):
         # of loaded feature normalization in the training
         if self.feature_indices is None:
             try:
+                if type(self.feature_names) is numpy.ndarray:
+                    self.feature_names = self.feature_names.tolist()
                 self.feature_indices = [self.feature_names.index(feature_name) 
                                         for feature_name in data.feature_names]
             except ValueError:
@@ -164,7 +168,6 @@ class OutlierFeatureNormalizationNode(FeatureNormalizationNode):
             node : OutlierFeatureNormalization
             parameters :
                 outlier_percentage : 10
-                load_path: "/Users/mustermann/proj/examples/FN.pickle"
     
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: ??
@@ -172,12 +175,12 @@ class OutlierFeatureNormalizationNode(FeatureNormalizationNode):
     :Revised (2): 2009/09/03
     
     """
-    def __init__(self, outlier_percentage = 0, **kwargs):
+    def __init__(self, outlier_percentage=0, **kwargs):
         super(OutlierFeatureNormalizationNode, self).__init__(**kwargs)
         self.set_permanent_attributes(outlier_percentage = outlier_percentage,
                                       samples = defaultdict(list))
 
-    def collect_data(self,data):
+    def collect_data(self, data):
         for feature_index, feature_value in enumerate(data[0,:]):
             self.samples[feature_index].append(feature_value)
 
@@ -219,8 +222,6 @@ class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
     
         -
             node : Gaussian_Feature_Normalization
-            parameters :
-                load_path: "/Users/mustermann/proj/examples/GFN.pickle"
     
     :Author: Mario Krell (Mario.Krell@dfki.de)
     :Created: 2011/04/15
@@ -245,6 +246,8 @@ class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
                 else:
                     self.mult[i] = 1
             self.n = len(self.samples)
+            # clean up to save memory
+            self.samples = []
                 
     def _train(self, data):
         if not self.is_retrainable():
@@ -269,7 +272,8 @@ class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
         self._train(data)
 
 class HistogramFeatureNormalizationNode(FeatureNormalizationNode):
-    """ Transform the features, such that they have zero mean in the main bit in the histogram and variance one on that bit.
+    """ Transform the features, such that they have zero mean in
+    the main bit in the histogram and variance one on that bit.
 
     The relevant values are learned from the training set.
 
@@ -279,8 +283,6 @@ class HistogramFeatureNormalizationNode(FeatureNormalizationNode):
     
         -
             node : Histogram_Feature_Normalization
-            parameters :
-                load_path: "/Users/mustermann/proj/examples/FN.pickle"
     
     :Author: Mario Krell (Mario.Krell@dfki.de)
     :Created: 2011/04/15
@@ -320,6 +322,7 @@ class HistogramFeatureNormalizationNode(FeatureNormalizationNode):
         mean = []
         std = []
 
+
 class EuclideanFeatureNormalizationNode(BaseNode):
     """ Normalize feature vectors to Euclidean norm with respect to dimensions
 
@@ -327,7 +330,7 @@ class EuclideanFeatureNormalizationNode(BaseNode):
     
         :dimension_scale:
             Scale the output to ||x|| * dim(x)
-            (to get bigger values) 
+            (to get bigger values)
 
             (*optional, default: False*)
 
@@ -336,7 +339,7 @@ class EuclideanFeatureNormalizationNode(BaseNode):
     .. code-block:: yaml
     
         -
-            node : Euclidian_Feature_Normalization
+            node : Euclidean_Feature_Normalization
             parameters :
                 dimension_scale : True
     
@@ -375,6 +378,38 @@ class EuclideanFeatureNormalizationNode(BaseNode):
         if self.store:
             pass
 
+class InfinityNormFeatureNormalizationNode(BaseNode):
+    """ Normalize feature vectors with infinity norm to [-1,1]
+
+    **Parameters**
+
+    **Exemplary Call**
+    
+    .. code-block:: yaml
+    
+        -
+            node : I_FN
+    
+    :Author: Mario Krell and Marc Tabie (Mario.Krell and Marc.Tabie@dfki.de)
+    :Created: 2012/07/16
+    
+    """
+    def __init__(self, **kwargs):
+        super(InfinityNormFeatureNormalizationNode, self).__init__(**kwargs)
+
+    def _execute(self, data):
+        """ Normalizes the samples vector to inf norm one"""
+        x = data.view(numpy.ndarray)
+        # always convert the array you do not start with an integer
+        a = x[0,:].astype(numpy.float128)
+        inf_norm = numpy.max(numpy.abs(a))
+        if inf_norm == 0:
+            inf_norm = 1
+        a /= inf_norm
+        return FeatureVector([a], data.feature_names)
+
+
+
 
 _NODE_MAPPING = {"Feature_Normalization": OutlierFeatureNormalizationNode,
                 "Outlier_Feature_Normalization": OutlierFeatureNormalizationNode,
@@ -385,4 +420,5 @@ _NODE_MAPPING = {"Feature_Normalization": OutlierFeatureNormalizationNode,
                 "Gaussian_Feature_Normalization": GaussianFeatureNormalizationNode,
                 "G_FN": GaussianFeatureNormalizationNode,
                 "Histogram_Feature_Normalization": HistogramFeatureNormalizationNode,
-                "H_FN": HistogramFeatureNormalizationNode}
+                "H_FN": HistogramFeatureNormalizationNode,
+                "I_FN": InfinityNormFeatureNormalizationNode}

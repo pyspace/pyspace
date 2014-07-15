@@ -236,7 +236,8 @@ class AverageFeatureVisNode(BaseNode):
     :Created: 2010/02/10
     :Reviewed: 2011/06/24
     """
-    
+    input_types = ["TimeSeries", "PredictionVector"]
+
     def __init__(self,
                  load_feature_path='None',
                  axflip= False,

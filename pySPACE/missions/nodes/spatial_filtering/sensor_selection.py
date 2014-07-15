@@ -277,7 +277,7 @@ class SensorSelectionRankingNode(SensorSelectionBase):
                                       add_remove=None,
                                       picked_sensors=[])
 
-    def create_ranker(self,ranking_name,ranking_spec):
+    def create_ranker(self, ranking_name, ranking_spec):
         """ A ranking method should return a sorted list of tuples (sensor, score),
         Where the first element is the worst sensor with the lowest score.
         Thus, in cases where a high score denotes a bad sensor: swap sign!
@@ -441,15 +441,15 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
     and is based on the signal to signal-plus-noise ratio (SSNR).
     
     **Parameters**
-          :erp_class_label: Label of the class for which an ERP should be evoked. 
-               For instance "Target" for a P300 oddball paradigm.
+          :erp_class_label: Label of the class for which an ERP should be
+               evoked. For instance "Target" for a P300 oddball paradigm.
     
           :num_selected_sensors: Determines how many sensors are kept.
 
           :retained_channels: The number of pseudo-channels that are kept after 
                 xDAWN filtering when using virtual sensor space. 
-                Even though this node only selects sensors 
-                and does no spatial filtering, this information is relevant since
+                Even though this node only selects sensors and
+                does no spatial filtering, this information is relevant since
                 the SSNR after xDAWN spatial filtering is used in objective 
                 functions in virtual sensor space and the SSNR depends 
                 on the number of pseudo-channels. If one does not use virtual
@@ -468,7 +468,7 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
                Available objective functions are "ssnr_vs" (the signal to 
                signal-plus-noise ratio in virtual sensor space), "ssnr_as" 
                (the signal to signal-plus-noise ratio in actual sensor space),
-               "ssnr_vs_loeo" (the minimum signal to signal-plus-noise ratio 
+               "ssnr_vs_test" (the minimum signal to signal-plus-noise ratio
                in virtual sensor space when one of selected sensors wouldn't
                be present)
                 
@@ -481,27 +481,27 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
                 (*optional, default: 20*)
                 
           :num_survivors: The number of individuals which survive at the end of
-                a generation of the EA. The ratio of num_survivors to population_size 
-                determines the selection pressure.
+                a generation of the EA. The ratio of num_survivors to
+                *population_size* determines the selection pressure.
                 
-                (*optional, default: *8*)
+                (*optional, default: 8*)
                 
           :mutant_ratio: The ratio of the next generation that consist of
                 survivors that a underwent a mutation.
                 
-                (*optional, default: *0.3*)
+                (*optional, default: 0.3*)
           
           :crossover_ratio: The ratio of the next generation that consist of
                 offspring of two survivors that were crossovered.
                 
-                (*optional, default: *0.3*)
+                (*optional, default: 0.3*)
 
           :iterations: The number of sensor configurations that are evaluated 
               before the EA terminates. The larger this value, the better 
               performance (higher SSNR) can be expected but the computation time 
               increases, too.
 
-              (*optional, default: *1000*)
+              (*optional, default: 1000*)
 
     **Exemplary Call**
     
@@ -510,26 +510,30 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
             -
                 node : Sensor_Selection_SSNR
                 parameters :
-                     erp_class_label : "'Target'"
+                     erp_class_label : "Target"
                      num_selected_sensors : 8
                      retained_channels : 4
-                     search_heuristic : "'evolutionary_algorithm'"
+                     search_heuristic : "evolutionary_algorithm"
                      iterations : 1000
                      mutant_ratio : 0.3
                      crossover_ratio : 0.3
                      diversity_support : 0.0
-                     objective_function : "'ssnr_vs'"
+                     objective_function : "ssnr_vs"
+
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2011/08/22
     """
     
     def __init__(self, num_selected_sensors, erp_class_label="Target",
-                 retained_channels=None, search_heuristic="evolutionary_algorithm",
-                 objective_function="ssnr_vs", population_size=20, num_survivors=8, 
+                 retained_channels=None,
+                 search_heuristic="evolutionary_algorithm",
+                 objective_function="ssnr_vs", population_size=20,
+                 num_survivors=8,
                  mutant_ratio=0.3, crossover_ratio=0.3, iterations=1000,
                  **kwargs):
-        super(SensorSelectionSSNRNode, self).__init__(num_selected_sensors=num_selected_sensors,**kwargs)
+        super(SensorSelectionSSNRNode, self).__init__(
+            num_selected_sensors=num_selected_sensors, **kwargs)
         # Check parameters
         search_heuristics = ["evolutionary_algorithm", 
                              "recursive_backward_elimination"]
@@ -541,29 +545,29 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
         objective_functions = ["ssnr_vs", "ssnr_as", "ssnr_vs_test"]
 
         assert objective_function in objective_functions, \
-            "Unknown objective function %s. Must be in %s." % (objective_function,
-                                                               objective_functions)
+            "Unknown objective function %s. Must be in %s." % \
+            (objective_function, objective_functions)
 
         from pySPACE.missions.nodes.spatial_filtering.xdawn import SSNR
         # Set permanent attributes
-        self.set_permanent_attributes(# Label of the class for which an ERP should be evoked.
-                                      erp_class_label = erp_class_label,
-                                      # Object for handling SSNR related calculations
-                                      ssnr = SSNR(erp_class_label, retained_channels),
-
-                                      num_selected_sensors=num_selected_sensors,
-                                      search_heuristic=search_heuristic,
-                                      objective_function=objective_function,
-                                      population_size=population_size,
-                                      num_survivors=num_survivors,
-                                      mutant_ratio=mutant_ratio,
-                                      crossover_ratio=crossover_ratio,
-                                      iterations=int(iterations))
+        self.set_permanent_attributes(
+            # Label of the class for which an ERP should be evoked.
+            erp_class_label=erp_class_label,
+            # Object for handling SSNR related calculations
+            ssnr=SSNR(erp_class_label, retained_channels),
+            num_selected_sensors=num_selected_sensors,
+            search_heuristic=search_heuristic,
+            objective_function=objective_function,
+            population_size=population_size,
+            num_survivors=num_survivors,
+            mutant_ratio=mutant_ratio,
+            crossover_ratio=crossover_ratio,
+            iterations=int(iterations))
 
     def _train(self, data, label):
         """ Train node on given example *data* for class *label*. """
         # If this is the first data sample we obtain
-        if self.channel_names == None:
+        if self.channel_names is None:
             self.channel_names = data.channel_names
 
         self.ssnr.add_example(data, label)
@@ -573,7 +577,8 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
         if self.objective_function == "ssnr_vs":
             objective_function = lambda selection: self.ssnr.ssnr_vs(selection)
         elif self.objective_function == "ssnr_vs_test":
-            objective_function = lambda selection: self.ssnr.ssnr_vs_test(selection)
+            objective_function = \
+                lambda selection: self.ssnr.ssnr_vs_test(selection)
         elif self.objective_function == "ssnr_as":
             objective_function = lambda selection: self.ssnr.ssnr_as(selection)
 
@@ -581,13 +586,14 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
         if self.search_heuristic == "evolutionary_algorithm":
             heuristic_search = \
                 EvolutionaryAlgorithm(self.ssnr.X.shape[1], 
-                                       self.num_selected_sensors,
-                                       self.population_size, self.num_survivors,
-                                       self.mutant_ratio, self.crossover_ratio)
+                                      self.num_selected_sensors,
+                                      self.population_size, self.num_survivors,
+                                      self.mutant_ratio, self.crossover_ratio)
         elif self.search_heuristic == "recursive_backward_elimination":
             heuristic_search = \
-                RecursiveBackwardElimination(total_elements=self.ssnr.X.shape[1], 
-                                               num_selected_sensors=self.num_selected_sensors)
+                RecursiveBackwardElimination(
+                    total_elements=self.ssnr.X.shape[1],
+                    num_selected_elements=self.num_selected_sensors)
 
         # Search for a set of sensors that yield a maximal SSNR using
         # heuristic search
@@ -595,14 +601,14 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
             heuristic_search.optimize(objective_function, self.iterations)
 
         self.selected_channels = \
-                [self.channel_names[index] for index in self.selected_indices]
+            [self.channel_names[index] for index in self.selected_indices]
 
 
 #==============================================================================#
 
 
 def evaluate_sensor_selection(cns, flow, metric, w, sensor_identifier, 
-                                 training_data, runs=1):
+                              training_data, runs=1):
     """ Execute the evaluation flow """
     # Getting together the two evaluation functions without self variables
     node_sequence = [ExternalGeneratorSourceNode(),
@@ -681,7 +687,7 @@ class PerformanceRanker(object):
     **Parameters**
         :flow: The processing chain (YAML readable). Usually, the flow
             will at least consist of a CV-Splitter, a classifier, and a
-            :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.ClassificationPerformanceSink`.
+            :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode`.
             See the documentation of :class:`SensorSelectionBase` for an example.
 
         :metric: The :ref:`metric <metrics>`

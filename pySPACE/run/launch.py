@@ -169,8 +169,8 @@ def run_operation_chain(default_backend, operation_chain):
     if prepare_operation is not None:
         print "Running prepare operation of the operation chain "
         # Create operation object for specified prepare operation
-        operation = create_operation_from_file(prepare_operation, base_result_dir)
-
+        operation = create_operation_from_file(prepare_operation,
+                                               base_result_dir)
         output_directory = run_operation(default_backend, operation)
 
         # Rename output_directory

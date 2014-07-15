@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """
 This module contains unittests that test splitter nodes
 

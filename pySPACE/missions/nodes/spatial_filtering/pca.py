@@ -75,7 +75,7 @@ class PCAWrapperNode(SpatialFilteringNode): #, PCANode):
         # are doing unsupervised learning
         if self.wrapped_node is None:
             self.wrapped_node = PCANode()
-        x=data.view(numpy.ndarray)
+        x = 1.0 * data.view(type=numpy.ndarray)
         self.wrapped_node.train(x)
         if self.channel_names is None:
             self.channel_names = data.channel_names
