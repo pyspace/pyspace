@@ -38,7 +38,7 @@ class RandomFeatureSelectionNode(BaseNode):
         -
             node : RandomFeatureSelection
             parameters :
-                  num_retained_features : 100
+                  num_retained_features : 1
               
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2009/02/03
@@ -70,6 +70,11 @@ class RandomFeatureSelectionNode(BaseNode):
     def _execute(self, feature_vector):
         """ Projects the feature vector onto the retained features """
         if self.retained_feature_indices == None:
+            if self.num_retained_features > feature_vector.shape[1]:
+                self._log("Too large 'num_retained_features' (%s)!" %
+                          self.num_retained_features)
+                self.set_permanent_attributes(
+                    num_retained_features=feature_vector.shape[1])
             # The indices of the features that will be retained
             self.retained_feature_indices = random.sample(range(feature_vector.shape[1]),
                                                           self.num_retained_features)

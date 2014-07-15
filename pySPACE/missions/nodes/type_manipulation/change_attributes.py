@@ -3,6 +3,7 @@
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.time_series import TimeSeries
 
+
 class ChangeTimeSeriesAttributesNode(BaseNode):
     """ Change the attributes of incoming :class:`~pySPACE.resources.data_types.time_series.TimeSeries`
     
@@ -47,6 +48,8 @@ class ChangeTimeSeriesAttributesNode(BaseNode):
     :Author: Anett Seeland (anett.seeland@dfki.de)
     :Created: 2012/02/21
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self, change, tolerance=1000, **kwargs):
         super(ChangeTimeSeriesAttributesNode, self).__init__(**kwargs)
         
@@ -75,5 +78,10 @@ class ChangeTimeSeriesAttributesNode(BaseNode):
             self.max_start_time = max(self.max_start_time, data.start_time)
         return data
 
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "TimeSeries"
+        else:
+            return self.string_to_class("TimeSeries")
 
 _NODE_MAPPING = {"Change_Time_Series_Attributes": ChangeTimeSeriesAttributesNode}

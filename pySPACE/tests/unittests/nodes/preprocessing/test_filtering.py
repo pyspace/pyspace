@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """ Unittests which test filtering nodes
 
 .. todo:: Implement tests for VarianceFilterNode
@@ -8,6 +10,12 @@
 
 """
 
+if __name__ == '__main__':
+    import sys
+    import os
+    # The root of the code
+    file_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(file_path[:file_path.rfind('pySPACE') - 1])
 
 import unittest
 
@@ -17,20 +25,9 @@ import time
 import pylab
 
 import logging
-
-if __name__ == '__main__':
-    import sys
-    import os
-    # The root of the code
-    file_path = os.path.dirname(os.path.abspath(__file__))
-    sys.path.append(file_path[:file_path.rfind('pySPACE')-1])
-
-    suite = unittest.TestLoader().loadTestsFromName('test_filtering')
-    unittest.TextTestRunner(verbosity=2).run(suite)
-
-
 import pySPACE.missions.nodes.preprocessing.filtering as filtering
 import pySPACE.tests.utils.data.test_data_generation as test_data_generation
+import pySPACE.tests.generic_unittest as gen_test
 
 test_ts_generator = test_data_generation.TestTimeSeriesGenerator()
 noise_generator = test_data_generation.GaussianNoise()
@@ -391,4 +388,24 @@ def plot_fir_filter(b,a=1):
         #pylab.plot(F,Y01)
 
 
+if __name__ == '__main__':
 
+    suite = unittest.TestLoader().loadTestsFromName('test_filtering')
+        # Test the generic initialization of the class methods
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=filtering.SimpleLowPassFilterNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=filtering.HighPassFilterNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=filtering.FIRFilterNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=filtering.IIRFilterNode))
+    suite.addTest(gen_test.ParametrizedTestCase.parametrize(
+        current_testcase=gen_test.GenericTestCase,
+        node=filtering.TkeoNode))
+
+    unittest.TextTestRunner(verbosity=2).run(suite)

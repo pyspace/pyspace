@@ -94,11 +94,11 @@ class FDAFilterNode(SpatialFilteringNode):
             self.channel_names = data.channel_names
         # Simply gather all data and do the actual training in _stop_training
         if self.data == None:
-            self.data = data
+            self.data = 1.0 * data
             self.labels = [label for i in range(data.shape[0])]
             self.channel_names = data.channel_names
         else:
-            self.data = numpy.vstack([self.data, data])
+            self.data = 1.0 * numpy.vstack([self.data, data])
             self.labels.extend([label for i in range(data.shape[0])])
 
     def _stop_training(self, debug=False):

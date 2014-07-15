@@ -338,8 +338,8 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
 
     def _save(self):
         """Stores the current figure to a file"""
-        dic = self.fig.canvas.get_supported_filetypes();
-	if "pdf" in dic:
+        dic = self.fig.canvas.get_supported_filetypes()
+        if "pdf" in dic:
             extensionList = ["%s (*.pdf)" % dic["pdf"]]
         else:
             extensionList = []
@@ -347,7 +347,8 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         for ext,desc in dic.items():
             if (ext != "pdf"):
                 extensionList.append("%s (*.%s)" % (desc,ext))
-	selectionList = ";;".join(extensionList)
+
+        selectionList = ";;".join(extensionList)
 
         file_name = \
             str(QtGui.QFileDialog.getSaveFileName(

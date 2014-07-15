@@ -52,8 +52,9 @@ class LLEVisNode(BaseNode):
                     
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2009/07/07
-     
     """
+    input_types = ["FeatureVector"]
+
     def __init__(self, neighbors = 15, **kwargs):
         super(LLEVisNode, self).__init__(**kwargs)
                 

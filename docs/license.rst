@@ -5,7 +5,7 @@ License
 
 pySPACE ist distributed under GPL::
 
-    Copyright 2008-2013 DFKI RIC and University of Bremen
+    Copyright 2008-2014 DFKI RIC and University of Bremen
 
     pySPACE is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,6 +20,25 @@ pySPACE ist distributed under GPL::
     You should have received a copy of the GNU General Public License
     along with pySPACE.  If not, see <http://www.gnu.org/licenses/>.
 
+.. _CLA:
+
+Contributor License Agreement
+=============================
+
+Currently, the main development of pySPACE happens
+at the `German Research Center for Artificial Intelligence (DFKI GmbH),
+Robotics Innovation Center, Bremen (DFKI RIC) <http://robotik.dfki-bremen.de/en/>`_.
+To avoid legal issues with intellectual property rights,
+and to keep the possibility to change the license in future versions,
+we followed the concept by the
+`Webyog company <http://faq.webyog.com/content/36/146/en/contribution-agreement.html>`_
+which developed MySQL.
+
+If you want to contribute to pySPACE, we kindly ask you to fill out
+:download:`this pdf file <CLA_form.pdf>`
+and send it to us as explained in the pdf file.
+
+
 .. _cite:
 
 Citation
@@ -28,7 +47,9 @@ Citation
 When using our software, we request you to cite the following paper::
 
     @article{krell2013:pySPACE,
-    author = {Krell, Mario Michael and Straube, Sirko and Seeland, Anett and W{\"o}hrle, Hendrik and Teiwes, Johannes and Metzen, Jan Hendrik and Kirchner, Elsa Andrea and Kirchner, Frank},
+    author = {Krell, Mario Michael and Straube, Sirko and Seeland, Anett
+         and W{\"o}hrle, Hendrik and Teiwes, Johannes and Metzen, Jan Hendrik
+         and Kirchner, Elsa Andrea and Kirchner, Frank},
     journal = {Frontiers in Neuroinformatics},
     title = {{pySPACE} — a signal processing and classification environment in {Python}},
     year = {2013},
@@ -39,7 +60,7 @@ When using our software, we request you to cite the following paper::
     ISSN = {1662-5196},
     }
 
-    Krell, M. M., Straube, S., Seeland, Anett,  Wöhrle, H., Teiwes, J.,
+    Krell, M. M., Straube, S., Seeland, A.,  Wöhrle, H., Teiwes, J.,
     Metzen, J. H., Kirchner, E. A., Kirchner, F. (2013).
     pySPACE — a signal processing and classification environment in Python,
     Frontiers in Neuroinformatics 7(40), doi: 10.3389/fninf.2013.00040.

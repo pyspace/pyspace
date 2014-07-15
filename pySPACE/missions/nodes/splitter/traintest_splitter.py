@@ -125,7 +125,7 @@ class TrainTestSplitterNode(BaseNode):
     def _create_split(self):
         """ Create the split of the data into training and test data. """
         self._log("Splitting data into train and test data")
-        train_data = list(self.input_node.request_data_for_training(use_test_data = False))
+        train_data = list(self.input_node.request_data_for_training(use_test_data=False))
 
         # If there is already a  non-empty training set,
         # it means that we are not  the first split node in the node chain.
@@ -135,7 +135,7 @@ class TrainTestSplitterNode(BaseNode):
                             "split)")
 
         # Create generator instead of loading all data
-        if self.num_train_instances and not(self.random):
+        if self.num_train_instances and not (self.random):
             self.train_data = []
             input_generator=self.input_node.request_data_for_testing
             for i in range(self.num_train_instances):

@@ -95,6 +95,7 @@ class LocalStandardizationNode(BaseNode):
 
     :Author: Anett Seeland (Anett.Seeland@dfki.de)
     """
+    input_types=["TimeSeries"]
     def __init__(self, **kwargs):
         super(LocalStandardizationNode, self).__init__(**kwargs)
 
@@ -255,6 +256,9 @@ class DevariancingNode(BaseNode):
 
         -
             node : Devariancing
+            parameters :
+                devariance_method : eval(__import__('numpy').std)
+
 
     :Authors: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2009/01/06
@@ -350,8 +354,8 @@ class SubsetNormalizationNode(BaseNode):
         -
             node : SubsetNormalization
             parameters :
-                subset : eval(range(50)) # or any list
-
+                subset : eval(range(4)) # or any list
+    
     :Author: Mario Krell (mario.krell@dfki.de)
     """
     def __init__(self, subset, devariance=False, **kwargs):
@@ -459,6 +463,7 @@ class DcRemovalNode(BaseNode):
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2011/08/18
     """
+    input_types=["TimeSeries"]
     def __init__(self,
                  alpha=0.95,
                  selected_channels=None,
@@ -553,5 +558,11 @@ def check_zero_division(self, data,  tolerance=10**-15, data_ts=None):
 
 _NODE_MAPPING = {"Standardization": LocalStandardizationNode,
                 "Dc_Removal": DcRemovalNode,
+                "Memory_Standardization": MemoryStandardizationNode,
+                "Detrending":DetrendingNode,
+                "MaximumStandardization":MaximumStandardizationNode,
+                "Devariancing":DevariancingNode,
+                "SubsetNormalization":SubsetNormalizationNode,
+                "Euclidian_Feature_Normalization":EuclideanNormalizationNode
                 }
 

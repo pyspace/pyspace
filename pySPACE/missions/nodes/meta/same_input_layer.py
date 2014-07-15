@@ -59,6 +59,7 @@ class SameInputLayerNode(BaseNode):
                                   frequency_band : [2.0, 8.0]
                                   frequency_resolution : 1.0
     """
+    input_types=["TimeSeries"]
     def __init__(self, nodes,enforce_unique_names=True,
                  store = False, **kwargs):
         self.nodes = nodes # needed to find out dimensions and trainability, ...
@@ -496,7 +497,7 @@ class MultiClassLayerNode(SameInputLayerNode):
             node : MultiClassLayer
             parameters :
                 class_labels : ["Target", "Standard","Artifact"]
-                scheme : 1vR
+                scheme : "1vR"
                 node : 
                     -
                         node : 1SVM
@@ -504,6 +505,7 @@ class MultiClassLayerNode(SameInputLayerNode):
                             class_labels : ["LABEL","REST"]
                             complexity : 1
     """
+    input_types=["FeatureVector"]
     @staticmethod
     def node_from_yaml(layer_spec):
         """ Load the specs and initialize the layer nodes """

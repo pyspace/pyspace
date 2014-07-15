@@ -283,7 +283,8 @@ class FlowNode(BaseNode):
 
     def set_run_number(self, run_number):
         """ Forward run number to flow """
-        self._get_flow()[-1].set_run_number(run_number)
+        if self.load_path is None:
+            self._get_flow()[-1].set_run_number(run_number)
         super(FlowNode, self).set_run_number(run_number)
 
     def set_temp_dir(self, temp_dir):
@@ -299,6 +300,7 @@ class FlowNode(BaseNode):
         .. todo:: Check if last node is sink node and remove 
         """
         if not self.flow: # Load nodes lazily
+            self.replace_keywords_in_load_path()
             nodes = cPickle.load(open(self.load_path, 'r'))
             for node in nodes:
                 node._dtype = None

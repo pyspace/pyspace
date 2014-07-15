@@ -274,9 +274,8 @@ class BaseNode(object):
 
         -
             node : Noop
-            parameters:
-                input_dim : 42
-                output_dim : 42
+            parameters :
+                keep_in_history : True
 
 
     :input:    Any (e.g. FeatureVector)
@@ -375,6 +374,14 @@ class BaseNode(object):
         self.retrain_data = None
         self.retrain_label = None
 
+        # Set the default run number which gives the number of the current 
+        # iteration
+        self.run_number = 0
+
+        # Set the default run number which gives the number of the current 
+        # iteration
+        self.run_number = 0
+
         # Every Parameter is stored since we reset them with every new spit.
         self.permanent_state = copy.deepcopy(self.__dict__)
 
@@ -443,6 +450,115 @@ class BaseNode(object):
         """
         return False
 
+    @ classmethod
+    def get_input_types(cls, as_string = True):
+        """ Return all available input types from the node
+
+        **Parameters**
+
+            :as_string:
+                Tells the method whether it should return
+                a string encoding of the type or a class instance
+
+            (*default: True*)
+
+            .. note ::
+                Strings have less overhead than class instances
+        """
+        if cls.__name__ == "BaseNode":
+            # if the current node is the base node, it need not have
+            # defined a variable called input_types but can
+            # accept all inputs
+            # if it had such a variable, the if clauses below would
+            # not work and the default would be to accept all inputs
+            return ["PredictionVector", "FeatureVector",
+                    "TimeSeries"]
+        if not hasattr(cls, "input_types"):
+            pack = cls.__module__.split(".")[3]
+            module = cls.__module__.split(".")[-1]
+            if pack in ['preprocessing', 'spatial_filtering',
+                        'feature_generation']:
+                cls.input_types = ["TimeSeries"]
+            elif pack in ["feature_selection", "classification"] or \
+                    module in ["feature_normalization", "compression",
+                               "scikits_nodes"]:
+                if module == "ensemble":
+                    cls.input_types=["PredictionVector"]
+                else:
+                    cls.input_types=["FeatureVector"]
+            elif module in ["score_transformation", "threshold_optimization"]:
+                cls.input_types=["PredictionVector"]
+            elif pack in ["sink", "source"]:
+                raise NotImplementedError
+            else:
+                cls.input_types=["PredictionVector", "FeatureVector",
+                                 "TimeSeries"]
+        if as_string:
+            return cls.input_types
+        else:
+            types = []
+            for one_type in cls.input_types:
+                types.append(cls.string_to_class(one_type))
+            return types
+
+    def get_output_type(self, input_type, as_string=True):
+        """ Return output type depending on the *input_type*
+
+        **Parameters**
+
+            :as_string:
+                Tells the method whether it should return
+                a string encoding of the type or a class instance
+
+            (*default: True*)
+
+        .. note ::
+
+            Strings have less overhead than class instances and
+            that is why they are normally used in routine operations
+
+        By default they are the same, except for *classification*,
+        *feature_generation* and *type_conversion*.
+        """
+        pack = self.__module__.split(".")[3]
+        if pack == "classification":
+            result = "PredictionVector"
+        elif pack == "feature_generation":
+            result = "FeatureVector"
+        elif pack == "type_conversion":
+            raise NotImplementedError
+        else:
+            result = str(input_type)
+        if as_string:
+            return result
+        else:
+            return self.string_to_class(result)
+
+    @staticmethod
+    def string_to_class(string_encoding):
+        """ given a string variable, outputs a class instance
+
+        e.g. obtaining a TimeSeries
+
+        .. code-block:: python
+
+            >>> result = BaseNode.stringToClass("TimeSeries")
+            >>> print type(result)
+            <class 'pySPACE.resources.data_types.time_series.TimeSeries'>
+
+        """
+        from pySPACE.resources.data_types.time_series import TimeSeries
+        from pySPACE.resources.data_types.feature_vector import FeatureVector
+        from pySPACE.resources.data_types.prediction_vector import PredictionVector
+        if "TimeSeries" in string_encoding:
+            return TimeSeries
+        elif "PredictionVector" in string_encoding:
+            return PredictionVector
+        elif "FeatureVector" in string_encoding:
+            return FeatureVector
+        else:
+            raise NotImplementedError
+
     ###### Reimplementation of some MDP methods that have some flaws, ######
     ###### when used with the different concepts, used here.          ######
     ### check functions
@@ -451,8 +567,15 @@ class BaseNode(object):
 
         Here input_dim are the dimensions of the input array
         """
-        data_array=x.view(numpy.ndarray)
-
+        data_array = x.view(numpy.ndarray)
+        # check input type
+        if not type(x).__name__ in self.get_input_types():
+            # self._log("Data type (%s) not supported by %s?" %
+            #           (type(x).__name__, self.__class__.__name__),
+            #           level=logging.CRITICAL)
+            warnings.warn("Data type (%s) not supported by %s?" %
+                (type(x).__name__, self.__class__.__name__))
+            # raise NotImplementedError
         # check input rank
         if not x.ndim == 2:
             error_str = "Class %s: x has rank %d, should be 2" \
@@ -466,6 +589,13 @@ class BaseNode(object):
         # set the dtype if necessary
         if self.dtype is None:
             self.dtype = x.dtype
+
+        # check if the user has changed the dtype of the input
+        if self.dtype is not None and self.dtype is not x.dtype:
+            warnings.warn("The dtype of individual data points is " +
+                          "inconsistent.\n The former data type was " +
+                          "(%s) and now the input is (%s)"
+                          % (str(self.dtype), str(x.dtype)))
         # set the input dimension if necessary
         if self.input_dim is None:
             shape = x.shape
@@ -566,6 +696,8 @@ class BaseNode(object):
         """ Creates a node based on the dictionary *node_spec* """
         # The node_spec from the calling method should not be changed,
         # hence there are maybe several recalls with the same node_spec
+        assert(type(node_spec) == dict and "node" in node_spec), \
+            "Error in node spec. (no dict or no 'node' key): '%s'" % node_spec
         node_spec = copy.deepcopy(node_spec)
         if node_spec is None:
             warnings.warn("Maybe you have a wrong minus with no following "
@@ -574,7 +706,7 @@ class BaseNode(object):
             return
         # evaluation of components of the form "eval(command)"
         if isinstance(node_spec["node"], basestring) \
-                            and node_spec["node"].startswith("eval("):
+                and node_spec["node"].startswith("eval("):
             node_name = eval(node_spec["node"][5:-1])
         else:
             node_name = node_spec["node"]
@@ -594,14 +726,18 @@ class BaseNode(object):
 
         # If parameters need to be passed to the class
         if "parameters" in node_spec:
-            # All parameters which are eval() statements
-            # are considered to be python expressions and are evaluated
-            BaseNode.eval_dict(node_spec["parameters"])
-            # Create the node object
-        #try:
-            node_obj = node_class(**node_spec["parameters"])
-        #except TypeError, e:
-            #raise TypeError("%s: %s" % (node_class.__name__, e))
+            if node_spec["parameters"] is None:
+                warnings.warn("No parameters specified for %s!" % node_name)
+                node_obj = node_class()
+            else:
+                # All parameters which are eval() statements
+                # are considered to be python expressions and are evaluated
+                BaseNode.eval_dict(node_spec["parameters"])
+                # Create the node object
+            #try:
+                node_obj = node_class(**node_spec["parameters"])
+            #except TypeError, e:
+                #raise TypeError("%s: %s" % (node_class.__name__, e))
         else:
             node_obj = node_class()
         return node_obj
@@ -621,8 +757,8 @@ class BaseNode(object):
             if isinstance(value, basestring) and value.startswith("eval("):
                 try:
                     dictionary[key] = eval(value[5:-1])
-                except:
-                    warnings.warn("Could not evaluate:" + value)
+                except BaseException, e:
+                    warnings.warn("Could not evaluate:"+value+". Error:"+str(e))
 
     def set_permanent_attributes(self, **kwargs):
         """ Add all the items of the given kwargs dictionary as permanent attributes of this object
@@ -734,9 +870,8 @@ class BaseNode(object):
     def get_source_file_name(self):
         """ Returns the name of the source file.
 
-        This works for the Stream2TimeSeriesSourceNode and the
-        Stream2TimeSeriesSourceNode, for other nodes None
-        is returned.
+        This works for the Stream2TimeSeriesSourceNode.
+        For other nodes None is returned.
         """
         try:
             return self.input_node.get_source_file_name()
@@ -861,7 +996,7 @@ class BaseNode(object):
         # Assert  that this node has already been trained
         assert(not self.is_trainable() or
                self.get_remaining_train_phase() == 0), "Node not trained!"
-        self._log("Processing data.", level = logging.DEBUG)
+        self._log("Processing data.", level=logging.DEBUG)
         data_generator = \
                 itertools.imap(lambda (data, label):
                       (self._trace(self.execute(self._trace(data, "entry")),
@@ -1106,15 +1241,21 @@ class BaseNode(object):
         """ Return a pickable state for this object """
         self._log("Pickling instance of class %s." % self.__class__.__name__,
                   level = logging.DEBUG)
+        #print "%s:Pickling instance of class %s." % (time.ctime(),self.__class__.__name__)
         odict = self.__dict__.copy() # copy the dict since we change it
         odict['data_for_training'] = None
         odict['data_for_testing'] = None
         odict['root_logger'] = None
-        del odict['permanent_state']
+        if "data" in odict.keys() and self.is_split_node():
+            odict.pop("data")
+        if "generator" in odict.keys():
+            odict["generator"] = None
+        odict['permanent_state'] = None
+        #del odict['permanent_state']
         # Remove other non-pickable stuff
         remove_keys=[]
         for key, value in odict.iteritems():
-            if key == "input_node":
+            if key == "input_node" or key == "flow":
                 continue
             try:
                 cPickle.dumps(value)
@@ -1182,7 +1323,7 @@ class BaseNode(object):
 
     def _set_input_dim(self, n):
         self._input_dim = n
-
+        
     input_dim = property(get_input_dim,
                          set_input_dim,
                          doc="Input dimensions")
@@ -1371,7 +1512,15 @@ class BaseNode(object):
 
         # Do the actual computation
         result = self._execute(self._refcast(x), *args, **kwargs)
-
+        # check output type
+        if not type(result).__name__ == self.get_output_type(type(x).__name__):
+            # self._log("Inappropriate output %s to given input %s?" %
+            #          (self.get_output_type(type(x).__name__), type(x).__name__),
+            #           level=logging.CRITICAL)
+            warnings.warn("Inappropriate output %s to given input %s in %s?" %
+                (type(result).__name__, type(x).__name__,
+                 self.__class__.__name__) +
+                " Expected: %s" % self.get_output_type(type(x).__name__))
         # Make sure key, tag, specs and history are passed
         if x.has_meta():
             result.inherit_meta_from(x)

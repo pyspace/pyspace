@@ -18,6 +18,7 @@ Tutorials
     tutorial_node_chain_online.rst
     tutorial_work_with_the_eegserver.rst
     data_handling
+    tutorial_unittesting
 
 .. _node_chain:
 

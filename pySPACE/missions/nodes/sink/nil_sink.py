@@ -31,7 +31,8 @@ class NilSinkNode(TimeSeriesSinkNode):
     :Author: David Feess (david.feess@dfki.de)
     :Created: 2010/03/30
     """
-    
+    input_types = ["TimeSeries", "FeatureVector", "PredictionVector"]
+
     def __init__(self,**kwargs):
         self.dummy_collection=DummyDataset()
         super(NilSinkNode, self).__init__(**kwargs)

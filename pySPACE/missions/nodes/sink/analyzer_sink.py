@@ -51,6 +51,7 @@ BinaryFormat=INT_16\n\
 
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.resources.data_types.time_series import TimeSeries
 
 
 class AnalyzerCollection(BaseDataset):
@@ -61,6 +62,9 @@ class AnalyzerCollection(BaseDataset):
     the BrainVision Analyzer. Remaining spaces in front and between the single
     windows are filled with zeros.
 
+    The input can be a TimeSeries collection or a single time series resulted from 
+    merging the datasets. 
+    
     **Parameters**
 
         :dataset_md:
@@ -68,15 +72,21 @@ class AnalyzerCollection(BaseDataset):
 
             (*optional, default: None*)
 
+    .. todo:: Move to storage_format in TimeSeriesDataset
+
     :Author: Johannes Teiwes (Johannes.Teiwes@dfki.de)
     :Created: 2010/05/09
+    :Modified: Foad Ghaderi 2014/04/15
     """
     def __init__(self, dataset_md =  None):
           super(AnalyzerCollection, self).__init__(dataset_md = dataset_md)
     
     def store(self, result_dir, s_format = "BrainVision"):
+        self.merged = False
+        scale = 10.0 # is used to scale up the eeg sample values.  The data samples are converted to int16
+                    # when saving, so scaling is necessary to keep maintain the resolutions. 
         # Keep original file name, depends on the AnalyserSinkNode, see it's documentation.
-        if self.meta_data.has_key('eeg_src_file_name') and self.meta_data['eeg_src_file_name'] is None:
+        if self.meta_data.has_key('eeg_src_file_name') and self.meta_data['eeg_src_file_name'] is not None:
             name = self.meta_data['eeg_src_file_name']
         # or use default name from this collection
         else:
@@ -100,6 +110,8 @@ class AnalyzerCollection(BaseDataset):
         slices = []
         slices.append(0)
         channel_names = []
+        
+
         
         for key, time_series in self.data.iteritems():
             # Sort the Times-Series Array
@@ -150,6 +162,9 @@ class AnalyzerCollection(BaseDataset):
             sampling_int = 0
             
             for ts in time_series:
+                ts0 = ts[0] * scale 
+                ts0 = ts0.astype(numpy.int16)
+                
                 if padding == None:
                     padding = numpy.zeros(len(ts[0].channel_names), dtype='int16')
                     num_ch = len(ts[0].channel_names)
@@ -157,15 +172,34 @@ class AnalyzerCollection(BaseDataset):
                     sampling_int = 1000000/ts[0].sampling_frequency
                     #print "writing %d channels.." % len(ts[0].channel_names)
                 # Write Padding (zeros)
-                while result_file_ms < ts[0].start_time:
+                while result_file_ms < ts[0].start_time - sampling_int/1000.0:
                     result_file_eeg.write(padding.tostring())
                     result_file_ms += ts[0]._samples_to_ms(1)
                 # Write window
-                ts[0].tofile(result_file_eeg)
-                result_file_ms += ts[0].end_time - ts[0].start_time
+                ts0.tofile(result_file_eeg)
+                result_file_ms += ts[0].end_time - (ts[0].start_time - sampling_int/1000.0)
                 # Write Marker
-                result_file_mrk.write("Mk%d=Label,%s,%d,1,0\n" % (count_mrk,ts[1],ts[0]._ms_to_samples(ts[0].start_time)))
-                count_mrk += 1
+                markers = []
+                
+                if(len(ts[0].marker_name) > 0):
+                    mk_keys = ts[0].marker_name.keys()
+                    mk_values = ts[0].marker_name.values()
+                    for mk in range(len(mk_keys)):
+                        for mv in range(len(mk_values[mk])):
+                            markers.append((mk_keys[mk], mk_values[mk][mv]))
+                    markers = sorted(markers, key=lambda tup: tup[1])
+                    
+                    for i in range(len(markers)):
+                        if 'R' in markers[i][0]: 
+                            event_type = 'Response' 
+                        elif 'S' in markers[i][0]:
+                            event_type = 'Stimulus'
+                        else:
+                            event_type = 'Label'
+                            
+                        result_file_mrk.write("Mk%d=%s,%s,%d,1,0\n" % (count_mrk, event_type, markers[i][0], (ts[0].start_time + markers[i][1])*ts[0].sampling_frequency/1000.0))                                                     
+                        count_mrk += 1
+
             # WRITE HEADERFILE
             # Keep original name
             if (self.meta_data.has_key('eeg_src_file_name') and self.meta_data['eeg_src_file_name'] != None):
@@ -177,11 +211,12 @@ class AnalyzerCollection(BaseDataset):
                 result_file_hdr.write(header_hdr % ((name + key_str), (name + key_str), num_ch, sampling_int))
             # Format: Ch1=Fp1,,0.1,\xB5V
             for i in range(num_ch):
-                result_file_hdr.write("Ch%d=%s,,0.1,\xB5V\n" % (i+1,channel_names[i]))
+                result_file_hdr.write("Ch%d=%s,,%.2f,\xB5V\n" % (i+1,channel_names[i], 1./scale))
 
             result_file_hdr.close()
             result_file_eeg.close()
             result_file_mrk.close()
+
 
 class AnalyzerSinkNode(BaseNode):
     """ Store all TimeSeries that are passed to it in an collection of type AnalyzerCollection
@@ -196,20 +231,23 @@ class AnalyzerSinkNode(BaseNode):
         are saved with the name of the original file.
     
         (*optional, default: False*)
-        
+
     **Exemplary Call**
 
     .. code-block:: yaml
 
         - 
-            node: Analyzer_Sink
+            node : Analyzer_Sink
             parameters :
                 original_name : True
 
+    .. todo:: Move to TimeSeriesSink/ implement storage format
+
     :Author: Johannes Teiwes (Johannes.Teiwes@dfki.de)
     :Created: 2010/05/09
-
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self, original_name = False, **kwargs):
         super(AnalyzerSinkNode, self).__init__(**kwargs)
         self.set_permanent_attributes(analyzer_collection = \

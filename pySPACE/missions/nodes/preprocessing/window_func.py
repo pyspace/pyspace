@@ -10,6 +10,7 @@ try:
     import os
     import yaml
     import pySPACE
+    import math
 except:
     pass
 
@@ -161,6 +162,7 @@ class ScaleNode(BaseNode):
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2013/03/08
     """
+    input_types=["TimeSeries"]
     def __init__(self,
                  factor=1,
                  **kwargs):

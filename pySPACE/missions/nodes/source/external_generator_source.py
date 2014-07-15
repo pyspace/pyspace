@@ -62,16 +62,17 @@ class ExternalGeneratorSourceNode(BaseNode):
     :Created: 2009/09/17
 
     """
-    
+    input_types = ["TimeSeries", "FeatureVector", "PredictionVector"]
+
     def __init__(self, **kwargs):
         super(ExternalGeneratorSourceNode, self).__init__(**kwargs)
         
-        self.set_permanent_attributes(input_types = ["time_series"],
-                                      current_split = 0)
+        self.set_permanent_attributes(
+            current_split=0)
 
     def set_generator(self, generator):
         """ Sets the generator from which this node reads the data """
-        self.set_permanent_attributes(generator = generator)
+        self.set_permanent_attributes(generator=generator)
 
     def register_input_node(self, node):
         """ Register the given node as input """

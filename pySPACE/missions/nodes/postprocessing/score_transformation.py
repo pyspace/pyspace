@@ -95,9 +95,9 @@ class PlattsSigmoidFitNode(BaseNode):
     .. code-block:: yaml
     
         -
-            node : SigmoidFit
+            node : PSF
             parameters :
-                class_labels : ['NoLRP','LRP']
+                class_labels : ['Target','Standard']
                 
             
     """
@@ -265,6 +265,10 @@ class PlattsSigmoidFitNode(BaseNode):
                       +str(g2), level=logging.WARNING)
         
         self._log("Finished training of sigmoid mapping in %d iterations." % it)
+        
+        # Clean up of not needed variables
+        self.scores = []
+        self.labels = []
 
     def _execute(self, x):
         """ Evaluate each prediction with the sigmoid mapping learned."""
@@ -458,6 +462,7 @@ class PlattsSigmoidFitNode(BaseNode):
                 
                 pylab.savefig(node_dir + "/reliable_diagrams_%d.png" % self.current_split)
 
+
 class SigmoidTransformationNode(BaseNode):
     """ Transform score to interval [0,1] with a sigmoid function
     
@@ -508,8 +513,9 @@ class SigmoidTransformationNode(BaseNode):
         -
             node : SigTrans
             parameters :
-                class_labels : ['NoLRP','LRP']
+                class_labels : ['Standard','Target']
     """
+    input_types=["PredictionVector"]
     def __init__(self, class_labels = ['Standard','Target'], 
                 A = -1, B = 0, offset = None,
                 **kwargs):
@@ -547,6 +553,77 @@ class SigmoidTransformationNode(BaseNode):
                                 predictor=data.predictor)
 
 
+class LinearTransformationNode(BaseNode):
+    """ Scaling and offset shift, and relabeling due to new decision boundary
+
+    Having a prediction value x it is mapped to (x+*offset*)*scaling*.
+    If the result is lower than the *decision boundary* it is mapped to the
+    first class label for the negative class and otherwise to the second
+    positive class.
+
+    **Parameters**
+
+        :class labels:  This mandatory parameter defines the ordering of class
+                        labels for the mapping after the transformation.
+                        If this parameter is not specified, the label remains
+                        unchanged. This is for example feasible for regression
+                        mappings.
+
+                        .. note:: This parameter could be also used to change
+                                  class label strings, but this would probably
+                                  cause problems in the evaluation step.
+
+                        (*recommended, default: None*)
+
+        :offset: Shift of the prediction value.
+
+                 (*optional, default: 0*)
+
+        :scaling: Scaling factor applied after offset shift.
+
+                  (*optional, default: 1*)
+
+        :decision_boundary: Everything lower this value is classified as
+            class one and everything else as class two. By default
+            no labels are changed.
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -   node : LinearTransformation
+            parameters :
+                class_labels : ['Standard', 'Target']
+                offset : 1
+                scaling : 42
+                decision_boundary : 3
+    """
+    def __init__(self, class_labels=None, offset=0, scaling=1,
+                 decision_boundary=None, **kwargs):
+        super(LinearTransformationNode, self).__init__(**kwargs)
+        if class_labels is None or decision_boundary is None:
+            decision_boundary = None
+            class_labels = None
+
+        self.set_permanent_attributes(class_labels=class_labels,
+                                      scaling=scaling,
+                                      offset=offset,
+                                      decision_boundary=decision_boundary,
+                                      )
+
+    def _execute(self, x):
+        """ (x+o)*s < d """
+        p = x.prediction
+        prediction = (p+self.offset)*self.scaling
+        if self.decision_boundary is None:
+            label = x.label
+        elif self.decision_boundary < prediction:
+            label = self.class_labels[0]
+        else:
+            label = self.class_labels[1]
+        return PredictionVector(prediction=prediction, label=label,
+                                predictor=x.predictor)
+
 class LinearFitNode(BaseNode):
     """ Linear mapping between score and [0,1]
     
@@ -582,7 +659,7 @@ class LinearFitNode(BaseNode):
         -
             node : LinearFit
             parameters :
-                class_labels : ['NoLRP','LRP']
+                class_labels : ['Standard','Target']
     """
     def __init__(self, class_labels = [], **kwargs):
         super(LinearFitNode, self).__init__(**kwargs)
@@ -810,5 +887,6 @@ class LinearFitNode(BaseNode):
 
 _NODE_MAPPING = {"PSF": PlattsSigmoidFitNode,
                 "SigTrans": SigmoidTransformationNode,
+                "LinearFit": LinearFitNode
                 }
 

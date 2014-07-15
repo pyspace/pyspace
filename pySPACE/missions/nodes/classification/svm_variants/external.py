@@ -132,7 +132,7 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
                 svm_type : "C-SVC"
                 complexity : 1
                 kernel_type : "LINEAR"
-                class_labels : ['ill', 'healthy']
+                class_labels : ['Standard', 'Target']
                 weight : [1,3]
                 debug : True
                 store : True

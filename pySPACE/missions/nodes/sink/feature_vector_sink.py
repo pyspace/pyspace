@@ -5,6 +5,7 @@ import copy
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.dataset_defs.feature_vector import FeatureVectorDataset
 
+
 class FeatureVectorSinkNode(BaseNode):
     """ Collect all :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` elements
     that are passed through it in a collection of type :mod:`~pySPACE.resources.dataset_defs.feature_vector`.
@@ -24,13 +25,17 @@ class FeatureVectorSinkNode(BaseNode):
     :Created: 2008/09/02
     
     """
+    input_types = ["FeatureVector"]
+
     def __init__(self, classes_names=[], num_features=None, **kwargs):
         super(FeatureVectorSinkNode, self).__init__(**kwargs)
         
-        self.set_permanent_attributes(classes_names = classes_names,
-                                      num_features = num_features,
-                                      feature_vector_collection = None, # This will be created lazily
-                                      )
+        self.set_permanent_attributes(
+            classes_names=classes_names,
+            num_features=num_features,
+            feature_vector_collection=None,  # This will be created lazily
+            )
+
     def reset(self):
         """
         Reset the state of the object to the clean state it had after its
@@ -58,15 +63,9 @@ class FeatureVectorSinkNode(BaseNode):
         """ Returns whether this node requires supervised training """
         return True
 
-    def _execute(self, data):
-        # We simply pass the given data on to the next node
-        # TODO: We could also generate an ARFF file which contains
-        #       unlabeled features...
-        return data
-    
     def _train(self, data, label):
-        # We simply pass the given data on to the next node
-        return (data, label)
+        # We do nothing
+        pass
     
     def _create_result_sets(self, num_features, feature_names = None):
         """ 

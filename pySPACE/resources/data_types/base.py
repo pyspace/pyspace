@@ -30,24 +30,25 @@ very similar, but its generation can be implemented by the subclass, because
 it contains semantic information (like e.g. time stamps) which is not known by
 the BaseData class.
 
-The other two properties are more flexible: the *specs* and the *history* are able to backup
-information the user is needing. *specs* is a dictionary and the *history* is a list.
-Both are empty by default. 
+The other two properties are more flexible: the *specs* and the *history* are
+ able to backup information the user is needing. *specs* is a dictionary and
+ the *history* is a list. Both are empty by default.
 
-The history is a placeholder (empty list) for storing results of previous nodes within a node chain.
-It can be filled by setting the *keep_in_history* parameter to *True* within a
-node chain. Then the data object is copied into the *history* as it is after
-this processing step. Additionally, the *specs* receive an entry labeled 'node_specs'
-containing a dictionary of additional information from the saving node. For n times
-storing the results within one node chain, the *history* property has the length n.
+The history is a placeholder (empty list) for storing results of previous
+nodes within a node chain. It can be filled by setting the *keep_in_history*
+parameter to *True* within a node chain. Then the data object is copied into
+the *history* as it is after this processing step. Additionally,
+the *specs* receive an entry labeled 'node_specs' containing a dictionary of
+additional information from the saving node. For n times storing the results
+within one node chain, the *history* property has the length n.
 
 .. note:: (I) When a data element is stored in the *history*, it loses its own
-            history. (II) Using history=myhistory appends something to the history;
-            the only way of deleting information here is to empty it (history=[]).
+    history. (II) Using history=myhistory appends something to the history;
+    the only way of deleting information here is to empty it (history=[]).
 
 The *specs* property is an empty dictionary which can be filled with whatever
-the user or developer needs in more than one node. The syntax is exactly the same
-as with a normal python dictionary.
+ the user or developer needs in more than one node. The syntax is exactly the
+  same as with a normal python dictionary.
 
 .. note:: All BaseData type properties survive data type conversion within
           a :class:`~pySPACE.environments.chains.node_chain.NodeChain`
@@ -60,20 +61,26 @@ as with a normal python dictionary.
              array processing. This does not copy memory,
              but creates a new clean reference to the array without meta data.
 
-:Author: Hendrik Woehrle, Sirko Straube, Mario Krell, David Feess  (david.feess@dfki.de)
+:Author: Hendrik Woehrle, Sirko Straube, Mario Krell, David Feess
 :Created: 2010/08/09
 :Major Revision: 2012/01/20
 """
 
-import numpy, uuid, copy
+import numpy
+import uuid
+import copy
 import warnings
+
 
 class BaseData(numpy.ndarray):
     """ Basic Data object
     
-    Superclass for every data type
-    - provides common variables that survive the data processing
+    Superclass for every data type - provides common variables
+    that survive the data processing.
+
+    For further details refer to the module documentation.
     """
+
     def __new__(subtype, input_array):
         """Constructor for BaseData object
 
@@ -106,27 +113,28 @@ class BaseData(numpy.ndarray):
             self.__tag = None
             self.__specs = {}
             self.__history = []
-        raise_error=False
+        raise_error = False
         try:
-            a=obj.shape
-            b=self.shape
-            raise_error=False
-            if not (a==b):
+            a = obj.shape
+            b = self.shape
+            raise_error = False
+            if not (a == b):
                 # array changed because of slicing 
                 # If you encounter this 'problem', try to use a raise here
                 # and you should get the traceback telling you,
                 # which node caused the problem.
                 # If the node uses a bad try-except you have to use
                 # a debugging tool!
-                raise_error=True
+                raise_error = True
                 #print a,b
-                warnings.warn("Dimensions do not match. Better cast object to ndarray, before slicing! "+
-                    "To locate the error check documentation in base.py"+
+                warnings.warn(
+                    "Dimensions do not match. Better cast object to ndarray, before slicing! " +
+                    "To locate the error check documentation in base.py" +
                     " or uncomment the lower next two lines and restart!")
         except:
             pass
-#        if raise_error:
-#            raise TypeError("Use the traceback to find out, where you used slicing on the data. Replace the data by x=data.view(numpy.ndarray)!")
+            #        if raise_error:
+            #            raise TypeError("Use the traceback to find out, where you used slicing on the data. Replace the data by x=data.view(numpy.ndarray)!")
 
     def __reduce__(self):
         # Refer to 
@@ -140,8 +148,9 @@ class BaseData(numpy.ndarray):
     def __setstate__(self, state):
         nd_state, own_state = state
         numpy.ndarray.__setstate__(self, nd_state)
-        if len(own_state)>4: #backward compatibility with old implementation of BaseData type
-            own_state=own_state[0:4]
+        if len(
+                own_state) > 4: #backward compatibility with old implementation of BaseData type
+            own_state = own_state[0:4]
         (self.key, self.tag, self.specs, self.history) = own_state
 
     def __generate_key__(self):
@@ -150,7 +159,7 @@ class BaseData(numpy.ndarray):
 
 
     ###following: property definitions, setter and getter
-    
+
     def __set_key__(self, new_key):
         """set method for key
         
@@ -158,59 +167,64 @@ class BaseData(numpy.ndarray):
         When creating it, a uuid has to be used! Then, the user can still change it:
         Either he can set it to None or use another uuid.
         """
-        if new_key==None:
-            self.__key=None
+        if new_key == None:
+            self.__key = None
             return
-        
+
         else:
             if self.key != None:
-                warnings.warn("BaseData type:: data has key already. be careful when changing!")
-            # in the other case we are having old data with key but not self.__key
-        
+                warnings.warn(
+                    "BaseData type:: data has key already. be careful when changing!")
+                # in the other case we are having old data with key but not self.__key
+
             if type(new_key) == uuid.UUID:
-                self.__key=new_key
+                self.__key = new_key
             else:
-                warnings.warn("BaseData type:: use a uuid when changing the key! attempt ignored!")
-            
+                warnings.warn(
+                    "BaseData type:: use a uuid when changing the key! attempt ignored!")
+
     def __get_key__(self):
         """ return key """
         return self.__key
-    
+
     def __del_key__(self):
         """ delete key """
-        self.__key=None
-    
-    key = property(__get_key__, __set_key__, __del_key__, "Property key of BaseData type.")
-    
+        self.__key = None
+
+    key = property(__get_key__, __set_key__, __del_key__,
+                   "Property key of BaseData type.")
+
     def __set_tag__(self, new_tag):
         """set method for tag
         
         Similar behavior to __set_key__. The tag is ALWAYS a string. So whatever
         is given as new_tag is casted into string (exception: None).
         """
-        
-        if new_tag==None:
-            self.__tag=None
+
+        if new_tag == None:
+            self.__tag = None
             return
         else:
             if self.tag != None:
-                warnings.warn("BaseData type:: data already tagged. be careful when changing!")
-                
-            self.__tag=str(new_tag)
-        
+                warnings.warn(
+                    "BaseData type:: data already tagged. be careful when changing!")
+
+            self.__tag = str(new_tag)
+
 
     def __get_tag__(self):
         """return tag
         """
         return self.__tag
-    
+
     def __del_tag__(self):
         """delete tag
         """
-        self.__tag=None
-    
-    tag = property(__get_tag__, __set_tag__, __del_tag__, "Property tag of BaseData type.")
-    
+        self.__tag = None
+
+    tag = property(__get_tag__, __set_tag__, __del_tag__,
+                   "Property tag of BaseData type.")
+
     def __set_specs__(self, key, value=None):
         """set method for specs
         
@@ -221,38 +235,41 @@ class BaseData(numpy.ndarray):
         
         """
         if key == {} and value == None:
-            self.__specs={}
+            self.__specs = {}
             return
-        
+
         # Here the question remains, if we do not want to overwrite the specs
         # or if we choose a dictionary for setting, that we want to create a new 
         # object. Currently the dictionary is extended by the new dictionary.
-        if type(key)==dict and value==None:
+        if type(key) == dict and value == None:
             for skey, svalue in key.iteritems():
                 self.specs[skey] = svalue
             return
-        
+
         if value == None:
             return
-        
+
         if self.__specs.has_key(key):
-            warnings.warn("BaseData type:: specs have already an entry labeled " + str(key) + ". This entry is overwritten!")
-        
+            warnings.warn(
+                "BaseData type:: specs have already an entry labeled " + str(
+                    key) + ". This entry is overwritten!")
+
         dict.__setitem__(self.__specs, key, value)
-        
-    
+
+
     def __get_specs__(self):
         """return specs
         """
         return self.__specs
-    
+
     def __del_specs__(self):
         """delete specs
         """
-        self.__specs={}
-    
-    specs = property(__get_specs__, __set_specs__, __del_specs__, "Property specs of BaseData type. This property is a dictionary.")
-    
+        self.__specs = {}
+
+    specs = property(__get_specs__, __set_specs__, __del_specs__,
+                     "Property specs of BaseData type. This property is a dictionary.")
+
     def __set_history__(self, elem):
         """set method for history
         
@@ -262,63 +279,72 @@ class BaseData(numpy.ndarray):
         or
         - it can be extended with another element
         """
-        
-        if elem==[]:
-            self.__history=[]
+
+        if elem == []:
+            self.__history = []
         else:
             self.__history.append(elem)
-        
-    
+
+
     def __get_history__(self):
         """return history
         """
         return self.__history
-    
+
     def __del_history__(self):
         """delete history
         """
-        self.__history=[]
-    
-    history = property(__get_history__, __set_history__, __del_history__, "Property history of BaseData type. This property is a list.")
-    
+        self.__history = []
+
+    history = property(__get_history__, __set_history__, __del_history__,
+                       "Property history of BaseData type. This property is a list.")
+
     ###following: user methods for interacting with the BaseData type
-    
+
     def has_meta(self):
         """Return whether basic meta data is present (key and tag)"""
         return not (self.key == None and self.tag == None)
-   
+
     def has_history(self):
         """Return whether history is present."""
         return self.history != []
-        
+
+    def get_data(self):
+        """A simple method that returns the data as a numpy array"""
+        return self.view(numpy.ndarray)
+
     def generate_meta(self):
         """generate basic meta data (key and tag)"""
-        self.key=self.__generate_key__()
+        self.key = self.__generate_key__()
         if hasattr(self, "_generate_tag"): #function is implemented by subclass
-            self.tag=self._generate_tag(self)
+            self.tag = self._generate_tag(self)
         else:
-            self.tag=None
-    
+            self.tag = None
+
     def inherit_meta_from(self, obj):
         """ Inherit history, key, tag and specs from the passed object """
-        if not getattr(self,"_inherited",False) and not obj is None and not type(obj)==numpy.ndarray:
+        if not getattr(self, "_inherited",
+                       False) and not obj is None and not type(
+                obj) == numpy.ndarray:
             # Use a copy of the history from old object as own history:
             if self.history == []:
                 self.__history = copy.deepcopy(obj.history)
             else: #merge
-                old_history=copy.deepcopy(self.__history)
-                self.__history = copy.deepcopy(obj.history) #overwrite existing history
+                old_history = copy.deepcopy(self.__history)
+                self.__history = copy.deepcopy(
+                    obj.history) #overwrite existing history
                 for elem in old_history:
                     self.history = elem
-                
-            self.specs = copy.deepcopy(obj.specs) #specs cannot be overwritten (see __set_specs__)
-                
+
+            self.specs = copy.deepcopy(
+                obj.specs) #specs cannot be overwritten (see __set_specs__)
+
             if self.key is None:
                 self.key = getattr(obj, 'key', None)
             if self.tag is None:
                 self.tag = getattr(obj, 'tag', None)
             self._inherited = True
-        
+
     def add_to_history(self, obj, node_specs=None):
         """Add the passed object to history.
         
@@ -328,20 +354,20 @@ class BaseData(numpy.ndarray):
         # Use a copy of the data object and remove the history because 
         # it would be redundant
         # Note: This will get obsolete with an own implementation of deepcopy
-        specs=copy.deepcopy(obj.specs)
-        key=copy.deepcopy(obj.key)
-        tag=copy.deepcopy(obj.tag)
+        specs = copy.deepcopy(obj.specs)
+        key = copy.deepcopy(obj.key)
+        tag = copy.deepcopy(obj.tag)
 
         obj_without_meta = copy.deepcopy(obj)
         del obj_without_meta.key
         del obj_without_meta.tag
         del obj_without_meta.specs
         del obj_without_meta.history
-        
+
         #transfer local copies
-        obj_without_meta.key=key
-        obj_without_meta.tag=tag
-        obj_without_meta.specs=specs
-        obj_without_meta.specs['node_specs']=copy.deepcopy(node_specs)
-        
-        self.history=obj_without_meta #appends to history
+        obj_without_meta.key = key
+        obj_without_meta.tag = tag
+        obj_without_meta.specs = specs
+        obj_without_meta.specs['node_specs'] = copy.deepcopy(node_specs)
+
+        self.history = obj_without_meta #appends to history

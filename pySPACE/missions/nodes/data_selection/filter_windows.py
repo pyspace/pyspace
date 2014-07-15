@@ -162,8 +162,8 @@ class FilterWindowsNode(BaseNode):
         -
             node : FilterWindows
             parameters :
-                deactivation_label : Stop
-                activation_label : Start
+                deactivation_label : "Stop"
+                activation_label : "Start"
 
 
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)

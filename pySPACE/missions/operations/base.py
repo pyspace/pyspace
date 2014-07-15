@@ -14,6 +14,9 @@ type
 ----
 
 Specifies which operation is used.
+Type and corresponding module name are the same in lower case (with underscore).
+The respective operation name is written in camel case with the ending
+``Operation``.
 
 (*obligatory*)
 
@@ -93,6 +96,7 @@ if not pyspace_path in sys.path:
 import pySPACE
 from pySPACE.tools.filesystem import create_directory
 
+
 class Operation(object):
     """ Take one summary of data as input and produces a second one as output with a set of *processes*.,
     that can be executed on an arbitrary backend modality
@@ -107,35 +111,35 @@ class Operation(object):
         create_directory(self.result_directory)
         
         # Store the specification of this operation in the directory
+        # without the base_file entry
+        base_file = self.operation_spec.pop("base_file", None)
         source_operation_file = open(os.sep.join([self.result_directory,
                                                   "source_operation.yaml"]), 'w')
         yaml.dump(self.operation_spec, source_operation_file)
         source_operation_file.close()
+        if not base_file is None:
+            self.operation_spec["base_file"] = base_file
     
     def consolidate(self, results):
         """
         Consolidates the results obtained by the single processes of this 
         operation into a consistent structure of collections.
         """
-        raise NotImplementedError("Method consolidate has not been implemented in subclass %s" 
-                                  % self.__class__.__name__)
+        raise NotImplementedError(
+            "Method consolidate has not been implemented in subclass %s"
+            % self.__class__.__name__)
     
-    def _log(self, message, level = logging.INFO):
+    def _log(self, message, level=logging.INFO):
         """ Logs  the given message  with the given logging level """
         logging.getLogger("%s" % self).log(level, message)
 
     
     @classmethod
-    def create(cls, operation_spec, base_result_dir = None):
+    def create(cls, operation_spec, base_result_dir=None):
         """
         A factory method that calls the responsible method
         for creating an operation of the type specified in
         the operation specification dictionary (*operation_spec*).
-
-        .. todo::   simplify imports and creation with a simple lookup dictionary
-                    mapping types to class names
-
-        .. todo:: Naming conventions needed for operation modules, classes, types. 
         """
         # Determine result directory
         result_directory = cls.get_unique_result_dir(base_result_dir)
@@ -335,19 +339,24 @@ def create_operation_from_file(operation_filename, base_result_dir = None):
 
     print("--> Loading operation: \n\t\t %s."%spec_file_name)
     try:
-        operation_spec = yaml.load(open(spec_file_name, "r"))
+        with open(spec_file_name, "r") as op_file:
+            operation_spec = yaml.load(op_file)
+        with open(spec_file_name, "r") as op_file:
+            operation_spec["base_file"] = op_file.read()
     except IOError,e:
         if not spec_file_name.endswith(".yaml"):
             warnings.warn(
                 "Operation specification not found. Trying with yaml ending.")
-            operation_spec = yaml.load(open(spec_file_name, "r"))
+            spec_file_name += ".yaml"
+            with open(spec_file_name, "r") as op_file:
+                operation_spec = yaml.load(op_file)
+            with open(spec_file_name, "r") as op_file:
+                operation_spec["base_file"] = op_file.read()
         else:
             raise e
     storage = pySPACE.configuration.storage
     if operation_spec.has_key("input_path"):
-        input_path = os.sep.join([storage,
-                                      operation_spec["input_path"],
-                                      ""])
+        input_path = os.sep.join([storage, operation_spec["input_path"], ""])
         print("--> Input data is taken from: \n\t\t %s"%input_path)
     return create_operation(operation_spec, base_result_dir)
 
