@@ -6,7 +6,8 @@ pySPACE
 =======
 
 For getting a basic introduction into pySPACE and its main principles,
-we refer to `the corresponding paper in the Frontiers in Neuroinformatics Journal <http://www.frontiersin.org/neuroinformatics/10.3389/fninf.2013.00040/abstract>`_.
+refer to `this talk at the PyData Berlin 2014 conference <http://youtu.be/KobSyPceR6I>`_
+and `this paper in the Frontiers in Neuroinformatics Journal <http://www.frontiersin.org/neuroinformatics/10.3389/fninf.2013.00040/abstract>`_.
 This paper should be also used to :ref:`cite pySPACE <cite>`.
 
 .. table:: **Quick Access**
@@ -149,6 +150,12 @@ Indices and Meta Information
 Contact
 -------
 
+pySPACE has been developed jointly by researchers at the
+`German Research Center for Artificial Intelligence (DFKI GmbH), Robotics Innovation Center, Bremen (DFKI RIC) <http://robotik.dfki-bremen.de/en/>`_
+and the
+`Robotics Group at the University of Bremen <http://www.informatik.uni-bremen.de/robotik/index_en.php>`_
+prior to its release as open source.
+
 If you want to be kept informed about current changes in the framework,
 add yourself to the user mailing list.
 
@@ -163,8 +170,6 @@ Both lists are moderated.
 User mailing list : Ric-pyspace-user@dfki.de
 
 Developer mailing list : Ric-pyspace-dev@dfki.de
-
-In future communication might switch to official tools on GitHub or SourceForge.
 
 Documentation TOC
 -----------------

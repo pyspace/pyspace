@@ -42,6 +42,7 @@ library folder. (partial) Copy from the documentation:
     .. note:: For creating the graphic, which is done with the 'dot' command,
               the GraphViz package needs to be installed.
 """
+# general imports
 import os
 import shutil
 import sys
@@ -51,18 +52,21 @@ import cProfile
 import yaml
 import warnings
 
+# adding pySPACE to system path for import
 file_path = os.path.dirname(os.path.realpath(__file__))
 pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
 if not pyspace_path in sys.path:
     sys.path.append(pyspace_path)
 
 import pySPACE
-import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__), os.path.pardir))
+import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
+                               os.path.pardir))
 if not import_path == pyspace_path:
     warnings.warn("Check your python path! "+
-                  "'%s' is the expected pySPACE path,"%pyspace_path+
-                  " but '%s' is used."%import_path)
+                  "'%s' is the expected pySPACE path," % pyspace_path +
+                  " but '%s' is used." % import_path)
 
+# pySPACE imports
 from pySPACE.missions.operations.base import Operation, create_operation_from_file
 from pySPACE.tools.filesystem import get_relative_path, create_source_archive
 from pySPACE import create_backend

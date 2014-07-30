@@ -11,17 +11,31 @@ called for that specific node.
 :Author: Andrei Ignat, Mario Michael Krell
 :Created: 2014/05/02
 """
+# general imports
 import unittest
 from unittest import TestCase
 import re
 
 YAML_START = re.compile(r'(.. code-block:: yaml)', re.MULTILINE)
-try:
-    import sys
-    sys.path.append('../../../pyspace')
-except:
-    print "Correct the location of the pyspace repo in this script"
 
+# adding pySPACE to system path for import (code copy from launch.py)
+import os
+import sys
+file_path = os.path.dirname(os.path.realpath(__file__))
+pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
+if not pyspace_path in sys.path:
+    sys.path.append(pyspace_path)
+
+import pySPACE
+import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
+                               os.path.pardir))
+if not import_path == pyspace_path:
+    warnings.warn("Check your python path! "+
+                  "'%s' is the expected pySPACE path," % pyspace_path +
+                  " but '%s' is used." % import_path)
+
+
+# special imports
 import yaml
 import pySPACE.missions.nodes
 import pySPACE.missions.nodes.base_node as bn
