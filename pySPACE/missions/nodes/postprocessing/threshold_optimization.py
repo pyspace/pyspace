@@ -13,6 +13,7 @@ from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset as ClassificationCollection
 
+
 class ThresholdOptimizationNode(BaseNode):
     """ Optimize the classification threshold for a specified metric
     
@@ -42,7 +43,8 @@ class ThresholdOptimizationNode(BaseNode):
             corresponding Python expression is determined automatically.
             
             For details and inspiration have a look at :ref:`metric <metrics>`
-            in the :mod:`pySPACE.missions.nodes.sink.classification_performance_sink.ClassificationCollection`.
+            in the
+            :class:`~pySPACE.resources.dataset_defs.metric.BinaryClassificationDataset`.
 
             .. warning:: If your metric is not existing, the algorithm will get
                          zero instead and will get problems optimizing.
@@ -114,7 +116,7 @@ class ThresholdOptimizationNode(BaseNode):
     :Created: 2010/11/25
     
     """
-    
+    input_types=["PredictionVector"]
     def __init__(self, metric="Balanced_accuracy", 
                  class_labels=None, preserve_score = False,
                  classifier_threshold = 0.0,
@@ -150,16 +152,16 @@ class ThresholdOptimizationNode(BaseNode):
         if recalibrate:
             self.retrainable = True
 
-        self.set_permanent_attributes(metric = metric,
-                                      metric_fct = None,
-                                      classes = class_labels,
-                                      preserve_score = preserve_score,
+        self.set_permanent_attributes(metric=metric,
+                                      metric_fct=None,
+                                      classes=class_labels,
+                                      preserve_score=preserve_score,
                                       classifier_threshold=classifier_threshold,
-                                      weight = weight,
+                                      weight=weight,
                                       recalibrate=recalibrate,
-                                      orientation_up = True,
-                                      threshold = 0,
-                                      instances = [], # list sorted by prediction score
+                                      orientation_up=True,
+                                      threshold=0,
+                                      instances=[], # list sorted by prediction score
                                       example=None, # classification vector input example
                                       classifier_information={},  # information from the example+own classification information
                                       inverse_metric=inverse_metric)
@@ -182,9 +184,9 @@ class ThresholdOptimizationNode(BaseNode):
                 
         if self.classes is None:
             try:
-                self.set_permanent_attributes(classes = data.predictor.classes)
+                self.set_permanent_attributes(classes=data.predictor.classes)
             except:
-                self.set_permanent_attributes(classes = ['Standard', 'Target'])
+                self.set_permanent_attributes(classes=['Standard', 'Target'])
                 self._log("No class labels given. Using default: ['Standard', 'Target'].\
                         If you get errors, this was the wrong choice.",level=logging.CRITICAL)
             
@@ -196,11 +198,13 @@ class ThresholdOptimizationNode(BaseNode):
             raise Exception("The ThresholdOptimizationNode can only handle a "
                             "string or a list with a string as its only element "
                             "as input. Got: %s with type: %s"%(str(data.label),type(data.label)))
+        if not class_label in self.classes and "REST" in self.classes:
+            class_label = "REST"
         # Insert new (score, predicted_label, actual_label) tuple into list of
         # instances that is sorted by ascending prediction score
         insort(self.instances, (data.prediction, prediction_label, 
                                 self.classes.index(class_label)))
-        
+
         # copying of important classifier parameters to give it to the sink node
         if self.example is None:
             self.example = data
@@ -286,10 +290,10 @@ class ThresholdOptimizationNode(BaseNode):
     def start_retraining(self):
         """ Start retraining phase of this node """
         if self.recalibrate:
-            # We remove all old training data since we expect that the distributions
-            # have shifted and thus, the old data does not help to model the
-            # new distributions
-            self.set_permanent_attributes(instances = []) 
+            # We remove all old training data since we expect that the
+            # distributions have shifted and thus, the old data does not help to
+            # model the new distributions
+            self.set_permanent_attributes(instances=[])
     
     def _inc_train(self, data, class_label):
         """ Provide training data for retraining """
@@ -304,11 +308,11 @@ class ThresholdOptimizationNode(BaseNode):
         if self.orientation_up:
             predicted_label = \
                 self.classes[1] if data.prediction > self.threshold \
-                                        else self.classes[0]
+                else self.classes[0]
         else:
             predicted_label = \
                 self.classes[1] if data.prediction < self.threshold \
-                                        else self.classes[0]
+                else self.classes[0]
                                         
 #        print "data.prediction ", data.prediction
 #        print "self.threshold ", self.threshold 
@@ -318,9 +322,9 @@ class ThresholdOptimizationNode(BaseNode):
         else:
             prediction_score = data.prediction - \
                                     (self.threshold - self.classifier_threshold)
-        return PredictionVector(label = predicted_label, 
-                                prediction = prediction_score,
-                                predictor = self)
+        return PredictionVector(label=predicted_label,
+                                prediction=prediction_score,
+                                predictor=self)
 
     def _get_metric_fct(self):
         if self.metric == 'Mutual_information':
@@ -337,21 +341,19 @@ class ThresholdOptimizationNode(BaseNode):
         elif self.inverse_metric:
             metric_fct = lambda TP, FP, TN, FN: \
                 (-1.0)*ClassificationCollection.calculate_confusion_metrics(
-                                {"True_negatives":TN,
-                                 "True_positives":TP,
-                                 "False_positives":FP,
-                                 "False_negatives":FN},
-                                weight=self.weight,
-                                )[self.metric]
+                    {"True_negatives": TN,
+                     "True_positives": TP,
+                     "False_positives": FP,
+                     "False_negatives": FN},
+                    weight=self.weight,)[self.metric]
         else: 
             metric_fct = lambda TP, FP, TN, FN: \
                 ClassificationCollection.calculate_confusion_metrics(
-                                {"True_negatives":TN,
-                                 "True_positives":TP,
-                                 "False_positives":FP,
-                                 "False_negatives":FN},
-                                weight=self.weight,
-                                )[self.metric]
+                    {"True_negatives": TN,
+                     "True_positives": TP,
+                     "False_positives": FP,
+                     "False_negatives": FN},
+                    weight=self.weight,)[self.metric]
         return metric_fct 
 
     def store_state(self, result_dir, index=None): 
@@ -389,7 +391,7 @@ class ThresholdOptimizationNode(BaseNode):
                     FN = list(labels_test).count(1)
                 
                 self.predictions_test = [[], []]
-                for label, prediction_value, in zip (labels_test, predictions_test):
+                for label, prediction_value, in zip(labels_test, predictions_test):
                     if label == 0 and self.orientation_up:
                         TN += 1
                         FP -= 1
@@ -402,7 +404,7 @@ class ThresholdOptimizationNode(BaseNode):
                     elif label == 1 and not self.orientation_up:
                         FN -= 1
                         TP += 1    
-                    assert (TP >= 0 and FP >= 0 and TN >= 0 and FN >=0), \
+                    assert (TP >= 0 and FP >= 0 and TN >= 0 and FN >= 0), \
                         "TP: %s FP: %s TN: %s FN: %s" % (TP, FP, TN, FN)
                     metric_value = metric_fct(TP, FP, TN, FN)
                     
@@ -423,21 +425,25 @@ class ThresholdOptimizationNode(BaseNode):
                           'xtick.labelsize': 10,
                           'ytick.labelsize': 10}
                 pylab.rcParams.update(params)
-                fig = pylab.figure(0, dpi=400,figsize=fig_size)
+                fig = pylab.figure(0, dpi=400, figsize=fig_size)
                 
-                xmin = min(min(self.predictions_train[0]), min(self.predictions_test[0]))
-                xmax = max(max(self.predictions_train[0]), max(self.predictions_test[0]))
-                ymin = min(min(self.predictions_train[1]), min(self.predictions_test[1]))
-                ymax = max(max(self.predictions_train[1]), max(self.predictions_test[1]))
+                xmin = min(min(self.predictions_train[0]),
+                           min(self.predictions_test[0]))
+                xmax = max(max(self.predictions_train[0]),
+                           max(self.predictions_test[0]))
+                ymin = min(min(self.predictions_train[1]),
+                           min(self.predictions_test[1]))
+                ymax = max(max(self.predictions_train[1]),
+                           max(self.predictions_test[1]))
                 
-                pylab.plot(self.predictions_train[0], self.predictions_train[1], 'b',
-                           label = 'Training data')
-                pylab.plot(self.predictions_test[0], self.predictions_test[1], 'g',
-                           label = 'Unseen test data')
+                pylab.plot(self.predictions_train[0], self.predictions_train[1],
+                           'b', label='Training data')
+                pylab.plot(self.predictions_test[0], self.predictions_test[1],
+                           'g', label='Unseen test data')
                 pylab.plot([self.classifier_threshold, self.classifier_threshold],
-                           [ymin, ymax], 'r', label = 'Original Threshold', lw=5)
+                           [ymin, ymax], 'r', label='Original Threshold', lw=5)
                 pylab.plot([self.threshold, self.threshold],
-                           [ymin, ymax], 'c', label = 'Optimized Threshold', lw=5)
+                           [ymin, ymax], 'c', label='Optimized Threshold', lw=5)
                 pylab.legend(loc = 0)
                 pylab.xlim((xmin, xmax))
                 pylab.ylim((ymin, ymax))

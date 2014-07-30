@@ -136,9 +136,17 @@ dataset is used.
 store_node_chain
 ----------------
 
-option to save as pickle file the total state of
-the node chain after the processing;
-separately for each split in cross validation if existing
+If True, the total state of the node chain after the processing is stored to disk.
+This is done separately for each split and run.
+If *store_node_chain* is a tuple of length 2---lets say (i1,i2)---only the 
+subflow starting at the i1-th node and ending at the (i2-1)-th node is stored. 
+This may be useful when the stored flow should be used in an ensemble.
+If *store_node_chain* is a list with indices, all nodes in the chain with the
+corresponding indices are stored. This might be useful to exclude specific nodes
+that do not change the data dimension / type, like e.g. visualization nodes.
+
+.. note:: Since yaml cannot recognize tuples, string parameters are evaluated
+          before type testing (if boolean, tuple, list) is done.
 
 (*optional, default: False*)
 
@@ -242,7 +250,7 @@ import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.tools.filesystem import create_directory
-from pySPACE.tools.conversion import python2yaml
+from pySPACE.tools.conversion import extract_key_str, replace_parameters_and_convert
 from pySPACE.environments.chains.node_chain \
     import BenchmarkNodeChain, NodeChainFactory
 
@@ -266,8 +274,13 @@ class NodeChainOperation(Operation):
     """
     def __init__(self, processes, operation_spec, result_directory,
                  number_processes, create_process=None):
+        # temporary replacement of template keyword for better layout when
+        # source_operation.yaml file is saved to result folder
+        templates = operation_spec.pop("templates")
+        operation_spec["templates"] = [yaml.load(x) for x in templates]
         super(NodeChainOperation, self).__init__(processes, operation_spec,
                                                  result_directory)
+        self.operation_spec = templates
         self.create_process = create_process
         self.number_processes = number_processes
 
@@ -304,10 +317,12 @@ class NodeChainOperation(Operation):
         ## Use node_chain parameter if no templates are given ##
         if not operation_spec.has_key("templates"):
             if operation_spec.has_key("node_chain"):
-                operation_spec["templates"] = [operation_spec.pop("node_chain")]
+                operation_spec["templates"] = [
+                    extract_key_str(operation_spec["base_file"],
+                                    keyword="node_chain")]
+                operation_spec.pop("node_chain")
             else:
                 warnings.warn("Specify parameter 'templates' or 'node_chain' in your operation spec!")
-                operation_spec["templates"]=[operation_spec.pop("flow")]
         elif operation_spec.has_key("node_chain"):
             operation_spec.pop("node_chain")
             warnings.warn("node_chain parameter is ignored. Templates are used.")
@@ -317,15 +332,16 @@ class NodeChainOperation(Operation):
                 copy.deepcopy(operation_spec["templates"])
             for i in range(len(operation_spec["templates"])):
                 rel_node_chain_file = operation_spec["templates"][i]
-                abs_node_chain_file = open(os.sep.join([
+                abs_node_chain_file_name = os.sep.join([
                     pySPACE.configuration.spec_dir, "node_chains",
-                    rel_node_chain_file]), 'r')
-                node_chain = yaml.load(abs_node_chain_file)
-                abs_node_chain_file.close()
+                    rel_node_chain_file])
+                with open(abs_node_chain_file_name, "r") as read_file:
+                    node_chain = read_file.read()
+                    #node_chain = yaml.load(read_file)
                 operation_spec["templates"][i] = node_chain
 
         storage = pySPACE.configuration.storage
-        if not input_paths :
+        if not input_paths:
             raise Exception("No input datasets found in input_path %s in %s!"
                             % (operation_spec["input_path"],storage))
 
@@ -710,16 +726,15 @@ class NodeChainProcess(Process):
     This is an atomic task,which takes
     a dataset (EEG-data, time series data, feature vector data in different formats)
     as input and produces a certain
-    output (e.g. ARFF , pickle files, performance tabular).
+    output (e.g. ARFF, pickle files, performance tabular).
     The execution of
     this process consists of applying a  given NodeChain
     on an input for a certain configuration.
 
     **Parameters**
-        :node_chain_spec:   name of the file, lying in the spec file
-                                folder, specified in the configuration file.
+        :node_chain_spec:       String in YAML syntax of the node chain.
 
-        :parameter setting:     parameters chosen for this process
+        :parameter_setting:     parameters chosen for this process
         :rel_dataset_dir:       location of input file relative to the pySPACE
                                 *storage*, specified in the configuration file
         :run:                   When process is started repeatedly, to deal
@@ -772,9 +787,8 @@ class NodeChainProcess(Process):
 
         self.min_log_level = min(console_log_level,file_log_level)
         pySPACE.configuration.min_log_level = self.min_log_level
-
-        # Replace parameters iin spec file
-        self.node_chain_spec = NodeChainProcess.replace_parameters(
+        # Replace parameters in spec file
+        self.node_chain_spec = replace_parameters_and_convert(
             self.node_chain_spec, self.parameter_setting)
         # Create node chain
         self.node_chain = NodeChainFactory.flow_from_yaml(
@@ -871,56 +885,6 @@ class NodeChainProcess(Process):
 
         ############## Clean up after benchmarking ##############
         super(NodeChainProcess, self).post_benchmarking()
-
-
-
-    @classmethod
-    def replace_parameters(cls, node_chain_spec, parameter_setting):
-        """ Replace parameters of parameter_setting in node_chain_spec """
-        # we have not specified a template file but a complete
-        # node chain instead
-        if type(node_chain_spec) == list:
-            node_chain_spec = yaml.dump(node_chain_spec)
-        else:
-            warnings.warn("Wrong format of template (%s)."
-                          % str(node_chain_spec))
-        # Instantiate the template
-        for key, value in parameter_setting.iteritems():
-
-
-            # Parameters framed by "#" are considered to be escaped
-            if "#"+key+"#" in node_chain_spec:
-                node_chain_spec = node_chain_spec.replace("#"+key+"#", "##")
-            #chek for optimization and normal parameter rule
-            elif key.startswith("_") or key.startswith("~"):
-                # single parameter in dictionary, marked as string
-                # later on the string is read as yaml file and so
-                # has to use proper inverted commas
-                # node_chain_spec = node_chain_spec.replace("'%s'" % str(key),
-                #                                           str(value))
-                # parameter as component in eval syntax not marked as string
-                try:
-                    if type(value)==str:
-                        node_chain_spec = node_chain_spec.replace("%s" % str(key),
-                                                          value)
-                    else:
-                        node_chain_spec = node_chain_spec.replace("%s" % str(key),
-                                                          repr(value))
-
-                except:
-                    node_chain_spec = node_chain_spec.replace("%s" % str(key),
-                                                          python2yaml(value))
-            else:
-                # node_chain_spec = node_chain_spec.replace("'%s'" % str(key),
-                #                                           str(value))
-                node_chain_spec = node_chain_spec.replace("%s" % str(key),
-                                                          python2yaml(value))
-                warnings.warn("The parameter %s is no regular parameter." +
-                              "Better use one starting with '_' or '~'. " +
-                              "Replacing despite." % key)
-            if "##" in node_chain_spec:
-                node_chain_spec = node_chain_spec.replace("##", key)
-        return yaml.load(node_chain_spec)
 
     @staticmethod
     def _check_node_chain_dataset_consistency(node_chain, dataset):

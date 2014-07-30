@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """ Unittests which test filtering nodes
 
 :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
@@ -54,4 +56,3 @@ if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromName('test_reorder_memory')
     
     unittest.TextTestRunner(verbosity=2).run(suite)
-    

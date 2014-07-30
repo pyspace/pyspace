@@ -40,6 +40,29 @@ class TimeSeries(base.BaseData):
     For example using the list ``[[1,2,3],[4,5,6]]`` would result in three
     channels and two time points.
 
+    For accessing the array only without the meta information,
+    please use the command
+
+    .. code-block:: python
+
+        x = data.view(numpy.ndarray)
+
+    which hides this information.
+
+    TimeSeries objects are normally organized/collected in a
+    :class:`~pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset`.
+    This type of dataset can be also used to generate the objects,
+    e.g., from csv files.
+    For data access in a node chain, data is loaded with a node from the
+    :mod:`~pySPACE.missions.nodes.source.time_series_source` module
+    as first node
+    and saved with the
+    :class:`~pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode`
+    as the last node.
+    It is also possible to create time series data from
+    not segmented data streams as described in the
+    :class:`~pySPACE.resources.dataset_defs.stream.StreamDataset`.
+
     :Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)
     :Created: 2008/03/05
     :Completely Refactored: 2008/08/18
@@ -242,20 +265,18 @@ class TimeSeries(base.BaseData):
 
     def __eq__(self,other):
         """ Same channels (names) and values """
-        if not type(self)==type(other):
+        if not type(self) == type(other):
             return False
-        if not set(self.channel_names)==set(other.channel_names):
+        if not set(self.channel_names) == set(other.channel_names):
             return False
-        if not self.shape==other.shape:
+        if not self.shape == other.shape:
             return False
-        if self.channel_names==other.channel_names:
-            if (self.view(numpy.ndarray)-other.view(numpy.ndarray)).any():
-                return False
-            else:
-                return True
+        if self.channel_names == other.channel_names:
+            return numpy.allclose(self.view(numpy.ndarray), other.view(numpy.ndarray))
         else:
             # Comparison by hand
             for channel in self.channel_names:
-                if ((self[self.channel_names.index(channel)]-self[other.channel_names.index(channel)]).any()):
+                if not numpy.allclose((self[self.channel_names.index(channel)],
+                                       other[other.channel_names.index(channel)])):
                     return False
             return True

@@ -31,6 +31,15 @@ class SimpleLowPassFilterNode(BaseNode):
               with much more important features.
               Use the FIRFilterNode or IIRFilterNode.
 
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : SimpleLowPassFilterNode
+            parameters :
+                cutoff_frequency : 1.0
+
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Revisited: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2008/08/18
@@ -91,11 +100,14 @@ class SimpleLowPassFilterNode(BaseNode):
 
         return result_time_series
 
+
 class HighPassFilterNode(BaseNode):
    """ High-pass filtering with a FIR filter
 
    .. todo:: This nodes needs revision concerning computation time and
              correctness.
+
+   .. todo:: Check if cutoff frequency is higher than sampling frequency.
 
    **Parameters**
 
@@ -134,9 +146,9 @@ class HighPassFilterNode(BaseNode):
         -
             node : High_Pass_Filter
             parameters :
-                cutoff_frequency : 40.0
+                cutoff_frequency : 0.1
                 taps : 150
-                selected_channels : ['EMG1',EMG2']
+                selected_channels : ['C3','C4']
 
 
    :Author: Judith Suttrup
@@ -195,6 +207,7 @@ class HighPassFilterNode(BaseNode):
 
        return result_time_series
 
+
 class FFTBandPassFilterNode(BaseNode):
     """ Band-pass filtering using a Fourier transform
 
@@ -204,6 +217,15 @@ class FFTBandPassFilterNode(BaseNode):
     using an IFFT.
 
     .. note:: Deprecated. Use the FIRFilterNode or IIRFilterNode.
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : FFTBandPassFilter
+            parameters :
+                pass_band : [0.1, 1.0]
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Revisited: Hendrik Woehrle (hendrik.woehrle@dfki.de)
@@ -265,6 +287,11 @@ class FIRFilterNode(BaseNode):
     This node performs a finite impulse response filtering for a given
     *pass_band* by applying a time domain convolution with a FIR filter kernel.
 
+    .. todo:: Check if ``pass_band`` frequencies are higher than sampling frequency.
+
+    .. todo:: Check why generic unittest does not work with a
+              ``pass_band`` interval of [0, 0.4]
+
     **Parameters**
 
         :pass_band:
@@ -316,10 +343,10 @@ class FIRFilterNode(BaseNode):
         -
             node : FIRBandPassFilter
             parameters :
-                pass_band : [0,4]
+                pass_band : [0.4]
                 comp_type : "normal"
                 window : "hamming"
-                taps : 33
+                taps : 3
                 skip : 0
 
 
@@ -531,8 +558,15 @@ class FIRFilterNode(BaseNode):
         self.data_buffer = None
         self.internal_state = None
 
+
 class IIRFilterNode(BaseNode):
     """ Band-pass or low-pass filtering with a direct form IIR filter
+
+    .. todo:: Check if ``pass_band`` frequencies are higher than sampling frequency.
+
+    .. todo:: Check why generic unittest does not work with a
+              ``pass_band`` interval of [0, 0.4]
+
 
     **Parameters**
 
@@ -568,10 +602,10 @@ class IIRFilterNode(BaseNode):
         -
             node : IIRBandPassFilter
             parameters :
-                pass_band : [0,4]
+                pass_band : [0.4]
                 comp_type : "normal"
                 window : "hamming"
-                taps : 33
+                taps : 3
                 skip : 0
 
     :Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)
@@ -671,6 +705,7 @@ class IIRFilterNode(BaseNode):
 
         return result_time_series
 
+
 class VarianceFilterNode(BaseNode):
     """ Take the variance as filtered data or standardize with moving variance and mean
 
@@ -710,6 +745,8 @@ class VarianceFilterNode(BaseNode):
             the higher the value the smoother is the resulting signal.
             The value is given in ms.
 
+            .. todo:: Check if given value is too small.
+
             (*optional, default: 50*)
 
         :standardization:
@@ -727,7 +764,7 @@ class VarianceFilterNode(BaseNode):
            -
                node : VarianceFilter
                parameters :
-                   width : 250
+                   width : 2000
                    standardization : False
 
     :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)
@@ -942,7 +979,7 @@ class TkeoNode(BaseNode):
         -
             node : TKEO
             parameters :
-                selected_channels : ["EMG1","EMG2"]
+                selected_channels : ["C3", "C4"]
 
 
     :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)

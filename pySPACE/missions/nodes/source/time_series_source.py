@@ -30,12 +30,12 @@ class TimeSeriesSourceNode(BaseNode):
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2008/11/25
     """
-    
+    input_types = ["TimeSeries"]
+
     def __init__(self, **kwargs):
         super(TimeSeriesSourceNode, self).__init__(**kwargs)
         
-        self.set_permanent_attributes(input_types=["time_series"],
-                                      dataset=None)
+        self.set_permanent_attributes(dataset=None)
 
     def set_input_dataset(self, dataset):
         """ Sets the dataset from which this node reads the data """
@@ -207,7 +207,7 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     .. code-block:: yaml
 
         -
-            node: Stream2TimeSeriesSourceNode
+            node : Stream2TimeSeriesSourceNode
             parameters :
                 windower_spec_file : "example_lrp_window_spec.yaml"
 
@@ -216,6 +216,7 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     :LastChanges: Mario Michael Krell
 
     """
+    input_types = ["TimeSeries"]
 
     def __init__(self, windower_spec_file=None, local_window_conf=False,
                  nullmarker_stride_ms=None, no_overlap=False,
@@ -234,7 +235,6 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
             nullmarker_stride_ms = 1000
 
         self.set_permanent_attributes(
-            input_types=["stream"],
             window_definition=Windower._load_window_spec(
                 windower_spec_file, local_window_conf),
             nullmarker_stride_ms=nullmarker_stride_ms,
@@ -392,7 +392,6 @@ class TimeSeries2TimeSeriesSourceNode(Stream2TimeSeriesSourceNode):
     def __init__(self, **kwargs):
 
         super(TimeSeries2TimeSeriesSourceNode, self).__init__(**kwargs)
-        self.set_permanent_attributes(input_types=["time_series"])
 
     def get_source_file_name(self):
         """ Source file name is unknown or preprocessing specific

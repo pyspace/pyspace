@@ -18,7 +18,6 @@ from math import cos, pi, sqrt, exp
 import os
 import warnings
 import numpy
-import yaml
 from pySPACE.resources.dataset_defs.base import BaseDataset
 
 class metricdict(defaultdict):
@@ -144,6 +143,15 @@ class BinaryClassificationDataset(BaseDataset):
 
             .. math:: \\frac{TP*TN-FP*FN}{\\sqrt{((TP+FN)*(TP+FP)*(TN+FN)*(TN+FP))}}
 
+        :Cohen's kappa-Kappa:
+            Measures the agreement between classifier and true class
+            with a correction for guessing
+
+            .. math:: \\frac{TP+TN-\\left(
+                    \\frac{P(TP+FP)}{P+N}+\\frac{N(TN+FN)}{P+N}
+                \\right)}{P+N-\\left(
+                    \\frac{P(TP+FP)}{P+N}+\\frac{N(TN+FN)}{P+N}
+                \\right)}
 
     **K-metrics**
         These metrics expect classification values between zero and one.
@@ -396,11 +404,14 @@ class BinaryClassificationDataset(BaseDataset):
         metrics = metricdict(float) #{"TP":0,"FP":0,"TN":0,"FN":0}
         # loss values are collected for each class
         # there are numerous different losses
-        loss_dict=metricdict(lambda: numpy.zeros(2))
-        for prediction_vector,label in classification_results:
-            if sec_class is None and not label==ir_class:
+        loss_dict = metricdict(lambda: numpy.zeros(2))
+        for prediction_vector, label in classification_results:
+            if sec_class is None and not label == ir_class:
                 sec_class = label
-            if not label==ir_class and not label==sec_class:
+            # special treatment for one vs REST evaluation
+            if sec_class == "REST" and not label == ir_class:
+                label = "REST"
+            if not label == ir_class and not label == sec_class:
                 warnings.warn("Binary metrics " \
                         "require exactly two classes. At least " \
                         "three are used:" + str(ir_class) + \
@@ -819,18 +830,18 @@ class BinaryClassificationDataset(BaseDataset):
 
         .. note:: If the input is a metricdict the new calculated entries are added to it.
         """
-        TN = performance[pre+"True_negatives"]
-        TP = performance[pre+"True_positives"]
-        FP = performance[pre+"False_positives"]
-        FN = performance[pre+"False_negatives"]
+        TN = performance[pre+"True_negatives"] * 1.0
+        TP = performance[pre+"True_positives"] * 1.0
+        FP = performance[pre+"False_positives"] * 1.0
+        FN = performance[pre+"False_negatives"] * 1.0
         if not type(performance) == metricdict:
             old_p = performance
             performance = metricdict(float)
             performance.update(old_p)
         if P is None:
-            P = TP+FN
+            P = TP + FN
         if N is None:
-            N = TN+FP
+            N = TN + FP
 
         performance[pre+"Positives"] = P
         performance[pre+"Negatives"] = N
@@ -840,19 +851,19 @@ class BinaryClassificationDataset(BaseDataset):
             PPV = 0
         else:
             # sensitivity, recall
-            TPR = 1.0*TP/(P)#(TP+FN) = Num of positive examples
+            TPR = 1.0 * TP / P  #(TP+FN) = Num of positive examples
             # positive predictive value, precision
-            PPV = 1.0*TP/(TP+FP)
+            PPV = 1.0 * TP / (TP + FP)
         if TN == 0:
             TNR = 0
             NPV = 0
         else:
-            TNR = 1.0*TN/(N) # specificity #  Num of negative examples
-            NPV = 1.0*TN/(TN+FN) # negative predictive value
-        FPR = 1-TNR # 1.0*FP/(TN+FP) # 1-TNR
-        FNR = 1-TPR # 1.0*FN/(TP+FN) # 1-TPR
+            TNR = 1.0 * TN / N  # specificity #  Num of negative examples
+            NPV = 1.0 * TN / (TN + FN)  # negative predictive value
+        FPR = 1 - TNR  # 1.0*FP/(TN+FP) # 1-TNR
+        FNR = 1 - TPR  # 1.0*FN/(TP+FN) # 1-TPR
 
-        if P+N ==0:
+        if P+N == 0:
             accuracy = 0.0
             missclassification_rate = 1.0
             warnings.warn("No examples given for performance calculation!")
@@ -863,16 +874,22 @@ class BinaryClassificationDataset(BaseDataset):
         if (PPV+TPR) == 0:
             F_measure = 0
         else:
-            F_measure = 2.0*PPV*TPR/(PPV+TPR)
+            F_measure = 2.0 * PPV * TPR / (PPV + TPR)
         if (NPV+TNR) == 0:
             F_neg_measure = 0
         else:
-            F_neg_measure = 2.0*NPV*TNR/(NPV+TNR)
+            F_neg_measure = 2.0 * NPV * TNR / (NPV + TNR)
 
-        den = (TP+FN)*(TP+FP)*(TN+FN)*(TN+FP)
-        if den<=0:
-            den=1
-        MCC = (TP*TN-FP*FN)/numpy.sqrt(den)
+        den = (TP + FN) * (TP + FP) * (TN + FN) * (TN + FP)
+        if den <= 0:
+            den = 1
+        MCC = (TP * TN - FP * FN) / numpy.sqrt(den)
+
+        try:
+            guessing = (P * (TP + FP) + N * (TN + FN)) / (P + N)
+            kappa = (TP + TN - guessing)/(P + N - guessing)
+        except:
+            kappa = 0
 
         # weighted_F_measure = lambda x: (1+x**2)*PPV*TPR/(x**2*PPV+TPR)
         performance[pre+"True_positive_rate"] = TPR
@@ -885,20 +902,21 @@ class BinaryClassificationDataset(BaseDataset):
         performance[pre+"Non_IR_F_measure"] = F_neg_measure
         performance[pre+"Non_IR_precision"] = NPV
         performance[pre+"Percent_correct"] = accuracy*100
-        performance[pre+"Percent_incorrect"] = missclassification_rate*100
+        performance[pre+"Percent_incorrect"] = missclassification_rate * 100
         performance[pre+"Weighted_accuracy("+str(weight)+")"] = \
-                                          weight * TPR + (1-weight)*TNR
-        performance[pre+"ROC-measure"]=sqrt(0.5*(TPR**2+TNR**2))
-        performance[pre+"Balanced_accuracy"] = 0.5*(TNR + TPR)
-        performance[pre+"Gmean"]=sqrt(abs(TPR*TNR))
+            weight * TPR + (1 - weight) * TNR
+        performance[pre+"ROC-measure"] = sqrt(0.5 * (TPR**2 + TNR**2))
+        performance[pre+"Balanced_accuracy"] = 0.5 * (TNR + TPR)
+        performance[pre+"Gmean"] = sqrt(abs(TPR * TNR))
         performance[pre+"Matthews_correlation_coefficient"] = MCC
-        performance[pre+"Correct_classified"]=TP+TN
-        performance[pre+"Wrong_classified"]=FP+FN
+        performance[pre+"Correct_classified"] = TP + TN
+        performance[pre+"Wrong_classified"] = FP + FN
+        performance[pre+"Kappa"] = kappa
         return performance
 
     @staticmethod
     def calculate_AUC(classification_outcome, ir_class, save_roc_points,
-                            performance,inverse_ordering=False):
+                      performance,inverse_ordering=False):
         """ AUC and ROC points by an algorithm from Fawcett, "An introduction to ROC analysis", 2005
         Also possible would be to calculate the Mann-Whitney-U-Statistik
 
@@ -1147,23 +1165,24 @@ class MultinomialClassificationDataset(BinaryClassificationDataset):
         num_class_samples = defaultdict(float)
         num_class_predictions = defaultdict(float)
         num_samples = 0
-        n=len(classes)
+        n = len(classes)
 
-        if weight is None or weight==0.5:
+        if weight is None or weight == 0.5:
             weight = defaultdict(float)
             for label in classes:
                 weight[label]=1.0/n
 
-        cm=numpy.zeros((n,n))
-        for i,truth in enumerate(classes):
-            for j,prediction in enumerate(classes):
-                metric_str="T:"+truth+"_P:"+prediction
+        cm = numpy.zeros((n,n))
+        for i, truth in enumerate(classes):
+            for j, prediction in enumerate(classes):
+                metric_str = "T:" + truth + "_P:" + prediction
                 num_samples += performance[metric_str]
                 num_class_samples[truth] += performance[metric_str]
                 num_class_predictions[prediction] += performance[metric_str]
-                cm[i,j] = performance[metric_str]
+                cm[i, j] = performance[metric_str]
+        # setting number per default to one to void zero division errors
         for label in classes:
-            if num_class_samples[label]==0:
+            if num_class_samples[label] == 0:
                 num_class_samples[label] = 1
 
         b_a = 0.0
@@ -1174,29 +1193,32 @@ class MultinomialClassificationDataset(BinaryClassificationDataset):
         miF_den = 0.0 #micro F-Measure denominator
 
         for label in classes:
-            metric_str="T:"+label+"_P:"+label
-            if not performance[metric_str]==0:
+            metric_str = "T:" + label + "_P:" + label
+            if not performance[metric_str] == 0:
                 b_a += performance[metric_str]/(num_class_samples[label]*n)
-                w_a += performance[metric_str]/(num_class_samples[label])*weight[label]
+                w_a += performance[metric_str]/(num_class_samples[label])\
+                    * weight[label]
                 acc += performance[metric_str]/num_samples
-                maF += 2*performance[metric_str]/(n*(num_class_predictions[label]+num_class_samples[label]))
-                miF_nom += 2*performance[metric_str]
-            miF_den += num_class_predictions[label]+num_class_samples[label]
+                maF += \
+                    2 * performance[metric_str]/(n *
+                    (num_class_predictions[label] + num_class_samples[label]))
+                miF_nom += 2 * performance[metric_str]
+            miF_den += num_class_predictions[label] + num_class_samples[label]
         performance["Balanced_accuracy"] = b_a
         performance["Accuracy"] = acc
         performance["Weighted_accuracy"] = w_a
         performance["macro_average_F_measure"] = maF
         performance["micro_average_F_measure"] = miF_nom/miF_den
 
-        MC_nom = num_samples*numpy.trace(cm)
-        f1 = num_samples**2*1.0
+        MC_nom = num_samples * numpy.trace(cm)
+        f1 = num_samples**2 * 1.0
         f2 = f1
         for k in range(n):
             for l in range(n):
-                MC_nom -= numpy.dot(cm[k,:],cm[:,l])
-                f1     -= numpy.dot(cm[k,:],(cm.T)[:,l])
-                f2     -= numpy.dot((cm.T)[k,:],cm[:,l])
-        if f1<=0 or f2<=0:
+                MC_nom -= numpy.dot(cm[k, :], cm[:, l])
+                f1 -= numpy.dot(cm[k, :], (cm.T)[:, l])
+                f2 -= numpy.dot((cm.T)[k, :], cm[:, l])
+        if f1 <= 0 or f2 <= 0:
             MCC = 0
         else:
             MCC = MC_nom/(numpy.sqrt(f1)*numpy.sqrt(f1))

@@ -58,29 +58,30 @@ class SerialBackend(Backend):
         try:
             process = self.current_operation.processes.get()
         except KeyboardInterrupt:
-            self._log(traceback.format_exc(), level = logging.ERROR)
+            self._log(traceback.format_exc(), level=logging.CRITICAL)
             process = False
         # while there are Processes in the queue ...
-        while process != False:   
+        while not process is False:
             process.prepare(pySPACE.configuration, handler_class, handler_args)
             # Execute process, update progress bar and get next queue-element
             try:
                 process()
             # if an exception is raised somewhere in the code we maybe want to
             # further try other processes
-            except Exception: 
-                self._log(traceback.format_exc(), level = logging.ERROR)
+            except Exception:
+                self._log(traceback.format_exc(), level=logging.CRITICAL)
                 process.post_benchmarking()
+                process = False
             # if ctrl+c is pressed we want to immediately stop everything
             except KeyboardInterrupt:
-                self._log(traceback.format_exc(), level = logging.ERROR)
+                self._log(traceback.format_exc(), level=logging.CRITICAL)
                 process.post_benchmarking()
                 process = False
             else:    
                 self.current_process += 1
                 self.progress_bar.update(self.current_process)
                 process = self.current_operation.processes.get()
-            
+
     def check_status(self):
         """
         Returns a description of the current state of the operations
@@ -111,7 +112,6 @@ class SerialBackend(Backend):
         # Change the state to retrieved
         self.state = "retrieved"
     
-    
     def consolidate(self):
         """
         Consolidates the results of the single processes into a consistent result of the whole
@@ -122,7 +122,7 @@ class SerialBackend(Backend):
         try:
             self.current_operation.consolidate()
         except Exception:
-            self._log(traceback.format_exc(), level = logging.ERROR)
+            self._log(traceback.format_exc(), level=logging.CRITICAL)
         
         self._log("Operation - consolidated")
         self.state = "consolidated"

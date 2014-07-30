@@ -27,6 +27,7 @@ from pySPACE.resources.dataset_defs.metric import metricdict, \
 
 import logging
 
+
 class PerformanceSinkNode(BaseNode):
     """ Calculate performance measures from standard prediction vectors and store them
     
@@ -72,6 +73,14 @@ class PerformanceSinkNode(BaseNode):
             The class name (as string) for which IR statistics are to be output.
             
             (*recommended, default: 'Target'*)
+
+        :sec_class:
+            For binary classification the second class (not the *ir_class*)
+            can be specified. Normally it is detected by default and not
+            required, except for one_vs_REST scenarios,
+            where it can not be determined.
+
+            (*optional, default: None*)
 
         :save_individual_classifications:
             If True, for every processed split a pickle file will be generated
@@ -204,7 +213,9 @@ class PerformanceSinkNode(BaseNode):
     :Author: Mario Krell (mario.krell@dfki.de)
     :Created: 2012/08/02
     """
-    def __init__(self, classes_names=[], ir_class="Target",
+    input_types = ["PredictionVector"]
+
+    def __init__(self, classes_names=[], ir_class="Target", sec_class=None,
                  save_individual_classifications=False, save_roc_points=False,
                  weight=0.5, measure_times=True, calc_soft_metrics=False,
                  sum_up_splits=False, dataset_pattern=None, calc_AUC=True,
@@ -243,26 +254,27 @@ class PerformanceSinkNode(BaseNode):
             save_trace
 
         self.set_permanent_attributes(
-                ir_class=ir_class.strip(),
-                classification_dataset=cc,
-                classes_names=classes_names,
-                sec_class=None,  # determined later on for checks in binary classification
-                weight=weight,
-                save_individual_classifications=save_individual_classifications,
-                save_roc_points=save_roc_points,
-                measure_times=measure_times,
-                calc_soft_metrics=calc_soft_metrics,
-                example=None,
-                sum_up_splits=sum_up_splits,
-                calc_AUC=calc_AUC,
-                calc_loss=calc_loss,
-                decision_boundary=decision_boundary,
-                loss_restriction=loss_restriction,
-                calc_train=calc_train,
-                save_trace=save_trace,
-                store=store,
-                type=type,
-                invert_classification=False)
+            ir_class=ir_class.strip(),
+            classification_dataset=cc,
+            classes_names=classes_names,
+            # determined later on for checks in binary classification
+            sec_class=sec_class,
+            weight=weight,
+            save_individual_classifications=save_individual_classifications,
+            save_roc_points=save_roc_points,
+            measure_times=measure_times,
+            calc_soft_metrics=calc_soft_metrics,
+            example=None,
+            sum_up_splits=sum_up_splits,
+            calc_AUC=calc_AUC,
+            calc_loss=calc_loss,
+            decision_boundary=decision_boundary,
+            loss_restriction=loss_restriction,
+            calc_train=calc_train,
+            save_trace=save_trace,
+            store=store,
+            type=type,
+            invert_classification=False)
 
     def reset(self):
         """ classification_dataset has to be kept over all splits """
@@ -289,13 +301,9 @@ class PerformanceSinkNode(BaseNode):
         """ Return whether this node requires supervised training. """
         return True
 
-    def _execute(self, data):
-        # We simply pass the given data on to the next node
-        return data
-
     def _train(self, data, label):
-        # We simply pass the given data on to the next node
-        return data, label
+        # We do nothing
+        pass
 
     def process_current_split(self):
         """ Main processing part on test and training data of current split
@@ -317,7 +325,7 @@ class PerformanceSinkNode(BaseNode):
             start_time_stamp = timeit.default_timer()
         for classification_vector, label in \
                                    self.input_node.request_data_for_training(False):
-            if self.calc_train and not label=='REST':
+            if self.calc_train:
                 self.set_helper_parameters(classification_vector,label)
                 self.train_classification_outcome.append((classification_vector, label))
         if self.measure_times:
@@ -326,7 +334,7 @@ class PerformanceSinkNode(BaseNode):
 
 
 
-        if self.calc_train and self.type=="binary" \
+        if self.calc_train and self.type == "binary" \
                             and not self.train_classification_outcome==[]:
             if self.decision_boundary is None and self.train_classification_outcome[0][0].predictor.node_name in \
                     ["PlattsSigmoidFitNode",
@@ -381,9 +389,8 @@ class PerformanceSinkNode(BaseNode):
             if self.measure_times:
                 stop_time_stamp = timeit.default_timer()
                 self.time_periods.append(stop_time_stamp - start_time_stamp)
-            if not label=='REST':
-                self.set_helper_parameters(classification_vector,label)
-                self.classification_outcome.append((classification_vector, label))
+            self.set_helper_parameters(classification_vector,label)
+            self.classification_outcome.append((classification_vector, label))
             # re-initialization of time before next item is requested
             if self.measure_times:
                 start_time_stamp = timeit.default_timer()
@@ -591,6 +598,7 @@ class PerformanceSinkNode(BaseNode):
                     result_file = open(os.path.join(node_dir, name), "wb")
                     result_file.write(cPickle.dumps(self.long_trace, protocol=2))
                     result_file.close()
+
 
 class LeaveOneOutSinkNode(PerformanceSinkNode):
     """ Request the leave one out metrics from the input node 

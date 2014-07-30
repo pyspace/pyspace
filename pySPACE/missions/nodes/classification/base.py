@@ -141,10 +141,10 @@ class RegularizedClassifierBase(BaseNode):
             (*optional, default: 3600*)
 
         :keep_vectors:
-            After training the the training data is normally deleted,
+            After training the training data is normally deleted,
             except this variable is set to True.
             
-            (*optional, default: True*)
+            (*optional, default: False*)
             
         :use_list:
             Switch to store samples as *list*. If set to *False* they are stored
@@ -239,7 +239,7 @@ class RegularizedClassifierBase(BaseNode):
 
     def delete_training_data(self):
         """ Check if training data can be deleted to save memory """
-        if not self.keep_vectors and self.is_retrainable():
+        if not (self.keep_vectors or self.is_retrainable()):
             self.samples = []
             self.labels  = []
 

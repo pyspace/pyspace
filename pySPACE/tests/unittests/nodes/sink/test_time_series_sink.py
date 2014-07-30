@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 """
 This module contains unit tests that test storing and loading using the sink and source nodes
 
@@ -71,7 +73,6 @@ class TimeSeriesSinkTestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  
     suite = unittest.TestLoader().loadTestsFromName('test_sink_source')
     unittest.TextTestRunner(verbosity=2).run(suite)  
     

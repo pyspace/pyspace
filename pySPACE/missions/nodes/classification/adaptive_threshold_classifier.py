@@ -76,18 +76,18 @@ class AdaptiveThresholdPreprocessingNode(BaseNode):
     .. code-block:: yaml
     
         -
-        node : AdaptiveThreshold_Preprocessing
-        parameters :
-            width_adaptive_threshold : 2000
-            p_adaptive_threshold : 8
-            time_below_threshold : 1000
+            node : AdaptiveThreshold_Preprocessing
+            parameters :
+                width_adaptive_threshold : 2000
+                p_adaptive_threshold : 8
+                time_below_threshold : 1000
     
     :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)
     :Created: 2013/01/17
     :Last change: 2013/01/23 by Marc Tabie
     
     """
-    
+    input_types=["TimeSeries"]
     def __init__(self, width_adaptive_threshold = 2000, p_adaptive_threshold = 8, time_below_threshold = 1000,  **kwargs):
         super(AdaptiveThresholdPreprocessingNode, self).__init__(**kwargs)
         self.set_permanent_attributes(width_AT = width_adaptive_threshold,                  #Width of the adaptive threshold
@@ -203,7 +203,7 @@ class AdaptiveThresholdClassifierNode(BaseNode):
     .. code-block:: yaml
 
         -
-        node : AdaptiveThreshold_Classifier
+            node : AdaptiveThreshold_Classifier
 
     :Author: Marc Tabie (mtabie@informatik.uni-bremen.de)
     :Created: 2013/01/17

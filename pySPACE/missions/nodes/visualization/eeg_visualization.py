@@ -115,6 +115,8 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
                 by matplotlib. Change when support is improved. The key command
                 is fig.set_size_inches([a,b]) and the dpi property.
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self,
                  clip = False,
                  contourlines = False,

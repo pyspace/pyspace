@@ -702,7 +702,7 @@ class PerformanceResultSummary(BaseDataset):
         for parameter in parameters:
             try:
                 # Try to create a float of the first value of the parameter
-                float(self.data[parameter][0])
+                [float(paramter_value) for paramter_value in self.data[parameter]]
                 # No exception and enough entities thus a numeric attribute
                 if len(set(self.data[parameter]))>=5:
                     continue

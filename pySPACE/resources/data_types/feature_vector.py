@@ -1,28 +1,87 @@
-""" 1d array of feature values with some additional properties (e.g. feature names)
-
-This type is collected as
-:class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`,
-loaded with :mod:`~pySPACE.missions.nodes.source.feature_vector_source`
-and saved with :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink`.
-
-.. todo:: Implement a method _generate_tag for inherited data type (if desired)
-
-:Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)
-:Created: 2009/01/30
-"""
-
+""" Extend array of feature values with some additional properties """
 import numpy
 import warnings
 from pySPACE.resources.data_types import base
 
+
 class FeatureVector(base.BaseData):
-    """ Represent a feature vector.
-    
-    Refer to http://docs.scipy.org/doc/numpy/user/basics.subclassing.html
-    for information about subclassing ndarray
+    """ Represent a feature vector (including meta information)
+
+    This type is collected as
+    :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`.
+    This type of dataset can be also used to create sets from FeatureVectors,
+    e.g., from csv files.
+    For data access in a node chain, data is
+    loaded with the
+    :class:`~pySPACE.missions.nodes.source.feature_vector_source.FeatureVectorSourceNode`
+    as first node
+    and saved with a
+    :class:`~pySPACE.missions.nodes.sink.feature_vector_sink.FeatureVectorSinkNode`
+    as the last node.
+    For creating feature vectors from
+    :class:`~pySPACE.resources.data_types.time_series.TimeSeries`
+    objects in a processing chain, the nodes in the
+    :mod:`~pySPACE.missions.nodes.feature_generation` module can be used.
+
+    For historical reasons, the FeatureVector  object is a
+    2d array where the first axes is not actively used.
+
+    When creating a feature vector, the first mandatory argument with the data
+    (*input_array*) can be any object,
+    which can be cast to a two dimensional array,
+    including lists and one-dimensional arrays.
+
+    The second (recommended) argument are the *feature_names*.
+    This is a list of strings which becomes an additional property of
+    the feature vector class. For the MNIST dataset, feature names like
+    ``Pixel001`` are used.
+    For mappings between feature vectors and
+    :class:`~pySPACE.resources.data_types.time_series.TimeSeries` objects,
+    certain naming conventions should be met.
+    The name parts should be separated with an underscore.
+    The first part denotes an abbreviation of the feature type.
+    The second part denotes the sensor/channel, the data was taken from.
+    The third part is an information on the time part in seconds.
+    the feature was taken from.
+    An example of such a feature name is ``TD_C3_0.080sec``.
+
+    If no feature names are given, the default name is
+    ``feature_INDEX_0.000sec`` where INDEX is replaced by the respective index
+    of the feature in the data array.
+
+    .. note:: For memory issues, the feature_names are hashed and not stored
+              individually for every samples.
+
+    Additionally, a FeatureVector comes with the metadata from its
+    :class:`base type <pySPACE.resources.data_types.base.BaseData>`.
+
+    For accessing the array only without the meta information,
+    please use the command
+
+    .. code-block:: python
+
+        x = data.view(numpy.ndarray)
+
+    which hides this information.
+    This is especially necessary, if you do not want to forward certain
+    information. For example the feature names will not make any sense,
+    when accessing only a subpart of the array.
+
+    .. todo:: Implement a method _generate_tag for inherited data type (if desired)
+
+    .. todo:: Change 2d-concept to 1d-concept.
+              This includes modifying every node, which handles FeatureVector
+              data.
+
+    :Author: Jan Hendrik Metzen  (jhm@informatik.uni-bremen.de)
+    :Created: 2009/01/30
     """
     
     def __new__(subtype, input_array, feature_names=None, tag=None):
+        """ Create FeatureVector object
+
+        Refer to general class documentation.
+        """
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
         obj = base.BaseData.__new__(subtype, numpy.atleast_2d(input_array))
@@ -46,19 +105,21 @@ class FeatureVector(base.BaseData):
             obj.tag = tag
         # Finally, we must return the newly created object:
         return obj
-    
+
     def __array_finalize__(self, obj):
+        """ Inherit feature names from obj """
         # reset the attributes from passed original object
         super(FeatureVector, self).__array_finalize__(obj)
         
-        if not obj is None and not type(obj)==numpy.ndarray:
+        if not obj is None and not type(obj) == numpy.ndarray:
             self.feature_names_hash = getattr(obj, 'feature_names_hash', None)
         else:
             # TODO: Do we need this?
             self.feature_names_hash = None
         
     def __str__(self):
-        str_repr =  ""
+        """ Connect array values and feature names for good string representation """
+        str_repr = ""
         data=self.view(numpy.ndarray)
         for feature_name, feature_value in zip(self.feature_names,
                                                data[0,:]):
@@ -81,37 +142,49 @@ class FeatureVector(base.BaseData):
         return tuple(object_state)
     
     def __setstate__(self, state):
-        if len(state) == 2: # For compatibility with old FV implementation
+        if len(state) == 2:  # For compatibility with old FV implementation
             nd_state, own_state = state
             numpy.ndarray.__setstate__(self, nd_state)
-        else: #len == 3: new feature vector. TODO: catch weird cases?
+        else:  # len == 3: new feature vector. TODO: catch weird cases?
             nd_state, base_state, own_state = state
             super(FeatureVector, self).__setstate__((nd_state, base_state))
         
         self.feature_names = own_state
 
-    
-    # In order to reduce the memory footprint, we do not store the feature names 
-    # once per instance but only once per occurrence. Instead we store a unique 
+
+    # In order to reduce the memory footprint, we do not store the feature names
+    # once per instance but only once per occurrence. Instead we store a unique
     # hash once per instance that allows to retrieve the feature names.
     feature_names_dict = {}
+
     def get_feature_names(self):
+        """ Extract feature names from hash """
         return FeatureVector.feature_names_dict[self.feature_names_hash]
+
     def set_feature_names(self, feature_names):
+        """ Set feature names, using the hash and store hash if needed """
+        if type(feature_names) is not list:
+            warnings.warn("The feature names must be of type list. " +
+                          "The current input is of type " +
+                          str(type(feature_names)) +". Switching to list.")
+            feature_names = list(feature_names)
         self.feature_names_hash = hash(str(feature_names))
         if not FeatureVector.feature_names_dict.has_key(self.feature_names_hash):
             FeatureVector.feature_names_dict[self.feature_names_hash] \
                                                                 = feature_names
+
     def del_feature_names(self):
+        """ Nothing happens, when feature names are deleted """
         pass
+
     feature_names = property(get_feature_names, set_feature_names, 
                              del_feature_names, 
                              "Property feature_names of FeatureVector.")
     
     @staticmethod
     def replace_data(old, data, **kwargs):
-        """ Create new feature vector with the given data but the old metadata.
-        
+        """ Create new feature vector with the given data but the old metadata
+
         A factory method which creates a feature vector object with the given
         data and the metadata from the old feature vector
         """
@@ -123,7 +196,7 @@ class FeatureVector(base.BaseData):
         return data
 
     def __eq__(self,other):
-        """ Same features (names) and values """
+        """ Test for same type, dimensions, features names, and array values """
         if not type(self)==type(other):
             return False
         if not set(self.feature_names)==set(other.feature_names):
@@ -131,13 +204,11 @@ class FeatureVector(base.BaseData):
         if not self.shape==other.shape:
             return False
         if self.feature_names==other.feature_names:
-            if (self.view(numpy.ndarray)-other.view(numpy.ndarray)).any():
-                return False
-            else:
-                return True
+            return numpy.allclose(self.view(numpy.ndarray), other.view(numpy.ndarray))
         else:
             # Comparison by hand
             for feature in self.feature_names:
-                if not self[0][self.feature_names.index(feature)]==self[0][other.feature_names.index(feature)]:
+                if not numpy.allclose(self[0][self.feature_names.index(feature)],
+                                      other[0][other.feature_names.index(feature)]):
                     return False
             return True

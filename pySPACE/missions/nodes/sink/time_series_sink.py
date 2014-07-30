@@ -49,6 +49,8 @@ class TimeSeriesSinkNode(BaseNode):
     :Created: 2008/11/28    
     :LastChange: 2011/04/13 Anett Seeland (anett.seeland@dfki.de)        
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self, sort_string=None, merge = False, **kwargs):
         super(TimeSeriesSinkNode, self).__init__(**kwargs)
         
@@ -97,14 +99,10 @@ class TimeSeriesSinkNode(BaseNode):
     def is_supervised(self):
         """ Returns whether this node requires supervised training """
         return True
-
-    def _execute(self, data):
-        # We simply pass the given data on to the next node
-        return data
     
     def _train(self, data, label):
-        # We simply pass the given data on to the next node
-        return (data, label)
+        # We do nothing
+        pass
         
     def process_current_split(self):
         """ 
@@ -152,21 +150,24 @@ class TimeSeriesSinkNode(BaseNode):
         # Retriev the time series from the input_collection
         input_timeseries = input_collection.get_data(0,0,'test')
         # Get the data from the first timeseries
-        output_data = input_timeseries[0][0].get_data()
+        output_data = input_timeseries[0][0]
+        skiped_range = output_data.start_time
+
         # Change the endtime of the first timeseries to the one of the last
         # timeseries inside the input_collection
         input_timeseries[0][0].end_time = input_timeseries[-1][0].end_time
         # For all the remaining timeseries
+
         for ts in input_timeseries[1:]:
             # Concatenate the data...
-            output_data = numpy.vstack((output_data,ts[0].get_data()))
+            output_data = numpy.vstack((output_data,ts[0]))
             # ... and add the marker to the first timeseries
             if(len(ts[0].marker_name) > 0):
                 for k in ts[0].marker_name:
                     if(not input_timeseries[0][0].marker_name.has_key(k)):
                         input_timeseries[0][0].marker_name[k] = []
                     for time in ts[0].marker_name[k]:
-                        input_timeseries[0][0].marker_name[k].append(time+ts[0].start_time)
+                        input_timeseries[0][0].marker_name[k].append(time+ts[0].start_time - skiped_range)
         # Use the meta information from the first timeseries e.g. marker start/end_time
         # and create a new timeseries with the concatenated data
         merged_time_series = TimeSeries.replace_data(input_timeseries[0][0],output_data)

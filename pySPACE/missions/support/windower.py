@@ -1015,13 +1015,16 @@ class RingBuffer:
     def __len__(self):
         return len(self.data)
 
+
 class RingBufferFull(RingBuffer):
     """Generic ring buffer when full"""
     def __init__(self,n):
         raise "RingBufferFull can't be directly instantiated"
-    def append(self,x):		
+
+    def append(self,x):
         self.data[self.cur]=x
         self.cur=int((self.cur+1) % self.max)
+
     def get(self):
         return self.data[self.cur:]+self.data[:self.cur]
 

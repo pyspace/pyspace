@@ -34,6 +34,7 @@ from pySPACE.resources.dataset_defs.stream import StreamDataset
 #delete me after conversion to vis supernode
 from pySPACE.missions.nodes.base_node import BaseNode
 
+
 class TimeSeriesPlotNode(VisualizationBase):
     """A node that allows to monitor the processing of time series
     
@@ -74,21 +75,17 @@ class TimeSeriesPlotNode(VisualizationBase):
     
     .. code-block:: yaml
 
-        - 
-            node : Time_Series_Source
         -
              node : Time_Series_Plot
              parameters :
                   averaging : True
                   online : True
                   separate_channels: True
-        - 
-             node: Nil_Sink
-                    
+
     :Author: Sirko Straube (sirko.straube@dfki.de)
     :Date of Last Revision: 2012/12/21                            
     """
-    
+    input_types = ["TimeSeries"]
     def __init__(self, channel_names=None, separate_channels = False, class_difference=False, **kwargs):       
         
         super(TimeSeriesPlotNode, self).__init__(**kwargs)
@@ -363,20 +360,15 @@ class SpectrumPlotNode(VisualizationBase):
         
         (*optional, default: 0*)
         
-    **Exemplary Calls**
-    A simple exemplary flow could be:
+    **Exemplary Call**
     
     .. code-block:: yaml
 
-        - 
-            node : Time_Series_Source
         -
             node : Spectrum_Plot
-             parameters :
-                  averaging : True
-                  online : True
-        - 
-             node: Nil_Sink
+            parameters :
+                averaging : True
+                online : True
                     
     :Author: Sirko Straube (sirko.straube@dfki.de)
     :Date of Last Revision: 2013/01/18                            
@@ -560,7 +552,7 @@ class SpectrumPlotNode(VisualizationBase):
             pylab.colorbar()
         
         return (Pxx, freqs, bins)
-                 
+
 
 class ScatterPlotNode(BaseNode):
     """Creates a scatter plot of the given channels for the given point in time
@@ -568,13 +560,15 @@ class ScatterPlotNode(BaseNode):
     This node creates scatter_plot of the values of all vs. all specified 
     channels for the given point in time (plot_ms).
     
-    Parameters
-     * *plot_ms* : The point of time, for which the scatter plots are drawn. 
+    **Parameters**
+
+        :plot_ms:  The point of time, for which the scatter plots are drawn.
                    For instance, if plot_ms = 200, all the values of the 
                    selected channels are collected that were measured
                    200ms after the window start and the scatter plots for 
                    these values are drawn
-     * *channels* : If channels is  not None, only scatter plots for
+
+        :channels:  If channels is  not None, only scatter plots for
                     these specified channels are plotted. If channels is not
                     specified, scatter plots for the first 7 available 
                     channels are drawn. 
@@ -585,20 +579,30 @@ class ScatterPlotNode(BaseNode):
 
     .. image:: ../../graphics/scatter_plot.png
         :width: 1024
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -   node : ScatterPlot
+            parameters :
+                plot_ms : 1000
     """
     figure_number = 0
-    def __init__(self, plot_ms, channels = None, **kwargs):
+    input_types = ["TimeSeries"]
+
+    def __init__(self, plot_ms, channels=None, **kwargs):
         super(ScatterPlotNode, self).__init__(**kwargs)
         
         self.set_permanent_attributes(
-                  plot_ms = plot_ms,
-                  channels = channels,
-                  # An attribute that stores the number of channels
-                  number_of_channels = None, # Set lazily
-                  # A set of colors that can be used to distinguish different classes
-                  colors = set(["r", "b"]),
-                  # A mapping from class label to its color in the plot
-                  class_colors = dict())        
+            plot_ms=plot_ms,
+            channels=channels,
+            # An attribute that stores the number of channels
+            number_of_channels = None, # Set lazily
+            # A set of colors that can be used to distinguish different classes
+            colors=set(["r", "b"]),
+            # A mapping from class label to its color in the plot
+            class_colors=dict())
         
         self.figure_number = ScatterPlotNode.figure_number 
         ScatterPlotNode.figure_number += 1      
@@ -678,8 +682,8 @@ class ScatterPlotNode(BaseNode):
     def _execute(self, data):
         # We simply pass the given data on to the next node
         return data
-    
-   
+
+
 class HistogramPlotNode(BaseNode):
     """ Creates a histogram of the given channels for the given point in time   
    
@@ -687,36 +691,52 @@ class HistogramPlotNode(BaseNode):
     the given point in time (plot_ms). The value range is restricted to the 
     specified value_range, values outside of this range are not plotted.
     
-    Parameters:
-     * *plot_ms* : The point of time, for which the histograms are drawn. 
+    **Parameters**
+
+        :plot_ms:  The point of time, for which the histograms are drawn.
                    For instance, if plot_ms = 200, all the values of the 
                    selected channels are collected that were measured
                    200ms after the window start and the histograms for these
                    values are drawn
-     * *value_range* : A pair (tuple) that specifies the range of
+
+        :value_range:  A pair (tuple) that specifies the range of
                        values that are plotted in the histogram. Values
                        outside this range are not drawn.     
-     * *channels* : If channels is  not None, only histograms for
+
+        :channels:  If channels is  not None, only histograms for
                     these specified channels are plotted. If channels is not
                     specified, histograms for all available channels
                     are plotted.
-                    
+
     .. image:: ../../graphics/histogram.png
         :width: 1024
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : HistogramPlot
+            parameters :
+                plot_ms : 1000
+                value_range : [-10, 10]
+
     """
-    def __init__(self, plot_ms, value_range, channels = None, **kwargs):
+    input_types = ["TimeSeries"]
+
+    def __init__(self, plot_ms, value_range, channels=None, **kwargs):
         super(HistogramPlotNode, self).__init__(**kwargs)
                 
         self.set_permanent_attributes(
-                  plot_ms = plot_ms,
-                  value_range = value_range, 
-                  channels = channels,
-                  # An attribute that stores the number of channels
-                  number_of_channels = None, # Set lazily
-                  # A mapping from class  label to samples for this class
-                  class_samples = dict(),
-                  # A set of colors that can be used to distinguish different classes
-                  colors = set(["r", "b"]))
+            plot_ms=plot_ms,
+            value_range=value_range,
+            channels=channels,
+            # An attribute that stores the number of channels
+            number_of_channels=None, # Set lazily
+            # A mapping from class  label to samples for this class
+            class_samples=dict(),
+            # A set of colors that can be used to distinguish different classes
+            colors=set(["r", "b"]))
     
     def is_trainable(self):
         """ Returns whether this node is trainable. """
@@ -769,7 +789,7 @@ class HistogramPlotNode(BaseNode):
         for index, channel_name in enumerate(self.channels):
             channel_index = data.channel_names.index(channel_name)
             self.class_samples[label][index].append(plot_column[channel_index])
-                
+
     def _stop_training(self, debug=False):
         pylab.ioff()
         for class_label, class_samples in self.class_samples.iteritems():
@@ -796,6 +816,6 @@ class HistogramPlotNode(BaseNode):
 
 
 _NODE_MAPPING = {"Time_Series_Plot": TimeSeriesPlotNode,
-                "Spectrum_Plot": SpectrumPlotNode,
-                "Scatter_Plot": ScatterPlotNode,
-                "Histogram_Plot": HistogramPlotNode}
+                 "Spectrum_Plot": SpectrumPlotNode,
+                 "Scatter_Plot": ScatterPlotNode,
+                 "Histogram_Plot": HistogramPlotNode}

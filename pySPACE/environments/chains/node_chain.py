@@ -65,6 +65,7 @@ MDP is distributed under the following BSD license::
 """
 import sys
 import os
+
 if __name__ == '__main__':
     # add root of the code to system path
     file_path = os.path.dirname(os.path.abspath(__file__))
@@ -84,7 +85,8 @@ import yaml
 import pySPACE
 from pySPACE.tools.filesystem import create_directory
 from pySPACE.tools.socket_utils import talk, inform
-from pySPACE.tools.conversion import python2yaml
+from pySPACE.tools.conversion import python2yaml, replace_parameters_and_convert, replace_parameters
+import copy
 
 import warnings
 import traceback
@@ -367,7 +369,7 @@ class NodeChain(object):
         remove_keys=[]
         k = 0
         for key, value in odict.iteritems():
-            if key == "input_node":
+            if key == "input_node" or key == "flow":
                 continue
             try:
                 cPickle.dumps(value)
@@ -379,10 +381,6 @@ class NodeChain(object):
             odict.pop(key)
 
         self.__dict__ = odict
-
-
-        cPickle.dumps(self, protocol)
-
         if filename is None:
             return cPickle.dumps(self, protocol)
         else:
@@ -395,7 +393,6 @@ class NodeChain(object):
             flh = open(filename , mode)
             cPickle.dump(self, flh, protocol)
             flh.close()
-
 
 #################
 # MDP Code copy #
@@ -918,6 +915,8 @@ class BenchmarkNodeChain(NodeChain):
 
     def store_node_chain(self, result_dir, store_node_chain):
         """ Pickle this flow into *result_dir* for later usage"""
+        if isinstance(store_node_chain,basestring):
+            store_node_chain = eval(store_node_chain)
         if isinstance(store_node_chain,tuple):
             assert(len(store_node_chain) == 2)
             # Keep only subflow starting at the i1-th node and ending at the
@@ -937,7 +936,6 @@ class BenchmarkNodeChain(NodeChain):
         input_node = flow[0].input_node
         flow[0].input_node = None
         flow.save(result_dir)
-        flow[0].input_node = input_node
 
     def prepare_logging(self):
         """ Set up logging
@@ -1054,11 +1052,11 @@ class NodeChainFactory(object):
         """
         instance = {}
         for key, value in template.iteritems():
-            if value in parametrization.keys(): # Replacement
+            if value in parametrization.keys():  # Replacement
                 instance[key] = parametrization[value]
-            elif isinstance(value, dict): # Recursive call
+            elif isinstance(value, dict):  # Recursive call
                 instance[key] = NodeChainFactory.instantiate(value, parametrization)
-            elif isinstance(value, basestring): # String replacement
+            elif isinstance(value, basestring):  # String replacement
                 for param_key, param_value in parametrization.iteritems():
                     try:
                         value = value.replace(param_key, repr(param_value))
@@ -1069,7 +1067,7 @@ class NodeChainFactory(object):
                 # Iterate over all items in sequence
                 instance[key] = []
                 for iter_item in value:
-                    if iter_item in parametrization.keys(): # Replacement
+                    if iter_item in parametrization.keys():  # Replacement
                         instance[key].append(parametrization[iter_item])
                     elif isinstance(iter_item, dict):
                         instance[key].append(NodeChainFactory.instantiate(
@@ -1089,6 +1087,19 @@ class NodeChainFactory(object):
                 instance[key] = value
         return instance
 
+    @staticmethod
+    def replace_parameters_in_node_chain(node_chain_template, parametrization):
+        node_chain_template = copy.copy(node_chain_template)
+        if parametrization == {}:
+            return node_chain_template
+        elif type(node_chain_template) == list:
+            return [NodeChainFactory.instantiate(
+                template=node,parametrization=parametrization)
+                for node in node_chain_template]
+        elif isinstance(node_chain_template, basestring):
+            node_chain_template = \
+                replace_parameters(node_chain_template, parametrization)
+        return node_chain_template
 
 class SubflowHandler(object):
     """ Interface for nodes to generate and execute subflows (subnode-chains)
@@ -1169,8 +1180,7 @@ class SubflowHandler(object):
             self.modality = 'serial'
 
     @staticmethod
-    def generate_subflow(flow_template, parametrization=None,
-                                                  flow_class=None):
+    def generate_subflow(flow_template, parametrization=None, flow_class=None):
         """ Return a *flow_class* object of the given *flow_template*
 
         This methods wraps two function calls (NodeChainFactory.instantiate and
@@ -1179,7 +1189,9 @@ class SubflowHandler(object):
         **Parameters**
 
             :flow_template:
-                List of dicts - a valid representation of a node chain
+                List of dicts - a valid representation of a node chain.
+                Alternatively, a YAML-String representation could be used,
+                which simplifies parameter replacement.
 
             :parametrization:
                 A dictionary with parameter names as keys and exact one value for
@@ -1195,12 +1207,8 @@ class SubflowHandler(object):
         """
         if flow_class is None:
             flow_class = BenchmarkNodeChain
-        # check whether params are given
-        if parametrization != None:
-            flow_spec = [NodeChainFactory.instantiate(node_templ, parametrization) \
-                                                for node_templ in flow_template]
-        else:
-            flow_spec = flow_template
+        flow_spec = NodeChainFactory.replace_parameters_in_node_chain(
+            flow_template,parametrization)
         # create a new Benchmark flow
         flow = NodeChainFactory.flow_from_yaml(flow_class, flow_spec)
 

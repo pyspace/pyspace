@@ -2,7 +2,7 @@
 
 import numpy
 import warnings
-
+import logging
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
@@ -52,6 +52,8 @@ class TimeDomainFeaturesNode(BaseNode):
     def _execute(self, x):
         """ Extract the TD features from the given data x """
         y = x.view(numpy.ndarray)
+        if self.datapoints == "None":
+            self.datapoints = None
         if self.datapoints is None or self.datapoints == 0:
             self.datapoints = range(y.shape[0])
         # Mapping from data point index to relative time to onset
@@ -146,6 +148,8 @@ class CustomChannelWiseFeatureNode(TimeDomainFeaturesNode):
     def _execute(self, x):
         """ Extract the TD features from the given data x """
         y=x.view(numpy.ndarray)
+        if self.datapoints == "None":
+            self.datapoints = None
         if self.datapoints == None or self.datapoints == 0:
             self.datapoints = range(y.shape[0])
         # We project onto the data points that should be used as features
@@ -246,6 +250,8 @@ class TimeDomainDifferenceFeatureNode(BaseNode):
         Extract the TD features from the given data x
         """
         #TODO: Shorten maybe this code
+        if self.datapoints == "None":
+            self.datapoints = None
         if self.datapoints == None:
             self.datapoints = range(x.shape[0]) 
         y=x.view(numpy.ndarray)
@@ -331,7 +337,7 @@ class SimpleDifferentiationFeatureNode(BaseNode):
             node : Derivative_Features
             parameters :
                 datapoints : None
-                moving_window_length = 1
+                moving_window_length : 1
     
     :Author: Mario Krell (Mario.Krell@dfki.de)
     """
@@ -351,6 +357,8 @@ class SimpleDifferentiationFeatureNode(BaseNode):
         """
         Extract the TD features from the given data x
         """
+        if self.datapoints == "None":
+            self.datapoints = None
         if self.datapoints == None:
             self.datapoints = range(x.shape[0])
         y=x.view(numpy.ndarray)
@@ -446,14 +454,18 @@ class LocalStraightLineFeatureNode(BaseNode):
         -
             node : Local_Straightline_Features
             parameters :
-                  segment_width : 400
-                  stepsize : 200
+                  segment_width : 1000
+                  stepsize : 1000
     
+    .. todo::
+        Check if segment width and stepsize make sense in relation to data.
+        Program should not crash for bad choice (e.g., 400 and 200 on default data)?
+
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2011/01/04
     :Refactored: 2012/01/18
     """
-    
+    input_types=["TimeSeries"]
     def __init__(self, segment_width, stepsize, coefficients_used=[0, 1],
                  *args, **kwargs):
         super(LocalStraightLineFeatureNode, self).__init__(*args, **kwargs)
@@ -478,7 +490,11 @@ class LocalStraightLineFeatureNode(BaseNode):
         
         stepsize = self.stepsize / 1000.0 * data.sampling_frequency
         stepsize = int(round(stepsize))
-        
+        if stepsize <= 0:
+            stepsize = 1000
+            self._log("Too small stepsize used! Changed to 1000.",
+                level=logging.ERROR)
+
         sample_width = int(1000 / data.sampling_frequency)
         
         # The subwindows of the time series to which a straight line is fitted
@@ -502,12 +518,12 @@ class LocalStraightLineFeatureNode(BaseNode):
                 #coefficients_used is inverted (see __init__)
                 #feature name consists of start and end time
                 if 0 in self.coefficients_used:
-                    feature_names.append("LSFSlope_%s_%.3fsec_%.3fsec" \
+                    feature_names.append("LSFOffset_%s_%.3fsec_%.3fsec" \
                                             % (channel_name, 
                                                float(start * sample_width)/1000.0,
                                                float(end * sample_width)/1000.0))
                 if 1 in self.coefficients_used:
-                    feature_names.append("LSFOffset_%s_%.3fsec_%.3fsec" \
+                    feature_names.append("LSFSlope_%s_%.3fsec_%.3fsec" \
                                             % (channel_name, 
                                                float(start * sample_width)/1000.0,
                                                float(end * sample_width)/1000.0))
@@ -519,7 +535,7 @@ class LocalStraightLineFeatureNode(BaseNode):
         
         # Compute the local straight line features
         coeffs = numpy.polyfit(range(windows.shape[0]), windows, 1)
-        coeffs =  coeffs[self.coefficients_used].flatten('F') 
+        coeffs =  coeffs[self.coefficients_used].flatten('F')
 
         feature_vector = \
             FeatureVector(numpy.atleast_2d(coeffs).astype(numpy.float64),

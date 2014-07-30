@@ -33,6 +33,7 @@ class ExchangeDataNode(BaseNode):
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2012/04/20
     """
+    input_types=["TimeSeries"]
     def __init__(self,
                  generator_expression = "Adder([One(),Multiplier([Constant(200),Channel(data.shape[1],data.shape[0])]),TimePoint(data.shape[1],data.shape[0])])",
                  **kwargs):

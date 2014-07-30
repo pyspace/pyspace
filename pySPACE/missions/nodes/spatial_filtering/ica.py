@@ -116,6 +116,7 @@ class ICAWrapperNode(SpatialFilteringNode): #, FastICANodeWrapper):
             self.channel_names = data.channel_names
         if self.wrapped_node is None:
             self.wrapped_node = FastICANode()
+        data = 1.0 * data
         self.wrapped_node.train(data)
        
 

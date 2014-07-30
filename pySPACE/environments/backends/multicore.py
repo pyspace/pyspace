@@ -31,12 +31,12 @@ class MulticoreBackend(Backend):
     :LastChange: 2012/09/24
     
     """
-    def __init__(self, pool_size = None):
+    def __init__(self, pool_size=None):
         super(MulticoreBackend, self).__init__()
         
         # Set the number of processes in the pool
         # per default to the number of CPUs
-        if pool_size == None:
+        if pool_size is None:
             pool_size = MulticoreBackend.detect_CPUs()
             
         self.pool_size = pool_size
@@ -91,7 +91,7 @@ class MulticoreBackend(Backend):
             process = False
         # Until not all Processes have been created prepare all processes
         # from the queue for remote execution and execute them
-        while process != False:
+        while not process is False:
             process.prepare(pySPACE.configuration, handler_class, handler_args,
                             backend_com)
             # since preparing the process might be quite faster than executing

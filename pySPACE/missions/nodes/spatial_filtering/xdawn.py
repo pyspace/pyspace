@@ -3,6 +3,7 @@
 import os
 import cPickle
 from copy import deepcopy, copy
+import warnings
 
 import numpy
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
@@ -18,7 +19,8 @@ except:
     pass
 
 from pySPACE.missions.nodes.base_node import BaseNode
-from pySPACE.missions.nodes.spatial_filtering.spatial_filtering import SpatialFilteringNode
+from pySPACE.missions.nodes.spatial_filtering.spatial_filtering \
+    import SpatialFilteringNode
 
 from pySPACE.resources.data_types.time_series import TimeSeries
 from pySPACE.resources.dataset_defs.stream import StreamDataset
@@ -108,42 +110,44 @@ class XDAWNNode(SpatialFilteringNode):
     def __init__(self, erp_class_label=None, retained_channels=None, 
                  load_filter_path=None, visualize_pattern=False,  **kwargs):
         # Must be set before constructor of superclass is called
-        self.trainable = (load_filter_path == None)
+        self.trainable = (load_filter_path is None)
 
-        super(XDAWNNode, self).__init__(retained_channels=retained_channels,**kwargs)
+        super(XDAWNNode, self).__init__(retained_channels=retained_channels,
+                                        **kwargs)
         
         if erp_class_label is None:
             erp_class_label = "Target"
-            self._log("No ERP class label given. Using default: 'Target'.", level=logging.CRITICAL)
+            self._log("No ERP class label given. Using default: 'Target'.",
+                      level=logging.CRITICAL)
         filters = None
         # Load patterns from file if requested
-        if load_filter_path != None:
+        if not load_filter_path is None:
             filters_file = open(load_filter_path, 'r')
             filters = cPickle.load(filters_file)
             filters_file.close()
         
         self.set_permanent_attributes(
             # Label of the class for which an ERP should be evoked.
-            erp_class_label = erp_class_label,
+            erp_class_label=erp_class_label,
             # The channel names
-            channel_names = None,
+            channel_names=None,
             # Matrices for storing data and stimuli  
-            X = None,
-            D = None,
-            SNR = None,
+            X=None,
+            D=None,
+            SNR=None,
             # The number of channels that will be retained
-            retained_channels = retained_channels,
+            retained_channels=retained_channels,
             # whether this node is trainable
-            trainable = self.trainable,
+            trainable=self.trainable,
             # After training is finished, this attribute will contain
             # the spatial filters that are used to project
             # the data onto a lower dimensional subspace
-            filters = filters,
+            filters=filters,
             # Determines whether the filters are stored after training
-            visualize_pattern = visualize_pattern,
-            xDAWN_channel_names = None)
+            visualize_pattern=visualize_pattern,
+            xDAWN_channel_names=None)
         if self.visualize_pattern:
-            self.set_permanent_attributes(store = True)
+            self.set_permanent_attributes(store=True)
     
     def is_trainable(self):
         """ Returns whether this node is trainable. """
@@ -156,16 +160,16 @@ class XDAWNNode(SpatialFilteringNode):
     def _train(self, data, label):
         """ Train node on given example *data* for class *label*. """
         # If this is the first data sample we obtain
-        if self.channel_names == None:
+        if self.channel_names is None:
             self.channel_names = data.channel_names
             if self.retained_channels in [None, 'None']:
                 self.retained_channels = len(self.channel_names)
                 
-        if len(self.channel_names)<self.retained_channels:
+        if len(self.channel_names) < self.retained_channels:
             self.retained_channels = len(self.channel_names)
             self._log("To many channels chosen for the retained channels! "
                       "Replaced by maximum number.", level=logging.CRITICAL)
-                        
+
         # Iteratively construct Toeplitz matrix D and data matrix X
         if label == self.erp_class_label:
             D = numpy.diag(numpy.ones(data.shape[0]))
@@ -180,14 +184,17 @@ class XDAWNNode(SpatialFilteringNode):
             self.D = numpy.vstack((self.D, D))
     
     def _stop_training(self, debug=False):
-        if map(int, __import__("scipy").__version__.split('.')) >= [0,9,0]:
+        # The following if statement is needed only to account for
+        # different versions of scipy
+        if map(int, __import__("scipy").__version__.split('.')) >= [0, 9, 0]:
             # NOTE: mode='economy'required since otherwise the memory consumption is excessive
             # QR decompositions of X
             Qx, Rx = qr(self.X, overwrite_a=True, mode='economic')
             # QR decompositions of D
             Qd, Rd = qr(self.D, overwrite_a=True, mode='economic')
         else:
-            # NOTE: econ=True required since otherwise the memory consumption is excessive
+            # NOTE: econ=True required since otherwise
+            #       the memory consumption is excessive
             # QR decompositions of X
             Qx, Rx = qr(self.X, overwrite_a=True, econ=True)
             # QR decompositions of D
@@ -210,13 +217,15 @@ class XDAWNNode(SpatialFilteringNode):
             ui = numpy.dot(numpy.linalg.inv(Rx), self.Psi[:,i])
             wi = numpy.dot(Rx.T, self.Psi[:,i]) 
             if i < self.Phi.shape[1]:
-                ai = numpy.dot(numpy.dot(numpy.linalg.inv(Rd), self.Phi[:,i]), self.Lambda[i])
+                ai = numpy.dot(numpy.dot(numpy.linalg.inv(Rd), self.Phi[:,i]),
+                               self.Lambda[i])
             if i == 0:
                 self.filters = numpy.atleast_2d(ui).T
                 self.wi = numpy.atleast_2d(wi)
                 self.ai = numpy.atleast_2d(ai)
             else:
-                self.filters = numpy.hstack((self.filters, numpy.atleast_2d(ui).T))
+                self.filters = numpy.hstack((self.filters,
+                                             numpy.atleast_2d(ui).T))
                 self.wi = numpy.vstack((self.wi, numpy.atleast_2d(wi)))
                 if i < self.Phi.shape[1]:
                     self.ai = numpy.vstack((self.ai, numpy.atleast_2d(ai)))
@@ -228,6 +237,8 @@ class XDAWNNode(SpatialFilteringNode):
             SNR[i] = numpy.dot(a.T, a)/numpy.dot(b.T, b)
 
         self.SNR = SNR
+        self.D = None
+        self.X = None
 
     def _execute(self, data):
         """ Apply the learned spatial filters to the given data point """
@@ -243,11 +254,12 @@ class XDAWNNode(SpatialFilteringNode):
                       "Replaced by maximum number.", level=logging.CRITICAL)
         data_array=data.view(numpy.ndarray)
         # Project the data using the learned spatial filters
-        projected_data = numpy.dot(data_array, self.filters[:, :self.retained_channels])
+        projected_data = numpy.dot(data_array,
+                                   self.filters[:, :self.retained_channels])
         
         if self.xDAWN_channel_names is None:
             self.xDAWN_channel_names = ["xDAWN%03d" % i 
-                                    for i in range(self.retained_channels)]
+                                        for i in range(self.retained_channels)]
         
         return TimeSeries(projected_data, self.xDAWN_channel_names,
                           data.sampling_frequency, data.start_time,
@@ -262,28 +274,33 @@ class XDAWNNode(SpatialFilteringNode):
                 # This node only stores the learned spatial filters
                 name = "%s_sp%s.pickle" % ("patterns", self.current_split)
                 result_file = open(os.path.join(node_dir, name), "wb")
-                result_file.write(cPickle.dumps((self.filters, self.wi, self.ai),
-                                                protocol=2))
+                result_file.write(cPickle.dumps((self.filters, self.wi,
+                                                 self.ai), protocol=2))
                 result_file.close()
                 
-                # Stores the signal to signal plus noise ratio resulted  by the spatial filter
-                fname = "SNR_sp%s.csv" % ( self.current_split)
-                numpy.savetxt(os.path.join(node_dir, fname), self.SNR, delimiter=',', fmt='%2.5e')
+                # Stores the signal to signal plus noise ratio resulted
+                # by the spatial filter
+                #fname = "SNR_sp%s.csv" % ( self.current_split)
+                #numpy.savetxt(os.path.join(node_dir, fname), self.SNR,
+                #    delimiter=',', fmt='%2.5e')
                 
                 # Store spatial filter plots if desired
                 if self.visualize_pattern:
-                    from pySPACE.missions.nodes.spatial_filtering.csp import CSPNode
-                    # Compute, accumulate and analyze signal components estimated
-                    # by xDAWN
+                    from pySPACE.missions.nodes.spatial_filtering.csp \
+                        import CSPNode
+                    # Compute, accumulate and analyze signal components
+                    # estimated by xDAWN
                     vmin = numpy.inf
                     vmax = -numpy.inf
     
                     signal_components = []
                     lambda_sum = sum(self.Lambda)
-                    complete_signal = numpy.zeros((self.wi.shape[1], self.ai.shape[1]))
-                    for filter_index in range(self.retained_channels): #self.ai.shape[0]):
+                    complete_signal = numpy.zeros((self.wi.shape[1],
+                                                   self.ai.shape[1]))
+                    for filter_index in range(self.retained_channels):
+                        #self.ai.shape[0]):
                         signal_component = numpy.outer(self.wi[filter_index, :], 
-                                                      self.ai[filter_index, :])
+                                                       self.ai[filter_index, :])
                         vmin = min(signal_component.min(), vmin)
                         vmax = max(signal_component.max(), vmax)
                         
@@ -307,29 +324,27 @@ class XDAWNNode(SpatialFilteringNode):
                                                      'Spatial filter')
                         # Plot signal component in electrode coordinate system 
                         self._plotTimeSeriesInEC(signal_component, vmin=vmin, 
-                                                 vmax=vmax, bb=(0.2, 1.0, 0.0, 1.0))
+                                                 vmax=vmax,
+                                                 bb=(0.2, 1.0, 0.0, 1.0))
                         
                         pylab.savefig("%s%ssignal_component%02d.png" 
-                                                    % (node_dir, os.sep, index))
+                                      % (node_dir, os.sep, index))
     
-                    CSPNode._store_spatial_filter_plots(self.filters[:,:self.retained_channels],
-                                                        self.channel_names,
-                                                        node_dir)
+                    CSPNode._store_spatial_filter_plots(
+                        self.filters[:, :self.retained_channels],
+                        self.channel_names, node_dir)
                     # Plot entire signal
-                    pylab.figure(0, figsize=(15,8))
+                    pylab.figure(0, figsize=(15, 8))
                     pylab.gcf().clear()
-                    self._plotTimeSeriesInEC(complete_signal,
-                                             file_name="%s%ssignal_complete.png" % (node_dir, os.sep))
+                    self._plotTimeSeriesInEC(
+                        complete_signal,
+                        file_name="%s%ssignal_complete.png" % (node_dir, os.sep))
                     pylab.savefig("%s%ssignal_complete.png" % (node_dir, os.sep))
 
             except Exception as e:
                 print e
                 raise
-        super(XDAWNNode,self).store_state(result_dir)
- 
-
-
-
+        super(XDAWNNode, self).store_state(result_dir)
 
     def _plotTimeSeriesInEC(self, values, vmin=None, vmax=None, 
                             bb=(0.0, 1.0, 0.0, 1.0), file_name=None):
@@ -349,17 +364,18 @@ class XDAWNNode(SpatialFilteringNode):
         y = numpy.array([ec_2d[key][1] for key in self.channel_names])
         
         # Determine min and max values
-        if vmin == None:
+        if vmin is None:
             vmin = values.min()
-        if vmax == None:
+        if vmax is None:
             vmax = values.max()
         
         width = (bb[1] - bb[0])
         height = (bb[3] - bb[2])
         for channel_index, channel_name in enumerate(self.channel_names):
-            ax = pylab.axes([x[channel_index]/(1.2*(x.max() - x.min()))*width + bb[0] + width/2 - 0.025,
-                            y[channel_index]/(1.2*(y.max() - y.min()))*height + bb[2] + height/2 - 0.0375,
-                            0.05, 0.075])
+            ax = pylab.axes([x[channel_index]/(1.2*(x.max() - x.min()))*width +
+                            bb[0] + width/2 - 0.025,
+                            y[channel_index]/(1.2*(y.max() - y.min()))*height +
+                            bb[2] + height/2 - 0.0375, 0.05, 0.075])
             ax.plot(values[channel_index, :], color='k', lw=1)
             ax.set_xticks([])
             ax.set_yticks([])
@@ -372,8 +388,8 @@ class SparseXDAWNNode(XDAWNNode):
     """ Sparse xDAWN spatial filter for enhancing event-related potentials.
     
     xDAWN tries to construct spatial filters such that the 
-    signal-to-signal plus noise ratio (SSNR) is maximized. This spatial filter is 
-    particularly suited for paradigms where classification is based on 
+    signal-to-signal plus noise ratio (SSNR) is maximized. This spatial filter
+    is particularly suited for paradigms where classification is based on
     event-related potentials. In contrast to the standard xDAWN algorithm,
     this node tries to minimize the electrodes that have non-zero weights in
     the spatial filters while at the same time trying to maximize the 
@@ -408,10 +424,10 @@ class SparseXDAWNNode(XDAWNNode):
     
         -
             node : Sparse_xDAWN
-            parameters:
+            parameters :
                 lambda_ : 0.1
                 erp_class_label : "Target"
-                num_selected_electrodes : 8
+                num_selected_electrodes : 2
                 store : True
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
@@ -453,9 +469,8 @@ class SparseXDAWNNode(XDAWNNode):
         
         # Compute the non-pruned weights
         v_1 = self._gradient_optimization(
-                    objective_function=lambda v_1: objective_function(v_1, self.lambda_),
-                    Sigma_1=Sigma_1, Sigma_X=Sigma_X, max_evals=25000)
-        
+            objective_function=lambda v_1: objective_function(v_1, self.lambda_),
+            Sigma_1=Sigma_1, Sigma_X=Sigma_X, max_evals=25000)
         # Prune weight vector such that only self.num_selected_electrodes keep 
         # entries != 0 (those with the largest weight)
         threshold = sorted(numpy.absolute(v_1))[-self.num_selected_electrodes]
@@ -464,7 +479,8 @@ class SparseXDAWNNode(XDAWNNode):
 
         # Determine indices and names of electrodes with non-zero weights
         self.selected_indices = list(numpy.where(numpy.absolute(v_1) > 0)[0])
-        self.selected_channels = [self.channel_names[index] for index in self.selected_indices]
+        self.selected_channels = [self.channel_names[index]
+                                  for index in self.selected_indices]
 
     def _gradient_optimization(self, objective_function, Sigma_1, Sigma_X,
                                max_evals=25000, **kwargs):
@@ -566,7 +582,7 @@ class SparseXDAWNNode(XDAWNNode):
                                   "electrode selection.")
 
 
-class SSNR(object):
+class SSNR(BaseNode):
     """ Helper-class that encapsulates SSNR related computations.
     
     Use as follows: add training examples one-by-one along with their labels
@@ -584,7 +600,7 @@ class SSNR(object):
                 
     def add_example(self, data, label):
         """ Add the example *data* for class *label*. """
-        if self.retained_channels == None:
+        if self.retained_channels is None:
             self.retained_channels = data.shape[1]
         else:
             self.retained_channels = min(self.retained_channels, data.shape[1])
@@ -596,7 +612,7 @@ class SSNR(object):
             D = numpy.zeros((data.shape[0], data.shape[0]))
             
         if self.X is None:
-            self.X = deepcopy(data) # TODO: Why deep copy? data is not used anymore afterwards!
+            self.X = deepcopy(data)
             self.D = D
         else:
             self.X = numpy.vstack((self.X, data))
@@ -608,7 +624,7 @@ class SSNR(object):
         If no electrode selection is given, the SSNR of all electrodes is 
         computed.
         """
-        if selected_electrodes == None:
+        if selected_electrodes is None:
             selected_electrodes = range(self.X.shape[1])
             
         self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
@@ -626,7 +642,7 @@ class SSNR(object):
         If no electrode selection is given, the SSNR of all electrodes is 
         computed.
         """
-        if selected_electrodes == None:
+        if selected_electrodes is None:
             selected_electrodes = range(self.X.shape[1])
             
         self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
@@ -658,7 +674,7 @@ class SSNR(object):
         If no electrode selection is given, the SSNR of all electrodes is 
         computed.
         """
-        if selected_electrodes == None:
+        if selected_electrodes is None:
             selected_electrodes = range(self.X.shape[1])
                     
         # Determine spatial filter using xDAWN that would be obtained if
@@ -680,6 +696,10 @@ class SSNR(object):
         return self._ssnr(filters, Sigma_1_test, Sigma_X_test)
         
     def _compute_Sigma(self, X, D):
+        if D is None:
+            warnings.warn("No data given for sigma computation.")
+        elif not(1 in D):
+            warnings.warn("No ERP data (%s) provided." % self.erp_class_label)
         # Estimate of the signal for class 1 (the erp_class_label class)
         A_1 = numpy.dot(numpy.dot(numpy.linalg.inv(numpy.dot(D.T, D)), D.T), X)
         # Estimate of Sigma 1 and Sigma X

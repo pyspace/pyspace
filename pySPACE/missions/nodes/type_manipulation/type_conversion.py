@@ -12,6 +12,7 @@ from pySPACE.resources.data_types.feature_vector import FeatureVector
 
 from pySPACE.resources.data_types.time_series import TimeSeries
 
+
 class Prediction2FeaturesNode(BaseNode):
     """ Use the prediction values as features
     
@@ -42,12 +43,14 @@ class Prediction2FeaturesNode(BaseNode):
     :Created: 2010/08/06
     
     """
-    def __init__(self, name = '', **kwargs):
+    input_types = ["PredictionVector"]
+
+    def __init__(self, name='', **kwargs):
         super(Prediction2FeaturesNode, self).__init__(**kwargs)
         
-        self.set_permanent_attributes(name = name,
-                                      feature_names = [],
-                                      label = None) 
+        self.set_permanent_attributes(name=name,
+                                      feature_names=[],
+                                      label=None)
 
     def _execute(self, data):
         """ Extract the prediction features from the given data
@@ -65,6 +68,13 @@ class Prediction2FeaturesNode(BaseNode):
             f_names = [self.name + "prediction_" + str(i)
                                     for i in range(len(data.prediction))]
             return FeatureVector(numpy.array([data.prediction]),f_names)
+
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "FeatureVector"
+        else:
+            return self.string_to_class("FeatureVector")
+
 
 class Features2PredictionNode(BaseNode):
     """ Use the feature vectors as prediction values
@@ -98,6 +108,8 @@ class Features2PredictionNode(BaseNode):
     :Created: 2010/089/24
     
     """
+    input_types = ["FeatureVector"]
+
     def __init__(self, class_labels, **kwargs):
         super(Features2PredictionNode, self).__init__(**kwargs)
     
@@ -116,11 +128,18 @@ class Features2PredictionNode(BaseNode):
         return PredictionVector(label = map(classification_rule, data[0,:]),  
                                 prediction=list(data[0,:]))
 
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "PredictionVector"
+        else:
+            return self.string_to_class("PredictionVector")
+
 
 def uniquify_list(seq):
     """ Uniquify a list by preserving its original order """
     seen = set()
     return [i for i in seq if i not in seen and not seen.add(i)] 
+
 
 class FeatureVector2TimeSeriesNode(BaseNode):
     """ Convert feature vector to time series
@@ -163,7 +182,8 @@ class FeatureVector2TimeSeriesNode(BaseNode):
     :Created: 2011/09/23
     :Refactored: 2013/04/24
     """
-    
+    input_types = ["FeatureVector"]
+
     def __init__(self,reshape=False,**kwargs):
         super(FeatureVector2TimeSeriesNode, self).__init__(**kwargs)
        
@@ -178,7 +198,7 @@ class FeatureVector2TimeSeriesNode(BaseNode):
     def _execute(self, data):
         """ Extract feature values from and match it to their respective sensor name and time """
         assert (type(data) == FeatureVector), \
-               "LabeledFeature2TimeSeries requires FeatureVector inputs " \
+               "FeatureVector2TimeSeries requires FeatureVector inputs " \
                "not %s" % type(data)
         
         # sensor name is what comes after the first underscore
@@ -238,9 +258,16 @@ class FeatureVector2TimeSeriesNode(BaseNode):
         # generate new time series object
         # all filled with zeros instead of data
         new_data = TimeSeries(matrix,
-                              channel_names = self.sensor_names,
-                              sampling_frequency = self.frequency)
+                              channel_names=self.sensor_names,
+                              sampling_frequency=self.frequency)
         return new_data
+
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "TimeSeries"
+        else:
+            return self.string_to_class("TimeSeries")
+
 
 class Feature2MonoTimeSeriesNode(BaseNode):
     """ Convert feature vector to time series with only one time stamp
@@ -263,6 +290,8 @@ class Feature2MonoTimeSeriesNode(BaseNode):
     :Author: Mario Krell (mario.krell@dfki.de)
     :Created: 2012/08/31
     """
+    input_types = ["FeatureVector"]
+
     def _execute(self, data):
         """ Identify feature names with channel names """
         assert (type(data) == FeatureVector), \
@@ -285,11 +314,18 @@ class Feature2MonoTimeSeriesNode(BaseNode):
         assert (type(data) == TimeSeries), \
             "Feature2MonoTimeSeries inversion requires TimeSeries inputs " \
             "not %s" % type(data)
-        assert (data.shape[0]==1), "Wrong array shape: %s."%data.shape
+        assert (data.shape[0]==1), "Wrong array shape: %s."%data.shape[0]
         data_array = data.view(numpy.ndarray)
         new_data = FeatureVector(data_array,
                         feature_names = data.channel_names)
         return new_data
+
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "TimeSeries"
+        else:
+            return self.string_to_class("TimeSeries")
+
 
 class MonoTimeSeries2FeatureNode(Feature2MonoTimeSeriesNode):
     """ Convert time series with only one time stamp to feature vector
@@ -313,6 +349,8 @@ class MonoTimeSeries2FeatureNode(Feature2MonoTimeSeriesNode):
     :Author: Mario Krell (mario.krell@dfki.de)
     :Created: 2012/08/31
     """
+    input_types = ["TimeSeries"]
+
     def _execute(self, data):
         """ Identify channel names with feature names """
         return super(MonoTimeSeries2FeatureNode,self)._invert(data)
@@ -321,8 +359,15 @@ class MonoTimeSeries2FeatureNode(Feature2MonoTimeSeriesNode):
         """ Irrelevant inversion introduced just for completeness """
         return super(MonoTimeSeries2FeatureNode,self)._execute(data)
 
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "FeatureVector"
+        else:
+            return self.string_to_class("FeatureVector")
+
+
 class CastDatatypeNode(BaseNode):
-    """Changes the datatype of the data
+    """ Changes the datatype of the data
     
     **Parameters**
         :datatype:
@@ -340,6 +385,8 @@ class CastDatatypeNode(BaseNode):
     :Authors: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2012/03/29
     """
+    input_types = ["TimeSeries"]
+
     def __init__(self, datatype=numpy.int16,
                  selected_channels=None,**kwargs):
         super(CastDatatypeNode, self).__init__(**kwargs)
@@ -356,7 +403,11 @@ class CastDatatypeNode(BaseNode):
         
         return result_time_series
 
-
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "TimeSeries"
+        else:
+            return self.string_to_class("TimeSeries")
 
 _NODE_MAPPING = {"Prediction2Features": Prediction2FeaturesNode,
                 "Features2Prediction": Features2PredictionNode,

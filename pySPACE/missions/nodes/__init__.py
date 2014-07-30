@@ -161,6 +161,11 @@ except:
                             "Node with name %s at %s has already been defined at %s!" % (key, value, NODE_MAPPING[key])
                         NODE_MAPPING[key] = value
             for key, value in module_nodes:
+                if file_name is not "base_node.py":
+                    try:
+                        value.get_input_types()
+                    except NotImplementedError:
+                        pass
                 # Nodes added the step before are allowed,
                 # but no other double entries
                 if key in NODE_MAPPING.keys():
@@ -174,11 +179,16 @@ except:
                 NODE_MAPPING[key[:-4]] = value
                 # import each node to shorten import path
                 exec "from %s import %s" % (module_path,key)
+
     # If sklearn is available, add wrapper-nodes for sklearn estimators.
     try:
         import scikit_nodes
     except ImportError:
         pass
+
+    DEFAULT_NODE_MAPPING["BaseNode"].input_types=["TimeSeries", 
+        "FeatureVector", "PredictionVector"]
+
     # Clean up...
     del(module_pattern, root, dir_path, dir_names, file_names,
         package_path, module_name, module_path, module, key, value, file_name)

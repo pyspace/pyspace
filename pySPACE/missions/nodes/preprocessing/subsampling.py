@@ -22,6 +22,7 @@ import numpy
 import scipy
 import scipy.signal
 
+
 def gcd(a, b):
     """ Return the greatest common divisor of a and b.
     
@@ -54,12 +55,20 @@ def gcd(a, b):
     return a
 
 
-
 class SubsamplingNode(BaseNode):
     """ Downsampling with a simple low pass filter
     
     This is done by upsampling with a linear interpolation and downsampling 
     with a corresponding low pass filter.
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : Subsampling
+            parameters :
+                target_frequency : 25.0
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2008/08/25
@@ -153,7 +162,7 @@ class FFTResamplingNode(BaseNode):
     .. code-block:: yaml
     
         - 
-            node : FFTResampling
+            node : Resampling
             parameters :
                 target_frequency : 25.0
                 window : "nut" # optional, window to apply before downsampling
@@ -202,7 +211,8 @@ class FFTResamplingNode(BaseNode):
                                                             window=self.window)[:self.new_len])
         downsampled_time_series.sampling_frequency = self.target_frequency
         return downsampled_time_series
-    
+
+
 class DownsamplingNode(BaseNode):
     """ Pure downsampling without filter
     
@@ -264,8 +274,8 @@ class DownsamplingNode(BaseNode):
         downsampled_time_series.sampling_frequency = self.target_frequency
                 
         return downsampled_time_series
-    
-    
+
+
 class DecimationBase(BaseNode):
     """ Decimate the signal to a given sampling frequency
     
@@ -316,7 +326,7 @@ class DecimationBase(BaseNode):
             should not be chosen automatically.
 
             (*optional, default: None*)
-                              
+   
     :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)
     """
     def __init__(self,
@@ -454,7 +464,8 @@ class DecimationBase(BaseNode):
             for index, node in enumerate(self.low_pass_nodes):
                 node.store_state(result_dir, index)
             super(DecimationBase, self).store_state(result_dir, index)
-              
+
+
 class DecimationIIRNode(DecimationBase):
     """ Downsampling with a preceding IIR filter
     
@@ -489,6 +500,7 @@ class DecimationIIRNode(DecimationBase):
                 
         return filtering.IIRFilterNode([target_frequency], 
                                          comp_type = self.comp_type)
+
 
 class DecimationFIRNode(DecimationBase):
     """ Downsampling with a preceding FIR filter
@@ -532,6 +544,7 @@ class DecimationFIRNode(DecimationBase):
        
     :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)
     """
+    input_types=["TimeSeries"]
     def __init__(self,
                  comp_type = 'normal',
                  skipping = False,
@@ -558,5 +571,8 @@ class DecimationFIRNode(DecimationBase):
 
 
 _NODE_MAPPING = {"Resampling": FFTResamplingNode,
-                "Decimation": DecimationFIRNode}
+                "Decimation": DecimationFIRNode,
+                "DecimationIIR": DecimationIIRNode,
+                "Subsampling":SubsamplingNode,
+                "Downsampling": DownsamplingNode}
 

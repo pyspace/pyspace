@@ -27,16 +27,15 @@ class FeatureVectorSourceNode(BaseNode):
     .. code-block:: yaml
 
         - 
-            node: Feature_Vector_Source
+            node : Feature_Vector_Source
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2008/11/25
     """
-    
-    def __init__(self, *args, **kwargs):
-        super(FeatureVectorSourceNode, self).__init__(*args, **kwargs)
-        
-        self.set_permanent_attributes(input_types=["feature_vector"])
+    input_types = ["FeatureVector"]
+
+    def __init__(self, **kwargs):
+        super(FeatureVectorSourceNode, self).__init__(**kwargs)
 
     def set_input_dataset(self, dataset):
         """ Sets the dataset from which this node reads the data """
