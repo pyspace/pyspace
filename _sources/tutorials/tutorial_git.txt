@@ -6,7 +6,7 @@ Download
 
 :zip file: https://github.com/pyspace/pyspace/archive/master.zip
 :git clone: ``git clone https://github.com/pyspace/pyspace.git``
-:GitHub: main repository page: https://github.com/pyspace
+:GitHub: main repository page: https://github.com/pyspace/pyspace
 :Sourceforge: http://sourceforge.net/projects/pyspace/
 :mloss: http://mloss.org/software/view/490/
 
