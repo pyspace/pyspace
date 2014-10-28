@@ -192,21 +192,21 @@ class ParameterOptimizationBase(BaseNode):
                  final_training_parameter_settings={},
                  **kwargs):
         super(ParameterOptimizationBase, self).__init__(**kwargs)
-        self.set_permanent_attributes(flow_template = flow_template,
-                                      variables = variables,
-                                      metric = metric,
-                                      w = std_weight,
-                                      runs = runs,
-                                      nom_rng = nominal_ranges,
-                                      debug = debug,
-                                      flow = None,
-                                      train_instances = None,
-                                      performance_dict = {},
-                                      search_history = [],
-                                      validation_parameter_settings = validation_parameter_settings,
-                                      final_training_parameter_settings = final_training_parameter_settings,
-                                      classifier_information=None
-                                      )
+        self.set_permanent_attributes(
+            flow_template=flow_template,
+            variables=variables,
+            metric=metric,
+            w=std_weight,
+            runs=runs,
+            nom_rng=nominal_ranges,
+            debug=debug,
+            flow=None,
+            train_instances=None,
+            performance_dict={},
+            search_history=[],
+            validation_parameter_settings=validation_parameter_settings,
+            final_training_parameter_settings=final_training_parameter_settings,
+            classifier_information=None)
 
     def is_trainable(self):
         """ Return whether this node is trainable """
@@ -219,26 +219,27 @@ class ParameterOptimizationBase(BaseNode):
     @staticmethod
     def check_parameters(param_spec):
         """ Check input parameters of existence and appropriateness """
-        assert("nodes" in param_spec and "optimization" in param_spec),\
-                   "Parameter Optimization node requires specification of a " \
-                   "list of nodes and optimization algorithm!"
+        assert("nodes" in param_spec and "optimization" in param_spec), \
+            "Parameter Optimization node requires specification of a " \
+            "list of nodes and optimization algorithm!"
         
-        validation_set = param_spec.get("validation_set",{})
+        validation_set = param_spec.pop("validation_set", {})
         validation_set["splits"] = validation_set.get("splits",5)
         validation_set["split_node"] = validation_set.get("split_node",
                            {'node': 'CV_Splitter', 
                             'parameters': {'splits': validation_set["splits"]}})
-                
-        evaluation = param_spec.get("evaluation",{})
+
+        evaluation = param_spec.pop("evaluation", {})
         evaluation["ir_class"] = evaluation.get("ir_class", "Target")
-        evaluation["performance_sink_node"] = evaluation.get("performance_sink_node",
-                          { 'node': 'Classification_Performance_Sink', 
+        evaluation["performance_sink_node"] = \
+            evaluation.get("performance_sink_node",
+                           {'node': 'Classification_Performance_Sink',
                             'parameters': {'ir_class': evaluation["ir_class"]}})
         
         # build flow template
         nodes_spec = param_spec.pop("nodes")
         flow_template = [{'node': 'External_Generator_Source_Node'},
-                                                   validation_set["split_node"]]
+                         validation_set["split_node"]]
         flow_template.extend(nodes_spec)
         flow_template.append(evaluation["performance_sink_node"])
         
@@ -361,7 +362,9 @@ class ParameterOptimizationBase(BaseNode):
             self.classifier_information["~~Pon_value~~"] = self.best_performance
             return result
 
-
+    def get_output_type(self, input_type, as_string=True):
+        """ Returns the output type of the entire flow"""
+        return self.flow.get_output_type(input_type, as_string)
 
     def _get_flow(self):
         """ Method introduced for consistency with flow_node 
@@ -571,11 +574,11 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
                             kernel_type : 'LINEAR'
 
     """
-    def __init__(self, ranges, *args, **kwargs):
-        ParameterOptimizationBase.__init__(self, *args, **kwargs)
+    def __init__(self, ranges, parallelization={}, **kwargs):
+        ParameterOptimizationBase.__init__(self, **kwargs)
         # extract parallelization dict for subflow handler
-        SubflowHandler.__init__(self, **kwargs.get('parallelization',{}))
-        self.set_permanent_attributes(grid = self.search_grid(ranges))
+        SubflowHandler.__init__(self, **parallelization)
+        self.set_permanent_attributes(grid=self.search_grid(ranges))
 
     @staticmethod
     def node_from_yaml(node_spec):
@@ -740,11 +743,12 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
     """
     def __init__(self, start=[], directions=[], start_step_size=1.0, 
                  stop_step_size=1e-10, scaling_factor=0.5, up_scaling_factor=1, 
-                 max_iter=inf, max_bound=[], min_bound=[],
+                 max_iter=inf, max_bound=[], min_bound=[], red_pars=[],
+                 parallelization={},
                  **kwargs):
         ParameterOptimizationBase.__init__(self, **kwargs)
         # extract parallelization dict for subflow handler
-        SubflowHandler.__init__(self, **kwargs.get('parallelization',{}))
+        SubflowHandler.__init__(self, parallelization)
                             
         dim = len(self.variables)
         if start != []:

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """ Create pySPACE center (basic software configuration and data folder)
 
 This file must be run with python.
@@ -16,6 +17,9 @@ import shutil
 import warnings
 from os.path import expanduser
 home = expanduser("~")
+
+import platform
+CURRENTOS = platform.system()
 
 email = 'ric-pyspace-dev@dfki.de'
 
@@ -167,32 +171,17 @@ def setup_package():
     print setup_message
     src_path = os.path.dirname(os.path.abspath(sys.argv[0]))
     create_directory(os.path.join(home, "pySPACEcenter"))
-    #create_directory(os.path.join(home, "pySPACEcenter","examples"))
+
+    # generate OS-independent shortcut scripts to the run interface
+    generate_shortcuts(os.path.join(home, "pySPACEcenter"))
+    # create_directory(os.path.join(home, "pySPACEcenter","examples"))
     create_directory(os.path.join(home, "pySPACEcenter","specs"))
     create_directory(os.path.join(home, "pySPACEcenter","storage"))
     src_conf_file = os.path.join(src_path, "docs", "examples", "conf",
                                  "example.yaml")
     dest_conf_file = os.path.join(home, "pySPACEcenter","config.yaml")
     save_copy(src_conf_file,dest_conf_file)
-    
-    try:
-        os.symlink(os.path.join(src_path, "pySPACE", "run", "launch.py"),
-                   os.path.join(home, "pySPACEcenter", "launch.py"))
-    except:
-        pass
-    try:
-        os.symlink(os.path.join(src_path, "pySPACE", "run", "launch_live.py"),
-                   os.path.join(home, "pySPACEcenter", "launch_live.py"))
-    except:
-        pass
-    try:
-        os.symlink(os.path.join(src_path,"pySPACE", "run", "gui",
-                   "performance_results_analysis.py"),
-                   os.path.join(home, "pySPACEcenter",
-                                "performance_results_analysis.py"))
-    except:
-        pass
-        
+
     examples = os.path.join(src_path,"docs","examples")
     # copying examples folder
     for folder, _, files in os.walk(examples):
@@ -223,6 +212,81 @@ def setup_package():
                           os.path.join(new_folder, file))
 
     print "The pySPACEcenter should be available now."
+
+def generate_blacklist():
+    """
+    This function tries to import all the pySPACE modules available.
+    If a certain module does not have the necessary dependencies installed,
+    it will be blacklisted and not imported in further usages of the software
+
+    Once the user installs the missing dependency, he or she can run the setup
+    script with the soft option enabled i.e.::
+
+        python setup.py --soft
+
+    which will only refresh the blacklisted nodes.
+    """
+    blacklist = []
+    missing_dependencies = []
+    for dirpath, dirnames, files in os.walk('pySPACE'):
+        for file in files:
+            if "__init__" in file or file.endswith(".py") == False:
+                continue
+
+            the_module = os.path.join(dirpath, file)
+            if CURRENTOS == 'Windows':
+                the_module = the_module.replace('\\', '.')[:-3]
+            else:
+                the_module = the_module.replace('/', '.')[:-3]
+            try:
+                __import__(the_module)
+            except Exception, e:
+                missing_dependencies.append(e.message)
+                blacklist.append(file)
+            except:
+                pass
+
+
+
+    try:
+        latest_config = home+'/pySPACEcenter/config.yaml'
+        config_file = open(latest_config, 'r+')
+    except:
+        import glob
+        print "The default config file was not found. Modifying the latest" \
+              "version available."
+        latest_config = max(glob.iglob(home+'/pySPACEcenter/*.yaml'),
+                            key=os.path.getctime)
+        config_file = open(latest_config, 'r+')
+
+    content = config_file.read()
+    blacklist_wrote_to_file = False
+    new_content = ""
+    for line in content.split('\n'):
+        if "blacklisted_nodes" in line:
+            new_content += "blacklisted_nodes: " + str(blacklist)
+            blacklist_wrote_to_file = True
+        else:
+            new_content += line + "\n"
+    if not blacklist_wrote_to_file:
+        new_content += "\nblacklisted_nodes: "+str(blacklist)
+
+    if len(blacklist) > 0:
+        print "--> The following nodes are blacklisted and henceforth" \
+              " excluded from usage within pySPACE"
+        print "\n       > "+"\n       > ".join(blacklist)
+
+        print "\n  > If you want to use the above modules, please fix the " \
+              "following errors"
+        print "\n       --> "+"\n       --> ".join(missing_dependencies) + "\n"
+
+
+
+    config_file.seek(0)
+    config_file.write(new_content)
+    config_file.truncate()
+    config_file.close()
+
 #
 #    try:
 #        shutil.copytree(os.path.join(src_path,"docs","examples"),os.path.join(home, "pySPACEcenter","examples"))
@@ -254,6 +318,105 @@ def setup_package():
 #          package_data = {}
 #          )
 
+def generate_shortcuts(pySPACEcenter_path):
+    """
+    This function generates and writes the launcher shortcut inside the
+    pySPACEcenter directory. This shortcut is OS-independent and should
+    be used when running pySPACE
+
+    Initially, the links to the launch scripts in pySPACE were done using
+    symbolic linking::
+
+        os.symlink(os.path.join(src_path, "pySPACE", "run", "launch_live.py"),
+                   os.path.join(home, "pySPACEcenter", "launch_live.py"))
+
+    The method above only works on Unix-systems and as such, the following
+    less elegant but fully functional method is preferred.
+    """
+    PATTERN = r"""#!/usr/bin/env python
+# THIS FILE WAS GENERATED AUTOMATICALLY
+# Adjust it only if you know what you're doing
+# The purpose of this script is to act as a system independent shortcut
+
+import sys
+import os
+
+argv = sys.argv
+command = "python %(path)s"
+for c in argv[1:]:
+    command +=' '+c
+os.system(command)
+""" # variables: path
+
+    # obtain the absolute path of the launcher
+    launch_path = os.path.join(os.path.abspath(os.path.curdir),
+                               "pySPACE",
+                               "run",
+                               "launch.py")
+    launch_live_path = os.path.join(os.path.abspath(os.path.curdir),
+                                    "pySPACE",
+                                    "run",
+                                    "launch_live.py")
+    perf_res_analysis_path = os.path.join(os.path.abspath(os.path.curdir),
+                                          "pySPACE",
+                                          "run",
+                                          "gui",
+                                          "performance_results_analysis.py")
+
+    # replace any special characters that might occur
+    launch_path = launch_path.replace(os.sep,
+                                      "\\" + os.sep)
+    launch_live_path = launch_live_path.replace(os.sep,
+                                                "\\" + os.sep)
+    perf_res_analysis_path = perf_res_analysis_path.replace(os.sep,
+                                                            "\\" + os.sep)
+
+    # write the paths in the predefined pattern
+    launch_shortcut = PATTERN % dict(path=launch_path)
+    launch_live_shortcut = PATTERN % dict(path=launch_live_path)
+    perf_res_analysis_shortcut = PATTERN % dict(path=perf_res_analysis_path)
+
+    # create, write and close the new launch file
+    shortcut_file = open(os.path.join(pySPACEcenter_path,
+                                      "launch.py"),
+                         'w')
+    shortcut_file.write(launch_shortcut)
+    os.fchmod(shortcut_file.fileno(), 0775)
+    shortcut_file.close()
+
+    shortcut_file = open(os.path.join(pySPACEcenter_path,
+                                      "launch_live.py"),
+                         'w')
+    shortcut_file.write(launch_live_shortcut)
+    os.fchmod(shortcut_file.fileno(), 0775)
+    shortcut_file.close()
+
+    shortcut_file = open(os.path.join(pySPACEcenter_path,
+                                      "performance_results_analysis.py"),
+                         'w')
+    shortcut_file.write(perf_res_analysis_shortcut)
+    os.fchmod(shortcut_file.fileno(), 0775)
+    shortcut_file.close()
 
 if __name__ == '__main__':
-    setup_package()
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-b', '--blacklist', default=False,
+                        action='store_true',
+                        help='Determines whether a hard install should be ' +
+                             'performed; use this option when you\'ve installed ' +
+                             'new dependencies and want to let pySPACE know ' +
+                             'that the blacklist must be updated.')
+
+    args = parser.parse_args()
+
+    if args.blacklist == True:
+        # If the soft version of the install is desired, the only action
+        # performed by the script is to refresh the blacklisted nodes
+        # which did not initially have the necessary dependencies
+        generate_blacklist()
+        pass
+    else:
+        setup_package()
+        generate_blacklist()

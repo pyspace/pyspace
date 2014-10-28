@@ -283,6 +283,7 @@ def main():
 
     # Configuration
     parser.add_option("-c", "--configuration",
+                      default="config.yaml",
                       help="Choose the configuration file, which is looked up in PYSPACE_CONF_DIR",
                       action="store")
     # Backends

@@ -394,6 +394,44 @@ class NodeChain(object):
             cPickle.dump(self, flh, protocol)
             flh.close()
 
+    def get_output_type(self, input_type, as_string=True):
+        """
+        Returns the output type of the entire node chain
+
+        The method implemented here, is the equivalent of the
+        `get_output_type` method which is currently implemented in
+        :mod:`~pySPACE.missions.nodes.base_node`
+
+        """
+        for i in range(len(self.flow)):
+            if i == 0:
+                output = self.flow[i].get_output_type(input_type, as_string=True)
+            else:
+                output = self.flow[i].get_output_type(output, as_string=True)
+
+        if as_string:
+            return output
+        else:
+            return self.string_to_class(output)
+
+    @staticmethod
+    def string_to_class(string_encoding):
+        """ given a string variable, outputs a class instance
+
+        e.g. obtaining a TimeSeries
+        """
+        from pySPACE.resources.data_types.time_series import TimeSeries
+        from pySPACE.resources.data_types.feature_vector import FeatureVector
+        from pySPACE.resources.data_types.prediction_vector import PredictionVector
+        if "TimeSeries" in string_encoding:
+            return TimeSeries
+        elif "PredictionVector" in string_encoding:
+            return PredictionVector
+        elif "FeatureVector" in string_encoding:
+            return FeatureVector
+        else:
+            raise NotImplementedError
+
 #################
 # MDP Code copy #
 

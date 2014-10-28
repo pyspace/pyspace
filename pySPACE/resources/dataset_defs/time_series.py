@@ -7,7 +7,6 @@ import cPickle
 import sys
 import scipy
 import yaml
-import pwd
 import csv
 import numpy
 import logging
@@ -32,7 +31,8 @@ class TimeSeriesDataset(BaseDataset):
     :mod:`~pySPACE.missions.nodes.sink.time_series_sink` node
     in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.
     
-    The standard format is 'pickle', but it is also possible to load, e.g.,
+    The standard *storage_format* is 'pickle',
+    but it is also possible to load, e.g.,
     BrainComputerInterface-competition data. For that, ``storage_format`` has
     to be set in the format **bci_comp_[competition number]_[dataset number]**
     in the metadata.yaml file. For example, **bci_comp_2_4** means loading of 
@@ -43,6 +43,16 @@ class TimeSeriesDataset(BaseDataset):
         - BCI Competition III, dataset II: P300 speller paradigm, training data
     
     See http://www.bbci.de/competition/ for further information.
+
+    For saving the data, other formats are currently supported but not
+    yet for loading the data.
+    This issue can be handled by processing the data with a node chain
+    operation which transforms the data into feature vectors and
+    use the respective storing and loading functionality, e.g., with csv and
+    arff files.
+    There is also a node for transforming feature vectors back to
+    TimeSeries objects.
+
     
     **Parameters**
     
@@ -173,7 +183,7 @@ class TimeSeriesDataset(BaseDataset):
                                               " dataset %s not supported " \
                                             % (self.comp_number, self.comp_set))
                         
-            else: # s_format=="csv":
+            else:  # s_format=="csv":
                 if "file_name" in self.meta_data.keys():
                     ts_file = os.path.join(dataset_dir,
                                            self.meta_data["file_name"])
@@ -221,7 +231,7 @@ class TimeSeriesDataset(BaseDataset):
                       "collection for run %s, split %s." % (train_test, run_nr, 
                                                             split_nr))
             s_format = self.meta_data["storage_format"]
-            if type(s_format)==list:
+            if type(s_format) == list:
                 s_format = s_format[0]
             if s_format == "pickle":
                 # Load the time series from a pickled file
@@ -402,7 +412,14 @@ class TimeSeriesDataset(BaseDataset):
             s_type = "%.18e"
         # Update the meta data
         try:
-            author = pwd.getpwuid(os.getuid())[4]
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                import getpass
+                author = getpass.getuser()
+            else:
+                import pwd
+                author = pwd.getpwuid(os.getuid())[4]
         except Exception:
             author = "unknown"
             self._log("Author could not be resolved.", level=logging.WARNING)

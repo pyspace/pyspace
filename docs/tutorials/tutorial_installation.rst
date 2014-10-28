@@ -164,6 +164,84 @@ Here is a documented example of the default configuration file:
 .. literalinclude:: ../examples/conf/example.yaml
     :language: yaml
 
+Windows and pySPACE
+^^^^^^^^^^^^^^^^^^^
+
+pySPACE can also be used under a Windows operating system. The first and most
+important dependency that must be installed is a ``python`` bundle that
+(preferably) comes with a large part of the heavy-weigth dependencies needed by
+pySPACE, e.g. ``numpy``, ``matplotlib`` etc. The other two must-have
+dependencies are a ``git`` management software and either a text editor that
+can edit ``.py`` and ``.yaml`` files or an IDE that can do the same thing.
+Below is a list of the software we recommend using when building and running
+pySPACE:
+
+	- Anaconda Python http://continuum.io/downloads
+	- some sort of github version (we recommend this one http://msysgit.github.io/)
+	- a python editor (we recommend pycharm http://www.jetbrains.com/pycharm/)
+
+Besides these, depending on the specific nodes that you plan on using, further
+dependencies might be neccessary. It is worth noting that, when the setup
+script is launched, it might blacklist some of the available nodes due to
+missing dependencies. Should you install these missing dependencies, you can
+refresh the list of missing dependencies by running the setup script with the
+``-b`` option enabled::
+
+	python setup.py -b
+
+This will refresh the blacklisted nodes and overwrite the previous list.
+For more details related to the setup script, please run the help option of the
+setup script as::
+
+    python setup.py -h
+
+It should be noted that pySPACE is developed using under and for UNIX systems.
+Therefore, the Windows support for the software suite is limited. Nonetheless,
+the basic functionalities of the software are available under a DOS operating
+system and, depending on the availabilty of the necessary dependencies, can be
+used to its fullest on DOS-operating systems.
+
+.. note::
+    When writing new nodes, special attention should be given to OS-independent
+    implementations. As an example of this approach, the `numpy.float128`
+    precision is not available under DOS-systems. There is however an
+    alternative precision floating point, namely the `numpy.longdouble` that
+    serves the same purpose yet is OS-independent. While this is merely an
+    example that is meant to show the motivation behind an OS-independent
+    approach, the general idea is the same for different issues. If there is
+    an OS-independent approach, it should be favored in the implementation
+    process.
+
+.. note::
+    Another example of a very important OS-independent approach is that of
+    using `os.sep` from the python :mod:`os` module whenever file paths are
+    in usage. Since DOS and UNIX systems use different path separators, it
+    is of the utmost importance that whenever new nodes are written and some
+    sort of path manipulation is necessary, the separator be obtained from
+    `os.sep` and not be hardcoded in the python script.
+
+Terminal usage
+++++++++++++++
+
+Under Windows, pySPACE can be used from the terminal in the same manner
+as one would under a UNIX system. Thanks to OS-independent python shortcuts,
+once you have prepaired your data and operation chain, you can save and
+execute them from pySPACEcenter. While pySPACE is primarily a UNIX oriented
+software package, the contributors strive to build OS-independent python
+scripts.
+
+Writing new nodes
++++++++++++++++++
+
+Should you want to develop new pySPACE nodes under Windows, please be aware
+that there are certain software packages that only run on DOS(Windows) systems
+while others run only on UNIX(Mac, Linux) systems. These OS-specific packages
+should be avoided as much as possible. If such a package is absolutely
+necessary, please consider implementing it in a ``if`` clause that first
+establishes the OS under use and then chooses the appropriate method of
+implementation. In most cases though there is an OS-independent implementation
+which is definitely the preferred version.
+
 Next Steps
 ^^^^^^^^^^
 

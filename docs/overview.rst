@@ -49,13 +49,13 @@ measured from one subject in one session.
 In contrast, a *summary* can contain the measurements of several different subjects or from different sessions.
 Both :mod:`~pySPACE.resources.dataset_defs` and *summaries* consist
 of the actual data and some meta data stored in the file: ``metadata.yaml``.
-:mod:`~pySPACE.resources.dataset_defs` have a type e.g.
+:mod:`~pySPACE.resources.dataset_defs` have a type, e.g.,
 :mod:`~pySPACE.resources.dataset_defs.time_series` or
 :mod:`~pySPACE.resources.dataset_defs.feature_vector`.
 **The metadata is crucial**, because it tells the software,
 which type of data is stored in which format.
 The format is also important to know, since different formats require
-totally different loading algorithms, e.g. comma separated values without heading
+totally different loading algorithms, e.g., comma separated values without heading
 and empty space separated values with heading.
 For the relevant types, there is a direct mapping between
 :mod:`~pySPACE.resources.dataset_defs` types and

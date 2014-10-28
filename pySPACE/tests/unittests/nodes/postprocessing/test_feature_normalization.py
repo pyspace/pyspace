@@ -112,7 +112,7 @@ class EuclideanFeatureNormalizationTestCase(unittest.TestCase):
             arrays are the same as the ones obtained by running the nodes
         """
         data_points = [numpy.arange(start=1, stop=1000, dtype=numpy.int64),
-                       numpy.arange(start=1, stop=1000, dtype=numpy.float128)]
+                       numpy.arange(start=1, stop=1000, dtype=numpy.longdouble)]
 
         for point in data_points:
             theoretical = numpy.divide(
@@ -138,13 +138,13 @@ class InfinityNormFeatureVisualizationTestCase(unittest.TestCase):
             features
         """
         data_points = [numpy.arange(start=1, stop=1000, dtype=numpy.int64),
-                       numpy.arange(start=1, stop=1000, dtype=numpy.float128)]
+                       numpy.arange(start=1, stop=1000, dtype=numpy.longdouble)]
 
         for point in data_points:
             # since the InfinityNormFeatureNormalizationNode also forces the
             # type to be float, our computational of the theoretical result
             # will also be done with a forced float
-            theoretical = numpy.divide(point.astype(numpy.float128), 999)
+            theoretical = numpy.divide(point.astype(numpy.longdouble), 999)
             result = self.node.execute(
                 FeatureVector(point, feature_names=point.astype(str)))
             self.assertTrue(numpy.allclose(result.view(numpy.ndarray)[0, :],

@@ -149,6 +149,8 @@ class AdaptiveThresholdPreprocessingNode(BaseNode):
         result_time_series = TimeSeries.replace_data(x, threshold_data)
         return result_time_series
 
+    def get_output_type(self, input_type, as_string=True):
+        return self.string_to_class("TimeSeries")
 
     def adaptive_threshold(self, data_point, channel_counter):
         """Adaptive threshold for single values

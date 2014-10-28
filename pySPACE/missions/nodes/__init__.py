@@ -99,6 +99,15 @@ try:
 except:
     _module_import_white_list = []
 
+# The following code accesses the list of blacklisted nodes. These nodes are mentioned
+# in the configuration file and cannot be accessed due to missing dependencies
+try:
+    _blacklisted_nodes = pySPACE.configuration.blacklisted_nodes
+    if _blacklisted_nodes is None:
+        _blacklisted_nodes = []
+except:
+    _blacklisted_nodes = []
+
 # The global dict of nodes
 try:
     NODE_MAPPING = pySPACE.configuration.NODE_MAPPING
@@ -139,7 +148,16 @@ except:
                     module_name not in _module_import_white_list:
                 continue
             module_path = package_path + '.' + module_name
-            module = __import__(module_path, {}, {}, ["dummy"])
+            if file_name in pySPACE.configuration.blacklisted_nodes:
+                continue
+            try:
+                module = __import__(module_path, {}, {}, ["dummy"])
+            except ImportError:
+                import warnings
+                warnings.warn(("The current module could not be imported: %s")
+                              % module_path)
+                continue
+
             module_nodes = inspect.getmembers(module, \
                 lambda x: inspect.isclass(x) and x.__name__.endswith("Node") \
                     and x.__module__==module.__name__)

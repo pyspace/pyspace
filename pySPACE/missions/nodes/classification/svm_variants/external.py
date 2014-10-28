@@ -225,7 +225,7 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
                 self.offset, self.nu, self.epsilon, self.tolerance, 1000) # use 1000MB instead of 100MB (default)
         # options += " -b 1" un-comment this for probabilistic output!
         if self.multinomial:
-            options += " -b 1" #un-comment this for probabilistic output!
+            options += " -b 1"
         for i,w in enumerate(self.weight):
             options += " -w%d %.42f" % (i, w)
         if self.kernel_type == 'LINEAR':

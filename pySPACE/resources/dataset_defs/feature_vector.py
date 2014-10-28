@@ -5,7 +5,6 @@
 import os
 import cPickle
 import yaml
-import pwd
 import numpy
 import warnings
 
@@ -62,7 +61,7 @@ class FeatureVectorDataset(BaseDataset):
     Therefore each column is separated with a comma and each row with a new line.
     Normally the first line gives the feature names and one row is giving
     the class labels. Therefore several parameters need to be specified in
-    the metadata.yaml file.
+    the :ref:`metadata.yaml <metadata_yaml>` file.
     
     If no collection meta data is available for the input data, 
     the 'metadata.yaml' file can be generated with
@@ -72,7 +71,40 @@ class FeatureVectorDataset(BaseDataset):
     
     Preferably the labels are in the last column. This corresponds to
     *label_column* being -1 in the metadata.yaml file.
-    
+
+    **Special CSV Parameters**
+
+        :label_column:
+            Column containing the labels
+
+            Normally this column looses its heading.
+            when saving the csv file, the default, -1, is used.
+
+            (*recommended, default: -1*)
+
+        :ignored_columns:
+            List of numbers containing the numbers of irrelevant columns,
+            e.g., `[1,2,8,42]`
+
+            After the data is loaded, this parameter becomes obsolete.
+
+            .. todo:: Enable and document eval syntax
+
+            (*optional, default: []*)
+
+        :ignored_rows:
+            Replace row in description of 'ignored_columns'
+
+            (*optional, default: []*)
+
+        :delimiter:
+            Symbol which separates the csv entries
+
+            Typically `,` is used or the tabulator `\t`.
+            When storing, `,` is used.
+
+            (*recommended, default: ','*)
+
     **Parameters**
     
         :dataset_md: dictionary containing meta data for the collection
@@ -89,47 +121,19 @@ class FeatureVectorDataset(BaseDataset):
         :classes_names: list of the used class labels
         
         :feature_names: list of the feature names
+
+            The feature names are either determined during the loading of the
+            data, if available in the respective *storage_format*,
+            or they are later on set with a default string (e.g.,
+            feature_0_0.000sec).
         
         :num_features: number of the given features
     
     .. todo:: Better integration and documentation of the data_pattern variable, 
-              e.g. when reading arff files.
-    
-    **Special CSV Parameters**
-    
-        :label_column:
-            Column containing the labels 
-            
-            Normally this column looses its heading.
-            when saving the csv file, the default, -1, is used.
-            
-            (*recommended, default: -1*)
-        
-        :ignored_columns:
-            List of numbers containing the numbers of irrelevant columns,
-            e.g., `[1,2,8,42]`
-
-            After the data is loaded, this parameter becomes obsolete.
-            
-            .. todo:: Enable and document eval syntax
-            
-            (*optional, default: []*)
-        
-        :ignored_rows:
-            Replace row in description of 'ignored_columns'
-            
-            (*optional, default: []*)
-        
-        :delimiter:
-            Symbol which separates the csv entries
-            
-            Typically `,` is used or the tabulator `\t`.
-            When storing, `,` is used.
-            
-            (*recommended, default: ','*)
+              e.g., when reading arff files.
     """
     def __init__(self, dataset_md=None, classes_names=[], feature_names=None,
-                 num_features = None, **kwargs):
+                 num_features=None, **kwargs):
         """ Read out the data from the given collection
         
         .. todo:: test data pattern usage on old data
@@ -214,7 +218,8 @@ class FeatureVectorDataset(BaseDataset):
             warnings.warn("Mismatching feature number: %i given but %i occured."
                           % (self.meta_data["num_features"], sample.size))
         try:
-            # Remember all class labels since these will be stored in the arff file
+            # Remember all class labels since these will be stored
+            # in the arff file meta data
             if label not in self.meta_data["classes_names"]:
                 self.meta_data["classes_names"].append(label)
         except KeyError:
@@ -504,7 +509,14 @@ class FeatureVectorDataset(BaseDataset):
         name = "features"
         # Update the meta data
         try:
-            author = pwd.getpwuid(os.getuid())[4]
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                import getpass
+                author = getpass.getuser()
+            else:
+                import pwd
+                author = pwd.getpwuid(os.getuid())[4]
         except:
             author = "unknown"
             self._log("Author could not be resolved.",level=logging.WARNING)

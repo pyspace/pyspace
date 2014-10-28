@@ -373,7 +373,8 @@ class SpectrumPlotNode(VisualizationBase):
     :Author: Sirko Straube (sirko.straube@dfki.de)
     :Date of Last Revision: 2013/01/18                            
     """
-    
+    input_types = ["TimeSeries"]
+
     def __init__(self, 
                  channel_names=None,
                  colorbar = False, 
@@ -586,7 +587,7 @@ class ScatterPlotNode(BaseNode):
 
         -   node : ScatterPlot
             parameters :
-                plot_ms : 1000
+                plot_ms : 2
     """
     figure_number = 0
     input_types = ["TimeSeries"]
@@ -612,6 +613,7 @@ class ScatterPlotNode(BaseNode):
                               figsize=(21, 11))
         figure.subplots_adjust(left=0.01, bottom=0.01, right=0.99, top= 0.99,
                                wspace=0.2, hspace=0.2)
+
         pylab.draw()
 
     def is_trainable(self):
@@ -649,6 +651,8 @@ class ScatterPlotNode(BaseNode):
         
         pylab.ioff()
         pylab.figure(self.figure_number)
+        print self.figure_number
+
         # For all pairs of channels
         #for ch1 in range(self.number_of_channels):
         #    for ch2 in range(self.number_of_channels):
@@ -674,6 +678,7 @@ class ScatterPlotNode(BaseNode):
                 pylab.plot([data[self.plot_index, channel_index1]],
                            [data[self.plot_index, channel_index2]],
                            self.class_colors[label] + "o")
+
         pylab.draw()
         
     def _stop_training(self, debug=False):
@@ -718,7 +723,7 @@ class HistogramPlotNode(BaseNode):
         -
             node : HistogramPlot
             parameters :
-                plot_ms : 1000
+                plot_ms : 2
                 value_range : [-10, 10]
 
     """
@@ -784,7 +789,7 @@ class HistogramPlotNode(BaseNode):
             
         if label not in self.class_samples.keys():
             self.class_samples[label] = [[] for i in range(self.number_of_channels)]
-        
+
         plot_column = data[self.plot_index, :]
         for index, channel_name in enumerate(self.channels):
             channel_index = data.channel_names.index(channel_name)

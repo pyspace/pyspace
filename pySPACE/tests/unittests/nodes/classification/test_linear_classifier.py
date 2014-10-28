@@ -20,30 +20,6 @@ if __name__ == '__main__':
 from pySPACE.missions.nodes.classification.linear_classifier import FDAClassifierNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
-from pySPACE.missions.nodes.classification.linear_classifier import NaiveBayesClassifierNode
-
-
-class NaiveBayesClassifierTestCase(unittest.TestCase):
-
-    """ unittest for NBClassifierNode """
-
-    def test_nb(self):
-        nb_node = NaiveBayesClassifierNode(output_dim=1)
-        nb_node.train(numpy.array([[6, 180, 12]]), 'male')
-        nb_node.train(numpy.array([[5.92, 190, 11]]), 'male')
-        nb_node.train(numpy.array([[5.58, 170, 12]]), 'male')
-        nb_node.train(numpy.array([[5.92, 165, 10]]), 'male')
-
-        nb_node.train(numpy.array([[5, 100, 6]]), 'female')
-        nb_node.train(numpy.array([[5.5, 150, 8]]), 'female')
-        nb_node.train(numpy.array([[5.42, 130, 7]]), 'female')
-        nb_node.train(numpy.array([[5.75, 150, 9]]), 'female')
-
-        nb_node.stop_training()
-
-        classification_female = nb_node._execute(numpy.array([[6, 130, 8]]))
-        self.assert_(classification_female.label == 'female')
-
 
 class FDAClassifierTestCase(unittest.TestCase):
 

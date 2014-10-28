@@ -154,6 +154,18 @@ class SplitClassifierLayerNode(BaseNode):
         self.num_retained_features = "differs maybe" # self.nodes[0].num_retained_features # This should be calculated more exactly.
         self.complexity =  "differs" #self.nodes[0].complexity
 
+    def get_output_type(self, input_type, as_string=True):
+        """ overwritten method from BaseNode
+
+        returns PredictionVector(as string or class) since this
+        is the only possible output of the current node
+        """
+        if as_string:
+            return "PredictionVector"
+        else:
+            return PredictionVector
+
+
 class SVMComplexityLayerNode(SplitClassifierLayerNode):
     """ Calculate the minimal complexity, where the soft margin is inactive
     

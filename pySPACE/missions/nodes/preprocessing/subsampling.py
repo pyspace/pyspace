@@ -68,7 +68,7 @@ class SubsamplingNode(BaseNode):
         -
             node : Subsampling
             parameters :
-                target_frequency : 25.0
+                target_frequency : 1.0
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2008/08/25
@@ -226,7 +226,10 @@ class DownsamplingNode(BaseNode):
         - 
             node : Downsampling
             parameters :
-                target_frequency : 25.0
+                target_frequency : 2.5
+                phase_shift : 1
+
+    .. todo:: Perhaps it is better to not rely on frequencies, but on factors?
     
     :Author: Hendrik Woehrle (Hendrik.Woehrle@dfki.de)
     """

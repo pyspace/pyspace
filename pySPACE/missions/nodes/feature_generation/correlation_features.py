@@ -123,6 +123,7 @@ class StatisticalFeatureNode(BaseNode):
             (*optional, default: None*)
     
     **Known issues**
+
     .. todo:: Try to use the methods on the whole data array
     
     **Exemplary Call**
@@ -139,24 +140,24 @@ class StatisticalFeatureNode(BaseNode):
     
     :Author: Anett Seeland (anett.seeland@dfki.de)
     :Created: 2009/10/06
-    :Last change: 2010/08/09 by Anett Seeland
+    :Refactoring: 2014/09/11 by Mario Michael Krell
     """
 
-    def __init__(self, raw_moment_order = 1, central_moment_order = 1, 
-                 std = False, std_function = None, quadratic_mean = False, 
-                 median = False, minimum = False, maximum = False,
-                 artifact_threshold = None, **kwargs):
+    def __init__(self, raw_moment_order=1, central_moment_order=1,
+                 std=False, std_function=None, quadratic_mean=False,
+                 median=False, minimum=False, maximum=False,
+                 artifact_threshold=None, **kwargs):
         super(StatisticalFeatureNode, self).__init__(**kwargs)
-        self.set_permanent_attributes(raw_moment_order = raw_moment_order,
-                                  central_moment_order = central_moment_order,
-                                  std = std, std_function = std_function,
-                                  quadratic_mean = quadratic_mean, 
-                                  median = median, minimum = minimum,
-                                  maximum = maximum,
-                                  artifact_threshold = artifact_threshold,
-                                  feature_names = None)
+        self.set_permanent_attributes(raw_moment_order=raw_moment_order,
+                                      central_moment_order=central_moment_order,
+                                      std=std, std_function=std_function,
+                                      quadratic_mean=quadratic_mean,
+                                      median=median, minimum=minimum,
+                                      maximum=maximum,
+                                      artifact_threshold=artifact_threshold,
+                                      feature_names=None)
 
-    def raw_moment(self, one_channel_time_series,  k):
+    def raw_moment(self, one_channel_time_series, k):
         """Compute the k'th-order raw moment of a given channel.
         
         **Arguments**
@@ -169,11 +170,11 @@ class StatisticalFeatureNode(BaseNode):
         """
         # raising int arrays to higher power can cause overflow!!!
         # Hence we do the power-raising manually and NOT by "array ** k" 
-        sum = 0.0
+        moment_sum = 0.0
         for index,  value in enumerate(one_channel_time_series):
             power = value ** k
-            sum += power
-        raw_moment = sum / len(one_channel_time_series)
+            moment_sum += power
+        raw_moment = moment_sum / len(one_channel_time_series)
         return raw_moment
     
     def amplitudes_above(self, one_channel_time_series, threshold):
@@ -183,30 +184,31 @@ class StatisticalFeatureNode(BaseNode):
         
             :window:
                 a tow dimensional time series
-        
+
             :threshold:
                 a number above the values are count.
         """
         count = 0
         for value in one_channel_time_series:
-            if value > threshold or  value < -threshold:
-                count+= 1
+            if value > threshold or value < -threshold:
+                count += 1
         return count
     
     def _execute(self, x):
-        """ Calculates statistical features. """
+        """ Calculates statistical features """
         # determine what has to be computed and initialize data structures
+        data = x.get_data()
         if self.central_moment_order == 0:
-            self.central_moment_order = 1 # only for feature_size computation
+            self.central_moment_order = 1  # only for feature_size computation
         feature_size = self.raw_moment_order * len(x.channel_names) + \
-                (self.central_moment_order-1) * len(x.channel_names) + \
-                self.std * len(x.channel_names) + \
-                self.quadratic_mean * len(x.channel_names) + \
-                self.median * len(x.channel_names) + \
-                self.minimum * len(x.channel_names) + \
-                self.maximum * len(x.channel_names)
-        if self.artifact_threshold != None:
-            feature_size+= 1
+            (self.central_moment_order-1) * len(x.channel_names) + \
+            self.std * len(x.channel_names) + \
+            self.quadratic_mean * len(x.channel_names) + \
+            self.median * len(x.channel_names) + \
+            self.minimum * len(x.channel_names) + \
+            self.maximum * len(x.channel_names)
+        if not self.artifact_threshold is None:
+            feature_size += 1
         statistical_features = numpy.zeros((feature_size, ), numpy.float64)
         # initialize the actual feature_index
         feature_index = 0
@@ -214,8 +216,7 @@ class StatisticalFeatureNode(BaseNode):
         # for every channel...
         # TODO: Try to use the methods on the whole data array
         for index in range(len(x.channel_names)):  
-            current_channel = x[:, index]
-            
+            current_channel = data[:, index]
             # in these cases it is auspicious to compute and store variables
             # cause we will need them again
             if self.raw_moment_order > 0 or self.central_moment_order > 1 or \
@@ -225,106 +226,90 @@ class StatisticalFeatureNode(BaseNode):
                 # self.raw_moment(current_channel, 2) 
                 second_raw_moment = scipy.stats.ss(current_channel) 
                 # print second_raw_moment
-            if self.raw_moment_order > 0: # raw_moment_of_1_th_order needed?
-                # it's the mean, so dont compute it again
+            if self.raw_moment_order > 0:  # raw_moment_of_1_th_order needed?
+                # it's the mean, so don't compute it again
                 statistical_features[feature_index] = average
-                feature_index += 1 # update feature_index
-                if self.raw_moment_order > 1: # raw_moment_2nd_order needed?
+                feature_index += 1  # update feature_index
+                if self.raw_moment_order > 1:  # raw_moment_2nd_order needed?
                     # we have already computed it
                     statistical_features[feature_index] = second_raw_moment
                     feature_index += 1
                     # for the other orders of raw_moments
                     for order in range(3, self.raw_moment_order+1): 
                         statistical_features[feature_index] = \
-                                self.raw_moment(current_channel, order)
+                            self.raw_moment(current_channel, order)
                         feature_index += 1
-                
             # central_moment
             for order in range(2, self.central_moment_order+1): 
                 statistical_features[feature_index] = \
-                        scipy.stats.moment(current_channel,order)
-                        #self.central_moment(current_channel, average, order)
+                    scipy.stats.moment(current_channel, order)
                 feature_index += 1
-                
-            if  self.std: # standard_deviation
+            # standard_deviation
+            if self.std:
                 statistical_features[feature_index] = \
-                        numpy.std(current_channel) 
-                # self.standard_deviation(current_channel, average,
-                # self.std_function)
+                    numpy.std(current_channel)
                 feature_index += 1
-                
             # quadratic_mean    
             if self.quadratic_mean: 
                 # we stored relevant results before
                 statistical_features[feature_index] = second_raw_moment ** 0.5
                 feature_index += 1
-                
-            if self.median: # median
+            # median
+            if self.median:
                 statistical_features[feature_index] = \
-                                                 numpy.median(current_channel)
+                    numpy.median(current_channel)
+                feature_index += 1
+            # minimum
+            if self.minimum:
+                statistical_features[feature_index] = \
+                    numpy.amin(current_channel)
+                feature_index += 1
+            # maximum
+            if self.maximum:
+                statistical_features[feature_index] = \
+                    numpy.amax(current_channel)
                 feature_index += 1
                 
-            if self.minimum: # minimum
-                statistical_features[feature_index] = \
-                                                   numpy.amin(current_channel)
-                feature_index += 1
-                
-            if self.maximum: # maximum
-                statistical_features[feature_index] = \
-                                                   numpy.amax(current_channel)
-                feature_index += 1
-                
-            if self.artifact_threshold != None:
-                statistical_features[-1] += \
-                self.amplitudes_above(current_channel, self.artifact_threshold)
-            
+            if self.artifact_threshold is None:
+                statistical_features[-1] += self.amplitudes_above(
+                    current_channel, self.artifact_threshold)
         # if feature_names have to be determined
-        if self.feature_names == None:
+        if self.feature_names is None:
             # initialize data structure
-            self.feature_names = numpy.empty((feature_size, ),  '|S32' )
-            # initialize the actual feature_index
-            feature_index = 0
+            self.feature_names = []
             for name in x.channel_names:
                 # raw_moment
                 for order in range(1,  self.raw_moment_order+1):
-                    self.feature_names[feature_index] = \
-                                "RAW_MOMENT_%d_%s" % (order, name)
-                    feature_index += 1 # update feature_index
+                    self.feature_names.append(
+                        "RAW_MOMENT_%d_%s" % (order, name))
                 # central_moment
                 for order in range(2, self.central_moment_order+1):
-                    self.feature_names[feature_index] = \
-                                "CENTRAL_MOMENT_%d_%s" % (order, name)
-                    feature_index += 1
+                    self.feature_names.append(
+                        "CENTRAL_MOMENT_%d_%s" % (order, name))
                 # standard_deviation
-                if  self.std: 
-                    self.feature_names[feature_index] = "STD_%s" % (name)
-                    feature_index += 1
+                if self.std:
+                    self.feature_names.append("STD_%s" % (name))
                 # quadratic_mean
                 if self.quadratic_mean: 
-                    self.feature_names[feature_index] = "QUAD_MEAN_%s" %(name)
-                    feature_index += 1
+                    self.feature_names.append("QUAD_MEAN_%s" %(name))
                 # median
                 if self.median: 
-                    self.feature_names[feature_index] = "MEDIAN_%s" % (name)
-                    feature_index += 1
+                    self.feature_names.append("MEDIAN_%s" % (name))
                 # minimum
                 if self.minimum: 
-                    self.feature_names[feature_index] = "MIN_%s" % (name)
-                    feature_index += 1
+                    self.feature_names.append("MIN_%s" % (name))
                 # maximum
                 if self.maximum:
-                    self.feature_names[feature_index] = "MAX_%s" % (name)
-                    feature_index += 1
-            if self.artifact_threshold != None:
-                self.feature_names[-1] = \
-                                "AMP_ABOVE_%.2f" % (self.artifact_threshold)
+                    self.feature_names.append("MAX_%s" % (name))
+            if not self.artifact_threshold is None:
+                self.feature_names.append(
+                    "AMP_ABOVE_%.2f" % (self.artifact_threshold))
                     
-        feature_vector = \
-          FeatureVector(numpy.atleast_2d(statistical_features), 
-                                                        self.feature_names)
-                        
+        feature_vector = FeatureVector(numpy.atleast_2d(statistical_features),
+                                       self.feature_names)
         return feature_vector
-    
+
+
 class PearsonCorrelationFeatureNode(BaseNode):
     """ Compute pearson correlation of all pairs of channels
     
@@ -362,14 +347,14 @@ class PearsonCorrelationFeatureNode(BaseNode):
     :Created: 2009/03/18
     """
     
-    def __init__(self, segments = 1, max_segment_shift = 0, *args, **kwargs):
+    def __init__(self, segments=1, max_segment_shift=0, *args, **kwargs):
         super(PearsonCorrelationFeatureNode, self).__init__(*args, **kwargs)
        
         assert(max_segment_shift < segments)
      
-        self.set_permanent_attributes(segments = segments,
-                                      segment_border_indices = None,
-                                      max_segment_shift = max_segment_shift)
+        self.set_permanent_attributes(segments=segments,
+                                      segment_border_indices=None,
+                                      max_segment_shift=max_segment_shift)
 
     def _execute(self, x):
         
@@ -456,14 +441,14 @@ class ClassAverageCorrelationFeatureNode(BaseNode):
     :Created: 2009/03/18
     """
     
-    def __init__(self, segments = 1, *args, **kwargs):
+    def __init__(self, segments=1, *args, **kwargs):
         super(ClassAverageCorrelationFeatureNode, self).__init__(*args,
                                                                      **kwargs)
         
-        self.set_permanent_attributes(segments = segments,
-                                      segment_border_indices = None,
-                                      class_averages = dict(),
-                                      class_examples = dict())
+        self.set_permanent_attributes(segments=segments,
+                                      segment_border_indices=None,
+                                      class_averages=dict(),
+                                      class_examples=dict())
     
     def is_trainable(self):
         """ Returns whether this node is trainable """

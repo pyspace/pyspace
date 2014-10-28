@@ -208,7 +208,13 @@ class StreamWindowingNode(BaseNode):
         """ Return a pickable state for this object """
         self.window_definition = None
         return super(StreamWindowingNode, self).__getstate__()
-        
+
+    def get_output_type(self, input_type, as_string=True):
+        from pySPACE.resources.data_types.time_series import TimeSeries
+        if as_string:
+            return "TimeSeries"
+        else:
+            return TimeSeries
 
 
 _NODE_MAPPING = {"Stream_Windowing": StreamWindowingNode}

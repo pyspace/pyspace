@@ -119,6 +119,9 @@ class Windower(object):
             window_definitions = WindowFactory.default_windower_spec()
             return window_definitions
 
+        if type(windower_spec) == dict:
+            return WindowFactory.create_window_defs(windower_spec)
+
         # check for 'yaml'-ending of the file
         if ".yaml" not in windower_spec: # general substring search!
             windower_spec = windower_spec + ".yaml"
@@ -293,7 +296,8 @@ class MarkerWindower(Windower):
 
         :window_def:    includes names of definitions of window cuts
         :classname:     name of the label given to the window, when cut
-        :markername:    name of the marker being in the 'current block'
+        :markername:    name of the marker being in the 'current block'.
+                        MUST BE A STRING!
 
                         .. note:: The ``null`` marker is a synthetic marker,
                                   which is internally added to the stream
@@ -711,7 +715,7 @@ class MarkerWindower(Windower):
                                 print "Warning: Standard deviation of channel(s) " \
                                       " %s in time interval [%.1f,%.1f] is zero!" \
                                       % (str(zero_channels), start_time, end_time)
-                        
+
                         if wdef.skipfirstms is None or \
                             start_time > wdef.skipfirstms:
                             self.cur_extract_windows.append((wdef.windef_name,
@@ -1073,7 +1077,10 @@ class WindowFactory(object):
         # The skip ranges are currently not supported correctly by the
         # EEG serve. Because of that, we use only the end of the first range
         # for specifying skipfirstms
-        skipfirstms = window_specs['skip_ranges'][0]['end']
+        try:
+            skipfirstms = window_specs['skip_ranges'][0]['end']
+        except KeyError:
+            skipfirstms = 0
         # An alternative to skip milliseconds is to define a marker that
         # labels the ranges to be skiped
         if window_specs.has_key('startmarker'):

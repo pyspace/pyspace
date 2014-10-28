@@ -224,6 +224,7 @@ class ReduceOverrepresentedClassNode(BaseNode):
     **Parameters**
 
     **Exemplary call**
+
     .. code-block:: yaml
     
         -

@@ -70,7 +70,6 @@ import sys
 import os
 import glob
 import time
-import pwd
 import yaml
 
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
@@ -275,7 +274,15 @@ class ShuffleProcess(Process):
                 output_dataset_meta['train_test'] = True
                 output_dataset_meta['date'] = time.strftime("%Y%m%d_%H_%M_%S")
                 try:
-                    output_dataset_meta['author'] = pwd.getpwuid(os.getuid())[4]
+                    import platform
+                    CURRENTOS = platform.system()
+                    if CURRENTOS == "Windows":
+                        import getpass
+                        author = getpass.getuser()
+                    else:
+                        import pwd
+                        author = pwd.getpwuid(os.getuid())[4]
+                    output_dataset_meta['author'] = author
                 except :
                     self._log("Author could not be resolved.",level=logging.WARNING)
                     output_dataset_meta['author'] = "unknown"

@@ -128,9 +128,10 @@ class BaseData(numpy.ndarray):
                 raise_error = True
                 #print a,b
                 warnings.warn(
-                    "Dimensions do not match. Better cast object to ndarray, before slicing! " +
-                    "To locate the error check documentation in base.py" +
-                    " or uncomment the lower next two lines and restart!")
+                    "Dimensions do not match. Better cast object to ndarray," +
+                    " before slicing! To locate the error check documentation" +
+                    " in base.py or uncomment the lower next two lines" +
+                    " and restart!")
         except:
             pass
             #        if raise_error:
@@ -157,9 +158,7 @@ class BaseData(numpy.ndarray):
         """uuid for key"""
         return uuid.uuid4()
 
-
     ###following: property definitions, setter and getter
-
     def __set_key__(self, new_key):
         """set method for key
         

@@ -182,8 +182,9 @@ def dict2csv(filename, data_dict, delimiter=','):
             ldict[key] = data_dict[key][current_line]
         final_list.append(ldict)
     # save it
-    csvDictWriter=csv.DictWriter(csv_file, 
-                    quoting=csv.QUOTE_ALL, fieldnames=keys, delimiter=delimiter)
+    csvDictWriter=csv.DictWriter(csv_file, quoting=csv.QUOTE_ALL,
+                                 fieldnames=keys, delimiter=delimiter,
+                                 lineterminator='\n')
     csvDictWriter.writerow(dict(zip(keys,keys)))
     csvDictWriter.writerows(final_list)
     csv_file.close()
@@ -401,7 +402,7 @@ def add_key(orig_dict, key_str, key_list):
 
     return orig_dict
     
-def extend_dict(orig_dict, extension_dict):
+def extend_dict(orig_dict, extension_dict, retain_unique_items = True):
     """ Extend one dictionary with another
     
     .. note:: This function returns a modified dictionary, even if the extension
@@ -425,12 +426,28 @@ def extend_dict(orig_dict, extension_dict):
         warnings.warn('Inconsistency while merging: ' +
                   'The two directories have different keys!')
     
+    current_num_entries = len(orig_dict[orig_dict.keys()[0]])
     for key in extension_dict.keys():
-        if orig_dict.has_key(key):
+        if orig_dict.has_key(key) :
+            orig_dict[key].extend(copy.deepcopy(extension_dict[key]))
+        elif retain_unique_items:
+            orig_dict[key] = current_num_entries*[None]
             orig_dict[key].extend(copy.deepcopy(extension_dict[key]))
         else:
             warnings.warn('Key ' + key + ' dismissed during dictionary extension:'+
                           ' Does not exist in all files!')
+    
+    num_new_entries = len(extension_dict[extension_dict.keys()[0]])
+    for key in orig_dict:
+        if key in extension_dict:
+            pass
+        elif retain_unique_items:       
+            orig_dict[key].extend(num_new_entries*[None])
+        else:
+            warnings.warn('Key ' + key + ' dismissed during dictionary extension:'+
+                          ' Does not exist in all files!')
+            orig_dict.pop(key)
+        
     return orig_dict
 
 

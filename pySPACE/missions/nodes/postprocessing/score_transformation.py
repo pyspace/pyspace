@@ -887,6 +887,6 @@ class LinearFitNode(BaseNode):
 
 _NODE_MAPPING = {"PSF": PlattsSigmoidFitNode,
                 "SigTrans": SigmoidTransformationNode,
-                "LinearFit": LinearFitNode
+                "LinearFit":LinearFitNode
                 }
 

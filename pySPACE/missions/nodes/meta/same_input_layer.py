@@ -14,10 +14,15 @@ from pySPACE.resources.data_types.prediction_vector import PredictionVector
 
 # ensemble imports
 import os
-import fcntl
+try:
+    import portalocker
+except ImportError, e:
+    pass
+# import fcntl
 import fnmatch
 import cPickle
 import logging
+import warnings
 from collections import defaultdict
 
 from pySPACE.missions.nodes.meta.flow_node import FlowNode
@@ -242,6 +247,16 @@ class SameInputLayerNode(BaseNode):
             node.set_run_number(run_number)
         super(SameInputLayerNode, self).set_run_number(run_number)
 
+    def get_output_type(self, input_type, as_string=True):
+        for node in self.nodes:
+            if output is None:
+                output = node.get_output_type(input_type, as_string)
+            elif output != node.get_output_type(input_type, as_string):
+                warnings.warn("Node %s yields has a different output from"
+                              "the rest of the nodes.", str(node))
+            else:
+                continue
+        return output
 
 class EnsembleNotFoundException(Exception): pass
 
@@ -309,7 +324,13 @@ class ClassificationFlowsLoaderNode(BaseNode):
     def __init__(self, ensemble_base_dir, ensemble_pattern,
                  flow_select_list=[-1], cache_dir=None, **kwargs):
         super(ClassificationFlowsLoaderNode, self).__init__(**kwargs)
-
+        try:
+            import portalocker
+        except ImportError, e:
+            warnings.warn("Before running " + self.__class__.__name__ +
+                          ", please install the portalocker module, e.g.," +
+                          " via pip install")
+            raise(e)
         # Load all flow-pickle files that match the given ensemble_pattern
         # in the directory tree rooted in ensemble_base_dir
         flow_pathes = tuple(locate(ensemble_pattern, ensemble_base_dir))
@@ -343,7 +364,8 @@ class ClassificationFlowsLoaderNode(BaseNode):
                 # Load ensemble cache
                 self._log("Loading flow cache from %s" % file_path)
                 lock_file = open(file_path + ".lock", 'w')
-                fcntl.flock(lock_file, fcntl.LOCK_EX)
+                portalocker.lock(lock_file, portalocker.LOCK_EX)
+                # fcntl.flock(lock_file, fcntl.LOCK_EX)
                 self._log("Got exclusive lock on %s" % (file_path + ".lock"),
                           logging.INFO)
                 cache_file = open(file_path, 'r')
@@ -351,8 +373,9 @@ class ClassificationFlowsLoaderNode(BaseNode):
                 cache_file.close()
                 self._log("Release exclusive lock on %s" % (file_path + ".lock"),
                           logging.INFO)
-                fcntl.flock(lock_file, fcntl.LOCK_UN)
-                
+                # fcntl.flock(lock_file, fcntl.LOCK_UN)
+                portalocker.unlock(lock_file)
+
     def _load_ensemble(self):
         self._log("Loading ensemble")
         # Create a flow node for each  flow pickle
@@ -429,7 +452,8 @@ class ClassificationFlowsLoaderNode(BaseNode):
                     self._log("Updating flow cache %s" % file_path)
                     # Update existing cache persistency file
                     lock_file = open(file_path + ".lock", 'w')
-                    fcntl.flock(lock_file, fcntl.LOCK_EX)
+                    portalocker.lock(lock_file, portalocker.LOCK_EX)
+                    # fcntl.flock(lock_file, fcntl.LOCK_EX)
                     self._log("Got exclusive lock on %s" % (file_path + ".lock"),
                               logging.INFO)
                     cache_file = open(file_path, 'r')
@@ -440,12 +464,14 @@ class ClassificationFlowsLoaderNode(BaseNode):
                     cache_file.close()
                     self._log("Release exclusive lock on %s" % (file_path + ".lock"),
                               logging.INFO)
-                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+                    portalocker.unlock(lock_file)
+                    # fcntl.flock(lock_file, fcntl.LOCK_UN)
                 else:
                     self._log("Writing flow cache %s" % file_path)
                     # Create new cache persistency file
                     lock_file = open(file_path + ".lock", 'w')
-                    fcntl.flock(lock_file, fcntl.LOCK_EX)
+                    portalocker.lock(lock_file, portalocker.LOCK_EX)
+                    # fcntl.flock(lock_file, fcntl.LOCK_EX)
                     self._log("Got exclusive lock on %s" % (file_path + ".lock"),
                               logging.INFO)
                     cache_file = open(file_path, 'w')
@@ -453,7 +479,14 @@ class ClassificationFlowsLoaderNode(BaseNode):
                     cache_file.close()
                     self._log("Release exclusive lock on %s" % (file_path + ".lock"),
                               logging.INFO)
-                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+                    portalocker.unlock(lock_file)
+                    # fcntl.flock(lock_file, fcntl.LOCK_UN)
+
+    def get_output_type(self, input_type, as_string=True):
+        if as_string:
+            return "PredictionVector"
+        else:
+            return PredictionVector
 
 class MultiClassLayerNode(SameInputLayerNode):
     """ Wrap the one vs. rest or one vs. one scheme around the given node

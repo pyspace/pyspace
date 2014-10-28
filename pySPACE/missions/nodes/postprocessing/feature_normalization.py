@@ -24,7 +24,11 @@ class FeatureNormalizationNode(BaseNode):
     
     This transformation can be loaded and stored
     and given to visualization tools.
-    
+
+    When used as a standalone node, loading a transformation is mandatory
+    because the *translation* and *mult* variables are otherwise not
+    available.
+
     **Parameter**
         :load_path:
             An absolute path from which the normalization vectors are loaded.
@@ -366,7 +370,7 @@ class EuclideanFeatureNormalizationNode(BaseNode):
         norm = numpy.linalg.norm(a)
         if norm == 0:
             norm = 1
-        a = a * numpy.float128(1) / norm
+        a = a * numpy.longdouble(1) / norm
         if self.dimension_scale:
             a = FeatureVector([len(a)*a],self.feature_names)
             return a
@@ -401,7 +405,7 @@ class InfinityNormFeatureNormalizationNode(BaseNode):
         """ Normalizes the samples vector to inf norm one"""
         x = data.view(numpy.ndarray)
         # always convert the array you do not start with an integer
-        a = x[0,:].astype(numpy.float128)
+        a = x[0,:].astype(numpy.longdouble)
         inf_norm = numpy.max(numpy.abs(a))
         if inf_norm == 0:
             inf_norm = 1
