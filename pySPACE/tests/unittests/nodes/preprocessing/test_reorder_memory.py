@@ -46,9 +46,8 @@ class ReorderMemoryTestCase(unittest.TestCase):
         
         data = self.node.execute(self.data)
         
-        logger.log(logging.INFO, "striding before reordering: " + str(self.data.strides))
-        logger.log(logging.INFO, "striding after reordering: " + str(self.data.strides))
-        
+        logging.info("striding before reordering: " + str(self.data.strides))
+
         self.assertTrue(True)
         
         

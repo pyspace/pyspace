@@ -18,7 +18,6 @@ import sys
 import os
 import glob
 import yaml
-import pwd
 import time
 import logging
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
@@ -216,7 +215,16 @@ class WekaFilterOperation(Operation):
                     input_collection_meta["feature_names"] = feature_names
                     input_collection_meta["num_features"] = len(feature_names)
                     try:
-                        input_collection_meta["author"] = pwd.getpwuid(os.getuid())[4]
+                        import platform
+                        CURRENTOS = platform.system()
+                        if CURRENTOS == "Windows":
+                            import getpass
+                            author = getpass.getuser()
+                        else:
+                            import pwd
+                            author = pwd.getpwuid(os.getuid())[4]
+
+                        input_collection_meta["author"] = author
                     except :
                         input_collection_meta["author"] = "unknown"
                         self._log("Author could not be resolved.",level=logging.WARNING)

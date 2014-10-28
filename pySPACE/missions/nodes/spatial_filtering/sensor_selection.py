@@ -377,8 +377,10 @@ class SensorSelectionRankingNode(SensorSelectionBase):
         active_elements = [old_channels.index(x)
                                for x in self.training_data[0][0].channel_names]
         # Behavior if load_path is used is not yet implemented
-        if self.picked_sensors is not []:
-            self._log("Behavior if load_path is used is not yet implemented for add_sensors!",
+        if not self.picked_sensors == []:
+            self._log("Behavior for load_path is used but is not yet "
+                "implemented for add_sensors! "
+                "Affected sensors: %s" % str(self.picked_sensors),
                 level=logging.CRITICAL)
         while len(active_elements) < self.num_selected_sensors:
             self._log("%s active sensors remaining." % len(active_elements))
@@ -392,7 +394,8 @@ class SensorSelectionRankingNode(SensorSelectionBase):
                 chosen_sensor = ranking[i][0]
                 self.picked_sensors.append(chosen_sensor)
                 active_elements.append(old_channels.index(chosen_sensor))
-                self._log("Readding sensor %s." % chosen_sensor)
+                self._log("Adding sensor %s." % chosen_sensor,
+                level=logging.CRITICAL)
         self.selected_indices = active_elements
         self.selected_channels = \
                 [old_channels[index] for index in self.selected_indices]

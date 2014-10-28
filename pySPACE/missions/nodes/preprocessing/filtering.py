@@ -38,7 +38,7 @@ class SimpleLowPassFilterNode(BaseNode):
         -
             node : SimpleLowPassFilterNode
             parameters :
-                cutoff_frequency : 1.0
+                cutoff_frequency : 0.25
 
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Revisited: Hendrik Woehrle (hendrik.woehrle@dfki.de)
@@ -775,7 +775,7 @@ class VarianceFilterNode(BaseNode):
                  standardization = False,
                  **kwargs):
 
-        super(VarianceFilterNode, self).__init__(ringbuffer = None,variables = None,**kwargs)
+        super(VarianceFilterNode, self).__init__(**kwargs)
         if(width < 1):
             print "Width have to be greater or equal to 1!\nWidth is now set to 1, therefore the data won't be changed!!!"
             width = 1

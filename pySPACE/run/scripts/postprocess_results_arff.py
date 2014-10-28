@@ -33,7 +33,7 @@ if __name__ == '__main__':
             line_dict["__Dataset__"] = "Inter-subject"
         # Lazy initialization
         if sink_writer == None:
-            sink_writer = csv.DictWriter(sink_file, line_dict.keys())
+            sink_writer = csv.DictWriter(sink_file, line_dict.keys(), lineterminator='\n')
             sink_writer.writerow(dict(zip(line_dict.keys(), line_dict.keys())))
         sink_writer.writerow(line_dict)
         

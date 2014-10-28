@@ -95,11 +95,16 @@ class FeatureVector(base.BaseData):
         # add subclasses attributes to the created instance
         if feature_names is None:
             feature_names = ["feature_%s_0.000sec" % i 
-                                    for i in range(obj.shape[1])]
+                             for i in range(obj.shape[1])]
         try:
-            assert(len(feature_names)==obj.shape[1]),"Feature names (%s) do not match array dimensions (%s)! Fix this!"%(str(feature_names),str(obj.shape))
+            assert(len(feature_names) == obj.shape[1]),\
+                "Feature names (%s) do not match to array dimensions (%s)! Fix this!" \
+                % (str(feature_names),str(obj.shape))
         except:
-            warnings.warn("Length of feature names (%d) do not match array dimensions (%s)! Fix this! Occurring feature names:%s"%(len(feature_names),str(obj.shape),str(feature_names)))
+            warnings.warn(
+                "Length of feature names (%d) do not match array dimensions (%s)! Fix this! Occurring feature names:%s"
+                % (len(feature_names),str(obj.shape),str(feature_names))
+                )
         obj.feature_names = feature_names
         if not tag is None:
             obj.tag = tag
@@ -118,16 +123,15 @@ class FeatureVector(base.BaseData):
             self.feature_names_hash = None
         
     def __str__(self):
-        """ Connect array values and feature names for good string representation """
+        """ Connect array values and feature names for a good string representation """
         str_repr = ""
-        data=self.view(numpy.ndarray)
+        data = self.view(numpy.ndarray)
         for feature_name, feature_value in zip(self.feature_names,
-                                               data[0,:]):
+                                               data[0, :]):
             if isinstance(feature_value, basestring):
                 str_repr += "%s : %s \n" % (feature_name, feature_value)
-            else : 
+            else:
                 str_repr += "%s : %.4f \n" % (feature_name, feature_value)
-            
         return str_repr
 
     def __reduce__(self):
@@ -135,7 +139,7 @@ class FeatureVector(base.BaseData):
         # http://www.mail-archive.com/numpy-discussion@scipy.org/msg02446.html
         # for infos about pickling ndarray subclasses
         object_state = list(super(FeatureVector, self).__reduce__())
-        
+
         subclass_state = (self.feature_names)
         object_state[2].append(subclass_state)
         object_state[2] = tuple(object_state[2])
@@ -151,7 +155,6 @@ class FeatureVector(base.BaseData):
         
         self.feature_names = own_state
 
-
     # In order to reduce the memory footprint, we do not store the feature names
     # once per instance but only once per occurrence. Instead we store a unique
     # hash once per instance that allows to retrieve the feature names.
@@ -166,12 +169,13 @@ class FeatureVector(base.BaseData):
         if type(feature_names) is not list:
             warnings.warn("The feature names must be of type list. " +
                           "The current input is of type " +
-                          str(type(feature_names)) +". Switching to list.")
+                          str(type(feature_names)) +". Switching to list. "
+                          + str(feature_names))
             feature_names = list(feature_names)
         self.feature_names_hash = hash(str(feature_names))
-        if not FeatureVector.feature_names_dict.has_key(self.feature_names_hash):
+        if not self.feature_names_hash in FeatureVector.feature_names_dict:
             FeatureVector.feature_names_dict[self.feature_names_hash] \
-                                                                = feature_names
+                = feature_names
 
     def del_feature_names(self):
         """ Nothing happens, when feature names are deleted """
@@ -188,27 +192,29 @@ class FeatureVector(base.BaseData):
         A factory method which creates a feature vector object with the given
         data and the metadata from the old feature vector
         """
-        data = FeatureVector(data,
-                   feature_names=kwargs.get('feature_names',
-                                            old.feature_names),
-                   tag=kwargs.get('tag', None))
+        data = FeatureVector(
+            data,
+            feature_names=kwargs.get('feature_names', old.feature_names),
+            tag=kwargs.get('tag', None))
         data.inherit_meta_from(old)
         return data
 
     def __eq__(self,other):
         """ Test for same type, dimensions, features names, and array values """
-        if not type(self)==type(other):
+        if not type(self) == type(other):
             return False
         if not set(self.feature_names)==set(other.feature_names):
             return False
-        if not self.shape==other.shape:
+        if not self.shape == other.shape:
             return False
-        if self.feature_names==other.feature_names:
-            return numpy.allclose(self.view(numpy.ndarray), other.view(numpy.ndarray))
+        if self.feature_names == other.feature_names:
+            return numpy.allclose(self.view(numpy.ndarray),
+                                  other.view(numpy.ndarray))
         else:
             # Comparison by hand
             for feature in self.feature_names:
-                if not numpy.allclose(self[0][self.feature_names.index(feature)],
-                                      other[0][other.feature_names.index(feature)]):
+                if not numpy.allclose(
+                        self[0][self.feature_names.index(feature)],
+                        other[0][other.feature_names.index(feature)]):
                     return False
             return True

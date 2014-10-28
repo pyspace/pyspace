@@ -190,11 +190,16 @@ class PerformanceSinkNode(BaseNode):
             Generates a table which contains a confusion matrix over time/samples.
             There are two types of traces: short traces and long traces. 
             The short traces contain only the information, if a classification
-            was a TP, TN, FP or FN. The long traces furthermore contain
+            was a TP, FN, FP or TN. The long traces furthermore contain
             loss values and are saved as a dictionary.
             To save only short traces (for, e.g. performance reasons),
             set save_trace to ``short``.
             To save long and short traces, set save_trace to True.
+            The encoding in trace is:
+            :TP: 0
+            :FN: 1
+            :FP: 2
+            :TN: 3
 
             (*optional, default: False*)
             

@@ -4,39 +4,51 @@ Getting started
 ---------------
 
 Before getting started, you should always follow the instructions in:
-:ref:`t_install`.
+:ref:`download` and :ref:`t_install`.
 
 For the execution of pySPACE it is helpful to take a look at the following questions:
 
  0. How do I specify configuration files?
-    The software comes with a lot of examples but before diving into,
-    your should read :ref:`yaml` thoroughly.
+    The software comes with a lot of examples but before diving into
+    you should read :ref:`yaml` thoroughly.
     The standard interfacing is with the help of this configuration files,
     which come with an intuitive format and avoid complicated Python
-    programming. Only for advanced usage and for implementing or modifying
-    algorithms, this is needed.
+    programming.
 
- 1. Do I have to modify the :ref:`configuration file<conf>`? A standard configuration
+    Only for advanced usage and for implementing or modifying
+    algorithms, Python programming skills are required.
+
+ 1. Do I have to modify the :ref:`configuration file<conf>`?
+    A standard configuration
     which should work for most cases
-    is provided during :ref:`t_install` in the pySPACEcenter. Take a look if you need to modify, e.g.,
-    storage, spec_dir or what is appended to your PYTHONPATH during execution.
+    is provided during :ref:`t_install` in the pySPACEcenter.
+    Take a look if you need to modify, e.g.,
+    storage, spec_dir, or what is appended to your PYTHONPATH during execution.
 
- 2. Take a look at your pySPACEcenter. You already find a suggestion for your data organization
+ 2. Take a look at your pySPACEcenter.
+    You already find a suggestion for your data organization
     and some examples there.
 
- 3. Does the storage provide the necessary data? The storage (i.e., the place for input and output
+ 3. Does the storage provide the necessary data?
+    :ref:`The storage <storage>` (i.e., the place for input and output
     of pySPACE) is by default located in your pySPACEcenter.
 
- 4. Which :mod:`backend<pySPACE.environments.backends>` will I use? The most common are the *serial* and the *mcore* (=multicore) backend.
-    By default, the :class:`~pySPACE.environments.backends.serial.SerialBackend` is used.
+ 4. optional: Which :mod:`backend<pySPACE.environments.backends>` will I use?
+    The most common ones are the *serial* and the *mcore* (=multicore) backend.
+    By default, the :class:`~pySPACE.environments.backends.serial.SerialBackend`
+    is used.
 
  5. Did I specify the :ref:`operation specification file <operation_spec>` 
     or :ref:`operation chain specification file <operation_chain_spec>`
     that should be used? For an :mod:`operation<pySPACE.missions.operations>` 
     you need to specify a yaml-file. In case you want to execute a 
-    :mod:`node chain operation<pySPACE.missions.operations.node_chain>`, you might want to
-    specify the node chain in a separate yaml-file (which is only optional). For more information
-    please take a look at the :ref:`example_specs`, some of them you can also find in your pySPACEcenter.
+    :mod:`node chain operation<pySPACE.missions.operations.node_chain>`,
+    you might want to
+    specify the node chain in a separate yaml-file (which is only optional).
+    For more information
+    please take a look at the :ref:`example_specs`,
+    some of them you can also find in your pySPACEcenter.
+    A complete list of available nodes can be found :ref:`here <node_list>`
 
 
 How do I then execute pySPACE? Mostly this is done using the command-line interface as described below.
@@ -151,3 +163,8 @@ More information concerning the interface are available
 in the :ref:`API documentation <api>`.
 
 .. note:: It is recommended to use the command line interface.
+
+Next Steps
+^^^^^^^^^^
+
+:ref:`first_operation`

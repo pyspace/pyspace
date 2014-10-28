@@ -49,6 +49,7 @@ class Configuration(object):
         self.min_log_level = 0
         self.backend_com = None
         self.external_nodes = []
+        self.blacklisted_nodes = []
 
 
     first_call_epilog =\

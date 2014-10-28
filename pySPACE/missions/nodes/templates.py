@@ -1,182 +1,10 @@
-""" Tell the developer about general coding and documentation approaches for nodes
-
-The first line in each module/class/function docstring should be short,
-in imperative, without stop and explain, what it does.
-You should **not** copy it from elsewhere, because if you overwrite
-existing routines, they should be different and such differ in documentation.
-If you really can not help, copying code, you should at least document,
-where you took it from.
-
-Detailed information on documentation guidelines can be found
-:ref:`here <doc>`.
-Before writing your own node, you have to have a look at it, because every node
-must be documented!
-You should also have a look at the documentation of the
-:mod:`~pySPACE.missions.nodes` package
-
-.. note:: Some parts of the guidelines, will be copied to this place,
-          because of their importance.
-
-Coding Guidelines
------------------
-
-Before programming a node or overwriting an method, have a look at this
-documentation and the documentation in the
-:class:`~pySPACE.missions.nodes.base_node.BaseNode`, because otherwise
-you might get unwanted side effects.
-Furthermore, you should have a look at existing code and mainly follow
-the `PEP 8 coding style <http://www.python.org/dev/peps/pep-0008/>`_
-
-How is the node accessed? - Some naming conventions
-----------------------------------------------------
-
-The :mod:`~pySPACE.missions.nodes` package supports automatic loading of nodes.
-The easiest access then is via the
-:mod:`node chains <pySPACE.environments.chains.node_chain>` in the
-:mod:`node chain operation <pySPACE.missions.operations.node_chain>`.
-Their, your new implemented node needs a name.
-To be detected as node, your node has to end with **`Node`**.
-Node names are written in CamelCase.
-Automatic node names are the class name and the class name without the
-ending **Node**.
-If you want to have extra names or backward compatibility after changing names,
-you can define or extend a dictionary with the name
-**_NODE_MAPPING** at the end of each module implementation.
-As keys you use the new names and the value is the corresponding class name.
-Be careful to use meaningful names or abbreviations, which are not already
-:ref:`in use <node_list>`.
-
-When the documentation is generated, the available names are added
-automatically to the documentation of each node and additionally
-:ref:`complete lists <node_list>` are generated to give information
-on available nodes and their functionality.
-
-Base nodes should always include **"Base"** in their class name
-and if they are not usable they should end with it instead of **"Node"**.
-
-The First Step: Where to put the node?
---------------------------------------
-
-Finding the Category
-+++++++++++++++++++++
-
-Before implementing your own node, you should find out, where to put it.
-The :mod:`~pySPACE.missions.nodes` has several categories of algorithms
-and you should check their documentation to find out, where your node belongs to.
-
-Finding the Module
-+++++++++++++++++++
-
-As the next step, you should find out, if there is already a fitting module in
-there, which fits to your algorithm or needs only small change in
-documentation, to be fitting.
-
-If there is no module, you have to open up your own new one.
-
-.. warning:: Be careful, when creating new modules. The module name should be
-             meaningful. The module should include some basic documentation and
-             most importantly describe a general concept of a group
-             of algorithms and not repeat the documentation of your new class.
-
-.. note:: When the documentation is generated, at the end of each module
-          documentation, a summary of its functions and classes is generated.
-          So you should not do this manually.
-
-Finding the Class Name
-+++++++++++++++++++++++
-
-The class name is written with the above mentioned conventions.
-But before starting with it, you should first check,
-if there is already a class, which only has to be modified for your new part.
-Second you should check if your algorithms is developed for a very special
-purpose but could be generalized.
-Finally you decide for a short meaningful algorithm name, which
-contrasts your algorithm from the exiting ones.
-
-Base Nodes
-++++++++++
-
-For some highly sophisticated types of nodes you can find a corresponding
-base node in the package.
-The :mod:`~pySPACE.missions.nodes.visualization` package is the best example
-in this case.
-Theses nodes define a special interface for your algorithm and you will only
-have to implement some special functions for these nodes,
-which can be found in their documentation.
-
-Currently the default is, that your node is not inheriting from any special
-generalizing base node but only from the basic
-:class:`~pySPACE.missions.nodes.base_node.BaseNode`.
-This node is by default just forwarding the data, but implements all
-functionality a node needs.
-
-The Main Principle
-------------------
-
-Every node, which is no base node should inherit from the base node.
-
-.. code-block:: python
-
-    from pySPACE.missions.nodes.base_node import BaseNode
-
-Implementing a node now is nothing more than carefully overwriting the
-default methods of this node.
-Depending on the complexity of your algorithm, this might be very easy or a bit
-more complicated. In the following we will give advice and examples therefore.
-
-The Processed Data Types - Input and Output
---------------------------------------------
-
-For processing only special input and output types are required,
-which are subclasses of numpy arrays.
-All currently available types can be found in
-:mod:`pySPACE.resources.data_types`.
-
-
-Further Minor Information
--------------------------
-
-* Randomization should be done be setting a fixed seed with the help of
-  *self.run_number* to enable reproducibility.
-* The here presented nodes are only examples
-  for better documentation of the node creation process
-  and should not be taken to serious
-  or used as base nodes for real algorithms.
-* A special end of a node chain can be a *sink node*.
-  It is defined by implementing the method *get_result_dataset*.
-  Its function is to gather all data.
-* The variable *self.temp_dir* an be used to store some data temporarily,
-  e.g. for security reasons.
-
-General Concept of a Node
--------------------------
-
-.. image:: ../../graphics/node.png
-   :width: 500
-
-Integration of Nodes in a :mod:`~pySPACE.environments.chains.node_chain`
--------------------------------------------------------------------------
-
-.. image:: ../../graphics/node_chain.png
-   :width: 500
-
-Usage of :mod:`node chains <pySPACE.environments.chains.node_chain>`
---------------------------------------------------------------------
-
-.. image:: ../../graphics/launch_live.png
-   :width: 500
-
-Visualization of :mod:`~pySPACE.missions.nodes.splitter` Nodes
---------------------------------------------------------------
-
-.. image:: ../../graphics/splitter.png
-    :width: 500
-"""
+""" Tell the developer about general coding and documentation approaches for nodes """
 from pySPACE.missions.nodes.base_node import BaseNode
 import warnings
 import logging
 import numpy
 from pySPACE.resources.data_types.feature_vector import FeatureVector
+from pySPACE.tools.memoize_generator import MemoizeGenerator
 
 class SimpleDataTransformationTemplateNode(BaseNode):
     """ Parametrized algorithm, transforming the data without training
@@ -594,3 +422,249 @@ class SpecialPurposeFunctionsTemplate(BaseNode):
             ranking_dict[feat_channel_names[i]] += abs(self.features[0][i])
         ranking = sorted(ranking_dict.items(),key=lambda t: t[1])
         return ranking
+
+
+class SimpleSourceTemplateNode(BaseNode):
+    """ A simple template that illustrates the basic principles of a source node
+
+    In `pySPACE`, source nodes are used at the beginning of the node chain.
+    The source nodes are responsible for the input of data, be it from a
+    static source or from a live stream.
+
+    It is very important to note that these nodes just serve the purpose of
+    providing the node chain with an input dataset and do not perform any
+    changes on the data itself. That being said, these nodes are **do not**
+    have an **input node** and are **not trainable**!
+
+    In the following we will discuss the general strategy for building a new
+    source node for a static input data set which has been saved to disk.
+    In the case of more complicated inputs, please consult the documentation of
+    :mod:`~pySPACE.missions.nodes.source.external_generator_source.ExternalGeneratorSourceNode`
+    and :mod:`~pySPACE.missions.nodes.source.time_series_source.Stream2TimeSeriesSourceNode`
+    """
+    def __init__(self, **kwargs):
+        """ Initialize some values to 0 or `None`
+
+        The initialization routine of the source node is basically completely
+        empty. Should you feel the need to do something in this part of the
+        code, you can initialize the ``input_dataset`` to ``None``. This
+        attribute will then later be changed when the ``set_input_dataset``
+        method is called.
+
+        If the user wants to generate the dataset inside the SourceNode,
+        this should be done in the ``__init__`` method though. A good example
+        of this practice can be found in the
+        :mod:`~pySPACE.missions.nodes.source.random_time_series_source.RandomTimeSeriesSourceNode`
+        """
+        super(SimpleSourceTemplateNode, self).__init__(**kwargs)
+
+        self.set_permanent_attributes(dataset=None)
+
+    def set_input_dataset(self, dataset):
+        """ Sets the dataset from which this node reads the data
+
+        This method is the beginning of the node. Put simply, this method
+        starts the feeding process of your node chain by telling the node chain
+        where to get the data from.
+        """
+        self.set_permanent_attributes(dataset=dataset)
+
+    def request_data_for_training(self, use_test_data):
+        """ Returns the data that can be used for training of subsequent nodes
+
+        This method streams training data and sends it to the subsequent nodes.
+        If one looks at the tutorial related to building new nodes (available in
+        the tutorial section), one can see exactly where the ``request_data``
+        methods are put to use.
+
+        The following example is one that was extracted from the
+        :mod:`~pySPACE.missions.nodes.source.feature_vector_source.FeatureVectorSourceNode`
+
+        which should(in theory at least) be implementable for all types of data.
+        """
+        if not use_test_data:
+            # If the input dataset consists only of one single run,
+            # we use this as input for all runs to be conducted (i.e. we
+            # rely on later randomization of the order). Otherwise
+            # we use the data for this run number
+            if self.dataset.meta_data["runs"] > 1:
+                key = (self.run_number, self.current_split, "train")
+            else:
+                key = (0, self.current_split, "train")
+            # Check if there is training data for the current split and run
+            if key in self.dataset.data.keys():
+                self._log("Accessing input dataset's training feature vector windows.")
+                self.data_for_training = MemoizeGenerator(self.dataset.get_data(*key).__iter__(),
+                                                          caching=self.caching)
+            else:
+                # Returns an iterator that iterates over an empty sequence
+                # (i.e. an iterator that is immediately exhausted), since
+                # this node does not provide any data that is explicitly
+                # dedicated for training
+                self._log("No training data available.")
+                self.data_for_training = MemoizeGenerator((x for x in [].__iter__()),
+                                                          caching=self.caching)
+        else:
+            # Return the test data as there is no additional data that
+            # was dedicated for training
+            return self.request_data_for_testing()
+
+        # Return a fresh copy of the generator
+        return self.data_for_training.fresh()
+
+
+    def request_data_for_testing(self):
+        """ Returns the data that can be used for testing of subsequent nodes
+
+        The principle of obtaining the testing data are the same as the principles
+        used in obtaining the training data set. The only difference here is that,
+        in the case in which there is no testing data available, we allow for the
+        training data to be used as testing data.
+        """
+        # If we haven't read the data for testing yet
+        if self.data_for_testing == None:
+            self._log("Accessing input dataset's test feature vector windows.")
+            # If the input dataset consists only of one single run,
+            # we use this as input for all runs to be conducted (i.e. we
+            # rely on later randomization of the order). Otherwise
+            # we use the data for this run number
+            if self.dataset.meta_data["runs"] > 1:
+                key = (self.run_number, self.current_split, "test")
+            else:
+                key = (0, self.current_split, "test")
+
+            test_data_generator = self.dataset.get_data(*key).__iter__()
+
+            self.data_for_testing = MemoizeGenerator(test_data_generator,
+                                                     caching=self.caching)
+
+        # Return a fresh copy of the generator
+        return self.data_for_testing.fresh()
+
+
+    def getMetadata(self, key):
+        """ Return the value corresponding to the given key from the dataset meta data of this source node
+
+        At some point in time, you might need to know the metadata of some
+        specific input in your input and this is when you would use this method.
+        """
+        return self.dataset.meta_data.get(key)
+
+    def use_next_split(self):
+        """ Return False
+
+        The method will always return `False` since the SourceNode
+        should(in the case of more than 1 split) execute the splits in
+        parallel and not in series.
+        """
+        return False
+
+
+class SimpleSinkTemplateNode(BaseNode):
+    """ A simple template that illustrates the basic principles of a sink node
+
+    The sink node is always placed at the end of the node chain. You can think
+    of a sink node as a place in which you can throw all your data and it will
+    do something with this data e.g. saving it to disk.
+
+    Of course, this is not the only possibility for a Sink node but it is the
+    most basic one. One example of a more complex process happening inside the
+    Sink node is that of the
+    :mod:`~pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode`
+    whereby the classification results are collected into a complex structure
+    that reflects the performance of the entire node chain.
+
+    That being said, this template addresses the very simple case of just
+    collecting the results of the node chain and doing something with them.
+
+    For a complete list of the available nodes, please consult
+    :mod:`~pySPACE.missions.nodes.sink`
+    """
+
+    def __init__(self, selection_criterion=None, data=None, **kwargs):
+        """ Initialize some criterion of selection for the data
+
+        In the initialization stage, the node is expected to just save some
+        permanent attributes that it might use at a later point in time.
+        In the case of :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`
+        data, this criterion might represent selected channel names(as
+        implemented in
+        :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink.FeatureVectorSinkNode`
+        while for :mod:`~pySPACE.resources.data_types.time_series.TimeSeries`
+        it might represent a sorting criterion, as implemented in
+        :mod:`~pySPACE.missions.nodes.sink.time_series_sink.TimeSeriesSinkNode`
+        Since this is only a mere template, we will call our selection criterion
+        `selection_criterion` and leave it up to the user to implement specific
+        selection criteria.
+        """
+        super(SimpleSinkTemplateNode, self).__init__(**kwargs)
+
+        self.set_permanent_attributes(selection_crit=selection_criterion,
+                                      data=data)
+
+    def is_trainable(self):
+        """ Return True if the node is trainable
+
+        While the sink nodes do not need to be trained, they do need access to
+        the training data that is sent through the node chain. In order to
+        achieve this, the :func:`~pySPACE.missions.nodes.base_node.BaseNode.is_trainable`
+        function from the `BaseNode` is overwritten such that it
+        always returns `True` when access to the training data is required.
+        """
+        return True
+
+    def is_supervised(self):
+        """ Returns True if the node requires supervised training
+
+        The function will almost always return True. If the node requires access
+        to the training data i.e. if the node `is_trainable` it will almost
+        surely also be supervised.
+        """
+        return True
+
+    def _train(self, data, label):
+        """ Tell the node what to do with specific data inputs
+
+        In the case of Sink nodes, the `_train` function is usually overwritten
+        with a dummy function that either returns the input data e.g.
+        :mod:`~pySPACE.missions.nodes.sink.analyzer_sink.AnalyzerSinkNode`
+        or just does not(as we will implement it here)
+        """
+        pass
+
+    def reset(self):
+        """ Reset the permanent parameters of the node chain
+
+        When used inside a node chain, the Sink node should also be
+        responsible for saving the permanent state parameters. These
+        parameters get reinitialized whenever the node chain reaches its
+        end. Nevertheless, the parameters should be saved such that they
+        can be inspected after the entire procedure has finished.
+
+
+        The following piece of code was adapted from
+        :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink.FeatureVectorSinkNode`
+        with the `FeatureVector` specific parameters changed to dummy
+        variables.
+        """
+        import copy
+        tmp = self.permanent_state
+        tmp["dataset"] = self.data
+        self.__dict__ = copy.copy(tmp)
+        self.permanent_state = tmp
+
+    def process_current_split(self):
+        """  The final processing step for the current split
+
+        This function should contain the last activities that need to be run in
+        the current split. You should include any method that combines, selects
+        or transforms the result data set in any way into this function.
+        """
+        pass
+
+    def get_result_dataset(self):
+        """ Return the result dataset
+
+        This function should be built such that it returns the result dataset.
+        """
+        return self.data

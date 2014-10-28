@@ -79,7 +79,6 @@ import sys
 import glob
 import shutil
 import time
-import pwd
 
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
     import processing
@@ -365,7 +364,14 @@ class MergeProcess(Process):
         # is assembled
         target_collection = BaseDataset.load(source_collection_pathes[0])
         try:
-            author = pwd.getpwuid(os.getuid())[4]
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                import getpass
+                author = getpass.getuser()
+            else:
+                import pwd
+                author = pwd.getpwuid(os.getuid())[4]
         except:
             author = "unknown"
             self._log("Author could not be resolved.",level=logging.WARNING)

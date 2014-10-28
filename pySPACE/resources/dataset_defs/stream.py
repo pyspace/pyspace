@@ -26,12 +26,13 @@ from pySPACE.missions.support.WindowerInterface import AbstractStreamReader
 class StreamDataset(BaseDataset):
     """ Wrapper for dealing with stream datasets like raw EEG datasets
     
-    For loading EEG data you need the
+    For loading streaming data you need the
     :class:`~pySPACE.missions.nodes.source.time_series_source.Stream2TimeSeriesSourceNode`
     as described in :ref:`tutorial_node_chain_operation`.
 
-    If ``file_name`` is given in the meta data, the corresponding file is
-    loaded, otherwise ``storage_format`` is used.
+    If ``file_name`` is given in the :ref:`meta data <storage>`,
+    the corresponding file is loaded, otherwise ``storage_format`` is used
+    to search for the needed file.
     Some formats are already supported, like EEG data in the .eeg/.vhdr/.vmrk 
     format and other streaming data in edf or csv format. It is also possible to
     load EEGLAB format (.set/.fdt) which itself can import a variety of 
@@ -121,7 +122,7 @@ class StreamDataset(BaseDataset):
             The (absolute) directory of the dataset.
             
             (*obligatory, default: None*)
-            
+
     :Author:  Johannes Teiwes (johannes.teiwes@dfki.de)
     :Date: 2010/10/13
     :refactored: 2013/06/10 Johannes Teiwes and Mario Michael Krell
@@ -461,8 +462,13 @@ def parse_float(param):
         return float(param)
     except ValueError, e:
         warnings.warn("Failed float conversion from csv file.")
-        return float(param.replace(".","").replace(",","."))
-
+    try:
+        return float(param.replace(".", "").replace(",", "."))
+    except:
+        warnings.warn("Secondary attempt at conversion also failed. " +
+                      "Treating the value as string and return a 0 as " +
+                      "placeholder.")
+        return float(0)
 
 def get_csv_handler(file_handler):
     """Helper function to get a DictReader from csv"""
@@ -554,6 +560,7 @@ class CsvReader(AbstractStreamReader):
             else:
                 self.first_marker = ""
         elif self.marker in self._channelNames:
+            self._channelNames.remove(self.marker)
             self.first_marker = self.first_entry.pop(self.marker)
         else:
             self.first_marker = ""
@@ -609,7 +616,7 @@ class CsvReader(AbstractStreamReader):
                         self.update_marker()
                     else:
                         marker = ""
-                elif self.marker in self._channelNames:
+                elif self.marker in samples.keys():
                     marker = samples.pop(self.marker)
                 else:
                     marker = ""
@@ -623,9 +630,20 @@ class CsvReader(AbstractStreamReader):
             if not marker == "":
                 markers[0] = self._markerids[marker]
             # convert samples to array
-            array_samples = numpy.zeros((len(self.channelNames),1))
+            # special handling of marker in channel names
+            # if the marker is in channelNames,
+            if self.marker in self.channelNames:
+                array_samples = numpy.zeros((len(self.channelNames)-1, 1))
+            else:
+                array_samples = numpy.zeros((len(self.channelNames), 1))
+
+            offset = 0
+
             for index, channel in enumerate(self.channelNames):
-                array_samples[index] = parse_float(samples[channel])
+                if self.marker == channel:
+                    offset -= 1
+                else:
+                    array_samples[index + offset] = parse_float(samples[channel])
             n += 1
             for c in self.callbacks:
                 c(array_samples, markers)

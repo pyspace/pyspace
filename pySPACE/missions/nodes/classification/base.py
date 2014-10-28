@@ -226,8 +226,8 @@ class RegularizedClassifierBase(BaseNode):
             self.classifier_information["Training_time(classifier)"] = \
                 stop_time_stamp - start_time_stamp
         else:
-            self._log("Training_time(classifier) has already been calculated?",
-                      level=logging.WARNING)
+            self.classifier_information["Training_time(classifier)"] += \
+                stop_time_stamp - start_time_stamp
 
     def is_trainable(self):
         """ Returns whether this node is trainable. """
@@ -373,7 +373,15 @@ class RegularizedClassifierBase(BaseNode):
         if not self.multinomial and len(self.classes) == 2 and \
                 not label in self.classes:
             return
-        super(RegularizedClassifierBase, self).train(data,label)
+        start_time_stamp = timeit.default_timer()
+        super(RegularizedClassifierBase, self).train(data, label)
+        stop_time_stamp = timeit.default_timer()
+        if not self.classifier_information.has_key("Training_time(classifier)"):
+            self.classifier_information["Training_time(classifier)"] = \
+                stop_time_stamp - start_time_stamp
+        else:
+            self.classifier_information["Training_time(classifier)"] += \
+                stop_time_stamp - start_time_stamp
 
     def append_sample(self,sample):
         """ Some methods need a list of arrays as lists and some prefer arrays

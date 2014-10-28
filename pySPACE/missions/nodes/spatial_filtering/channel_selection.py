@@ -1,6 +1,8 @@
 """ Select a subset of concrete specified channels """
 import warnings
 import numpy
+import copy
+import logging
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.time_series import TimeSeries
@@ -124,6 +126,82 @@ class ChannelNameSelectorNode(BaseNode):
         return projected_time_series
 
 
+class ConstantChannelCleanupNode(ChannelNameSelectorNode):
+    """ Remove channels that contain invalid(e.g. None or string values
+
+    This node is used to clean up messy data that does not conform to
+    the standards. This might happen if part of the data comes under
+    string form or if the data columns are just empty. The node also
+    removes the channels that have constant values.
+
+    Since the node inherits the execute method from the
+    :class:`~pySPACE.missions.nodes.spatial_filtering.channel_selection.ChannelNameSelector`,
+    it is only necessary to populate the list of excluded nodes in the training
+    phase.
+
+
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : CCC
+
+    :Author: Mario Michael Krell, Andrei Ignat
+    :Created: 2014/08/15
+    """
+    input_types=["TimeSeries"]
+    def __init__(self, **kwargs):
+        super(ConstantChannelCleanupNode, self).__init__([], **kwargs)
+        self.set_permanent_attributes(data_values=None,
+                                      inverse=True)
+
+    def is_trainable(self):
+        """
+        The node invalidates the constant channels in the training phase.
+        As such, the node is trainable.
+        """
+        return True
+
+    def is_supervised(self):
+        """
+        No supervision is necessary since only the numerical values are
+        considered.
+        """
+        return False
+
+    def _train(self, data):
+        """ Check which channels have constant values.
+
+        The training data is considered and the invalid channel names
+        are removed. The first data entry is saved and the starting
+        assumption is that all channels have constant values. When a value
+        different from the first data entry for a respective channel is found,
+        that channel is removed from the list of channels that have constant
+        values.
+        """
+        # copy the first data value
+        if self.data_values is None:
+            # copy the first entry
+            self.data_values = TimeSeries.replace_data(data, data.get_data()[0])
+            # invalidate all the channels in the beginning
+            self.selected_channel_names = copy.deepcopy(data.channel_names)
+
+        for channel in self.selected_channel_names:
+            if (data.get_channel(channel) != self.data_values.get_channel(channel)[0]).any():
+                self.selected_channel_names.remove(channel)
+
+    def _stop_training(self, **kwargs):
+        """ log the names of the excluded channels """
+        if len(self.selected_channel_names) > 0:
+            self._log(str(len(self.selected_channel_names)) + " channels" +
+                      " have been removed since they have constant values. " +
+                      "Their names are: " + str(self.selected_channel_names),
+                      level=logging.CRITICAL)
+
+
 _NODE_MAPPING = {"Channel_Name_Selector": ChannelNameSelectorNode,
                 "CNS": ChannelNameSelectorNode,
+                "CCC": ConstantChannelCleanupNode
                 }

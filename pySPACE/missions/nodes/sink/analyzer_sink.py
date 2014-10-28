@@ -7,7 +7,6 @@
 
 import os
 import yaml
-import pwd
 import numpy
 import warnings
 import logging
@@ -96,7 +95,14 @@ class AnalyzerCollection(BaseDataset):
             return
         # Update the meta data
         try:
-            author = pwd.getpwuid(os.getuid())[4]
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                import getpass
+                author = getpass.getuser()
+            else:
+                import pwd
+                author = pwd.getpwuid(os.getuid())[4]
         except:
             author = "unknown"
             self._log("Author could not be resolved.",level=logging.WARNING)

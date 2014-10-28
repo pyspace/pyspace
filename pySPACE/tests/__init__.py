@@ -10,9 +10,11 @@ import logging
 logger = logging.getLogger('TestLogger')
 logger.setLevel(logging.DEBUG)
 
-loggingFileHandler = logging.FileHandler("unittest_log.txt")
+loggingFileHandler = logging.FileHandler("unittest_log.txt", mode='w')
+loggingFileHandler.setLevel(logging.DEBUG)
+
 loggingStreamHandler = logging.StreamHandler()
-loggingStreamHandler.setLevel(logging.DEBUG)
+loggingStreamHandler.setLevel(logging.CRITICAL)
 
 formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(pathname)s:%(lineno)d - %(message)s")
 loggingFileHandler.setFormatter(formatter)

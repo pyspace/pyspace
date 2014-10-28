@@ -11,6 +11,26 @@ called for that specific node.
 :Author: Andrei Ignat, Mario Michael Krell
 :Created: 2014/05/02
 """
+
+# adding pySPACE to system path for import (code copy from launch.py)
+import os
+import sys
+file_path = os.path.dirname(os.path.realpath(__file__))
+pyspace_path = file_path[:file_path.rfind('pySPACE') - 1]
+if pyspace_path not in sys.path:
+    sys.path.append(pyspace_path)
+
+import pySPACE
+pySPACE.load_configuration()
+
+import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
+                                            os.path.pardir))
+import warnings
+if not import_path == pyspace_path:
+    warnings.warn("Check your python path! " +
+                  "'%s' is the expected pySPACE path," % pyspace_path +
+                  " but '%s' is used." % import_path)
+
 # general imports
 import unittest
 from unittest import TestCase
@@ -18,28 +38,16 @@ import re
 
 YAML_START = re.compile(r'(.. code-block:: yaml)', re.MULTILINE)
 
-# adding pySPACE to system path for import (code copy from launch.py)
-import os
-import sys
-file_path = os.path.dirname(os.path.realpath(__file__))
-pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
-if not pyspace_path in sys.path:
-    sys.path.append(pyspace_path)
-
-import pySPACE
-import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
-                               os.path.pardir))
-if not import_path == pyspace_path:
-    warnings.warn("Check your python path! "+
-                  "'%s' is the expected pySPACE path," % pyspace_path +
-                  " but '%s' is used." % import_path)
-
 
 # special imports
 import yaml
 import pySPACE.missions.nodes
+# If the script is called from the command line, it will run the generic
+# unittest on all the available nodes
+list_of_nodes = pySPACE.missions.nodes.DEFAULT_NODE_MAPPING
+
 import pySPACE.missions.nodes.base_node as bn
-from utils.data.test_default_data import all_inputs
+from pySPACE.tests.utils.data.test_default_data import all_inputs
 
 
 class ParametrizedTestCase(TestCase):
@@ -68,7 +76,7 @@ class ParametrizedTestCase(TestCase):
     one must 'fool' python and use a wrapper class such that the unit testing
     is done in a different class. The end result is that the unittest
     implementation is done within a class that has an initialization method
-    which obviously accepts external parameters(such as different nodes) and
+    which obviously accepts external parameters (such as different nodes) and
     which takes the actual tests from a class that inherits from
     :class:`GenericTestCase`.
 
@@ -186,7 +194,10 @@ class ParametrizedTestCase(TestCase):
 
             for single_input in input_set:
                 # execute the node on the data
+                # If the script is called from the command line, it will run
+                # the generic
                 result = the_node.execute(single_input[0])
+
                 self.assertEqual(type(result),
                                  the_node.get_output_type(
                                      type(single_input[0]),
@@ -343,7 +354,7 @@ class GenericTestCase(ParametrizedTestCase):
 
     def test_has_documentation(self):
         """ check if the node has some sort of documentation """
-        self.assertIsNot(self.the_node.__doc__, None)
+        self.assertNotEqual(self.the_node.__doc__, None)
 
     def test_has_exemplary_call(self):
         """ check if there is an exemplary call in the documentation """
@@ -374,15 +385,32 @@ class GenericTestCase(ParametrizedTestCase):
         return result
 
 
-if __name__ == '__main__':
-    # the following are needed to redirect the output to file
-    import sys
-    import warnings
+def single_node_testing(node_name):
+    """
+    This function facilitates the testing of a single node referred to by using
+    its representation in the DEFAULT_NODE_MAPPING variable.
+    """
+    # The output is sent to the console of the terminal
+    stdout = sys.stdout
 
-    # If the script is called from the command line, it will run the generic
-    # unittest on all the available nodes
-    list_of_nodes = pySPACE.missions.nodes.DEFAULT_NODE_MAPPING
+    stdout.write("\n>>>>> Single node testing: %s <<<<<\n" % (node_name))
+    stdout.write('\n' + '*' * 70 + '\n' + str(node_name) + '\n' + '*' * 70 + '\n')
 
+    # Initialize the test case
+    suite = unittest.TestSuite()
+    suite.addTest(ParametrizedTestCase.parametrize(
+        current_testcase=GenericTestCase, node=list_of_nodes[node_name]))
+
+    # Run the tests using the default TextRunner
+    unittest.TextTestRunner(stream=stdout, verbosity=2).run(suite)
+
+
+def multiple_node_testing(verbose=False, report=False):
+    """
+    This function ensures the testing of all available nodes.
+    The results of the test are packed into an HTML file which is
+    saved in the current working directory.
+    """
     # we define a list of nodes that we do not want to test
     skipped_dirs = ['pySPACE.missions.nodes.sink',
                     'pySPACE.missions.nodes.source',
@@ -415,33 +443,55 @@ if __name__ == '__main__':
     # initialize some counters and log the results to a txt file
     total_tests, docu, exemplary, initialize, execution = 0, 0, 0, 0, 0
 
-    # everything is logged to a file
-    file = open('generic_unittest.log', mode='w')
-
-    def customwarn(message, category, filename, lineno, file=file, line=None):
-        file.write(warnings.formatwarning(message, category, filename, lineno))
-
-    warnings.showwarning = customwarn
     stdout = sys.stdout
-    sys.stdout = file
+
+    if not verbose:
+        # suppress all the different outputs from popping on screen
+        sys.stderr = open(os.devnull, 'w')
+        sys.stdout = open(os.devnull, 'w')
+        pySPACE.configuration.min_log_level = 1000
+
+        # this list will be populated will unit testing suites for all the
+        # available nodes
+        the_report_suite = []
+
     count = 0
+
     for key, item in list_of_nodes.items():
         # we want to skip the nodes defined above
         skiptest = [item.__module__.startswith(x) for x in skipped_dirs]
         count += 1
         stdout.write('\r')
-        # the exact output you're looking for:
-        stdout.write(">>>>> Nodes tested already: %d <<<<<" % (count))
-        stdout.flush()
+
+
         if True in skiptest or item.__name__ in skipped_nodes:
             continue
 
-        file.write('*' * 70 + '\n' + str(key) + '\n' + '*' * 70 + '\n')
+        stdout.write('\r')
+        # print an OS independent status message
+        stdout.write(">>>>>>>>>>>>>>> Nodes tested already: %d. Currently testing %s "
+                     "<<<<<<<<<<<<<<<" % (count, item.__name__))
+        stdout.flush()
+
+        # update the test count
         total_tests += 4
+
+        if verbose:
+            stdout.write('\n' + '*' * 70 + '\n' + str(key) +
+                         '\n' + '*' * 70 + '\n')
+
         suite = unittest.TestSuite()
         suite.addTest(ParametrizedTestCase.parametrize(
             current_testcase=GenericTestCase, node=item))
-        result = unittest.TextTestRunner(stream=file, verbosity=2).run(suite)
+
+        if verbose:
+            result = unittest.TextTestRunner(stream=stdout, verbosity=2).run(suite)
+        else:
+            result = unittest.TextTestRunner(stream=open(os.devnull, 'w'), verbosity=2).run(suite)
+
+        if report:
+            the_report_suite.append((suite, key))
+
         # check which tests failed
         for item in result.failures:
             failed_test = str(item[0])
@@ -464,22 +514,46 @@ if __name__ == '__main__':
                 initialize += 1
             elif failed_test.startswith('test_execution'):
                 execution += 1
-    file.close()
 
-    # plot the results
-    success = total_tests - docu - exemplary - initialize - execution
-    import matplotlib.pyplot as plt
-    import numpy as np
-    plt.clf()
-    fig = plt.figure(125, figsize=(15, 15))
-    colors = plt.cm.prism(np.linspace(0., 1., 5))
+    # either generate an HTML report or generate a matplotlib plot of
+    # the results
+    if report:
+        try:
+            import HTMLTestRunner
+            import datetime
+        except ImportError:
+            print "Please download the HTMLTestRunner python script"
 
-    patches = plt.pie([success, docu, exemplary, initialize, execution],
-                      autopct='%2.2f%%', colors=colors,
-                      pctdistance=1.1, labeldistance=0.5,
-                      explode=[0.03, 0.10, 0.15, 0.03, 0.03])
+        the_html = open("generic_unittests.html", 'w')
+        desc = ('This is the result of running the generic unit test on' +
+                       ' all available nodes as of %s') % datetime.datetime.now()
+        runner = HTMLTestRunner.HTMLTestRunner(stream=the_html,
+                                               title='Generic unittest',
+                                               description=desc)
+        runner.run(the_report_suite)
+        the_html.close()
 
-    l = plt.legend(patches[0],
+        # if a webbrowser is available, open the report
+        try:
+            import webbrowser
+            webbrowser.open("generic_unittests.html")
+        except:
+            pass
+    else:
+        # plot the results
+        success = total_tests - docu - exemplary - initialize - execution
+        import matplotlib.pyplot as plt
+        import numpy as np
+        plt.clf()
+        plt.figure(125, figsize=(15, 15))
+        colors = plt.cm.prism(np.linspace(0., 1., 5))
+
+        patches = plt.pie([success, docu, exemplary, initialize, execution],
+                          autopct='%2.2f%%', colors=colors,
+                          pctdistance=1.1, labeldistance=0.5,
+                          explode=[0.03, 0.10, 0.15, 0.03, 0.03])
+
+        plt.legend(patches[0],
                    ["Successful (" + str(success) + ")",
                     "No documentation (" + str(docu) + ")",
                     "No exemplary call (" + str(exemplary) + ")",
@@ -487,17 +561,45 @@ if __name__ == '__main__':
                     "Execution failed (" + str(execution) + ")"],
                    loc="best")
 
-    plt.title("Total number of tests:" + str(total_tests))
-    plt.savefig("generic_unittest_plot.pdf")
-    plt.close()
+        plt.title("Total number of tests:" + str(total_tests))
+        plt.savefig("generic_unittest_plot.pdf")
+        plt.close()
 
-    # some print statements with the results of the tests
-    sys.stdout = stdout
-    print "\n" + '*' * 70 + '\n' + "Test results" + '\n' + '*' * 70
-    print "Successful tests: " + str(success) + "\n" + \
-          '-' * 70 + '\n' + \
-          "No documentation: " + str(docu) + "\n" + \
-          "No exemplary call: " + str(exemplary) + "\n" + \
-          "Initialization failed: " + str(initialize) + "\n" + \
-          "Execution failed: " + str(execution) + "\n" + \
-          '-' * 70 + '\n'
+        # some print statements with the results of the tests
+        sys.stdout = stdout
+        print "\n" + '*' * 70 + '\n' + "Test results" + '\n' + '*' * 70
+        print "Successful tests: " + str(success) + "\n" + \
+              '-' * 70 + '\n' + \
+              "No documentation: " + str(docu) + "\n" + \
+              "No exemplary call: " + str(exemplary) + "\n" + \
+              "Initialization failed: " + str(initialize) + "\n" + \
+              "Execution failed: " + str(execution) + "\n" + \
+              '-' * 70 + '\n'
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('-v', '--verbose', default=False,
+                        action='store_true',
+                        help='Enable this switch if you want to print the' +
+                        ' results to the terminal screen instead of to the ' +
+                        ' log file')
+
+    parser.add_argument('-sn', '--singlenode', default="",
+                        help='If you want to test a single node, specify it ' +
+                             'under the SINGLENODE variable')
+
+    parser.add_argument('-r', '--report', default=False,
+                        action='store_true',
+                        help='Decides whether an HTML report should be ' +
+                        'generated from the results of the unittest')
+
+    args = parser.parse_args()
+
+    # The single node execution is done by default under verbose mode
+    if args.singlenode != "":
+        single_node_testing(args.singlenode)
+    else:
+        multiple_node_testing(args.verbose, args.report)

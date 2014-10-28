@@ -32,7 +32,6 @@ import os
 import glob
 
 # imports for storing
-import pwd
 import yaml
 
 import warnings
@@ -541,7 +540,14 @@ class PerformanceResultSummary(BaseDataset):
 
         """
         try:
-            author = pwd.getpwuid(os.getuid())[4]
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                import getpass
+                author = getpass.getuser()
+            else:
+                import pwd
+                author = pwd.getpwuid(os.getuid())[4]
         except:
             author = "unknown"
             self._log("Author could not be resolved.",level=logging.WARNING)

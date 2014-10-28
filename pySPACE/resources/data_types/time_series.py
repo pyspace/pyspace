@@ -221,7 +221,7 @@ class TimeSeries(base.BaseData):
     def get_channel(self, channel_name):
         """ Return the values of the channel with name *channel_name* """
         channel_index = self.channel_names.index(channel_name)
-        data=self.view(numpy.ndarray)
+        data = self.view(numpy.ndarray)
         return data[:, channel_index]
     
     def reorder(self, ordered_channel_list):

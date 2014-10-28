@@ -178,3 +178,9 @@ class ConsumeTrainingDataNode(BaseNode):
         """ Stores this node in the given directory *result_dir* """
         self.wrapped_node.store_state(result_dir, index=None)
 
+    def get_output_type(self, input_type, as_string=True):
+        """ Return the output type
+
+        The method calls the corresponding method in the wrapped node
+        """
+        return self.wrapped_node.get_output_type(input_type, as_string)

@@ -241,7 +241,6 @@ class RMM2Node(RegularizedClassifierBase):
         return PredictionVector(label=label, prediction=prediction,
                                 predictor=self)
 
-
     def _stop_training(self, debug=False):
         """ Train the SVM with the SOR algorithm on the collected training data
         """
@@ -655,6 +654,13 @@ class RMM2Node(RegularizedClassifierBase):
         as a starting point for the iteration.
         Only the problem has to be lifted up one dimension.
         """
+        #one vs. REST case
+        if "REST" in self.classes and not label in self.classes:
+            label = "REST"
+        # one vs. one case
+        if not self.multinomial and len(self.classes) == 2 and \
+                not label in self.classes:
+            return
         self._train(data, label)
         # here it is important to use the mapped label
         self.append_weights_and_class_factors(self.labels[-1])

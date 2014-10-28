@@ -11,9 +11,11 @@ from pySPACE.run.scripts import md_creator
 #import bz2
 from collections import defaultdict
 
+
 class UnknownDatasetTypeException(Exception):
     """ Wrapper around error, when dataset type is not available """
     pass
+
 
 class BaseDataset(object):
     """ Base class for datasets
@@ -40,7 +42,7 @@ class BaseDataset(object):
     training/testing.
     """
     
-    def __init__(self, dataset_md = None):
+    def __init__(self, dataset_md=None):
         # The data structure containing the actual data
         # The data is stored as a dictionary that maps
         # (run, split, train/test) tuples to the actual 
@@ -90,7 +92,7 @@ class BaseDataset(object):
             dataset_module = __import__(
                 'pySPACE.resources.dataset_defs.%s' % data_mod_name,
                 fromlist=[data_class_name])
-        except:
+        except ImportError:
             msg = "Dataset type %s in %s is unknown" % \
                 (meta_data["type"], meta_data["dataset_directory"])
             raise UnknownDatasetTypeException(msg)

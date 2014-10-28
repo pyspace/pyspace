@@ -116,7 +116,7 @@ load_configuration = configuration.load_configuration
 
 del(file_path)
 
-__version__ = '0.5'
+__version__ = '1.2'
 __short_description__ = \
     "pySPACE is a **Signal Processing And Classification Environment** "+\
     "(which is the reason for the name, which is an abbreviation). "+\

@@ -161,7 +161,7 @@ class BaseNode(object):
             from the saving node.
 
             Especially :mod:`~pySPACE.missions.nodes.visualization` nodes
-            may use this functionality to visualize the change ifn the
+            may use this functionality to visualize the change of the
             processing of the data.
 
             (*optional, default: False*)
@@ -263,6 +263,11 @@ class BaseNode(object):
 
             (*optional, default: True*)
 
+        :kwargs_warning:
+            Raise a warning if unexpected keyword arguments are given.
+
+            (*optional, default: True*)
+
     **Implementing your own Node**
 
     For finding out, how to implement your own node, have a look at the
@@ -286,7 +291,8 @@ class BaseNode(object):
     # setting the meta class
     __metaclass__ = NodeMetaclass
 
-    def __init__(self, store=False, retrain=False, input_dim=None, output_dim=None, dtype=None, **kwargs):
+    def __init__(self, store=False, retrain=False, input_dim=None,
+                 output_dim=None, dtype=None, kwargs_warning=True, **kwargs):
         """ This initialization is necessary for every node
 
         So make sure, that you use it via the *super* method in each new node.
@@ -365,8 +371,8 @@ class BaseNode(object):
         #: Do we have to remember the outputs of this node for later reuse?
         self.caching = False
 
-        self.load_path=kwargs.get('load_path', None)
-        self.keep_in_history=kwargs.get('keep_in_history', False)
+        self.load_path = kwargs.get('load_path', None)
+        self.keep_in_history = kwargs.get('keep_in_history', False)
 
         self.node_specs = {}
         self.node_name = str(type(self)).split(".")[-1].split("'")[0]
@@ -378,12 +384,25 @@ class BaseNode(object):
         # iteration
         self.run_number = 0
 
-        # Set the default run number which gives the number of the current 
-        # iteration
-        self.run_number = 0
+        # Switch for in-/homogenous data (e.g. data with different sampling
+        # frequencies). Has to be handled from the node which can deal with 
+        # inhomogenous data.
+        self.homogenous = kwargs.get("homogenous", True)
 
         # Every Parameter is stored since we reset them with every new spit.
         self.permanent_state = copy.deepcopy(self.__dict__)
+
+        if kwargs_warning:
+            remove_kwargs = ["homogeneous", "keep_in_history", "load_path",
+                             "save_intermediate_results", "zero_training",
+                             "buffering"]
+            for key in kwargs.keys():
+                if not key in remove_kwargs:
+                    warnings.warn("The parameter '%s' seems to be unused in %s."
+                        % (key, self.__class__.__name__) +
+                        " Either you specified it on purpose, you spelled it " +
+                        "wrong, or there is an implementation inconsistency.")
+
 
     ###### Methods, which can be overwritten by inheriting nodes ######
     def _train(self, x):
@@ -438,7 +457,7 @@ class BaseNode(object):
     def is_trainable(self):
         """ Return True if the node can be trained, False otherwise
 
-        *Default*: False
+        *default: False*
         """
         return False
 
@@ -446,7 +465,7 @@ class BaseNode(object):
     def is_supervised(self):
         """ Returns whether this node requires supervised training
 
-        *Default*: False
+        *default: False*
         """
         return False
 
@@ -512,20 +531,30 @@ class BaseNode(object):
 
             (*default: True*)
 
+            :input_type:
+                The input type of the node.
+                In most cases, the input depends on the input
+                and can not be inferred from the algorithm category.
+
         .. note ::
 
             Strings have less overhead than class instances and
             that is why they are normally used in routine operations
 
-        By default they are the same, except for *classification*,
-        *feature_generation* and *type_conversion*.
+        By default the input type is assumed to be the same as the output type,
+        except for *classification*, *feature_generation* and *type_conversion*.
+        For any other algorithm type, especially for meta nodes,
+        this method needs to be overwritten.
+        Otherwise, a warning will occur.
         """
-        pack = self.__module__.split(".")[3]
-        if pack == "classification":
+        pack = self.__module__.split(".")[3:4]
+        if "classification" in pack:
             result = "PredictionVector"
-        elif pack == "feature_generation":
+        elif "feature_generation" in pack:
             result = "FeatureVector"
-        elif pack == "type_conversion":
+        elif "type_conversion" in pack:
+            # it is expected that nodes in the type_conversion script
+            # overwrite this method with their specific output types
             raise NotImplementedError
         else:
             result = str(input_type)
@@ -538,18 +567,19 @@ class BaseNode(object):
     def string_to_class(string_encoding):
         """ given a string variable, outputs a class instance
 
-        e.g. obtaining a TimeSeries
+        e.g., obtaining a TimeSeries
 
         .. code-block:: python
 
-            >>> result = BaseNode.stringToClass("TimeSeries")
+            >>> result = BaseNode.string_to_class("TimeSeries")
             >>> print type(result)
             <class 'pySPACE.resources.data_types.time_series.TimeSeries'>
 
         """
         from pySPACE.resources.data_types.time_series import TimeSeries
         from pySPACE.resources.data_types.feature_vector import FeatureVector
-        from pySPACE.resources.data_types.prediction_vector import PredictionVector
+        from pySPACE.resources.data_types.prediction_vector \
+            import PredictionVector
         if "TimeSeries" in string_encoding:
             return TimeSeries
         elif "PredictionVector" in string_encoding:
@@ -591,7 +621,7 @@ class BaseNode(object):
             self.dtype = x.dtype
 
         # check if the user has changed the dtype of the input
-        if self.dtype is not None and self.dtype is not x.dtype:
+        if self.dtype is not None and self.dtype.name != x.dtype.name:
             warnings.warn("The dtype of individual data points is " +
                           "inconsistent.\n The former data type was " +
                           "(%s) and now the input is (%s)"
@@ -672,8 +702,9 @@ class BaseNode(object):
     def _set_dtype(self, t):
         t = numpy.dtype(t)
         if t not in self.get_supported_dtypes():
-            raise NodeException('dtype %s not among supported dtypes (%s) in node %s'
-                                % (str(t), self.get_supported_dtypes(),self.__class__.__name__))
+            raise NodeException(
+                'dtype %s not among supported dtypes (%s) in node %s'
+                % (str(t), self.get_supported_dtypes(),self.__class__.__name__))
         self._dtype = t
 
     def get_supported_dtypes(self):
@@ -1241,8 +1272,7 @@ class BaseNode(object):
         """ Return a pickable state for this object """
         self._log("Pickling instance of class %s." % self.__class__.__name__,
                   level = logging.DEBUG)
-        #print "%s:Pickling instance of class %s." % (time.ctime(),self.__class__.__name__)
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = self.__dict__.copy()  # copy the dict since we change it
         odict['data_for_training'] = None
         odict['data_for_testing'] = None
         odict['root_logger'] = None
@@ -1473,11 +1503,11 @@ class BaseNode(object):
         a FeatureVector or a PredictionVector.
 
         .. note:: This method changes the original MDP implementation.
-                  The main difference to the MDP's standard execute method is that here
-                  the output_dim of the node is set per default to the size of the
-                  node's first result (and not to the size of the input data).
-                  Furthermore we have a possible buffering mode for retraining
-                  and suppress the setting of the dtype.
+                  The main difference to the MDP's standard execute method is
+                  that here the output_dim of the node is set per default to
+                  the size of the node's first result (and not to the size of
+                  the input data). Furthermore we have a possible buffering
+                  mode for retraining and suppress the setting of the dtype.
         """
         # data buffering for training in live usage
         # needed for the delayed training, which is called
@@ -1507,8 +1537,9 @@ class BaseNode(object):
 #
 #        self._if_training_stop_training()
 
-        # control the dimension x
-        self._check_input(x)
+        # in case of homogenous data control the dimension x
+        if self.homogenous:
+            self._check_input(x)
 
         # Do the actual computation
         result = self._execute(self._refcast(x), *args, **kwargs)
@@ -1520,7 +1551,10 @@ class BaseNode(object):
             warnings.warn("Inappropriate output %s to given input %s in %s?" %
                 (type(result).__name__, type(x).__name__,
                  self.__class__.__name__) +
-                " Expected: %s" % self.get_output_type(type(x).__name__))
+                " Expected: %s. " % self.get_output_type(type(x).__name__) +
+                "Please check your node chain. " +
+                "Please provide a bug report if the respective node is " +
+                "expecting the wrong output.")
         # Make sure key, tag, specs and history are passed
         if x.has_meta():
             result.inherit_meta_from(x)
@@ -1528,7 +1562,8 @@ class BaseNode(object):
             result.generate_meta()
 
         if self.keep_in_history:
-            result.add_to_history(result, self.node_specs) # Append current data to history
+            # Append current data to history
+            result.add_to_history(result, self.node_specs) 
         if self.save_intermediate_results:
             self.export_intermediate_results(result)
 
@@ -1543,11 +1578,12 @@ class BaseNode(object):
                 self.output_dim = shape[0]
             else:
                 self.output_dim = shape
-        elif not (self.output_dim in [result.shape,result.shape[1]]):
-            error_str = "y has dimension %d, should be %d in node %s" % (result.shape[1],
-                                                              self.output_dim[1],
-                                                              self.__class__.__name__)
-            raise Exception(error_str)
+        elif self.homogenous: 
+            if not (self.output_dim in [result.shape,result.shape[1]]):
+                error_str = "y has dimension %d, should be %d in node %s" \
+                    % (result.shape[1], self.output_dim[1],
+                       self.__class__.__name__)
+                raise Exception(error_str)
 
         return result
 
@@ -1565,14 +1601,17 @@ class BaseNode(object):
             A subclass supporting multiple training phases should implement
             the *same* signature for all the training phases and document the
             meaning of the arguments in the `_train` method doc-string. Having
-            consistent signatures is a requirement to use the node in a node chain.
+            consistent signatures is a requirement to use the node in a
+            node chain.
         """
 
         if not self.is_trainable():
-            raise IsNotTrainableException("The node %s is not trainable."%self.__class__.__name__)
+            raise IsNotTrainableException(
+                "The node %s is not trainable." % self.__class__.__name__)
 
         if not self.is_training():
-            err_str = "The training phase of node %s has already finished."%self.__class__.__name__
+            err_str = "The training phase of node %s has already finished." \
+                % self.__class__.__name__
             raise TrainingFinishedException(err_str)
 
         self._check_input(x)
@@ -1589,13 +1628,16 @@ class BaseNode(object):
         overwrites this docstring.
         """
         if self.is_training() and self._train_phase_started == False:
-            raise TrainingException("The node %s has not been trained. "%self.__class__.__name__ +
-            "Check if you specified training data or a validation scheme (splitter). "+
-            "Furthermore you should check the node parameters. "+
-            "Did you specify relevant labels correct?")
+            raise TrainingException(
+                "The node %s has not been trained. "
+                % self.__class__.__name__ +
+                "Check if you specified training data or a validation scheme" +
+                " (splitter). Furthermore you should check the node " +
+                "parameters. Did you specify relevant labels correct?")
 
         if not self.is_training():
-            err_str = "The training phase of node %s has already finished."%self.__class__.__name__
+            err_str = "The training phase of node %s has already finished."\
+                % self.__class__.__name__
             raise TrainingFinishedException(err_str)
 
         # close the current phase.

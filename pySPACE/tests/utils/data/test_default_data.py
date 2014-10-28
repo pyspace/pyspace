@@ -50,43 +50,43 @@ import pySPACE.resources.data_types.time_series as ts
 # t gets the label Target and s gets the label Standard
 ts_t_1 = ts.TimeSeries([[1, -1], [1, -1], [1, -1], [1, -1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_s_1 = ts.TimeSeries([[-1, 1], [-1, 1], [-1, 1], [-1, 1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_t_2 = ts.TimeSeries([[1.5, -1], [1.5, -1], [1.5, -1], [1.5, -1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_s_2 = ts.TimeSeries([[-1, 1.5], [-1, 1.5], [-1, 1.5], [-1, 1.5]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_t_3 = ts.TimeSeries([[1, -1], [1, -1], [-1, 1], [-1, 1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_s_3 = ts.TimeSeries([[-1, 1], [-1, 1], [1, -1], [1, -1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_t_4 = ts.TimeSeries([[1, -1], [-1, 1], [1, -1], [-1, 1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_s_4 = ts.TimeSeries([[-1, 1], [1, -1], [-1, 1], [1, -1]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_t_5 = ts.TimeSeries([[0, 0], [0, 0], [0, 0], [0, 0]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 ts_s_5 = ts.TimeSeries([[0, 0], [0, 0], [0, 0], [0, 0]],
                        channel_names=["C3", "C4"], sampling_frequency=1.0,
-                       start_time=0.0, end_time=3.0)
+                       start_time=0.0, end_time=3.0, tag="generic_unittest")
 
 
 # now put all of this data into a dict

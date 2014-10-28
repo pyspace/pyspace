@@ -27,9 +27,11 @@ MODULEGEN       = $(APIGEN)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
+	@echo "  all       to make generate html and api files and run the available unittests"
 	@echo "  html      to make standalone HTML files"
 	@echo "  html_complete to generate html and api files"
 	@echo "  pickle    to make pickle files"
+	@echo "  unittest  to run the available unittests"
 	@echo "  json      to make JSON files"
 	@echo "  htmlhelp  to make HTML files and a HTML help project"
 	@echo "  latex     to make LaTeX files, you can set PAPER=a4 or PAPER=letter"
@@ -40,6 +42,39 @@ clean:
 	-rm -rf .build/*
 	-rm -rf api/generated/*
 	-rm -rf api/tests/*
+
+all:
+	@echo "cleaning ..."
+	-rm -rf .build/*
+	-rm -rf api/generated/*
+	-rm -rf api/tests/*
+	@echo "generating API documentation ..."
+	mkdir -p .build/html .build/doctrees
+	$(MODULEGEN)
+	$(PACKAGEGEN)
+#	$(ADAPPT)
+	@echo
+	@echo "API files have been created automatically."
+	@echo
+	@echo "Building the documentation ... This may take a while."
+	@echo
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) .build/html
+	@echo
+	@echo "Build finished. The HTML pages are in .build/html."
+	@echo
+	@echo "If you got errors or warnings from scikits or not referring to any module or file, just ignore them. "
+	@echo
+	@echo "======================================================================"
+	@echo "Generating and running generic unittests"
+	@echo "======================================================================"
+	../pySPACE/tests/generic_unittest.py -r
+	mv generic_unittests.html .build/html/
+	@echo "======================================================================"
+	@echo "Generating and running specific unittests"
+	@echo "======================================================================"
+	../pySPACE/tests/run_unittests.py
+	mv ../pySPACE/tests/run_unittests.html .build/html/
+	@echo "The results of the unittests are in .build/html"
 
 html:
 	@echo "cleaning ..."
@@ -68,6 +103,19 @@ html_short:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) .build/html
 	@echo
 	@echo "Build finished. The HTML pages are in .build/html."
+
+unittest:
+	@echo "======================================================================"
+	@echo "Generating and running generic unittests"
+	@echo "======================================================================"
+	../pySPACE/tests/generic_unittest.py -r
+	mv generic_unittests.html .build/html/
+	@echo "======================================================================"
+	@echo "Generating and running specific unittests"
+	@echo "======================================================================"
+	../pySPACE/tests/run_unittests.py
+	mv ../pySPACE/tests/run_unittests.html .build/html/
+	@echo "The results of the unittests are in .build/html"
 
 pickle:
 	mkdir -p .build/pickle .build/doctrees

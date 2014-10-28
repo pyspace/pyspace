@@ -203,7 +203,8 @@ class BinaryClassificationDataset(BaseDataset):
 
         self.meta_data = {"train_test": False,
                           "splits": 1,
-                          "runs": 1} #: A dictionary containing some default meta data for the respective dataset
+                          "runs": 1,
+                          "type": "binary_classification"} #: A dictionary containing some default meta data for the respective dataset
 
     def store(self, result_dir, s_format = "csv"):
         """ Handle meta data and meta information and save result as csv table

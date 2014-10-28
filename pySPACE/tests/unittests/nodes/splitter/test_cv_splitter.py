@@ -28,7 +28,7 @@ class CrossValidationSplitterTestCase(unittest.TestCase):
     def setUp(self):
         self.source = SimpleTimeSeriesSourceNode()
         
-        self.cv_splitter = CrossValidationSplitterNode(splits = 10)
+        self.cv_splitter = CrossValidationSplitterNode(splits=3)
         self.cv_splitter.register_input_node(self.source)
         
         
@@ -106,7 +106,7 @@ class CrossValidationSplitterTestCase(unittest.TestCase):
     
     def test_cv_no_iterated_splitters(self):
         """ Splitter cannot be applied to a node chain, that has already been split """
-        second_cv_splitter = CrossValidationSplitterNode(splits = 10)
+        second_cv_splitter = CrossValidationSplitterNode(splits=3)
         second_cv_splitter.register_input_node(self.cv_splitter)
         
         #check that the proper Exception is raised
@@ -127,7 +127,7 @@ class CrossValidationSplitterTestCase(unittest.TestCase):
         Tests that the splitting of the data by a cv splitter node 
         is randomized by the run number
         """
-        second_cv_splitter = CrossValidationSplitterNode(splits = 10)
+        second_cv_splitter = CrossValidationSplitterNode(splits=3)
         second_cv_splitter.register_input_node(self.source)
         # Test whether the two splitter give different results for two
         # arbitrary run numbers (say 7 and 8)
@@ -158,7 +158,7 @@ class CrossValidationSplitterTestCase(unittest.TestCase):
         Tests that the splitting of the data by a cv splitter node 
         is deterministic given the run_number
         """
-        second_cv_splitter = CrossValidationSplitterNode(splits = 10)
+        second_cv_splitter = CrossValidationSplitterNode(splits=3)
         second_cv_splitter.register_input_node(self.source)
         # Test whether the two splitter give the same results for an
         # arbitrary run number (say 7)

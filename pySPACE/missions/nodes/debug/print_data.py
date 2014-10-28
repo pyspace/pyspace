@@ -3,6 +3,7 @@
 
 import numpy
 import time
+import warnings
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector

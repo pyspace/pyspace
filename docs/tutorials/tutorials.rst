@@ -13,12 +13,14 @@ Tutorials
     tutorial_interface_weka
     tutorial_interface_to_mmlf
     tutorial_analysis_gui
+    tutorial_new_node
     tutorial_node_chain_operation
     tutorial_node_chain
     tutorial_node_chain_online.rst
     tutorial_work_with_the_eegserver.rst
     data_handling
     tutorial_unittesting
+
 
 .. _node_chain:
 

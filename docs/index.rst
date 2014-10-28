@@ -13,14 +13,6 @@ This paper should be also used to :ref:`cite pySPACE <cite>`.
 .. table:: **Quick Access**
 
     +---------------------------+---+---------------------------+---+---------------------------+
-    |                           | # |                           | # |                           |
-    +---------------------------+---+---------------------------+---+---------------------------+
-    |:ref:`welcome`             |   |:ref:`download`            |   |:ref:`t_install`           |
-    |                           |   |                           |   |                           |
-    |Introduction               |   |How to Get it?             |   |Dependencies & Setup       |
-    +---------------------------+---+---------------------------+---+---------------------------+
-    |                           | # |                           | # |                           |
-    +---------------------------+---+---------------------------+---+---------------------------+
     |:ref:`overview`            |   |:ref:`getting_started`     |   |:ref:`tutorials`           |
     |                           |   |                           |   |                           |
     |Data, Processing &         |   |Launch pySPACE             |   |Learn About Usage          |

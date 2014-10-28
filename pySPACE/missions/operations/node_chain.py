@@ -231,7 +231,6 @@ import sys
 import time
 import yaml
 import shutil
-import pwd
 import glob
 import logging
 import warnings
@@ -277,7 +276,11 @@ class NodeChainOperation(Operation):
         # temporary replacement of template keyword for better layout when
         # source_operation.yaml file is saved to result folder
         templates = operation_spec.pop("templates")
-        operation_spec["templates"] = [yaml.load(x) for x in templates]
+        if type(templates[0]) is str or type(templates[0]) is basestring:
+            operation_spec["templates"] = [yaml.load(x) for x in templates]
+        else:
+            operation_spec["templates"] = templates
+ 
         super(NodeChainOperation, self).__init__(processes, operation_spec,
                                                  result_directory)
         self.operation_spec = templates
@@ -543,7 +546,14 @@ class NodeChainOperation(Operation):
 
             # Determine author and date
             try:
-                author = pwd.getpwuid(os.getuid())[4]
+                import platform
+                CURRENTOS = platform.system()
+                if CURRENTOS == "Windows":
+                    import getpass
+                    author = getpass.getuser()
+                else:
+                    import pwd
+                    author = pwd.getpwuid(os.getuid())[4]
             except:
                 author = "unknown"
                 self._log("Author could not be resolved.",level=logging.WARNING)

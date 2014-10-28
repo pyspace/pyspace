@@ -401,6 +401,16 @@ class FlowNode(BaseNode):
             for node in self._get_flow():
                 node.store_state(result_dir, index)
 
+    def get_output_type(self, input_type, as_string=True):
+        """ Get the output type of the flow
+
+        The method calls the method with the same name from the
+        NodeChain module where the output of an entire flow is
+        determined
+        """
+        flow = self._get_flow()
+        return flow.get_output_type(input_type, as_string)
+
 
 class BatchAdaptSubflowNode(FlowNode):
     """ Load and retrain a pre-trained NodeChain for recalibration
