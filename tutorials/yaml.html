@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -63,6 +63,10 @@
 <li><a class="reference internal" href="#eval-uate-syntax-for-python-code-to-ease-specification-file-writing">Eval(uate) syntax for Python code to ease specification file writing</a></li>
 <li><a class="reference internal" href="#usage-of-yaml-in-node-chain-specification-files">Usage of YAML in node chain specification files</a><ul>
 <li><a class="reference internal" href="#example-node-chain-file">Example Node Chain File</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#metadata-yaml">Metadata.yaml</a><ul>
+<li><a class="reference internal" href="#example-of-a-featurevectordataset-metadata-yaml">Example of a FeatureVectorDataset metadata.yaml</a></li>
 </ul>
 </li>
 </ul>
@@ -187,7 +191,7 @@ Some of the values may be <em>lists</em>. They can be defined in two ways:</p>
 </ul>
 </div></blockquote>
 <p>Single-line versions are mainly used if you have
-lists of lists or dictionaries or dictionaries, but they do not have to be used.
+lists of lists or dictionaries of dictionaries, but they do not have to be used.
 These data types are called <em>collections</em> in YAML.</p>
 <div class="section" id="eval-uate-syntax-for-python-code-to-ease-specification-file-writing">
 <span id="eval"></span><h3>Eval(uate) syntax for Python code to ease specification file writing<a class="headerlink" href="#eval-uate-syntax-for-python-code-to-ease-specification-file-writing" title="Permalink to this headline">¶</a></h3>
@@ -266,6 +270,171 @@ in your file and you are finished.</p>
 </div>
 </div>
 </div>
+<div class="section" id="metadata-yaml">
+<span id="id2"></span><h3>Metadata.yaml<a class="headerlink" href="#metadata-yaml" title="Permalink to this headline">¶</a></h3>
+<p>This file is responsible for defining dataset properties.
+It can be always found in the data folder, associated with the dataset.
+It is a dictionary written in YAML syntax.
+If you get a dataset as a result of processing with pySPACE,
+this file is stored automatically and some information about previous
+processing is added.
+For further processing, the resulting dataset can be immediately used.</p>
+<p>From the programming perspective, the dictionary is loaded and forwarded
+as <em>dataset_md</em> to the respective datasets.
+It is even possible to access this data with the
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.getMetadata" title="pySPACE.missions.nodes.base_node.BaseNode.getMetadata"><tt class="xref py py-func docutils literal"><span class="pre">getMetadata()</span></tt></a> method in a node.</p>
+<p>If you want to define your own metadata.yaml,
+to enable pySPACE to read your data, there are three categories of parameters
+you can define:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">mandatory parameters:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body"><p class="first">This is always the <em>type</em> of the data and the <em>storage_format</em>
+and potentially additional required information for loading the data.
+For the additional loading information, check the documentation of the
+respective dataset which corresponds to your chosen type.</p>
+<p>There is a direct mapping between the type variable, the respective
+<cite>dataset class &lt;pySPACE.resources.dataset_defs&gt;</cite>,
+and the used <a class="reference internal" href="../api/generated/pySPACE.resources.data_types.html#module-pySPACE.resources.data_types" title="pySPACE.resources.data_types"><tt class="xref py py-mod docutils literal"><span class="pre">data</span> <span class="pre">type</span></tt></a>.
+The type is written in lower case with underscores.
+The data type is the same but with camel case and for respective
+dataset, <em>Dataset</em> is added to the class name.
+The respective module names are the same as the <em>type</em>.</p>
+<p>Currently implemented types are:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.StreamDataset" title="pySPACE.resources.dataset_defs.stream.StreamDataset"><tt class="xref py py-class docutils literal"><span class="pre">stream</span></tt></a></li>
+<li><a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset" title="pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset"><tt class="xref py py-class docutils literal"><span class="pre">time_series</span></tt></a>
+and</li>
+<li><a class="reference internal" href="../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset" title="pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset"><tt class="xref py py-class docutils literal"><span class="pre">feature_vector</span></tt></a>.</li>
+</ul>
+</div></blockquote>
+<p>The <em>storage_format</em> might consist of two components:
+<tt class="docutils literal"><span class="pre">[general_format,</span> <span class="pre">value_format]</span></tt>.
+Currently, for the <em>value_format</em> only <em>real</em> is supported
+but it is used as a placeholder, to also for example
+support symbolic or text data in future.
+The <em>general_format</em> is the important part.
+For the stream type, only this parameter is used
+and for the other types it is possible, to for example use
+<tt class="docutils literal"><span class="pre">storage_format:</span> <span class="pre">csv</span></tt> in the <em>metadata.yaml</em>.
+By default, the framework stores data in the Python specific
+<em>pickle</em> format.
+the most commonly used other format is <em>csv</em>.</p>
+<p>An example for additional loading information is the <em>data_pattern</em>.
+It contains the placeholders <em>_run</em> for the run number,
+<em>_sp</em> for the split number, and <em>_tt</em> for the distinction between
+training and test data.
+These parameters are later on replaced in the pattern
+to get the needed file names.
+Hence, these keywords should not occur in the name of the dataset as
+for example in <em>data/my_special_running_tt_train_data</em>.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">optional parameter:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first">Optional parameters are either determined automatically
+or set with a sufficient default.</p>
+<p>The really important ones are:</p>
+<blockquote>
+<div><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">run:</th><td class="field-body"><p class="first">This parameter defines the number of total processing
+repetitions, which were applied to the original data.</p>
+<p>If you define a new dataset, the correct value is <em>1</em>,
+which is also the default.</p>
+<p>The respective dataset will then contain
+a separate file for each repetition as specified in the
+aforementioned <em>data_pattern</em>:
+<em>_run</em> is replaced by an underscore
+and the respective <em>run_number</em>.
+The repetitions are sometimes needed, to account for
+randomness effects.
+For each repetition, the random seed is fixed, using
+the number of the current repetition (<em>run_number</em>).
+This is needed to get reproducible results and
+for example to get the same splitting
+into training and test data when processing the same
+dataset with different parametrization.</p>
+<p>(<em>optional, default: 1</em>)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">split:</th><td class="field-body"><p class="first">This parameter defines the total number of splits,
+which were created in previous processing of a dataset
+using a cross-validation scheme.
+This parameter is handled in the same way as the run number
+with the <em>data_pattern</em>:
+<em>_sp</em> is replaced by an underscore and the respective index
+of the splitting.</p>
+<p>(<em>optional, default: 1</em>)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">train_test:</th><td class="field-body"><p class="first">Defines if the data is already split into training
+and testing data. This holds true for the MNIST dataset of
+handwritten digits but not for the data in our
+example_summary, provided in the default <em>pySPACE_center</em>.</p>
+<p>By default this parameter is set to <em>false</em> and all data
+is assumed to be testing data.
+This can be for example changed with nodes for the
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.splitter.html#module-pySPACE.missions.nodes.splitter" title="pySPACE.missions.nodes.splitter"><tt class="xref py py-mod docutils literal"><span class="pre">splitter</span></tt></a> module.</p>
+<p>If the parameter is set to <em>true</em>, the loading procedure
+needs to know, which part is used for training and which one
+for testing. This is usually done by using the
+aforementioned <em>data_pattern</em> with the place holder <em>_tt</em>
+for the strings <em>_train</em> and <em>_test</em> to define training
+and testing data.</p>
+<p>For example the dataset pattern
+<em>data/MINST_1_vs_2_tt.csv</em></p>
+<p class="last">(<em>optional, default: false</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<p>For special dataset dependent parameters and loading parameters
+refer to the documentation of the respective dataset (e.g,
+electrode positions from an EEG recording).
+Furthermore, <tt class="docutils literal"><span class="pre">parameter_setting</span></tt> of previous processing
+might be specified. This can be later on used for comparisons
+in an evaluation.</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">additional information:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body"><p class="first last">There can be a lot of additional information specified for the dataset
+which are not used by the software but which can provide useful
+information about the data and previous processing steps.
+This can be the class names, a dataset description,
+the source url, the data of creation, the author, or the detailed
+the specifications of previous processing
+which was applied to the data.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</div></blockquote>
+<div class="section" id="example-of-a-featurevectordataset-metadata-yaml">
+<h4>Example of a FeatureVectorDataset metadata.yaml<a class="headerlink" href="#example-of-a-featurevectordataset-metadata-yaml" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-yaml"><div class="highlight"><pre><span class="l-Scalar-Plain">type</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">feature_vector</span>
+<span class="l-Scalar-Plain">author</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">Max Mustermann</span>
+<span class="l-Scalar-Plain">date</span><span class="p-Indicator">:</span> <span class="s">&#39;2009_4_5&#39;</span>
+<span class="l-Scalar-Plain">node_chain_file_name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">example_flow.yaml</span>
+<span class="l-Scalar-Plain">input_collection_name</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">input_collection_example</span>
+<span class="l-Scalar-Plain">classes_names</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">Standard</span><span class="p-Indicator">,</span> <span class="nv">Target</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">feature_names</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">feature1</span><span class="p-Indicator">,</span> <span class="nv">feature2</span><span class="p-Indicator">,</span> <span class="nv">feature3</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">num_features</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">3</span>
+<span class="l-Scalar-Plain">parameter_setting</span><span class="p-Indicator">:</span> <span class="p-Indicator">{</span><span class="nv">__LOWER_CUTOFF__</span><span class="p-Indicator">:</span> <span class="nv">0.1</span><span class="p-Indicator">,</span> <span class="nv">__UPPER_CUTOFF__</span><span class="p-Indicator">:</span> <span class="nv">4.0</span><span class="p-Indicator">}</span>
+<span class="l-Scalar-Plain">runs</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">10</span>
+<span class="l-Scalar-Plain">splits</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">5</span>
+<span class="l-Scalar-Plain">storage_format</span><span class="p-Indicator">:</span> <span class="p-Indicator">[</span><span class="nv">arff</span><span class="p-Indicator">,</span> <span class="nv">real</span><span class="p-Indicator">]</span>
+<span class="l-Scalar-Plain">data_pattern</span><span class="p-Indicator">:</span> <span class="l-Scalar-Plain">data_run/features_sp_tt.arff</span>
+</pre></div>
+</div>
+</div>
+</div>
 </div>
 </div>
 
@@ -297,8 +466,8 @@ in your file and you are finished.</p>
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

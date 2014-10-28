@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -463,6 +463,44 @@
             <span class="n">flh</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span> <span class="p">,</span> <span class="n">mode</span><span class="p">)</span>
             <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flh</span><span class="p">,</span> <span class="n">protocol</span><span class="p">)</span>
             <span class="n">flh</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="NodeChain.get_output_type"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.NodeChain.get_output_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the output type of the entire node chain</span>
+
+<span class="sd">        The method implemented here, is the equivalent of the</span>
+<span class="sd">        `get_output_type` method which is currently implemented in</span>
+<span class="sd">        :mod:`~pySPACE.missions.nodes.base_node`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">as_string</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">output</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">string_to_class</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="NodeChain.string_to_class"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.chains.node_chain.html#pySPACE.environments.chains.node_chain.NodeChain.string_to_class">[docs]</a>    <span class="k">def</span> <span class="nf">string_to_class</span><span class="p">(</span><span class="n">string_encoding</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; given a string variable, outputs a class instance</span>
+
+<span class="sd">        e.g. obtaining a TimeSeries</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+        <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+        <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+        <span class="k">if</span> <span class="s">&quot;TimeSeries&quot;</span> <span class="ow">in</span> <span class="n">string_encoding</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">TimeSeries</span>
+        <span class="k">elif</span> <span class="s">&quot;PredictionVector&quot;</span> <span class="ow">in</span> <span class="n">string_encoding</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PredictionVector</span>
+        <span class="k">elif</span> <span class="s">&quot;FeatureVector&quot;</span> <span class="ow">in</span> <span class="n">string_encoding</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">FeatureVector</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
 <span class="c">#################</span>
 <span class="c"># MDP Code copy #</span>
@@ -1446,8 +1484,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

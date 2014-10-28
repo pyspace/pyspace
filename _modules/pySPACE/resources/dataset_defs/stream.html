@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -96,12 +96,13 @@
 <div class="viewcode-block" id="StreamDataset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.StreamDataset">[docs]</a><span class="k">class</span> <span class="nc">StreamDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Wrapper for dealing with stream datasets like raw EEG datasets</span>
 <span class="sd">    </span>
-<span class="sd">    For loading EEG data you need the</span>
+<span class="sd">    For loading streaming data you need the</span>
 <span class="sd">    :class:`~pySPACE.missions.nodes.source.time_series_source.Stream2TimeSeriesSourceNode`</span>
 <span class="sd">    as described in :ref:`tutorial_node_chain_operation`.</span>
 
-<span class="sd">    If ``file_name`` is given in the meta data, the corresponding file is</span>
-<span class="sd">    loaded, otherwise ``storage_format`` is used.</span>
+<span class="sd">    If ``file_name`` is given in the :ref:`meta data &lt;storage&gt;`,</span>
+<span class="sd">    the corresponding file is loaded, otherwise ``storage_format`` is used</span>
+<span class="sd">    to search for the needed file.</span>
 <span class="sd">    Some formats are already supported, like EEG data in the .eeg/.vhdr/.vmrk </span>
 <span class="sd">    format and other streaming data in edf or csv format. It is also possible to</span>
 <span class="sd">    load EEGLAB format (.set/.fdt) which itself can import a variety of </span>
@@ -191,7 +192,7 @@
 <span class="sd">            The (absolute) directory of the dataset.</span>
 <span class="sd">            </span>
 <span class="sd">            (*obligatory, default: None*)</span>
-<span class="sd">            </span>
+
 <span class="sd">    :Author:  Johannes Teiwes (johannes.teiwes@dfki.de)</span>
 <span class="sd">    :Date: 2010/10/13</span>
 <span class="sd">    :refactored: 2013/06/10 Johannes Teiwes and Mario Michael Krell</span>
@@ -531,8 +532,13 @@
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">param</span><span class="p">)</span>
     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Failed float conversion from csv file.&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">,</span><span class="s">&quot;.&quot;</span><span class="p">))</span>
-
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;,&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">))</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Secondary attempt at conversion also failed. &quot;</span> <span class="o">+</span>
+                      <span class="s">&quot;Treating the value as string and return a 0 as &quot;</span> <span class="o">+</span>
+                      <span class="s">&quot;placeholder.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </div>
 <div class="viewcode-block" id="get_csv_handler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.stream.html#pySPACE.resources.dataset_defs.stream.get_csv_handler">[docs]</a><span class="k">def</span> <span class="nf">get_csv_handler</span><span class="p">(</span><span class="n">file_handler</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Helper function to get a DictReader from csv&quot;&quot;&quot;</span>
@@ -624,6 +630,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">first_marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">marker</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">first_marker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_entry</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">marker</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">first_marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
@@ -679,7 +686,7 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">update_marker</span><span class="p">()</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span><span class="p">:</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker</span> <span class="ow">in</span> <span class="n">samples</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                     <span class="n">marker</span> <span class="o">=</span> <span class="n">samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">marker</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
@@ -693,9 +700,20 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">marker</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
                 <span class="n">markers</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span>
             <span class="c"># convert samples to array</span>
-            <span class="n">array_samples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">),</span><span class="mi">1</span><span class="p">))</span>
+            <span class="c"># special handling of marker in channel names</span>
+            <span class="c"># if the marker is in channelNames,</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">:</span>
+                <span class="n">array_samples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">array_samples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span>
+
+            <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">channel</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channelNames</span><span class="p">):</span>
-                <span class="n">array_samples</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">parse_float</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker</span> <span class="o">==</span> <span class="n">channel</span><span class="p">:</span>
+                    <span class="n">offset</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">array_samples</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="n">offset</span><span class="p">]</span> <span class="o">=</span> <span class="n">parse_float</span><span class="p">(</span><span class="n">samples</span><span class="p">[</span><span class="n">channel</span><span class="p">])</span>
             <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="p">:</span>
                 <span class="n">c</span><span class="p">(</span><span class="n">array_samples</span><span class="p">,</span> <span class="n">markers</span><span class="p">)</span>
@@ -1483,8 +1501,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -88,9 +88,30 @@
 
 <div class="viewcode-block" id="PCAWrapperNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.pca.html#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode">[docs]</a><span class="k">class</span> <span class="nc">PCAWrapperNode</span><span class="p">(</span><span class="n">SpatialFilteringNode</span><span class="p">):</span> <span class="c">#, PCANode):</span>
     <span class="sd">&quot;&quot;&quot; Reuse the  implementation of the Principal Component Analysis of mdp</span>
-<span class="sd">    </span>
+
+<span class="sd">    For a theoretical description of how PCA works, the following tutorial</span>
+<span class="sd">    is extremely useful.</span>
+
+<span class="sd">    ======= =========================================================</span>
+<span class="sd">    Title   A TUTORIAL ON PRINCIPAL COMPONENT ANALYSIS Derivation, Discussion and Singular Value Decomposition</span>
+<span class="sd">    Author  Jon Shlens</span>
+<span class="sd">    Link    http://www.cs.princeton.edu/picasso/mats/PCA-Tutorial-Intuition_jp.pdf</span>
+<span class="sd">    ======= =========================================================</span>
+
+
 <span class="sd">    This node implements the unsupervised principal component</span>
 <span class="sd">    analysis algorithm for spatial filtering.</span>
+
+<span class="sd">    .. note:: The original PCANode can execute the Principal Component Analysis</span>
+<span class="sd">        in 2 ways. The first method(which is also the default) involves the</span>
+<span class="sd">        computation of the eigenvalues of a symmetric matrix. This is obviously</span>
+<span class="sd">        a rather fast approach. Nonetheless, this approach sometimes fails and</span>
+<span class="sd">        negative eigenvalues are obtained from the computation. The problem can</span>
+<span class="sd">        be solved by using the Singular Value Decomposition method in the PCA.</span>
+<span class="sd">        This is easily done by setting ``svd=True`` when initializing the</span>
+<span class="sd">        :mod:`~pySPACE.missions.nodes.spatial_filtering.pca`. The SVD approach</span>
+<span class="sd">        is more robust but also less cost-effective when it comes to computation</span>
+<span class="sd">        time.</span>
 
 <span class="sd">    **Parameters**</span>
 <span class="sd">        :retained_channels: Determines how many of the PCA pseudo channels</span>
@@ -102,6 +123,24 @@
 
 <span class="sd">            (*optional, default: None*)</span>
 
+<span class="sd">    **mdp parameters**</span>
+<span class="sd">        :svd:   if True use Singular Value Decomposition instead of the</span>
+<span class="sd">            standard eigenvalue problem solver. Use it when PCANode</span>
+<span class="sd">            complains about singular covariance matrices</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
+<span class="sd">        :reduce: Keep only those principal components which have a variance</span>
+<span class="sd">            larger than &#39;var_abs&#39; and a variance relative to the</span>
+<span class="sd">            first principal component larger than &#39;var_rel&#39; and a</span>
+<span class="sd">            variance relative to total variance larger than &#39;var_part&#39;</span>
+<span class="sd">            (set var_part to None or 0 for no filtering).</span>
+<span class="sd">            Note: when the &#39;reduce&#39; switch is enabled, the actual number</span>
+<span class="sd">            of principal components (self.output_dim) may be different</span>
+<span class="sd">            from that set when creating the instance.</span>
+
+<span class="sd">            (*optional, default: False*)</span>
+
 <span class="sd">    **Exemplary Call**</span>
 <span class="sd">    </span>
 <span class="sd">    .. code-block:: yaml</span>
@@ -111,7 +150,8 @@
 <span class="sd">            parameters:</span>
 <span class="sd">                retained_channels : 42</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-<div class="viewcode-block" id="PCAWrapperNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.pca.html#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">retained_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">load_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="PCAWrapperNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.pca.html#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">retained_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">load_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">svd</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="nb">reduce</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="c"># Must be set before constructor of superclass is set</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="p">(</span><span class="n">load_path</span> <span class="o">==</span> <span class="bp">None</span><span class="p">)</span>
         
@@ -123,13 +163,15 @@
             <span class="n">avg</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filter_file</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">avg</span><span class="o">=</span><span class="n">avg</span><span class="p">,</span> <span class="n">v</span><span class="o">=</span><span class="n">v</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="n">v</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="c"># The number of channels that will be retained</span>
-                                <span class="n">retained_channels</span> <span class="o">=</span> <span class="n">retained_channels</span><span class="p">,</span>
-                                <span class="n">output_dim</span> <span class="o">=</span> <span class="n">retained_channels</span><span class="p">,</span>
-                                <span class="n">channel_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
-                                <span class="n">new_channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
-                                <span class="n">wrapped_node</span><span class="o">=</span><span class="bp">None</span>
-                                <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>  <span class="c"># The number of channels that will be retained</span>
+            <span class="n">retained_channels</span><span class="o">=</span><span class="n">retained_channels</span><span class="p">,</span>
+            <span class="n">output_dim</span><span class="o">=</span><span class="n">retained_channels</span><span class="p">,</span>
+            <span class="n">channel_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">new_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">wrapped_node</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">svd</span><span class="o">=</span><span class="n">svd</span><span class="p">,</span>  <span class="c"># choose the method to use when computing the PCA</span>
+            <span class="nb">reduce</span><span class="o">=</span><span class="nb">reduce</span>
+        <span class="p">)</span>
         </div>
 <div class="viewcode-block" id="PCAWrapperNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.pca.html#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
@@ -144,7 +186,7 @@
         <span class="c"># We simply ignore the class label since we </span>
         <span class="c"># are doing unsupervised learning</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">PCANode</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span> <span class="o">=</span> <span class="n">PCANode</span><span class="p">(</span><span class="n">svd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">svd</span><span class="p">,</span> <span class="nb">reduce</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">reduce</span><span class="p">)</span>
         <span class="n">x</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">wrapped_node</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
@@ -225,8 +267,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

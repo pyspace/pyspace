@@ -82,7 +82,7 @@ Some of the values may be *lists*. They can be defined in two ways:
     * use squared brackets (``[item1, item2]``) as in Python.
     
 Single-line versions are mainly used if you have
-lists of lists or dictionaries or dictionaries, but they do not have to be used.
+lists of lists or dictionaries of dictionaries, but they do not have to be used.
 These data types are called *collections* in YAML.
 
 .. todo:: Documentation on datasets needed!
@@ -144,3 +144,167 @@ Example Node Chain File
 .. literalinclude:: /examples/specs/node_chains/example_flow.yaml
     :language: yaml
 
+
+.. _metadata_yaml:
+
+Metadata.yaml
++++++++++++++
+
+This file is responsible for defining dataset properties.
+It can be always found in the data folder, associated with the dataset.
+It is a dictionary written in YAML syntax.
+If you get a dataset as a result of processing with pySPACE,
+this file is stored automatically and some information about previous
+processing is added.
+For further processing, the resulting dataset can be immediately used.
+
+From the programming perspective, the dictionary is loaded and forwarded
+as *dataset_md* to the respective datasets.
+It is even possible to access this data with the
+:func:`~pySPACE.missions.nodes.base_node.BaseNode.getMetadata` method in a node.
+
+If you want to define your own metadata.yaml,
+to enable pySPACE to read your data, there are three categories of parameters
+you can define:
+
+    :mandatory parameters:
+        This is always the *type* of the data and the *storage_format*
+        and potentially additional required information for loading the data.
+        For the additional loading information, check the documentation of the
+        respective dataset which corresponds to your chosen type.
+
+        There is a direct mapping between the type variable, the respective
+        `dataset class <pySPACE.resources.dataset_defs>`,
+        and the used :mod:`data type <pySPACE.resources.data_types>`.
+        The type is written in lower case with underscores.
+        The data type is the same but with camel case and for respective
+        dataset, *Dataset* is added to the class name.
+        The respective module names are the same as the *type*.
+
+        Currently implemented types are:
+
+            - :class:`stream <pySPACE.resources.dataset_defs.stream.StreamDataset>`
+            - :class:`time_series <pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset>`
+              and
+            - :class:`feature_vector <pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset>`.
+
+        The *storage_format* might consist of two components:
+        ``[general_format, value_format]``.
+        Currently, for the *value_format* only *real* is supported
+        but it is used as a placeholder, to also for example
+        support symbolic or text data in future.
+        The *general_format* is the important part.
+        For the stream type, only this parameter is used
+        and for the other types it is possible, to for example use
+        ``storage_format: csv`` in the *metadata.yaml*.
+        By default, the framework stores data in the Python specific
+        *pickle* format.
+        the most commonly used other format is *csv*.
+
+        An example for additional loading information is the *data_pattern*.
+        It contains the placeholders *_run* for the run number,
+        *_sp* for the split number, and *_tt* for the distinction between
+        training and test data.
+        These parameters are later on replaced in the pattern
+        to get the needed file names.
+        Hence, these keywords should not occur in the name of the dataset as
+        for example in *data/my_special_running_tt_train_data*.
+
+    :optional parameter:
+        Optional parameters are either determined automatically
+        or set with a sufficient default.
+
+        The really important ones are:
+
+            :run: This parameter defines the number of total processing
+                repetitions, which were applied to the original data.
+
+                If you define a new dataset, the correct value is *1*,
+                which is also the default.
+
+                The respective dataset will then contain
+                a separate file for each repetition as specified in the
+                aforementioned *data_pattern*:
+                *_run* is replaced by an underscore
+                and the respective *run_number*.
+                The repetitions are sometimes needed, to account for
+                randomness effects.
+                For each repetition, the random seed is fixed, using
+                the number of the current repetition (*run_number*).
+                This is needed to get reproducible results and
+                for example to get the same splitting
+                into training and test data when processing the same
+                dataset with different parametrization.
+
+                (*optional, default: 1*)
+
+            :split: This parameter defines the total number of splits,
+                which were created in previous processing of a dataset
+                using a cross-validation scheme.
+                This parameter is handled in the same way as the run number
+                with the *data_pattern*:
+                *_sp* is replaced by an underscore and the respective index
+                of the splitting.
+
+                (*optional, default: 1*)
+
+            :train_test: Defines if the data is already split into training
+                and testing data. This holds true for the MNIST dataset of
+                handwritten digits but not for the data in our
+                example_summary, provided in the default *pySPACE_center*.
+
+                By default this parameter is set to *false* and all data
+                is assumed to be testing data.
+                This can be for example changed with nodes for the
+                :mod:`~pySPACE.missions.nodes.splitter` module.
+
+                If the parameter is set to *true*, the loading procedure
+                needs to know, which part is used for training and which one
+                for testing. This is usually done by using the
+                aforementioned *data_pattern* with the place holder *_tt*
+                for the strings *_train* and *_test* to define training
+                and testing data.
+
+                For example the dataset pattern
+                *data/MINST_1_vs_2_tt.csv*
+
+                (*optional, default: false*)
+
+        For special dataset dependent parameters and loading parameters
+        refer to the documentation of the respective dataset (e.g,
+        electrode positions from an EEG recording).
+        Furthermore, ``parameter_setting`` of previous processing
+        might be specified. This can be later on used for comparisons
+        in an evaluation.
+
+    :additional information:
+
+        There can be a lot of additional information specified for the dataset
+        which are not used by the software but which can provide useful
+        information about the data and previous processing steps.
+        This can be the class names, a dataset description,
+        the source url, the data of creation, the author, or the detailed
+        the specifications of previous processing
+        which was applied to the data.
+
+
+
+
+Example of a FeatureVectorDataset metadata.yaml
+...............................................
+
+.. code-block:: yaml
+
+  type: feature_vector
+  author: Max Mustermann
+  date: '2009_4_5'
+  node_chain_file_name: example_flow.yaml
+  input_collection_name: input_collection_example
+  classes_names: [Standard, Target]
+  feature_names: [feature1, feature2, feature3]
+  num_features: 3
+  parameter_setting: {__LOWER_CUTOFF__: 0.1, __UPPER_CUTOFF__: 4.0}
+  runs: 10
+  splits: 5
+  storage_format: [arff, real]
+  data_pattern: data_run/features_sp_tt.arff

@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -252,8 +252,9 @@
             <span class="n">ldict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">current_line</span><span class="p">]</span>
         <span class="n">final_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ldict</span><span class="p">)</span>
     <span class="c"># save it</span>
-    <span class="n">csvDictWriter</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> 
-                    <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_ALL</span><span class="p">,</span> <span class="n">fieldnames</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">)</span>
+    <span class="n">csvDictWriter</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">DictWriter</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> <span class="n">quoting</span><span class="o">=</span><span class="n">csv</span><span class="o">.</span><span class="n">QUOTE_ALL</span><span class="p">,</span>
+                                 <span class="n">fieldnames</span><span class="o">=</span><span class="n">keys</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span>
+                                 <span class="n">lineterminator</span><span class="o">=</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
     <span class="n">csvDictWriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span><span class="n">keys</span><span class="p">)))</span>
     <span class="n">csvDictWriter</span><span class="o">.</span><span class="n">writerows</span><span class="p">(</span><span class="n">final_list</span><span class="p">)</span>
     <span class="n">csv_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -471,7 +472,7 @@
 
     <span class="k">return</span> <span class="n">orig_dict</span>
     </div>
-<div class="viewcode-block" id="extend_dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.extend_dict">[docs]</a><span class="k">def</span> <span class="nf">extend_dict</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">,</span> <span class="n">extension_dict</span><span class="p">):</span>
+<div class="viewcode-block" id="extend_dict"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.csv_analysis.html#pySPACE.tools.csv_analysis.extend_dict">[docs]</a><span class="k">def</span> <span class="nf">extend_dict</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">,</span> <span class="n">extension_dict</span><span class="p">,</span> <span class="n">retain_unique_items</span> <span class="o">=</span> <span class="bp">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Extend one dictionary with another</span>
 <span class="sd">    </span>
 <span class="sd">    .. note:: This function returns a modified dictionary, even if the extension</span>
@@ -495,12 +496,28 @@
         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Inconsistency while merging: &#39;</span> <span class="o">+</span>
                   <span class="s">&#39;The two directories have different keys!&#39;</span><span class="p">)</span>
     
+    <span class="n">current_num_entries</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">[</span><span class="n">orig_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]])</span>
     <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">extension_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="k">if</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="p">:</span>
+            <span class="n">orig_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">extension_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">retain_unique_items</span><span class="p">:</span>
+            <span class="n">orig_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">current_num_entries</span><span class="o">*</span><span class="p">[</span><span class="bp">None</span><span class="p">]</span>
             <span class="n">orig_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">extension_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Key &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&#39; dismissed during dictionary extension:&#39;</span><span class="o">+</span>
                           <span class="s">&#39; Does not exist in all files!&#39;</span><span class="p">)</span>
+    
+    <span class="n">num_new_entries</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">extension_dict</span><span class="p">[</span><span class="n">extension_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]])</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">orig_dict</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">extension_dict</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">retain_unique_items</span><span class="p">:</span>       
+            <span class="n">orig_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">num_new_entries</span><span class="o">*</span><span class="p">[</span><span class="bp">None</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;Key &#39;</span> <span class="o">+</span> <span class="n">key</span> <span class="o">+</span> <span class="s">&#39; dismissed during dictionary extension:&#39;</span><span class="o">+</span>
+                          <span class="s">&#39; Does not exist in all files!&#39;</span><span class="p">)</span>
+            <span class="n">orig_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+        
     <span class="k">return</span> <span class="n">orig_dict</span>
 
 
@@ -838,8 +855,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

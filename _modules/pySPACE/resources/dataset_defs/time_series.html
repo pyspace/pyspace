@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -77,7 +77,6 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
-<span class="kn">import</span> <span class="nn">pwd</span>
 <span class="kn">import</span> <span class="nn">csv</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -102,7 +101,8 @@
 <span class="sd">    :mod:`~pySPACE.missions.nodes.sink.time_series_sink` node</span>
 <span class="sd">    in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.</span>
 <span class="sd">    </span>
-<span class="sd">    The standard format is &#39;pickle&#39;, but it is also possible to load, e.g.,</span>
+<span class="sd">    The standard *storage_format* is &#39;pickle&#39;,</span>
+<span class="sd">    but it is also possible to load, e.g.,</span>
 <span class="sd">    BrainComputerInterface-competition data. For that, ``storage_format`` has</span>
 <span class="sd">    to be set in the format **bci_comp_[competition number]_[dataset number]**</span>
 <span class="sd">    in the metadata.yaml file. For example, **bci_comp_2_4** means loading of </span>
@@ -113,6 +113,16 @@
 <span class="sd">        - BCI Competition III, dataset II: P300 speller paradigm, training data</span>
 <span class="sd">    </span>
 <span class="sd">    See http://www.bbci.de/competition/ for further information.</span>
+
+<span class="sd">    For saving the data, other formats are currently supported but not</span>
+<span class="sd">    yet for loading the data.</span>
+<span class="sd">    This issue can be handled by processing the data with a node chain</span>
+<span class="sd">    operation which transforms the data into feature vectors and</span>
+<span class="sd">    use the respective storing and loading functionality, e.g., with csv and</span>
+<span class="sd">    arff files.</span>
+<span class="sd">    There is also a node for transforming feature vectors back to</span>
+<span class="sd">    TimeSeries objects.</span>
+
 <span class="sd">    </span>
 <span class="sd">    **Parameters**</span>
 <span class="sd">    </span>
@@ -243,7 +253,7 @@
                                               <span class="s">&quot; dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
                                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
                         
-            <span class="k">else</span><span class="p">:</span> <span class="c"># s_format==&quot;csv&quot;:</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c"># s_format==&quot;csv&quot;:</span>
                 <span class="k">if</span> <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                     <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
                                            <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
@@ -291,7 +301,7 @@
                       <span class="s">&quot;collection for run </span><span class="si">%s</span><span class="s">, split </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_test</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> 
                                                             <span class="n">split_nr</span><span class="p">))</span>
             <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;storage_format&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span><span class="o">==</span><span class="nb">list</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
                 <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span><span class="p">:</span>
                 <span class="c"># Load the time series from a pickled file</span>
@@ -472,7 +482,14 @@
             <span class="n">s_type</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%.18e</span><span class="s">&quot;</span>
         <span class="c"># Update the meta data</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="kn">import</span> <span class="nn">platform</span>
+            <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">getpass</span>
+                <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">pwd</span>
+                <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="n">author</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
@@ -757,8 +774,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

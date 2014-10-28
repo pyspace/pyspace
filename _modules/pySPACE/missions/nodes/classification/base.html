@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -296,8 +296,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s">&quot;Training_time(classifier)&quot;</span><span class="p">]</span> <span class="o">=</span> \
                 <span class="n">stop_time_stamp</span> <span class="o">-</span> <span class="n">start_time_stamp</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Training_time(classifier) has already been calculated?&quot;</span><span class="p">,</span>
-                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s">&quot;Training_time(classifier)&quot;</span><span class="p">]</span> <span class="o">+=</span> \
+                <span class="n">stop_time_stamp</span> <span class="o">-</span> <span class="n">start_time_stamp</span>
 </div>
 <div class="viewcode-block" id="RegularizedClassifierBase.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.base.html#pySPACE.missions.nodes.classification.base.RegularizedClassifierBase.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
@@ -443,7 +443,15 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">multinomial</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> \
                 <span class="ow">not</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span>
             <span class="k">return</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">label</span><span class="p">)</span>
+        <span class="n">start_time_stamp</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+        <span class="n">stop_time_stamp</span> <span class="o">=</span> <span class="n">timeit</span><span class="o">.</span><span class="n">default_timer</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;Training_time(classifier)&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s">&quot;Training_time(classifier)&quot;</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">stop_time_stamp</span> <span class="o">-</span> <span class="n">start_time_stamp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s">&quot;Training_time(classifier)&quot;</span><span class="p">]</span> <span class="o">+=</span> \
+                <span class="n">stop_time_stamp</span> <span class="o">-</span> <span class="n">start_time_stamp</span>
 </div>
 <div class="viewcode-block" id="RegularizedClassifierBase.append_sample"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.classification.base.html#pySPACE.missions.nodes.classification.base.RegularizedClassifierBase.append_sample">[docs]</a>    <span class="k">def</span> <span class="nf">append_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">sample</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Some methods need a list of arrays as lists and some prefer arrays</span>
@@ -597,8 +605,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

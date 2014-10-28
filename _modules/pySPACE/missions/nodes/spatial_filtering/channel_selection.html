@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -71,6 +71,8 @@
 <span class="sd">&quot;&quot;&quot; Select a subset of concrete specified channels &quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
@@ -194,8 +196,84 @@
         <span class="k">return</span> <span class="n">projected_time_series</span>
 
 </div></div>
+<div class="viewcode-block" id="ConstantChannelCleanupNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode">[docs]</a><span class="k">class</span> <span class="nc">ConstantChannelCleanupNode</span><span class="p">(</span><span class="n">ChannelNameSelectorNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Remove channels that contain invalid(e.g. None or string values</span>
+
+<span class="sd">    This node is used to clean up messy data that does not conform to</span>
+<span class="sd">    the standards. This might happen if part of the data comes under</span>
+<span class="sd">    string form or if the data columns are just empty. The node also</span>
+<span class="sd">    removes the channels that have constant values.</span>
+
+<span class="sd">    Since the node inherits the execute method from the</span>
+<span class="sd">    :class:`~pySPACE.missions.nodes.spatial_filtering.channel_selection.ChannelNameSelector`,</span>
+<span class="sd">    it is only necessary to populate the list of excluded nodes in the training</span>
+<span class="sd">    phase.</span>
+
+
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node : CCC</span>
+
+<span class="sd">    :Author: Mario Michael Krell, Andrei Ignat</span>
+<span class="sd">    :Created: 2014/08/15</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_types</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;TimeSeries&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="ConstantChannelCleanupNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConstantChannelCleanupNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">([],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">data_values</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">inverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ConstantChannelCleanupNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        The node invalidates the constant channels in the training phase.</span>
+<span class="sd">        As such, the node is trainable.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="ConstantChannelCleanupNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        No supervision is necessary since only the numerical values are</span>
+<span class="sd">        considered.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="ConstantChannelCleanupNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Check which channels have constant values.</span>
+
+<span class="sd">        The training data is considered and the invalid channel names</span>
+<span class="sd">        are removed. The first data entry is saved and the starting</span>
+<span class="sd">        assumption is that all channels have constant values. When a value</span>
+<span class="sd">        different from the first data entry for a respective channel is found,</span>
+<span class="sd">        that channel is removed from the list of channels that have constant</span>
+<span class="sd">        values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># copy the first data value</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_values</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># copy the first entry</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_values</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">get_data</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="c"># invalidate all the channels in the beginning</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">channel</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">:</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get_channel</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_values</span><span class="o">.</span><span class="n">get_channel</span><span class="p">(</span><span class="n">channel</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">channel</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ConstantChannelCleanupNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.channel_selection.html#pySPACE.missions.nodes.spatial_filtering.channel_selection.ConstantChannelCleanupNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; log the names of the excluded channels &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">))</span> <span class="o">+</span> <span class="s">&quot; channels&quot;</span> <span class="o">+</span>
+                      <span class="s">&quot; have been removed since they have constant values. &quot;</span> <span class="o">+</span>
+                      <span class="s">&quot;Their names are: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">selected_channel_names</span><span class="p">),</span>
+                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+
+</div></div>
 <span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Channel_Name_Selector&quot;</span><span class="p">:</span> <span class="n">ChannelNameSelectorNode</span><span class="p">,</span>
                 <span class="s">&quot;CNS&quot;</span><span class="p">:</span> <span class="n">ChannelNameSelectorNode</span><span class="p">,</span>
+                <span class="s">&quot;CCC&quot;</span><span class="p">:</span> <span class="n">ConstantChannelCleanupNode</span>
                 <span class="p">}</span>
 </pre></div>
 
@@ -219,8 +297,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

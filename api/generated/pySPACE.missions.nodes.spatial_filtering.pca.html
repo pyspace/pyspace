@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -118,11 +118,43 @@
 <h2><a class="reference internal" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode" title="pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode"><tt class="xref py py-class docutils literal"><span class="pre">PCAWrapperNode</span></tt></a><a class="headerlink" href="#pcawrappernode" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode">
-<em class="property">class </em><tt class="descclassname">pySPACE.missions.nodes.spatial_filtering.pca.</tt><tt class="descname">PCAWrapperNode</tt><big>(</big><em>retained_channels=None</em>, <em>load_path=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/nodes/spatial_filtering/pca.html#PCAWrapperNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><tt class="descclassname">pySPACE.missions.nodes.spatial_filtering.pca.</tt><tt class="descname">PCAWrapperNode</tt><big>(</big><em>retained_channels=None</em>, <em>load_path=None</em>, <em>svd=False</em>, <em>reduce=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/nodes/spatial_filtering/pca.html#PCAWrapperNode"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="pySPACE.missions.nodes.spatial_filtering.spatial_filtering.html#pySPACE.missions.nodes.spatial_filtering.spatial_filtering.SpatialFilteringNode" title="pySPACE.missions.nodes.spatial_filtering.spatial_filtering.SpatialFilteringNode"><tt class="xref py py-class docutils literal"><span class="pre">pySPACE.missions.nodes.spatial_filtering.spatial_filtering.SpatialFilteringNode</span></tt></a></p>
 <p>Reuse the  implementation of the Principal Component Analysis of mdp</p>
+<p>For a theoretical description of how PCA works, the following tutorial
+is extremely useful.</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="7%" />
+<col width="93%" />
+</colgroup>
+<tbody valign="top">
+<tr class="row-odd"><td>Title</td>
+<td>A TUTORIAL ON PRINCIPAL COMPONENT ANALYSIS Derivation, Discussion and Singular Value Decomposition</td>
+</tr>
+<tr class="row-even"><td>Author</td>
+<td>Jon Shlens</td>
+</tr>
+<tr class="row-odd"><td>Link</td>
+<td><a class="reference external" href="http://www.cs.princeton.edu/picasso/mats/PCA-Tutorial-Intuition_jp.pdf">http://www.cs.princeton.edu/picasso/mats/PCA-Tutorial-Intuition_jp.pdf</a></td>
+</tr>
+</tbody>
+</table>
 <p>This node implements the unsupervised principal component
 analysis algorithm for spatial filtering.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The original PCANode can execute the Principal Component Analysis
+in 2 ways. The first method(which is also the default) involves the
+computation of the eigenvalues of a symmetric matrix. This is obviously
+a rather fast approach. Nonetheless, this approach sometimes fails and
+negative eigenvalues are obtained from the computation. The problem can
+be solved by using the Singular Value Decomposition method in the PCA.
+This is easily done by setting <tt class="docutils literal"><span class="pre">svd=True</span></tt> when initializing the
+<a class="reference internal" href="#module-pySPACE.missions.nodes.spatial_filtering.pca" title="pySPACE.missions.nodes.spatial_filtering.pca"><tt class="xref py py-mod docutils literal"><span class="pre">pca</span></tt></a>. The SVD approach
+is more robust but also less cost-effective when it comes to computation
+time.</p>
+</div>
 <dl class="docutils">
 <dt><strong>Parameters</strong></dt>
 <dd><table class="first last docutils field-list" frame="void" rules="none">
@@ -138,6 +170,31 @@ are retained. Default is None which means &#8220;all channels&#8221;.</p>
 is loaded.
 If not specified, this matrix is learned from the training data.</p>
 <p class="last">(<em>optional, default: None</em>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd>
+<dt><strong>mdp parameters</strong></dt>
+<dd><table class="first last docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">svd:</th><td class="field-body"><p class="first">if True use Singular Value Decomposition instead of the
+standard eigenvalue problem solver. Use it when PCANode
+complains about singular covariance matrices</p>
+<p>(<em>optional, default: False</em>)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">reduce:</th><td class="field-body"><p class="first">Keep only those principal components which have a variance
+larger than &#8216;var_abs&#8217; and a variance relative to the
+first principal component larger than &#8216;var_rel&#8217; and a
+variance relative to total variance larger than &#8216;var_part&#8217;
+(set var_part to None or 0 for no filtering).
+Note: when the &#8216;reduce&#8217; switch is enabled, the actual number
+of principal components (self.output_dim) may be different
+from that set when creating the instance.</p>
+<p class="last">(<em>optional, default: False</em>)</p>
 </td>
 </tr>
 </tbody>
@@ -188,7 +245,7 @@ If not specified, this matrix is learned from the training data.</p>
 <td>Updates the estimated covariance matrix based on <em>data</em>.</td>
 </tr>
 <tr class="row-even"><td><a class="reference internal" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.input_types" title="pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.input_types"><tt class="xref py py-obj docutils literal"><span class="pre">input_types</span></tt></a></td>
-<td>list() -&gt; new empty list</td>
+<td></td>
 </tr>
 <tr class="row-odd"><td><a class="reference internal" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.is_supervised" title="pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.is_supervised"><tt class="xref py py-obj docutils literal"><span class="pre">is_supervised</span></tt></a>()</td>
 <td>Returns whether this node requires supervised training.</td>
@@ -203,7 +260,7 @@ If not specified, this matrix is learned from the training data.</p>
 </table>
 <dl class="method">
 <dt id="pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.__init__">
-<tt class="descname">__init__</tt><big>(</big><em>retained_channels=None</em>, <em>load_path=None</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/nodes/spatial_filtering/pca.html#PCAWrapperNode.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.__init__" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">__init__</tt><big>(</big><em>retained_channels=None</em>, <em>load_path=None</em>, <em>svd=False</em>, <em>reduce=False</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="../../_modules/pySPACE/missions/nodes/spatial_filtering/pca.html#PCAWrapperNode.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pySPACE.missions.nodes.spatial_filtering.pca.PCAWrapperNode.__init__" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="method">
@@ -285,8 +342,8 @@ eigenvectors and returns the data in this lower-dimensional subspace.</p>
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

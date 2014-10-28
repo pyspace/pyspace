@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -73,105 +73,164 @@
 <span class="sd">&quot;&quot;&quot; Runs all unit tests that can be found in the subdirectory</span>
 
 
-<span class="sd">**Option**</span>
-<span class="sd">    :-ep: -- Enable parallelization</span>
-
 <span class="sd">.. todo:: Write automatic script to turn of parallelization. The one that</span>
 <span class="sd">    is used now manually turns of each test cases.</span>
 
-<span class="sd">:Author: Hendrik Woehrle (hendrik.woehrle@dfki.de) (extended by Titiruck Nuntapramote)</span>
+<span class="sd">:Author: Hendrik Woehrle (hendrik.woehrle@dfki.de) (extended by Titiruck Nuntapramote, Andrei Ignat)</span>
 <span class="sd">:Created: 2010/07/21</span>
-<span class="sd">:Last revision: 2010/05/10</span>
+<span class="sd">:Last revision: 2014/08/08</span>
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;TestLogger&#39;</span><span class="p">)</span>
+<span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">unittest</span>
 <span class="kn">import</span> <span class="nn">re</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">glob</span>
 
-<span class="n">enable</span> <span class="o">=</span> <span class="bp">False</span>
+<div class="viewcode-block" id="SpecificUnittestSuite"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.SpecificUnittestSuite">[docs]</a><span class="k">class</span> <span class="nc">SpecificUnittestSuite</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestSuite</span><span class="p">):</span>
+<div class="viewcode-block" id="SpecificUnittestSuite.populate_suite"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.SpecificUnittestSuite.populate_suite">[docs]</a>    <span class="k">def</span> <span class="nf">populate_suite</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enable_parallel</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; fill the testing suite with the available tests</span>
 
+<span class="sd">        The function is an extension of the normal unittest.TestSuite</span>
+<span class="sd">        in the sense that it looks for available tests in the `unittest`</span>
+<span class="sd">        directory and appends the available tests to the testing suite.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c"># first, we check if the path of the script is the correct one</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_path</span><span class="p">()</span>
 
-<div class="viewcode-block" id="add_tests_to_suite"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.add_tests_to_suite">[docs]</a><span class="k">def</span> <span class="nf">add_tests_to_suite</span><span class="p">(</span><span class="n">suite</span><span class="p">,</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Method to add tests to a given test suite.</span>
-
-<span class="sd">    This node plots certain information about the time series objects</span>
-<span class="sd">    in the electrode configuration space depending on the parameters that are</span>
-<span class="sd">    given to its constructor:</span>
-
-<span class="sd">    **Arguments**</span>
-<span class="sd">        :suite: -- The test suite, to which the tests are added.</span>
-<span class="sd">        :dir: -- The directory which contains the files</span>
-<span class="sd">        :files: -- List of files</span>
-
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c"># logger = logging.getLogger(&#39;TestLogger&#39;)</span>
-    <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
-        <span class="c"># add python all files, if they start with test_</span>
-        <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;test_.*\.py$&quot;</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">dir</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="nb">file</span><span class="p">):</span>
-            <span class="c"># figure out module name</span>
-            <span class="n">moduleName</span> <span class="o">=</span> <span class="nb">dir</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;\.\/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">moduleName</span><span class="p">):</span>
-                <span class="n">moduleName</span> <span class="o">+=</span> <span class="s">&quot;.&quot;</span>
-            <span class="n">moduleName</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="nb">file</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">enable</span><span class="p">:</span>
-                <span class="k">print</span> <span class="n">moduleName</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
-                <span class="k">print</span> <span class="n">moduleName</span>
-                <span class="n">tempSuite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="n">moduleName</span><span class="p">)</span>
-                <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span><span class="n">tempSuite</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="n">name</span> <span class="o">=</span> <span class="n">moduleName</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-                <span class="c"># for enable/disable parallel</span>
-                <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_filtering&#39;</span> <span class="ow">and</span> \
-                    <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_normalization&#39;</span> <span class="ow">and</span> \
-                        <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_subsampling&#39;</span><span class="p">:</span>
-                    <span class="k">print</span> <span class="n">moduleName</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span>
-                        <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
-                    <span class="n">tempSuite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span>
-                        <span class="n">moduleName</span><span class="p">)</span>
-                    <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span><span class="n">tempSuite</span><span class="p">)</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="k">print</span> <span class="n">moduleName</span> <span class="o">+</span> <span class="s">&quot;   --disable&quot;</span>
+        <span class="c"># collect all tests in subdirectory tree</span>
+        <span class="n">tree_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+        <span class="c"># NOTE: For this command, tree path must end with the directory separator</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">tree_path</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s">&#39;unittests&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_tests_to_suite</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">enable_parallel</span><span class="p">))</span>
 </div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SpecificUnittestSuite.check_path"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.SpecificUnittestSuite.check_path">[docs]</a>    <span class="k">def</span> <span class="nf">check_path</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot; a simple method that checks the pySPACE folder&quot;&quot;&quot;</span>
+        <span class="c"># We now check if our script is able to import all the available tests</span>
+        <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+        <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
+        <span class="kn">import</span> <span class="nn">pySPACE</span>
+        <span class="n">import_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">__file__</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">pardir</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">import_path</span> <span class="o">==</span> <span class="n">pyspace_path</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">warnings</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Check your python path! &quot;</span> <span class="o">+</span>
+                          <span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39; is the expected pySPACE path,&quot;</span> <span class="o">%</span> <span class="n">pyspace_path</span> <span class="o">+</span>
+                          <span class="s">&quot; but &#39;</span><span class="si">%s</span><span class="s">&#39; is used.&quot;</span> <span class="o">%</span> <span class="n">import_path</span><span class="p">)</span>
+</div>
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SpecificUnittestSuite.add_tests_to_suite"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.run_unittests.html#pySPACE.tests.run_unittests.SpecificUnittestSuite.add_tests_to_suite">[docs]</a>    <span class="k">def</span> <span class="nf">add_tests_to_suite</span><span class="p">((</span><span class="n">suite</span><span class="p">,</span> <span class="n">enable_parallel</span><span class="p">),</span> <span class="nb">dir</span><span class="p">,</span> <span class="n">files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method to add tests to a given test suite.</span>
+
+<span class="sd">        The function is built such that it can be called by os.path.walk.</span>
+<span class="sd">        The specific call thus requires that the `suite` and</span>
+<span class="sd">        `enable_parallel` arguments be packed into a tuple.</span>
+
+<span class="sd">        **Arguments**</span>
+<span class="sd">            :(self, enable_parallel): -- The test suite, to which the tests</span>
+<span class="sd">                are added and a parameter that enables the testing of nodes</span>
+<span class="sd">                that rely on the `adappt` parallelization module.</span>
+<span class="sd">            :dir: -- The directory which contains the files</span>
+<span class="sd">            :files: -- List of files</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="c"># add python all files, if they start with test_</span>
+            <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s">&quot;test_.*\.py$&quot;</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="nb">dir</span> <span class="o">+</span> <span class="s">&#39;/&#39;</span> <span class="o">+</span> <span class="nb">file</span><span class="p">):</span>
+                <span class="c"># figure out module name</span>
+                <span class="n">moduleName</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">dir</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+                <span class="c"># do the necessary conversions such that the path becomes</span>
+                <span class="c"># a python module reference</span>
+                <span class="n">moduleName</span> <span class="o">=</span> <span class="n">moduleName</span>\
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\\</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;.py&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+                <span class="k">print</span> <span class="s">&quot;--) Tests discovered in &quot;</span> <span class="o">+</span> <span class="n">moduleName</span>
+
+                <span class="c"># check if the user wants to test all the modules</span>
+                <span class="k">if</span> <span class="n">enable_parallel</span><span class="p">:</span>
+                    <span class="c"># enter this branch if the nodes that require the</span>
+                    <span class="c"># `adappt` module should also be tested</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
+                    <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span>
+                        <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="n">moduleName</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c"># check which nodes rely on the `adappt` module and</span>
+                    <span class="c"># ignore them</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="n">moduleName</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_filtering&#39;</span> <span class="ow">and</span> \
+                        <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_normalization&#39;</span> <span class="ow">and</span> \
+                            <span class="n">name</span> <span class="o">!=</span> <span class="s">&#39;test_subsampling&#39;</span><span class="p">:</span>
+
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;loading tests from &#39;</span> <span class="o">+</span> <span class="n">moduleName</span><span class="p">)</span>
+                        <span class="n">suite</span><span class="o">.</span><span class="n">addTests</span><span class="p">(</span>
+                            <span class="n">unittest</span><span class="o">.</span><span class="n">TestLoader</span><span class="p">()</span><span class="o">.</span><span class="n">loadTestsFromName</span><span class="p">(</span><span class="n">moduleName</span><span class="p">))</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                            <span class="n">moduleName</span> <span class="o">+</span> <span class="s">&quot; is disabled in the current run&quot;</span><span class="p">)</span>
+
+
+</div></div>
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="n">arg</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">arg</span> <span class="o">==</span> <span class="s">&#39;-ep&#39;</span><span class="p">:</span>
-            <span class="n">enable</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">print</span> <span class="s">&quot;usage: run_tests.py [-ep](enable parallelization)&quot;</span>
+    <span class="kn">import</span> <span class="nn">argparse</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="n">__doc__</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-v&#39;</span><span class="p">,</span> <span class="s">&#39;--verbose&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s">&#39;Enable this switch if you want to print the&#39;</span> <span class="o">+</span>
+                        <span class="s">&#39; results to the terminal screen instead of to the&#39;</span> <span class="o">+</span>
+                        <span class="s">&#39; log file&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-nr&#39;</span><span class="p">,</span> <span class="s">&#39;--noreport&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_false&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s">&#39;Enable this switch if you do NOT want an HTML &#39;</span> <span class="o">+</span>
+                             <span class="s">&#39;file to be generated using the results.&#39;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">&#39;-ep&#39;</span><span class="p">,</span> <span class="s">&#39;--enableparallelization&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> 
+                        <span class="n">action</span><span class="o">=</span><span class="s">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s">&#39;Enable this switch if you want to enable &#39;</span> <span class="o">+</span>
+                             <span class="s">&#39;parallelization when executing the available&#39;</span> <span class="o">+</span>
+                             <span class="s">&#39; unittests.&#39;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">suite</span> <span class="o">=</span> <span class="n">SpecificUnittestSuite</span><span class="p">()</span>
+    <span class="n">suite</span><span class="o">.</span><span class="n">populate_suite</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">enableparallelization</span><span class="p">)</span>
+
+    <span class="c"># finally, run the collected tests and either print the output to the</span>
+    <span class="c"># screen or generate the default HTML report</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">verbose</span><span class="p">:</span>
+        <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">noreport</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">HTMLTestRunner</span>
+            <span class="kn">import</span> <span class="nn">datetime</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">print</span> <span class="s">&quot;Could not successfully import the necessary dependencies.&quot;</span>
+            <span class="k">print</span> <span class="s">&quot;Exiting....&quot;</span>
             <span class="nb">exit</span><span class="p">()</span>
-    <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="k">print</span> <span class="s">&quot;usage: run_tests.py [-ep](enable parallelization)&quot;</span>
-        <span class="nb">exit</span><span class="p">()</span>
-    <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
-    <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&#39;pySPACE&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
-        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
-    <span class="kn">import</span> <span class="nn">pySPACE</span>
-    <span class="n">import_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">__file__</span><span class="p">),</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">pardir</span><span class="p">))</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">import_path</span> <span class="o">==</span> <span class="n">pyspace_path</span><span class="p">:</span>
-        <span class="kn">import</span> <span class="nn">warnings</span>
-        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Check your python path! &quot;</span> <span class="o">+</span>
-                      <span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39; is the expected pySPACE path,&quot;</span> <span class="o">%</span> <span class="n">pyspace_path</span> <span class="o">+</span>
-                      <span class="s">&quot; but &#39;</span><span class="si">%s</span><span class="s">&#39; is used.&quot;</span> <span class="o">%</span> <span class="n">import_path</span><span class="p">)</span>
 
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;TestLogger&#39;</span><span class="p">)</span>
+        <span class="c"># per default, the report will be saved in a file named</span>
+        <span class="c"># ``run_unittests.html``.</span>
+        <span class="n">desc</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;This is the result of running all the available &#39;</span> <span class="o">+</span>
+                       <span class="s">&#39;unittests as of </span><span class="si">%s</span><span class="s">&#39;</span><span class="p">)</span> <span class="o">%</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+        <span class="n">the_html</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;run_unittests.html&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">runner</span> <span class="o">=</span> <span class="n">HTMLTestRunner</span><span class="o">.</span><span class="n">HTMLTestRunner</span><span class="p">(</span><span class="n">stream</span><span class="o">=</span><span class="n">the_html</span><span class="p">,</span>
+                                               <span class="n">title</span><span class="o">=</span><span class="s">&#39;Specific unittests&#39;</span><span class="p">,</span>
+                                               <span class="n">description</span><span class="o">=</span><span class="n">desc</span><span class="p">)</span>
+        <span class="n">runner</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
 
-    <span class="n">suite</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestSuite</span><span class="p">()</span>
-    <span class="c"># collect all tests in subdirectory tree</span>
-    <span class="n">tree_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
-    <span class="c"># NOTE: For this command, tree path must end with the directory separator</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">tree_path</span><span class="p">)</span>
-    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s">&#39;unittests&#39;</span><span class="p">,</span> <span class="n">add_tests_to_suite</span><span class="p">,</span> <span class="n">suite</span><span class="p">)</span>
-
-    <span class="c"># finally, run the collected tests</span>
-    <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
-    <span class="n">unittest</span><span class="o">.</span><span class="n">TextTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">suite</span><span class="p">)</span>
+        <span class="n">the_html</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">webbrowser</span>
+            <span class="n">webbrowser</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s">&quot;run_unittests.html&quot;</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">pass</span>
 </pre></div>
 
           </div>
@@ -194,8 +253,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

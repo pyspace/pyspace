@@ -1,0 +1,1031 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.tests.HTMLTestRunner &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.2 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../index.html">
+              <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for pySPACE.tests.HTMLTestRunner</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">A TestRunner for use with the Python unit testing framework. It</span>
+<span class="sd">generates a HTML report to show the result at a glance.</span>
+
+<span class="sd">The simplest way to use this is to invoke its main method. E.g.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import unittest</span>
+<span class="sd">        import HTMLTestRunner</span>
+
+<span class="sd">        # ... define your tests ...</span>
+
+<span class="sd">        if __name__ == &#39;__main__&#39;:</span>
+<span class="sd">            HTMLTestRunner.main()</span>
+
+<span class="sd">License</span>
+<span class="sd">-------</span>
+<span class="sd">Copyright (c) 2004-2007, Wai Yip Tung</span>
+<span class="sd">All rights reserved.</span>
+
+<span class="sd">Redistribution and use in source and binary forms, with or without</span>
+<span class="sd">modification, are permitted provided that the following conditions are</span>
+<span class="sd">met:</span>
+
+<span class="sd">* Redistributions of source code must retain the above copyright notice,</span>
+<span class="sd">  this list of conditions and the following disclaimer.</span>
+<span class="sd">* Redistributions in binary form must reproduce the above copyright</span>
+<span class="sd">  notice, this list of conditions and the following disclaimer in the</span>
+<span class="sd">  documentation and/or other materials provided with the distribution.</span>
+<span class="sd">* Neither the name Wai Yip Tung nor the names of its contributors may be</span>
+<span class="sd">  used to endorse or promote products derived from this software without</span>
+<span class="sd">  specific prior written permission.</span>
+
+<span class="sd">THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS</span>
+<span class="sd">IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED</span>
+<span class="sd">TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A</span>
+<span class="sd">PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER</span>
+<span class="sd">OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</span>
+<span class="sd">EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</span>
+<span class="sd">PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</span>
+<span class="sd">PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF</span>
+<span class="sd">LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</span>
+<span class="sd">NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</span>
+<span class="sd">SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c"># URL: http://tungwaiyip.info/software/HTMLTestRunner.html</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s">&quot;Wai Yip Tung&quot;</span>
+<span class="n">__version__</span> <span class="o">=</span> <span class="s">&quot;0.8.2&quot;</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Change History</span>
+
+<span class="sd">Version 0.8.2</span>
+<span class="sd">* Show output inline instead of popup window (Viorel Lupu).</span>
+
+<span class="sd">Version in 0.8.1</span>
+<span class="sd">* Validated XHTML (Wolfgang Borgert).</span>
+<span class="sd">* Added description of test classes and test cases.</span>
+
+<span class="sd">Version in 0.8.0</span>
+<span class="sd">* Define Template_mixin class for customization.</span>
+<span class="sd">* Workaround a IE 6 bug that it does not treat &lt;script&gt; block as CDATA.</span>
+
+<span class="sd">Version in 0.7.1</span>
+<span class="sd">* Back port to Python 2.3 (Frank Horowitz).</span>
+<span class="sd">* Fix missing scroll bars in detail log (Podi).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">StringIO</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">from</span> <span class="nn">xml.sax</span> <span class="kn">import</span> <span class="n">saxutils</span>
+
+
+<span class="c"># ------------------------------------------------------------------------</span>
+<span class="c"># The redirectors below are used to capture output during testing. Output</span>
+<span class="c"># sent to sys.stdout and sys.stderr are automatically captured. However</span>
+<span class="c"># in some cases sys.stdout is already cached before HTMLTestRunner is</span>
+<span class="c"># invoked (e.g. calling logging.basicConfig). In order to capture those</span>
+<span class="c"># output, use the redirectors for the cached stream.</span>
+<span class="c">#</span>
+<span class="c"># e.g.</span>
+<span class="c">#   &gt;&gt;&gt; logging.basicConfig(stream=HTMLTestRunner.stdout_redirector)</span>
+<span class="c">#   &gt;&gt;&gt;</span>
+
+<div class="viewcode-block" id="OutputRedirector"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.OutputRedirector">[docs]</a><span class="k">class</span> <span class="nc">OutputRedirector</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot; Wrapper to redirect stdout or stderr &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="OutputRedirector.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.OutputRedirector.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fp</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp</span> <span class="o">=</span> <span class="n">fp</span>
+</div>
+<div class="viewcode-block" id="OutputRedirector.write"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.OutputRedirector.write">[docs]</a>    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OutputRedirector.writelines"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.OutputRedirector.writelines">[docs]</a>    <span class="k">def</span> <span class="nf">writelines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lines</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OutputRedirector.flush"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.OutputRedirector.flush">[docs]</a>    <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fp</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</div></div>
+<span class="n">stdout_redirector</span> <span class="o">=</span> <span class="n">OutputRedirector</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+<span class="n">stderr_redirector</span> <span class="o">=</span> <span class="n">OutputRedirector</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+
+
+<span class="c"># ----------------------------------------------------------------------</span>
+<span class="c"># Template</span>
+
+<div class="viewcode-block" id="Template_mixin"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.Template_mixin">[docs]</a><span class="k">class</span> <span class="nc">Template_mixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Define a HTML template for report customization and generation.</span>
+
+<span class="sd">    Overall structure of an HTML report</span>
+
+<span class="sd">    .. code-block:: html</span>
+
+<span class="sd">        &lt;html&gt;</span>
+<span class="sd">          &lt;head&gt;</span>
+
+<span class="sd">           STYLESHEET</span>
+
+<span class="sd">          &lt;/head&gt;</span>
+
+<span class="sd">          &lt;body&gt;</span>
+
+<span class="sd">           HEADING</span>
+
+<span class="sd">           REPORT</span>
+
+<span class="sd">           ENDING</span>
+
+<span class="sd">          &lt;/body&gt;</span>
+<span class="sd">        &lt;/html&gt;</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">STATUS</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">0</span><span class="p">:</span> <span class="s">&#39;pass&#39;</span><span class="p">,</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="s">&#39;fail&#39;</span><span class="p">,</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="s">&#39;error&#39;</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="n">DEFAULT_TITLE</span> <span class="o">=</span> <span class="s">&#39;Unit Test Report&#39;</span>
+    <span class="n">DEFAULT_DESCRIPTION</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+    <span class="c"># ------------------------------------------------------------------------</span>
+    <span class="c"># HTML Template</span>
+
+    <span class="n">HTML_TMPL</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;</span>
+<span class="s">&lt;!DOCTYPE html PUBLIC &quot;-//W3C//DTD XHTML 1.0 Strict//EN&quot; &quot;http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd&quot;&gt;</span>
+<span class="s">&lt;html xmlns=&quot;http://www.w3.org/1999/xhtml&quot;&gt;</span>
+<span class="s">&lt;head&gt;</span>
+<span class="s">    &lt;title&gt;</span><span class="si">%(title)s</span><span class="s">&lt;/title&gt;</span>
+<span class="s">    &lt;meta name=&quot;generator&quot; content=&quot;</span><span class="si">%(generator)s</span><span class="s">&quot;/&gt;</span>
+<span class="s">    &lt;meta http-equiv=&quot;Content-Type&quot; content=&quot;text/html; charset=UTF-8&quot;/&gt;</span>
+<span class="s">    </span><span class="si">%(stylesheet)s</span><span class="s"></span>
+<span class="s">&lt;/head&gt;</span>
+<span class="s">&lt;body&gt;</span>
+<span class="s">&lt;script language=&quot;javascript&quot; type=&quot;text/javascript&quot;&gt;&lt;!--</span>
+<span class="s">output_list = Array();</span>
+
+<span class="s">/* level - 0:Summary; 1:Failed; 2:All */</span>
+<span class="s">function showCase(level) {</span>
+<span class="s">    trs = document.getElementsByTagName(&quot;tr&quot;);</span>
+<span class="s">    for (var i = 0; i &lt; trs.length; i++) {</span>
+<span class="s">        tr = trs[i];</span>
+<span class="s">        id = tr.id;</span>
+<span class="s">        if (id.substr(0,2) == &#39;ft&#39;) {</span>
+<span class="s">            if (level &lt; 1) {</span>
+<span class="s">                tr.className = &#39;hiddenRow&#39;;</span>
+<span class="s">            }</span>
+<span class="s">            else {</span>
+<span class="s">                tr.className = &#39;&#39;;</span>
+<span class="s">            }</span>
+<span class="s">        }</span>
+<span class="s">        if (id.substr(0,2) == &#39;pt&#39;) {</span>
+<span class="s">            if (level &gt; 1) {</span>
+<span class="s">                tr.className = &#39;&#39;;</span>
+<span class="s">            }</span>
+<span class="s">            else {</span>
+<span class="s">                tr.className = &#39;hiddenRow&#39;;</span>
+<span class="s">            }</span>
+<span class="s">        }</span>
+<span class="s">    }</span>
+<span class="s">}</span>
+
+<span class="s">function showTestDetail(div_id){</span>
+<span class="s">    var details_div = document.getElementById(div_id)</span>
+<span class="s">    var displayState = details_div.style.display</span>
+<span class="s">    // alert(displayState)</span>
+<span class="s">    if (displayState != &#39;block&#39; ) {</span>
+<span class="s">        displayState = &#39;block&#39;</span>
+<span class="s">        details_div.style.display = &#39;block&#39;</span>
+<span class="s">    }</span>
+<span class="s">    else {</span>
+<span class="s">        details_div.style.display = &#39;none&#39;</span>
+<span class="s">    }</span>
+<span class="s">}</span>
+
+
+<span class="s">function html_escape(s) {</span>
+<span class="s">    s = s.replace(/&amp;/g,&#39;&amp;amp;&#39;);</span>
+<span class="s">    s = s.replace(/&lt;/g,&#39;&amp;lt;&#39;);</span>
+<span class="s">    s = s.replace(/&gt;/g,&#39;&amp;gt;&#39;);</span>
+<span class="s">    return s;</span>
+<span class="s">}</span>
+
+<span class="s">/* obsoleted by detail in &lt;div&gt;</span>
+<span class="s">function showOutput(id, name) {</span>
+<span class="s">    var w = window.open(&quot;&quot;, //url</span>
+<span class="s">                    name,</span>
+<span class="s">                    &quot;resizable,scrollbars,status,width=800,height=450&quot;);</span>
+<span class="s">    d = w.document;</span>
+<span class="s">    d.write(&quot;&lt;pre&gt;&quot;);</span>
+<span class="s">    d.write(html_escape(output_list[id]));</span>
+<span class="s">    d.write(&quot;\n&quot;);</span>
+<span class="s">    d.write(&quot;&lt;a href=&#39;javascript:window.close()&#39;&gt;close&lt;/a&gt;\n&quot;);</span>
+<span class="s">    d.write(&quot;&lt;/pre&gt;\n&quot;);</span>
+<span class="s">    d.close();</span>
+<span class="s">}</span>
+<span class="s">*/</span>
+<span class="s">--&gt;&lt;/script&gt;</span>
+
+<span class="si">%(heading)s</span><span class="s"></span>
+<span class="si">%(report)s</span><span class="s"></span>
+<span class="si">%(ending)s</span><span class="s"></span>
+
+<span class="s">&lt;/body&gt;</span>
+<span class="s">&lt;/html&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>
+    <span class="c"># variables: (title, generator, stylesheet, heading, report, ending)</span>
+
+    <span class="c"># ------------------------------------------------------------------------</span>
+    <span class="c"># Stylesheet</span>
+    <span class="c">#</span>
+    <span class="c"># alternatively use a &lt;link&gt; for external style sheet, e.g.</span>
+    <span class="c">#   &lt;link rel=&quot;stylesheet&quot; href=&quot;$url&quot; type=&quot;text/css&quot;&gt;</span>
+
+    <span class="n">STYLESHEET_TMPL</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">&lt;style type=&quot;text/css&quot; media=&quot;screen&quot;&gt;</span>
+<span class="s">body        { font-family: verdana, arial, helvetica, sans-serif; font-size: 80%; }</span>
+<span class="s">table       { font-size: 100%; }</span>
+<span class="s">pre         { }</span>
+
+<span class="s">/* -- heading ---------------------------------------------------------------------- */</span>
+<span class="s">h1 {</span>
+<span class="s">	font-size: 16pt;</span>
+<span class="s">	color: gray;</span>
+<span class="s">}</span>
+<span class="s">.heading {</span>
+<span class="s">    margin-top: 0ex;</span>
+<span class="s">    margin-bottom: 1ex;</span>
+<span class="s">}</span>
+
+<span class="s">.heading .attribute {</span>
+<span class="s">    margin-top: 1ex;</span>
+<span class="s">    margin-bottom: 0;</span>
+<span class="s">}</span>
+
+<span class="s">.heading .description {</span>
+<span class="s">    margin-top: 4ex;</span>
+<span class="s">    margin-bottom: 6ex;</span>
+<span class="s">}</span>
+
+<span class="s">/* -- css div popup ------------------------------------------------------------------------ */</span>
+<span class="s">a.popup_link {</span>
+<span class="s">}</span>
+
+<span class="s">a.popup_link:hover {</span>
+<span class="s">    color: red;</span>
+<span class="s">}</span>
+
+<span class="s">.popup_window {</span>
+<span class="s">    display: none;</span>
+<span class="s">    position: relative;</span>
+<span class="s">    left: 0px;</span>
+<span class="s">    top: 0px;</span>
+<span class="s">    /*border: solid #627173 1px; */</span>
+<span class="s">    padding: 10px;</span>
+<span class="s">    background-color: #E6E6D6;</span>
+<span class="s">    font-family: &quot;Lucida Console&quot;, &quot;Courier New&quot;, Courier, monospace;</span>
+<span class="s">    text-align: left;</span>
+<span class="s">    font-size: 8pt;</span>
+<span class="s">    width: 500px;</span>
+<span class="s">}</span>
+
+<span class="s">}</span>
+<span class="s">/* -- report ------------------------------------------------------------------------ */</span>
+<span class="s">#show_detail_line {</span>
+<span class="s">    margin-top: 3ex;</span>
+<span class="s">    margin-bottom: 1ex;</span>
+<span class="s">}</span>
+<span class="s">#result_table {</span>
+<span class="s">    width: 80%;</span>
+<span class="s">    border-collapse: collapse;</span>
+<span class="s">    border: 1px solid #777;</span>
+<span class="s">}</span>
+<span class="s">#header_row {</span>
+<span class="s">    font-weight: bold;</span>
+<span class="s">    color: white;</span>
+<span class="s">    background-color: #777;</span>
+<span class="s">}</span>
+<span class="s">#result_table td {</span>
+<span class="s">    border: 1px solid #777;</span>
+<span class="s">    padding: 2px;</span>
+<span class="s">}</span>
+
+<span class="s">#info_table{</span>
+<span class="s">    border-collapse: collapse;</span>
+<span class="s">    border: 1px solid #777;</span>
+<span class="s">    width: 80%;</span>
+<span class="s">}</span>
+
+<span class="s">#info_table td {</span>
+<span class="s">    background-color: #310C3D;</span>
+<span class="s">    padding: 2px;</span>
+<span class="s">}</span>
+<span class="s">#info_row td {</span>
+<span class="s">    padding: 2px;</span>
+<span class="s">    background-color: white;</span>
+<span class="s">    border: 1px solid #151552;</span>
+<span class="s">}</span>
+<span class="s">#total_row  { font-weight: bold; }</span>
+<span class="s">.passClass  { background-color: #6c6; }</span>
+<span class="s">.failClass  { background-color: #c60; }</span>
+<span class="s">.errorClass { background-color: #c00; }</span>
+<span class="s">.overallClass { background-color: #819FF7; }</span>
+<span class="s">.totalClass  { background-color: #F3F781; }</span>
+<span class="s">.passCase   { color: #6c6; }</span>
+<span class="s">.failCase   { color: #c60; font-weight: bold; }</span>
+<span class="s">.errorCase  { color: #c00; font-weight: bold; }</span>
+<span class="s">.hiddenRow  { display: none; }</span>
+<span class="s">.testcase   { margin-left: 2em; }</span>
+
+
+<span class="s">/* -- ending ---------------------------------------------------------------------- */</span>
+<span class="s">#ending {</span>
+<span class="s">}</span>
+
+<span class="s">&lt;/style&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>
+
+    <span class="c"># ------------------------------------------------------------------------</span>
+    <span class="c"># Heading</span>
+    <span class="c">#</span>
+
+    <span class="n">HEADING_TMPL</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;&lt;div class=&#39;heading&#39;&gt;</span>
+<span class="s">&lt;h1&gt;</span><span class="si">%(title)s</span><span class="s">&lt;/h1&gt;</span>
+<span class="si">%(parameters)s</span><span class="s"></span>
+<span class="s">&lt;p class=&#39;description&#39;&gt;</span><span class="si">%(description)s</span><span class="s">&lt;/p&gt;</span>
+<span class="s">&lt;p&gt;</span><span class="si">%(sysinfo)s</span><span class="s">&lt;/p&gt;</span>
+<span class="s">&lt;p id=&#39;show_detail_line&#39;&gt;Show</span>
+<span class="s">&lt;a href=&#39;javascript:showCase(0)&#39;&gt;Summary&lt;/a&gt;</span>
+<span class="s">&lt;a href=&#39;javascript:showCase(1)&#39;&gt;Failed&lt;/a&gt;</span>
+<span class="s">&lt;a href=&#39;javascript:showCase(2)&#39;&gt;All&lt;/a&gt;</span>
+<span class="s">&lt;/p&gt;</span>
+<span class="s">&lt;/div&gt;</span>
+
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (title, parameters, sysinfo, description)</span>
+
+    <span class="n">GENERIC_UNITTEST_HEADING</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">&lt;table id=&#39;result_table&#39;&gt;</span>
+<span class="s">&lt;colgroup&gt;</span>
+<span class="s">&lt;col align=&#39;left&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;/colgroup&gt;</span>
+<span class="s">&lt;tr id=&#39;header_row&#39;&gt;</span>
+<span class="s">    &lt;td&gt;Test name&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Success&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Fail&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Error&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="si">%(test_list)s</span><span class="s"></span>
+<span class="s">&lt;/table&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (test_list)</span>
+
+    <span class="n">GENERIC_UNITTEST_TEST</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="s">&lt;tr class=&#39;</span><span class="si">%(style)s</span><span class="s">&#39;&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(desc)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(success)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(fail)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(error)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (style, desc, success, fail, error)</span>
+
+    <span class="n">HEADING_ATTRIBUTE_TMPL</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;&lt;p class=&#39;attribute&#39;&gt;&lt;strong&gt;</span><span class="si">%(name)s</span><span class="s">:&lt;/strong&gt; </span><span class="si">%(value)s</span><span class="s">&lt;/p&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (name, value)</span>
+
+    <span class="c"># ------------------------------------------------------------------------</span>
+    <span class="c"># Report</span>
+    <span class="c">#</span>
+
+    <span class="n">REPORT_TMPL</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;</span>
+<span class="s">&lt;table id=&#39;result_table&#39;&gt;</span>
+<span class="s">&lt;colgroup&gt;</span>
+<span class="s">&lt;col align=&#39;left&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;/colgroup&gt;</span>
+<span class="s">&lt;tr id=&#39;header_row&#39;&gt;</span>
+<span class="s">    &lt;td&gt;Test Group/Test case&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Count&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Pass&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Fail&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Error&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="si">%(test_list)s</span><span class="s"></span>
+<span class="s">&lt;tr id=&#39;total_row&#39;&gt;</span>
+<span class="s">    &lt;td&gt;Total&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(count)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(Pass)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(fail)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(error)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&lt;/table&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (test_list, count, Pass, fail, error)</span>
+
+    <span class="n">REPORT_CLASS_TMPL</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="s">&lt;tr class=&#39;</span><span class="si">%(style)s</span><span class="s">&#39;&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(desc)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(count)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(Pass)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(fail)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(error)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (style, desc, count, Pass, fail, error, cid)</span>
+
+    <span class="n">REPORT_TEST_WITH_OUTPUT_TMPL</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="s">&lt;tr id=&#39;</span><span class="si">%(tid)s</span><span class="s">&#39; class=&#39;</span><span class="si">%(Class)s</span><span class="s">&#39;&gt;</span>
+<span class="s">    &lt;td class=&#39;</span><span class="si">%(style)s</span><span class="s">&#39;&gt;&lt;div class=&#39;testcase&#39;&gt;</span><span class="si">%(desc)s</span><span class="s">&lt;/div&gt;&lt;/td&gt;</span>
+<span class="s">    &lt;td colspan=&#39;5&#39; align=&#39;center&#39;&gt;</span>
+
+<span class="s">    &lt;!--css div popup start--&gt;</span>
+<span class="s">    &lt;a class=&quot;popup_link&quot; onfocus=&#39;this.blur();&#39; href=&quot;javascript:showTestDetail(&#39;div_</span><span class="si">%(tid)s</span><span class="s">&#39;)&quot; &gt;</span>
+<span class="s">        </span><span class="si">%(status)s</span><span class="s">&lt;/a&gt;</span>
+
+<span class="s">    &lt;div id=&#39;div_</span><span class="si">%(tid)s</span><span class="s">&#39; class=&quot;popup_window&quot;&gt;</span>
+<span class="s">        &lt;div style=&#39;text-align: right; color:red;cursor:pointer&#39;&gt;</span>
+<span class="s">        &lt;a onfocus=&#39;this.blur();&#39; onclick=&quot;document.getElementById(&#39;div_</span><span class="si">%(tid)s</span><span class="s">&#39;).style.display = &#39;none&#39; &quot; &gt;</span>
+<span class="s">           [x]&lt;/a&gt;</span>
+<span class="s">        &lt;/div&gt;</span>
+<span class="s">        &lt;pre&gt;</span>
+<span class="s">        </span><span class="si">%(script)s</span><span class="s"></span>
+<span class="s">        &lt;/pre&gt;</span>
+<span class="s">    &lt;/div&gt;</span>
+<span class="s">    &lt;!--css div popup end--&gt;</span>
+
+<span class="s">    &lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (tid, Class, style, desc, status)</span>
+
+    <span class="n">REPORT_TEST_NO_OUTPUT_TMPL</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="s">&lt;tr id=&#39;</span><span class="si">%(tid)s</span><span class="s">&#39; class=&#39;</span><span class="si">%(Class)s</span><span class="s">&#39;&gt;</span>
+<span class="s">    &lt;td class=&#39;</span><span class="si">%(style)s</span><span class="s">&#39;&gt;&lt;div class=&#39;testcase&#39;&gt;</span><span class="si">%(desc)s</span><span class="s">&lt;/div&gt;&lt;/td&gt;</span>
+<span class="s">    &lt;td colspan=&#39;5&#39; align=&#39;center&#39;&gt;</span><span class="si">%(status)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (tid, Class, style, desc, status)</span>
+
+    <span class="n">REPORT_TEST_OUTPUT_TMPL</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="si">%(id)s</span><span class="s">: </span><span class="si">%(output)s</span><span class="s"></span>
+<span class="s">&quot;&quot;&quot;</span>  <span class="c"># variables: (id, output)</span>
+
+    <span class="c"># ------------------------------------------------------------------------</span>
+    <span class="c"># ENDING</span>
+    <span class="c">#</span>
+
+    <span class="n">SYSTEM_INFO</span> <span class="o">=</span> <span class="s">r&quot;&quot;&quot;</span>
+<span class="s">&lt;p&gt;System information&lt;/p&gt;</span>
+<span class="s">&lt;table id=&#39;info_table&#39;&gt;</span>
+<span class="s">&lt;colgroup&gt;</span>
+<span class="s">&lt;col align=&#39;left&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;col align=&#39;right&#39; /&gt;</span>
+<span class="s">&lt;/colgroup&gt;</span>
+<span class="s">&lt;tr id=&#39;header_row&#39;&gt;</span>
+<span class="s">    &lt;td&gt;System&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Node&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Release&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Version&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Processor&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;Python version&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&lt;tr id=&#39;info_row&#39;&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(system)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(node)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(release)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(version)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(processor)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">    &lt;td&gt;</span><span class="si">%(pythonversion)s</span><span class="s">&lt;/td&gt;</span>
+<span class="s">&lt;/tr&gt;</span>
+<span class="s">&lt;/table&gt;</span>
+<span class="s">&amp;nbsp;</span>
+<span class="s">&amp;nbsp;</span>
+<span class="s">&quot;&quot;&quot;</span> <span class="c"># variables: (system, node, release, version, processor, pythonversion)</span>
+
+    <span class="n">ENDING_TMPL</span> <span class="o">=</span> <span class="s">&quot;&quot;&quot;&lt;div id=&#39;ending&#39;&gt;&amp;nbsp;&lt;/div&gt;&quot;&quot;&quot;</span>
+
+<span class="c"># -------------------- The end of the Template class -------------------</span>
+
+</div>
+<span class="n">TestResult</span> <span class="o">=</span> <span class="n">unittest</span><span class="o">.</span><span class="n">TestResult</span>
+
+
+<span class="k">class</span> <span class="nc">_TestResult</span><span class="p">(</span><span class="n">TestResult</span><span class="p">):</span>
+    <span class="c"># note: _TestResult is a pure representation of results.</span>
+    <span class="c"># It lacks the output and reporting ability compares to</span>
+    <span class="c"># unittest._TextTestResult.</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">TestResult</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stdout0</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stderr0</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">success_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failure_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">=</span> <span class="n">verbosity</span>
+
+        <span class="c"># result is a list of result in 4 tuple</span>
+        <span class="c"># (</span>
+        <span class="c">#   result code (0: success; 1: fail; 2: error),</span>
+        <span class="c">#   TestCase object,</span>
+        <span class="c">#   Test output (byte string),</span>
+        <span class="c">#   stack trace,</span>
+        <span class="c"># )</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">startTest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+        <span class="n">TestResult</span><span class="o">.</span><span class="n">startTest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span>
+        <span class="c"># just one buffer for both stdout and stderr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outputBuffer</span> <span class="o">=</span> <span class="n">StringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+        <span class="n">stdout_redirector</span><span class="o">.</span><span class="n">fp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputBuffer</span>
+        <span class="n">stderr_redirector</span><span class="o">.</span><span class="n">fp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputBuffer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stdout0</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stderr0</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout_redirector</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="n">stderr_redirector</span>
+
+    <span class="k">def</span> <span class="nf">complete_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Disconnect output redirection and return buffer.</span>
+<span class="sd">        Safe to call multiple times.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdout0</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stdout0</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stderr0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stdout0</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stderr0</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">outputBuffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">stopTest</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+        <span class="c"># Usually one of addSuccess, addError or addFailure would have</span>
+        <span class="c"># been called.</span>
+        <span class="c"># But there are some path in unittest that would bypass this.</span>
+        <span class="c"># We must disconnect stdout in stopTest(), which is guaranteed to be</span>
+        <span class="c"># called.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete_output</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">addSuccess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">success_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">TestResult</span><span class="o">.</span><span class="n">addSuccess</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complete_output</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="s">&#39;&#39;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;ok &#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">test</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">addError</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">TestResult</span><span class="o">.</span><span class="n">addError</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_exc_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complete_output</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">_exc_str</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;E  &#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">test</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">addFailure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">err</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">failure_count</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">TestResult</span><span class="o">.</span><span class="n">addFailure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">err</span><span class="p">)</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_exc_str</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">failures</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complete_output</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span> <span class="n">_exc_str</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;F  &#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">test</span><span class="p">))</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="HTMLTestRunner"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner">[docs]</a><span class="k">class</span> <span class="nc">HTMLTestRunner</span><span class="p">(</span><span class="n">Template_mixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    As opposed to the original script, two methods were added in</span>
+<span class="sd">    order to account for the testing method used in the generic_unittest</span>
+<span class="sd">    module.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="HTMLTestRunner.__init__"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">verbosity</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">description</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span> <span class="o">=</span> <span class="n">stream</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span> <span class="o">=</span> <span class="n">verbosity</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_result</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_suite</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">title</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_TITLE</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
+        <span class="k">if</span> <span class="n">description</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">DEFAULT_DESCRIPTION</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">startTime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner.run"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="s">&quot;Run the given test case or test suite.&quot;</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">_TestResult</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+            <span class="n">test</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stopTime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">generateReport</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c"># if the test instance is a list, the script</span>
+            <span class="c"># assumes that we are dealing with a generic</span>
+            <span class="c"># unittest list of suites and proceeds accordingly</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">overall_results</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s">&quot;test_execution&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="s">&quot;test_has_exemplary_call&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="s">&quot;test_has_documentation&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="s">&quot;test_initialize&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+            <span class="p">}</span>
+
+            <span class="n">report</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+            <span class="k">for</span> <span class="n">single_suite</span> <span class="ow">in</span> <span class="n">test</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">current_suite</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">result</span> <span class="o">=</span> <span class="n">_TestResult</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+                <span class="n">single_suite</span><span class="p">[</span><span class="mi">0</span><span class="p">](</span><span class="n">result</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">stopTime</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+                <span class="n">report</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_report</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">single_suite</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+            <span class="n">generator</span> <span class="o">=</span> <span class="s">&#39;HTMLTestRunner </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">__version__</span>
+            <span class="n">stylesheet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_stylesheet</span><span class="p">()</span>
+            <span class="n">heading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_generic_unittest_heading</span><span class="p">()</span>
+            <span class="n">ending</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_ending</span><span class="p">()</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HTML_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">title</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">),</span>
+                <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span>
+                <span class="n">stylesheet</span><span class="o">=</span><span class="n">stylesheet</span><span class="p">,</span>
+                <span class="n">heading</span><span class="o">=</span><span class="n">heading</span><span class="p">,</span>
+                <span class="n">report</span><span class="o">=</span><span class="n">report</span><span class="p">,</span>
+                <span class="n">ending</span><span class="o">=</span><span class="n">ending</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;utf8&#39;</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner.sortResult"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner.sortResult">[docs]</a>    <span class="k">def</span> <span class="nf">sortResult</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_list</span><span class="p">):</span>
+        <span class="c"># unittest does not seems to run in any particular order.</span>
+        <span class="c"># Here at least we want to group them together by class.</span>
+        <span class="n">rmap</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">classes</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">result_list</span><span class="p">:</span>
+            <span class="n">cls</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">__class__</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">rmap</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
+                <span class="n">rmap</span><span class="p">[</span><span class="n">cls</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">classes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cls</span><span class="p">)</span>
+            <span class="n">rmap</span><span class="p">[</span><span class="n">cls</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span><span class="p">))</span>
+        <span class="n">r</span> <span class="o">=</span> <span class="p">[(</span><span class="n">cls</span><span class="p">,</span> <span class="n">rmap</span><span class="p">[</span><span class="n">cls</span><span class="p">])</span> <span class="k">for</span> <span class="n">cls</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">r</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner.getReportAttributes"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner.getReportAttributes">[docs]</a>    <span class="k">def</span> <span class="nf">getReportAttributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return report attributes as a list of (name, value).</span>
+<span class="sd">        Override this to add custom attributes.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">startTime</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">startTime</span><span class="p">)[:</span><span class="mi">19</span><span class="p">]</span>
+        <span class="n">duration</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stopTime</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">startTime</span><span class="p">)</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">success_count</span><span class="p">:</span>
+            <span class="n">status</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;Pass </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">result</span><span class="o">.</span><span class="n">success_count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">failure_count</span><span class="p">:</span>
+            <span class="n">status</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;Failure </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">result</span><span class="o">.</span><span class="n">failure_count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">error_count</span><span class="p">:</span>
+            <span class="n">status</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;Error </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">result</span><span class="o">.</span><span class="n">error_count</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">status</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">status</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="s">&#39;none&#39;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="p">(</span><span class="s">&#39;Start Time&#39;</span><span class="p">,</span> <span class="n">startTime</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;Duration&#39;</span><span class="p">,</span> <span class="n">duration</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;Status&#39;</span><span class="p">,</span> <span class="n">status</span><span class="p">),</span>
+        <span class="p">]</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner.generateReport"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner.generateReport">[docs]</a>    <span class="k">def</span> <span class="nf">generateReport</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+        <span class="n">report_attrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getReportAttributes</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">generator</span> <span class="o">=</span> <span class="s">&#39;HTMLTestRunner </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">__version__</span>
+        <span class="n">stylesheet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_stylesheet</span><span class="p">()</span>
+        <span class="n">heading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_heading</span><span class="p">(</span><span class="n">report_attrs</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_report</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="n">ending</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_generate_ending</span><span class="p">()</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HTML_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">),</span>
+            <span class="n">generator</span><span class="o">=</span><span class="n">generator</span><span class="p">,</span>
+            <span class="n">stylesheet</span><span class="o">=</span><span class="n">stylesheet</span><span class="p">,</span>
+            <span class="n">heading</span><span class="o">=</span><span class="n">heading</span><span class="p">,</span>
+            <span class="n">report</span><span class="o">=</span><span class="n">report</span><span class="p">,</span>
+            <span class="n">ending</span><span class="o">=</span><span class="n">ending</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s">&#39;utf8&#39;</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_stylesheet"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_stylesheet">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_stylesheet</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">STYLESHEET_TMPL</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_generic_unittest_heading"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_generic_unittest_heading">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_generic_unittest_heading</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        provides methods of generating the yellow-blue table</span>
+<span class="sd">        at the beginning of the page</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">add</span>
+        <span class="n">a_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">final_result</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">overall_results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GENERIC_UNITTEST_TEST</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">style</span><span class="o">=</span><span class="s">&quot;overallClass&quot;</span><span class="p">,</span>
+                <span class="n">desc</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">success</span><span class="o">=</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">fail</span><span class="o">=</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">error</span><span class="o">=</span><span class="n">item</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="n">a_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="n">final_result</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">add</span><span class="p">,</span> <span class="n">final_result</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+
+        <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GENERIC_UNITTEST_TEST</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">style</span><span class="o">=</span><span class="s">&quot;totalClass&quot;</span><span class="p">,</span>
+            <span class="n">desc</span><span class="o">=</span><span class="s">&quot;Total&quot;</span><span class="p">,</span>
+            <span class="n">success</span><span class="o">=</span><span class="n">final_result</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">fail</span><span class="o">=</span><span class="n">final_result</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">error</span><span class="o">=</span><span class="n">final_result</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+        <span class="n">a_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+        <span class="n">result_table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">GENERIC_UNITTEST_HEADING</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">test_list</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">a_lines</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">heading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HEADING_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">),</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="n">result_table</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">),</span>
+            <span class="n">sysinfo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_generate_system_info</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">heading</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_heading"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_heading">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_heading</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">report_attrs</span><span class="p">):</span>
+        <span class="n">a_lines</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">report_attrs</span><span class="p">:</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HEADING_ATTRIBUTE_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+                <span class="n">value</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">value</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">a_lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="n">heading</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">HEADING_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">title</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">title</span><span class="p">),</span>
+            <span class="n">parameters</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">a_lines</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">),</span>
+            <span class="n">sysinfo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_generate_system_info</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">heading</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_system_info"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_system_info">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_system_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">platform</span>
+            <span class="n">sysinfo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">SYSTEM_INFO</span> <span class="o">%</span> <span class="nb">dict</span> <span class="p">(</span>
+                <span class="n">system</span><span class="o">=</span><span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">(),</span>
+                <span class="n">node</span><span class="o">=</span><span class="n">platform</span><span class="o">.</span><span class="n">node</span><span class="p">(),</span>
+                <span class="n">release</span><span class="o">=</span><span class="n">platform</span><span class="o">.</span><span class="n">release</span><span class="p">(),</span>
+                <span class="n">version</span><span class="o">=</span><span class="n">platform</span><span class="o">.</span><span class="n">version</span><span class="p">(),</span>
+                <span class="n">processor</span><span class="o">=</span><span class="n">platform</span><span class="o">.</span><span class="n">processor</span><span class="p">(),</span>
+                <span class="n">pythonversion</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">platform</span><span class="o">.</span><span class="n">python_version</span><span class="p">())</span>
+            <span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="n">sysinfo</span><span class="o">=</span><span class="s">&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">sysinfo</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._update_overall_results"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._update_overall_results">[docs]</a>    <span class="k">def</span> <span class="nf">_update_overall_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_result</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">each_testcase</span> <span class="ow">in</span> <span class="n">new_result</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">test_id</span> <span class="o">=</span> <span class="n">each_testcase</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">id</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">test_result</span> <span class="o">=</span> <span class="n">each_testcase</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">overall_results</span><span class="p">[</span><span class="n">test_id</span><span class="p">][</span><span class="n">test_result</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_report"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_report">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_report</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">,</span> <span class="n">custom_decription</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">sortedResult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sortResult</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">result</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">custom_decription</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_overall_results</span><span class="p">(</span><span class="n">sortedResult</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">cid</span><span class="p">,</span> <span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">cls_results</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sortedResult</span><span class="p">):</span>
+            <span class="c"># subtotal for a class</span>
+            <span class="n">np</span> <span class="o">=</span> <span class="n">nf</span> <span class="o">=</span> <span class="n">ne</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">cls_results</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">np</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">nf</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">ne</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c"># format class description</span>
+            <span class="k">if</span> <span class="n">cls</span><span class="o">.</span><span class="n">__module__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">__name__</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cls</span><span class="o">.</span><span class="n">__module__</span><span class="p">,</span> <span class="n">cls</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="n">doc</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">__doc__</span> <span class="ow">and</span> <span class="n">cls</span><span class="o">.</span><span class="n">__doc__</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="s">&quot;&quot;</span>
+            <span class="k">if</span> <span class="n">custom_decription</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">desc</span> <span class="o">=</span> <span class="n">doc</span> <span class="ow">and</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">doc</span><span class="p">)</span> <span class="ow">or</span> <span class="n">name</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">desc</span> <span class="o">=</span> <span class="n">custom_decription</span>
+
+            <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPORT_CLASS_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+                <span class="n">style</span><span class="o">=</span><span class="p">(</span><span class="n">ne</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="s">&#39;errorClass&#39;</span> <span class="ow">or</span> <span class="n">nf</span> <span class="o">&gt;</span> <span class="mi">0</span> 
+                    <span class="ow">and</span> <span class="s">&#39;failClass&#39;</span> <span class="ow">or</span> <span class="s">&#39;passClass&#39;</span><span class="p">),</span>
+                <span class="n">desc</span><span class="o">=</span><span class="n">desc</span><span class="p">,</span>
+                <span class="n">count</span><span class="o">=</span><span class="n">np</span> <span class="o">+</span> <span class="n">nf</span> <span class="o">+</span> <span class="n">ne</span><span class="p">,</span>
+                <span class="n">Pass</span><span class="o">=</span><span class="n">np</span><span class="p">,</span>
+                <span class="n">fail</span><span class="o">=</span><span class="n">nf</span><span class="p">,</span>
+                <span class="n">error</span><span class="o">=</span><span class="n">ne</span><span class="p">,</span>
+                <span class="n">cid</span><span class="o">=</span><span class="s">&#39;c</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_suite</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">tid</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cls_results</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_generate_report_test</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">cid</span><span class="p">,</span> <span class="n">tid</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+
+        <span class="n">report</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPORT_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">test_list</span><span class="o">=</span><span class="s">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span>
+            <span class="n">count</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">success_count</span> <span class="o">+</span>
+                      <span class="n">result</span><span class="o">.</span><span class="n">failure_count</span> <span class="o">+</span>
+                      <span class="n">result</span><span class="o">.</span><span class="n">error_count</span><span class="p">),</span>
+            <span class="n">Pass</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">success_count</span><span class="p">),</span>
+            <span class="n">fail</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">failure_count</span><span class="p">),</span>
+            <span class="n">error</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">error_count</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">report</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_report_test"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_report_test">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_report_test</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rows</span><span class="p">,</span> <span class="n">cid</span><span class="p">,</span> <span class="n">tid</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="n">e</span><span class="p">):</span>
+        <span class="c"># e.g. &#39;pt1.1&#39;, &#39;ft1.1&#39;, etc</span>
+        <span class="n">has_output</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">o</span> <span class="ow">or</span> <span class="n">e</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_result</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">tid</span> <span class="o">=</span> <span class="p">(</span><span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="s">&#39;p&#39;</span> <span class="ow">or</span> <span class="s">&#39;f&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s">&#39;t</span><span class="si">%s</span><span class="s">.</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_suite</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_result</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">id</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">doc</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">shortDescription</span><span class="p">()</span>
+        <span class="n">desc</span> <span class="o">=</span> <span class="n">doc</span> <span class="ow">and</span> <span class="p">(</span><span class="s">&#39;</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">doc</span><span class="p">))</span> <span class="ow">or</span> <span class="n">name</span>
+        <span class="n">tmpl</span> <span class="o">=</span> <span class="p">(</span><span class="n">has_output</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPORT_TEST_WITH_OUTPUT_TMPL</span> 
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPORT_TEST_NO_OUTPUT_TMPL</span><span class="p">)</span>
+
+        <span class="c"># o and e should be byte string because they are collected from stdout</span>
+        <span class="c"># and stderr?</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="c"># uo = unicode(o.encode(&#39;string_escape&#39;))</span>
+            <span class="n">uo</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;latin-1&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">uo</span> <span class="o">=</span> <span class="n">o</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="c"># ue = unicode(e.encode(&#39;string_escape&#39;))</span>
+            <span class="n">ue</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s">&#39;latin-1&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ue</span> <span class="o">=</span> <span class="n">e</span>
+
+        <span class="n">script</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">REPORT_TEST_OUTPUT_TMPL</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="n">tid</span><span class="p">,</span>
+            <span class="n">output</span><span class="o">=</span><span class="n">saxutils</span><span class="o">.</span><span class="n">escape</span><span class="p">(</span><span class="n">uo</span> <span class="o">+</span> <span class="n">ue</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">row</span> <span class="o">=</span> <span class="n">tmpl</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">tid</span><span class="o">=</span><span class="n">tid</span><span class="p">,</span>
+            <span class="n">Class</span><span class="o">=</span><span class="p">(</span><span class="n">n</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="s">&#39;hiddenRow&#39;</span> <span class="ow">or</span> <span class="s">&#39;none&#39;</span><span class="p">),</span>
+            <span class="n">style</span> <span class="o">=</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="s">&#39;errorCase&#39;</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="s">&#39;failCase&#39;</span> <span class="ow">or</span> <span class="s">&#39;none&#39;</span><span class="p">),</span>
+            <span class="n">desc</span> <span class="o">=</span> <span class="n">desc</span><span class="p">,</span>
+            <span class="n">script</span> <span class="o">=</span> <span class="n">script</span><span class="p">,</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">STATUS</span><span class="p">[</span><span class="n">n</span><span class="p">],</span>
+        <span class="p">)</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">has_output</span><span class="p">:</span>
+            <span class="k">return</span>
+</div>
+<div class="viewcode-block" id="HTMLTestRunner._generate_ending"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.HTMLTestRunner._generate_ending">[docs]</a>    <span class="k">def</span> <span class="nf">_generate_ending</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ENDING_TMPL</span>
+
+
+<span class="c">##############################################################################</span>
+<span class="c"># Facilities for running tests from the command line</span>
+<span class="c">##############################################################################</span>
+
+<span class="c"># Note: Reuse unittest.TestProgram to launch test. In the future we may</span>
+<span class="c"># build our own launcher to support more specific command line</span>
+<span class="c"># parameters like test title, CSS, etc.</span></div></div>
+<div class="viewcode-block" id="TestProgram"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.TestProgram">[docs]</a><span class="k">class</span> <span class="nc">TestProgram</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestProgram</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A variation of the unittest.TestProgram. Please refer to the base</span>
+<span class="sd">    class for command line parameters.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TestProgram.runTests"><a class="viewcode-back" href="../../../api/generated/pySPACE.tests.HTMLTestRunner.html#pySPACE.tests.HTMLTestRunner.TestProgram.runTests">[docs]</a>    <span class="k">def</span> <span class="nf">runTests</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># Pick HTMLTestRunner as the default test runner.</span>
+        <span class="c"># base class&#39;s testRunner parameter is not useful because it means</span>
+        <span class="c"># we have to instantiate HTMLTestRunner before we know self.verbosity.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">testRunner</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">testRunner</span> <span class="o">=</span> <span class="n">HTMLTestRunner</span><span class="p">(</span><span class="n">verbosity</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">verbosity</span><span class="p">)</span>
+        <span class="n">unittest</span><span class="o">.</span><span class="n">TestProgram</span><span class="o">.</span><span class="n">runTests</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div></div>
+<span class="n">main</span> <span class="o">=</span> <span class="n">TestProgram</span>
+
+<span class="c">##############################################################################</span>
+<span class="c"># Executing this module from the command line</span>
+<span class="c">##############################################################################</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">(</span><span class="n">module</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2014, pySPACE Developer Team.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    </div>
+  </body>
+</html>

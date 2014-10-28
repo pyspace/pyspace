@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -84,10 +84,15 @@
 
 <span class="c"># ensemble imports</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">import</span> <span class="nn">fcntl</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">portalocker</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+    <span class="k">pass</span>
+<span class="c"># import fcntl</span>
 <span class="kn">import</span> <span class="nn">fnmatch</span>
 <span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.meta.flow_node</span> <span class="kn">import</span> <span class="n">FlowNode</span>
@@ -311,7 +316,17 @@
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
             <span class="n">node</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SameInputLayerNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
-
+</div>
+<div class="viewcode-block" id="SameInputLayerNode.get_output_type"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.SameInputLayerNode.get_output_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">output</span> <span class="o">!=</span> <span class="n">node</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Node </span><span class="si">%s</span><span class="s"> yields has a different output from&quot;</span>
+                              <span class="s">&quot;the rest of the nodes.&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">node</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">continue</span>
+        <span class="k">return</span> <span class="n">output</span>
 </div></div>
 <div class="viewcode-block" id="EnsembleNotFoundException"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.EnsembleNotFoundException">[docs]</a><span class="k">class</span> <span class="nc">EnsembleNotFoundException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span> <span class="k">pass</span>
 
@@ -379,7 +394,13 @@
 <div class="viewcode-block" id="ClassificationFlowsLoaderNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoaderNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ensemble_base_dir</span><span class="p">,</span> <span class="n">ensemble_pattern</span><span class="p">,</span>
                  <span class="n">flow_select_list</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">cache_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">ClassificationFlowsLoaderNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">portalocker</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Before running &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span>
+                          <span class="s">&quot;, please install the portalocker module, e.g.,&quot;</span> <span class="o">+</span>
+                          <span class="s">&quot; via pip install&quot;</span><span class="p">)</span>
+            <span class="k">raise</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="c"># Load all flow-pickle files that match the given ensemble_pattern</span>
         <span class="c"># in the directory tree rooted in ensemble_base_dir</span>
         <span class="n">flow_pathes</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">locate</span><span class="p">(</span><span class="n">ensemble_pattern</span><span class="p">,</span> <span class="n">ensemble_base_dir</span><span class="p">))</span>
@@ -413,7 +434,8 @@
                 <span class="c"># Load ensemble cache</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Loading flow cache from </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">file_path</span><span class="p">)</span>
                 <span class="n">lock_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
-                <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                <span class="n">portalocker</span><span class="o">.</span><span class="n">lock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">portalocker</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_EX)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Got exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                           <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
                 <span class="n">cache_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
@@ -421,8 +443,9 @@
                 <span class="n">cache_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Release exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                           <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
-                <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_UN</span><span class="p">)</span>
-                </div>
+                <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_UN)</span>
+                <span class="n">portalocker</span><span class="o">.</span><span class="n">unlock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">)</span>
+</div>
 <div class="viewcode-block" id="ClassificationFlowsLoaderNode._load_ensemble"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoaderNode._load_ensemble">[docs]</a>    <span class="k">def</span> <span class="nf">_load_ensemble</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Loading ensemble&quot;</span><span class="p">)</span>
         <span class="c"># Create a flow node for each  flow pickle</span>
@@ -499,7 +522,8 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Updating flow cache </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">file_path</span><span class="p">)</span>
                     <span class="c"># Update existing cache persistency file</span>
                     <span class="n">lock_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
-                    <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                    <span class="n">portalocker</span><span class="o">.</span><span class="n">lock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">portalocker</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                    <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_EX)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Got exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                               <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
                     <span class="n">cache_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
@@ -510,12 +534,14 @@
                     <span class="n">cache_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Release exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                               <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
-                    <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_UN</span><span class="p">)</span>
+                    <span class="n">portalocker</span><span class="o">.</span><span class="n">unlock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">)</span>
+                    <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_UN)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Writing flow cache </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">file_path</span><span class="p">)</span>
                     <span class="c"># Create new cache persistency file</span>
                     <span class="n">lock_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
-                    <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                    <span class="n">portalocker</span><span class="o">.</span><span class="n">lock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">portalocker</span><span class="o">.</span><span class="n">LOCK_EX</span><span class="p">)</span>
+                    <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_EX)</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Got exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                               <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
                     <span class="n">cache_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
@@ -523,7 +549,14 @@
                     <span class="n">cache_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Release exclusive lock on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_path</span> <span class="o">+</span> <span class="s">&quot;.lock&quot;</span><span class="p">),</span>
                               <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
-                    <span class="n">fcntl</span><span class="o">.</span><span class="n">flock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">,</span> <span class="n">fcntl</span><span class="o">.</span><span class="n">LOCK_UN</span><span class="p">)</span>
+                    <span class="n">portalocker</span><span class="o">.</span><span class="n">unlock</span><span class="p">(</span><span class="n">lock_file</span><span class="p">)</span>
+                    <span class="c"># fcntl.flock(lock_file, fcntl.LOCK_UN)</span>
+</div>
+<div class="viewcode-block" id="ClassificationFlowsLoaderNode.get_output_type"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.ClassificationFlowsLoaderNode.get_output_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">as_string</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&quot;PredictionVector&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PredictionVector</span>
 </div></div>
 <div class="viewcode-block" id="MultiClassLayerNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.same_input_layer.html#pySPACE.missions.nodes.meta.same_input_layer.MultiClassLayerNode">[docs]</a><span class="k">class</span> <span class="nc">MultiClassLayerNode</span><span class="p">(</span><span class="n">SameInputLayerNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Wrap the one vs. rest or one vs. one scheme around the given node</span>
@@ -631,8 +664,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

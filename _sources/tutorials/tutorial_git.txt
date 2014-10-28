@@ -12,7 +12,7 @@ Download
 
 
 Git
-====
+----
 
 Git is a distributed version control system.
 For further instructions on using Git refer to http://git-scm.com
@@ -21,3 +21,8 @@ and http://github.com.
 In future we will use this space to present the pySPACE version control workflow
 and for some small git tutorials tailored to it.
 
+
+Next Steps
+----------
+
+:ref:`t_install`

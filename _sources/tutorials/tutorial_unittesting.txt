@@ -27,7 +27,9 @@ regardless of their intended purpose must:
    :width: 600 px
 
    Conceptual design of the generic unittest.
-   Note that this is *not an inheritance diagram*!
+   Note that this is *not an inheritance diagram*, but rather a visualization
+   of the concept behind the unittest! For the inheritance diagram, please go
+   to :mod:`~pySPACE.tests.generic_unittest`.
 
 
 These four core tests must be passed by any node. Whether the node outputs
@@ -45,22 +47,12 @@ to the next step which involves testing whether the node can be initialized
 with the help of this exemplary call.
 If this test also succeeds, the next (and last) step in the generic unittest
 is to execute the node using the default data (as defined in
-:mod:`~pySPACE.tests.utils.data.test_default_data`).
+:mod:`~pySPACE.tests.utils.data.test_default_data`). It is worth mentioning that
+if one of the lower ranking tests fails e.g. the node has no exemplary call, the
+rest of the tests are still run and will yield error(in the previous, the
+generic unit test would try to initialize the node and then to execute it.)
 This execution is run without a check of the results since the output of each
 node is different and, as such, requires node-specific testing methods.
-
-Running the :mod:`~pySPACE.tests.generic_unittest` script from the command line
-will execute the generic unittests on all the available nodes. The results in
-this case will be saved in a log file named ``generic_unittest.log`` and
-plotted in a pie-chart saved under ``generic_unittest_plot.pdf``.
-An example of such a plot is given below
-
-.. figure:: ../graphics/generic_unittest_plot.png
-   :align: center
-   :figwidth: 800 px
-   :width: 800
-
-   Example output of running the ``generic_unittest.py`` script from the command line
 
 
 Implementation Example
@@ -189,3 +181,58 @@ The principle behind this particular test is that the input is already
 normalized and as such should be the same as the output.
 In both cases, the dimensions of the input are of particular importance,
 hence the square brackets surrounding the input ``[[[initial_data]]]``.
+
+Using the script as a command line executable
+---------------------------------------------
+
+Running the :mod:`~pySPACE.tests.generic_unittest` script from the command line
+will execute the generic unittests on all the available nodes. 
+
+The script itself comes with the possibility of **verbose**
+output as well as with the option of testing a single node. If for whatever
+reason, the user decides that the output should be printed to the terminal screen,
+this can be attained by calling the script using:
+
+::
+
+    ./generic_unittest.py -v
+
+This will print the error messages to the terminal ''stdout''. Along with the output,
+the verbose mode produces a piechart plot of the results saved in the file
+``generic_unittest_plot.pdf``. An example of such a plot is given below
+
+.. figure:: ../graphics/generic_unittest_plot.png
+   :align: center
+   :figwidth: 800 px
+   :width: 800
+
+   Example output of running the ``generic_unittest.py`` script from the command line
+
+Another command line application of :mod:`~pySPACE.tests.generic_unittest`
+script is the testing of a singular node. The node can be called using the
+``-sn SINGLENODE`` option. A concrete example of this would be:
+
+::
+
+    ./generic_unittest.py -v -sn SorSvmNode
+
+The node is called based on the key that it is represented by in the default
+node mapping.
+
+The default option of running the unittests and to evaluate the output is by
+the generation of an ``.html`` report that contains the results in a comfortable,
+human-readable form. This is done by simply calling 
+
+::
+
+    ./generic_unittest.py -r
+
+from the command line. Executing the script suing this option will start a backend
+parser and test runner, called :mod:`~pySPACE.tests.HTMLTestRunner` which executes
+the tests and outputs the results in HTML format.
+
+For more help regarding the usage of the script, type::
+
+    ./generic_unittest.py -h
+
+on the command line.

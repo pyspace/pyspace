@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -188,6 +188,9 @@
         <span class="k">if</span> <span class="n">windower_spec</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
             <span class="n">window_definitions</span> <span class="o">=</span> <span class="n">WindowFactory</span><span class="o">.</span><span class="n">default_windower_spec</span><span class="p">()</span>
             <span class="k">return</span> <span class="n">window_definitions</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">windower_spec</span><span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">WindowFactory</span><span class="o">.</span><span class="n">create_window_defs</span><span class="p">(</span><span class="n">windower_spec</span><span class="p">)</span>
 
         <span class="c"># check for &#39;yaml&#39;-ending of the file</span>
         <span class="k">if</span> <span class="s">&quot;.yaml&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">windower_spec</span><span class="p">:</span> <span class="c"># general substring search!</span>
@@ -363,7 +366,8 @@
 
 <span class="sd">        :window_def:    includes names of definitions of window cuts</span>
 <span class="sd">        :classname:     name of the label given to the window, when cut</span>
-<span class="sd">        :markername:    name of the marker being in the &#39;current block&#39;</span>
+<span class="sd">        :markername:    name of the marker being in the &#39;current block&#39;.</span>
+<span class="sd">                        MUST BE A STRING!</span>
 
 <span class="sd">                        .. note:: The ``null`` marker is a synthetic marker,</span>
 <span class="sd">                                  which is internally added to the stream</span>
@@ -781,7 +785,7 @@
                                 <span class="k">print</span> <span class="s">&quot;Warning: Standard deviation of channel(s) &quot;</span> \
                                       <span class="s">&quot; </span><span class="si">%s</span><span class="s"> in time interval [</span><span class="si">%.1f</span><span class="s">,</span><span class="si">%.1f</span><span class="s">] is zero!&quot;</span> \
                                       <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">zero_channels</span><span class="p">),</span> <span class="n">start_time</span><span class="p">,</span> <span class="n">end_time</span><span class="p">)</span>
-                        
+
                         <span class="k">if</span> <span class="n">wdef</span><span class="o">.</span><span class="n">skipfirstms</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> \
                             <span class="n">start_time</span> <span class="o">&gt;</span> <span class="n">wdef</span><span class="o">.</span><span class="n">skipfirstms</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">cur_extract_windows</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">wdef</span><span class="o">.</span><span class="n">windef_name</span><span class="p">,</span>
@@ -1143,7 +1147,10 @@
         <span class="c"># The skip ranges are currently not supported correctly by the</span>
         <span class="c"># EEG serve. Because of that, we use only the end of the first range</span>
         <span class="c"># for specifying skipfirstms</span>
-        <span class="n">skipfirstms</span> <span class="o">=</span> <span class="n">window_specs</span><span class="p">[</span><span class="s">&#39;skip_ranges&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">&#39;end&#39;</span><span class="p">]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">skipfirstms</span> <span class="o">=</span> <span class="n">window_specs</span><span class="p">[</span><span class="s">&#39;skip_ranges&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">&#39;end&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">skipfirstms</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="c"># An alternative to skip milliseconds is to define a marker that</span>
         <span class="c"># labels the ranges to be skiped</span>
         <span class="k">if</span> <span class="n">window_specs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;startmarker&#39;</span><span class="p">):</span>
@@ -1253,8 +1260,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

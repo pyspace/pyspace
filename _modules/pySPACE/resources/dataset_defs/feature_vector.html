@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -75,7 +75,6 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
-<span class="kn">import</span> <span class="nn">pwd</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
@@ -132,7 +131,7 @@
 <span class="sd">    Therefore each column is separated with a comma and each row with a new line.</span>
 <span class="sd">    Normally the first line gives the feature names and one row is giving</span>
 <span class="sd">    the class labels. Therefore several parameters need to be specified in</span>
-<span class="sd">    the metadata.yaml file.</span>
+<span class="sd">    the :ref:`metadata.yaml &lt;metadata_yaml&gt;` file.</span>
 <span class="sd">    </span>
 <span class="sd">    If no collection meta data is available for the input data, </span>
 <span class="sd">    the &#39;metadata.yaml&#39; file can be generated with</span>
@@ -142,7 +141,40 @@
 <span class="sd">    </span>
 <span class="sd">    Preferably the labels are in the last column. This corresponds to</span>
 <span class="sd">    *label_column* being -1 in the metadata.yaml file.</span>
-<span class="sd">    </span>
+
+<span class="sd">    **Special CSV Parameters**</span>
+
+<span class="sd">        :label_column:</span>
+<span class="sd">            Column containing the labels</span>
+
+<span class="sd">            Normally this column looses its heading.</span>
+<span class="sd">            when saving the csv file, the default, -1, is used.</span>
+
+<span class="sd">            (*recommended, default: -1*)</span>
+
+<span class="sd">        :ignored_columns:</span>
+<span class="sd">            List of numbers containing the numbers of irrelevant columns,</span>
+<span class="sd">            e.g., `[1,2,8,42]`</span>
+
+<span class="sd">            After the data is loaded, this parameter becomes obsolete.</span>
+
+<span class="sd">            .. todo:: Enable and document eval syntax</span>
+
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">        :ignored_rows:</span>
+<span class="sd">            Replace row in description of &#39;ignored_columns&#39;</span>
+
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">        :delimiter:</span>
+<span class="sd">            Symbol which separates the csv entries</span>
+
+<span class="sd">            Typically `,` is used or the tabulator `\t`.</span>
+<span class="sd">            When storing, `,` is used.</span>
+
+<span class="sd">            (*recommended, default: &#39;,&#39;*)</span>
+
 <span class="sd">    **Parameters**</span>
 <span class="sd">    </span>
 <span class="sd">        :dataset_md: dictionary containing meta data for the collection</span>
@@ -159,47 +191,19 @@
 <span class="sd">        :classes_names: list of the used class labels</span>
 <span class="sd">        </span>
 <span class="sd">        :feature_names: list of the feature names</span>
+
+<span class="sd">            The feature names are either determined during the loading of the</span>
+<span class="sd">            data, if available in the respective *storage_format*,</span>
+<span class="sd">            or they are later on set with a default string (e.g.,</span>
+<span class="sd">            feature_0_0.000sec).</span>
 <span class="sd">        </span>
 <span class="sd">        :num_features: number of the given features</span>
 <span class="sd">    </span>
 <span class="sd">    .. todo:: Better integration and documentation of the data_pattern variable, </span>
-<span class="sd">              e.g. when reading arff files.</span>
-<span class="sd">    </span>
-<span class="sd">    **Special CSV Parameters**</span>
-<span class="sd">    </span>
-<span class="sd">        :label_column:</span>
-<span class="sd">            Column containing the labels </span>
-<span class="sd">            </span>
-<span class="sd">            Normally this column looses its heading.</span>
-<span class="sd">            when saving the csv file, the default, -1, is used.</span>
-<span class="sd">            </span>
-<span class="sd">            (*recommended, default: -1*)</span>
-<span class="sd">        </span>
-<span class="sd">        :ignored_columns:</span>
-<span class="sd">            List of numbers containing the numbers of irrelevant columns,</span>
-<span class="sd">            e.g., `[1,2,8,42]`</span>
-
-<span class="sd">            After the data is loaded, this parameter becomes obsolete.</span>
-<span class="sd">            </span>
-<span class="sd">            .. todo:: Enable and document eval syntax</span>
-<span class="sd">            </span>
-<span class="sd">            (*optional, default: []*)</span>
-<span class="sd">        </span>
-<span class="sd">        :ignored_rows:</span>
-<span class="sd">            Replace row in description of &#39;ignored_columns&#39;</span>
-<span class="sd">            </span>
-<span class="sd">            (*optional, default: []*)</span>
-<span class="sd">        </span>
-<span class="sd">        :delimiter:</span>
-<span class="sd">            Symbol which separates the csv entries</span>
-<span class="sd">            </span>
-<span class="sd">            Typically `,` is used or the tabulator `\t`.</span>
-<span class="sd">            When storing, `,` is used.</span>
-<span class="sd">            </span>
-<span class="sd">            (*recommended, default: &#39;,&#39;*)</span>
+<span class="sd">              e.g., when reading arff files.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="FeatureVectorDataset.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.feature_vector.html#pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">classes_names</span><span class="o">=</span><span class="p">[],</span> <span class="n">feature_names</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                 <span class="n">num_features</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                 <span class="n">num_features</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read out the data from the given collection</span>
 <span class="sd">        </span>
 <span class="sd">        .. todo:: test data pattern usage on old data</span>
@@ -284,7 +288,8 @@
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Mismatching feature number: </span><span class="si">%i</span><span class="s"> given but </span><span class="si">%i</span><span class="s"> occured.&quot;</span>
                           <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;num_features&quot;</span><span class="p">],</span> <span class="n">sample</span><span class="o">.</span><span class="n">size</span><span class="p">))</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="c"># Remember all class labels since these will be stored in the arff file</span>
+            <span class="c"># Remember all class labels since these will be stored</span>
+            <span class="c"># in the arff file meta data</span>
             <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;classes_names&quot;</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;classes_names&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -574,7 +579,14 @@
         <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;features&quot;</span>
         <span class="c"># Update the meta data</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
+            <span class="kn">import</span> <span class="nn">platform</span>
+            <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">getpass</span>
+                <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="kn">import</span> <span class="nn">pwd</span>
+                <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="n">author</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
@@ -681,8 +693,8 @@
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -231,7 +231,7 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
             from the saving node.
 
             Especially :mod:`~pySPACE.missions.nodes.visualization` nodes
-            may use this functionality to visualize the change ifn the
+            may use this functionality to visualize the change of the
             processing of the data.
 
             (*optional, default: False*)
@@ -333,6 +333,11 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 
             (*optional, default: True*)
 
+        :kwargs_warning:
+            Raise a warning if unexpected keyword arguments are given.
+
+            (*optional, default: True*)
+
     **Implementing your own Node**
 
     For finding out, how to implement your own node, have a look at the
@@ -356,7 +361,8 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
     # setting the meta class
     __metaclass__ = NodeMetaclass
 
-<div class="viewcode-block" id="BaseNode.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.__init__">[docs]</a>    def __init__(self, store=False, retrain=False, input_dim=None, output_dim=None, dtype=None, **kwargs):
+<div class="viewcode-block" id="BaseNode.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.__init__">[docs]</a>    def __init__(self, store=False, retrain=False, input_dim=None,
+                 output_dim=None, dtype=None, kwargs_warning=True, **kwargs):
         &quot;&quot;&quot; This initialization is necessary for every node
 
         So make sure, that you use it via the *super* method in each new node.
@@ -435,8 +441,8 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
         #: Do we have to remember the outputs of this node for later reuse?
         self.caching = False
 
-        self.load_path=kwargs.get(&#39;load_path&#39;, None)
-        self.keep_in_history=kwargs.get(&#39;keep_in_history&#39;, False)
+        self.load_path = kwargs.get(&#39;load_path&#39;, None)
+        self.keep_in_history = kwargs.get(&#39;keep_in_history&#39;, False)
 
         self.node_specs = {}
         self.node_name = str(type(self)).split(&quot;.&quot;)[-1].split(&quot;&#39;&quot;)[0]
@@ -448,12 +454,25 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
         # iteration
         self.run_number = 0
 
-        # Set the default run number which gives the number of the current 
-        # iteration
-        self.run_number = 0
+        # Switch for in-/homogenous data (e.g. data with different sampling
+        # frequencies). Has to be handled from the node which can deal with 
+        # inhomogenous data.
+        self.homogenous = kwargs.get(&quot;homogenous&quot;, True)
 
         # Every Parameter is stored since we reset them with every new spit.
         self.permanent_state = copy.deepcopy(self.__dict__)
+
+        if kwargs_warning:
+            remove_kwargs = [&quot;homogeneous&quot;, &quot;keep_in_history&quot;, &quot;load_path&quot;,
+                             &quot;save_intermediate_results&quot;, &quot;zero_training&quot;,
+                             &quot;buffering&quot;]
+            for key in kwargs.keys():
+                if not key in remove_kwargs:
+                    warnings.warn(&quot;The parameter &#39;%s&#39; seems to be unused in %s.&quot;
+                        % (key, self.__class__.__name__) +
+                        &quot; Either you specified it on purpose, you spelled it &quot; +
+                        &quot;wrong, or there is an implementation inconsistency.&quot;)
+
 
     ###### Methods, which can be overwritten by inheriting nodes ######</div>
 <div class="viewcode-block" id="BaseNode._train"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode._train">[docs]</a>    def _train(self, x):
@@ -508,7 +527,7 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 <div class="viewcode-block" id="BaseNode.is_trainable"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.is_trainable">[docs]</a>    def is_trainable(self):
         &quot;&quot;&quot; Return True if the node can be trained, False otherwise
 
-        *Default*: False
+        *default: False*
         &quot;&quot;&quot;
         return False
 
@@ -516,7 +535,7 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 <div class="viewcode-block" id="BaseNode.is_supervised"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.is_supervised">[docs]</a>    def is_supervised(self):
         &quot;&quot;&quot; Returns whether this node requires supervised training
 
-        *Default*: False
+        *default: False*
         &quot;&quot;&quot;
         return False
 </div>
@@ -582,20 +601,30 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 
             (*default: True*)
 
+            :input_type:
+                The input type of the node.
+                In most cases, the input depends on the input
+                and can not be inferred from the algorithm category.
+
         .. note ::
 
             Strings have less overhead than class instances and
             that is why they are normally used in routine operations
 
-        By default they are the same, except for *classification*,
-        *feature_generation* and *type_conversion*.
+        By default the input type is assumed to be the same as the output type,
+        except for *classification*, *feature_generation* and *type_conversion*.
+        For any other algorithm type, especially for meta nodes,
+        this method needs to be overwritten.
+        Otherwise, a warning will occur.
         &quot;&quot;&quot;
-        pack = self.__module__.split(&quot;.&quot;)[3]
-        if pack == &quot;classification&quot;:
+        pack = self.__module__.split(&quot;.&quot;)[3:4]
+        if &quot;classification&quot; in pack:
             result = &quot;PredictionVector&quot;
-        elif pack == &quot;feature_generation&quot;:
+        elif &quot;feature_generation&quot; in pack:
             result = &quot;FeatureVector&quot;
-        elif pack == &quot;type_conversion&quot;:
+        elif &quot;type_conversion&quot; in pack:
+            # it is expected that nodes in the type_conversion script
+            # overwrite this method with their specific output types
             raise NotImplementedError
         else:
             result = str(input_type)
@@ -608,18 +637,19 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 <div class="viewcode-block" id="BaseNode.string_to_class"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.string_to_class">[docs]</a>    def string_to_class(string_encoding):
         &quot;&quot;&quot; given a string variable, outputs a class instance
 
-        e.g. obtaining a TimeSeries
+        e.g., obtaining a TimeSeries
 
         .. code-block:: python
 
-            &gt;&gt;&gt; result = BaseNode.stringToClass(&quot;TimeSeries&quot;)
+            &gt;&gt;&gt; result = BaseNode.string_to_class(&quot;TimeSeries&quot;)
             &gt;&gt;&gt; print type(result)
             &lt;class &#39;pySPACE.resources.data_types.time_series.TimeSeries&#39;&gt;
 
         &quot;&quot;&quot;
         from pySPACE.resources.data_types.time_series import TimeSeries
         from pySPACE.resources.data_types.feature_vector import FeatureVector
-        from pySPACE.resources.data_types.prediction_vector import PredictionVector
+        from pySPACE.resources.data_types.prediction_vector \
+            import PredictionVector
         if &quot;TimeSeries&quot; in string_encoding:
             return TimeSeries
         elif &quot;PredictionVector&quot; in string_encoding:
@@ -661,7 +691,7 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
             self.dtype = x.dtype
 
         # check if the user has changed the dtype of the input
-        if self.dtype is not None and self.dtype is not x.dtype:
+        if self.dtype is not None and self.dtype.name != x.dtype.name:
             warnings.warn(&quot;The dtype of individual data points is &quot; +
                           &quot;inconsistent.\n The former data type was &quot; +
                           &quot;(%s) and now the input is (%s)&quot;
@@ -742,8 +772,9 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 <div class="viewcode-block" id="BaseNode._set_dtype"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode._set_dtype">[docs]</a>    def _set_dtype(self, t):
         t = numpy.dtype(t)
         if t not in self.get_supported_dtypes():
-            raise NodeException(&#39;dtype %s not among supported dtypes (%s) in node %s&#39;
-                                % (str(t), self.get_supported_dtypes(),self.__class__.__name__))
+            raise NodeException(
+                &#39;dtype %s not among supported dtypes (%s) in node %s&#39;
+                % (str(t), self.get_supported_dtypes(),self.__class__.__name__))
         self._dtype = t
 </div>
 <div class="viewcode-block" id="BaseNode.get_supported_dtypes"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.base_node.html#pySPACE.missions.nodes.base_node.BaseNode.get_supported_dtypes">[docs]</a>    def get_supported_dtypes(self):
@@ -1311,8 +1342,7 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
         &quot;&quot;&quot; Return a pickable state for this object &quot;&quot;&quot;
         self._log(&quot;Pickling instance of class %s.&quot; % self.__class__.__name__,
                   level = logging.DEBUG)
-        #print &quot;%s:Pickling instance of class %s.&quot; % (time.ctime(),self.__class__.__name__)
-        odict = self.__dict__.copy() # copy the dict since we change it
+        odict = self.__dict__.copy()  # copy the dict since we change it
         odict[&#39;data_for_training&#39;] = None
         odict[&#39;data_for_testing&#39;] = None
         odict[&#39;root_logger&#39;] = None
@@ -1543,11 +1573,11 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
         a FeatureVector or a PredictionVector.
 
         .. note:: This method changes the original MDP implementation.
-                  The main difference to the MDP&#39;s standard execute method is that here
-                  the output_dim of the node is set per default to the size of the
-                  node&#39;s first result (and not to the size of the input data).
-                  Furthermore we have a possible buffering mode for retraining
-                  and suppress the setting of the dtype.
+                  The main difference to the MDP&#39;s standard execute method is
+                  that here the output_dim of the node is set per default to
+                  the size of the node&#39;s first result (and not to the size of
+                  the input data). Furthermore we have a possible buffering
+                  mode for retraining and suppress the setting of the dtype.
         &quot;&quot;&quot;
         # data buffering for training in live usage
         # needed for the delayed training, which is called
@@ -1577,8 +1607,9 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
 #
 #        self._if_training_stop_training()
 
-        # control the dimension x
-        self._check_input(x)
+        # in case of homogenous data control the dimension x
+        if self.homogenous:
+            self._check_input(x)
 
         # Do the actual computation
         result = self._execute(self._refcast(x), *args, **kwargs)
@@ -1590,7 +1621,10 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
             warnings.warn(&quot;Inappropriate output %s to given input %s in %s?&quot; %
                 (type(result).__name__, type(x).__name__,
                  self.__class__.__name__) +
-                &quot; Expected: %s&quot; % self.get_output_type(type(x).__name__))
+                &quot; Expected: %s. &quot; % self.get_output_type(type(x).__name__) +
+                &quot;Please check your node chain. &quot; +
+                &quot;Please provide a bug report if the respective node is &quot; +
+                &quot;expecting the wrong output.&quot;)
         # Make sure key, tag, specs and history are passed
         if x.has_meta():
             result.inherit_meta_from(x)
@@ -1598,7 +1632,8 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
             result.generate_meta()
 
         if self.keep_in_history:
-            result.add_to_history(result, self.node_specs) # Append current data to history
+            # Append current data to history
+            result.add_to_history(result, self.node_specs) 
         if self.save_intermediate_results:
             self.export_intermediate_results(result)
 
@@ -1613,11 +1648,12 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
                 self.output_dim = shape[0]
             else:
                 self.output_dim = shape
-        elif not (self.output_dim in [result.shape,result.shape[1]]):
-            error_str = &quot;y has dimension %d, should be %d in node %s&quot; % (result.shape[1],
-                                                              self.output_dim[1],
-                                                              self.__class__.__name__)
-            raise Exception(error_str)
+        elif self.homogenous: 
+            if not (self.output_dim in [result.shape,result.shape[1]]):
+                error_str = &quot;y has dimension %d, should be %d in node %s&quot; \
+                    % (result.shape[1], self.output_dim[1],
+                       self.__class__.__name__)
+                raise Exception(error_str)
 
         return result
 </div>
@@ -1635,14 +1671,17 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
             A subclass supporting multiple training phases should implement
             the *same* signature for all the training phases and document the
             meaning of the arguments in the `_train` method doc-string. Having
-            consistent signatures is a requirement to use the node in a node chain.
+            consistent signatures is a requirement to use the node in a
+            node chain.
         &quot;&quot;&quot;
 
         if not self.is_trainable():
-            raise IsNotTrainableException(&quot;The node %s is not trainable.&quot;%self.__class__.__name__)
+            raise IsNotTrainableException(
+                &quot;The node %s is not trainable.&quot; % self.__class__.__name__)
 
         if not self.is_training():
-            err_str = &quot;The training phase of node %s has already finished.&quot;%self.__class__.__name__
+            err_str = &quot;The training phase of node %s has already finished.&quot; \
+                % self.__class__.__name__
             raise TrainingFinishedException(err_str)
 
         self._check_input(x)
@@ -1659,13 +1698,16 @@ from pySPACE.tools.memoize_generator import MemoizeGenerator
         overwrites this docstring.
         &quot;&quot;&quot;
         if self.is_training() and self._train_phase_started == False:
-            raise TrainingException(&quot;The node %s has not been trained. &quot;%self.__class__.__name__ +
-            &quot;Check if you specified training data or a validation scheme (splitter). &quot;+
-            &quot;Furthermore you should check the node parameters. &quot;+
-            &quot;Did you specify relevant labels correct?&quot;)
+            raise TrainingException(
+                &quot;The node %s has not been trained. &quot;
+                % self.__class__.__name__ +
+                &quot;Check if you specified training data or a validation scheme&quot; +
+                &quot; (splitter). Furthermore you should check the node &quot; +
+                &quot;parameters. Did you specify relevant labels correct?&quot;)
 
         if not self.is_training():
-            err_str = &quot;The training phase of node %s has already finished.&quot;%self.__class__.__name__
+            err_str = &quot;The training phase of node %s has already finished.&quot;\
+                % self.__class__.__name__
             raise TrainingFinishedException(err_str)
 
         # close the current phase.
@@ -1757,8 +1799,8 @@ _NODE_MAPPING = {&quot;Noop&quot;: BaseNode}
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>

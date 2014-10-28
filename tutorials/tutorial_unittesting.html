@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.1 release',
+        VERSION:     '1.2 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -61,6 +61,7 @@
 <li><a class="reference internal" href="#the-generic-unittest">The <tt class="docutils literal"><span class="pre">generic_unittest</span></tt></a><ul>
 <li><a class="reference internal" href="#implementation-example">Implementation Example</a></li>
 <li><a class="reference internal" href="#easy-going-unit-tests-by-defining-the-output-of-the-generic-unit-test">Easy going unit tests by defining the output of the generic unit test</a></li>
+<li><a class="reference internal" href="#using-the-script-as-a-command-line-executable">Using the script as a command line executable</a></li>
 </ul>
 </li>
 </ul>
@@ -119,7 +120,9 @@ regardless of their intended purpose must:</p>
 <div class="figure align-center" style="width: 400px">
 <a class="reference internal image-reference" href="../_images/parametrized.png"><img alt="../_images/parametrized.png" src="../_images/parametrized.png" style="width: 600px;" /></a>
 <p class="caption">Conceptual design of the generic unittest.
-Note that this is <em>not an inheritance diagram</em>!</p>
+Note that this is <em>not an inheritance diagram</em>, but rather a visualization
+of the concept behind the unittest! For the inheritance diagram, please go
+to <a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a>.</p>
 </div>
 <p>These four core tests must be passed by any node. Whether the node outputs
 the correct result or not, is something that can be tested at a later point
@@ -135,18 +138,12 @@ to the next step which involves testing whether the node can be initialized
 with the help of this exemplary call.
 If this test also succeeds, the next (and last) step in the generic unittest
 is to execute the node using the default data (as defined in
-<a class="reference internal" href="../api/generated/pySPACE.tests.utils.data.test_default_data.html#module-pySPACE.tests.utils.data.test_default_data" title="pySPACE.tests.utils.data.test_default_data"><tt class="xref py py-mod docutils literal"><span class="pre">test_default_data</span></tt></a>).
+<a class="reference internal" href="../api/generated/pySPACE.tests.utils.data.test_default_data.html#module-pySPACE.tests.utils.data.test_default_data" title="pySPACE.tests.utils.data.test_default_data"><tt class="xref py py-mod docutils literal"><span class="pre">test_default_data</span></tt></a>). It is worth mentioning that
+if one of the lower ranking tests fails e.g. the node has no exemplary call, the
+rest of the tests are still run and will yield error(in the previous, the
+generic unit test would try to initialize the node and then to execute it.)
 This execution is run without a check of the results since the output of each
 node is different and, as such, requires node-specific testing methods.</p>
-<p>Running the <a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a> script from the command line
-will execute the generic unittests on all the available nodes. The results in
-this case will be saved in a log file named <tt class="docutils literal"><span class="pre">generic_unittest.log</span></tt> and
-plotted in a pie-chart saved under <tt class="docutils literal"><span class="pre">generic_unittest_plot.pdf</span></tt>.
-An example of such a plot is given below</p>
-<div class="figure align-center" style="width: 800px">
-<a class="reference internal image-reference" href="../_images/generic_unittest_plot.png"><img alt="../_images/generic_unittest_plot.png" src="../_images/generic_unittest_plot.png" style="width: 800px;" /></a>
-<p class="caption">Example output of running the <tt class="docutils literal"><span class="pre">generic_unittest.py</span></tt> script from the command line</p>
-</div>
 <div class="section" id="implementation-example">
 <h3>Implementation Example<a class="headerlink" href="#implementation-example" title="Permalink to this headline">¶</a></h3>
 <p>An example where the <tt class="docutils literal"><span class="pre">generic_unittest</span></tt> was implemented is the
@@ -259,6 +256,47 @@ normalized and as such should be the same as the output.
 In both cases, the dimensions of the input are of particular importance,
 hence the square brackets surrounding the input <tt class="docutils literal"><span class="pre">[[[initial_data]]]</span></tt>.</p>
 </div>
+<div class="section" id="using-the-script-as-a-command-line-executable">
+<h3>Using the script as a command line executable<a class="headerlink" href="#using-the-script-as-a-command-line-executable" title="Permalink to this headline">¶</a></h3>
+<p>Running the <a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a> script from the command line
+will execute the generic unittests on all the available nodes.</p>
+<p>The script itself comes with the possibility of <strong>verbose</strong>
+output as well as with the option of testing a single node. If for whatever
+reason, the user decides that the output should be printed to the terminal screen,
+this can be attained by calling the script using:</p>
+<div class="highlight-python"><div class="highlight"><pre>./generic_unittest.py -v
+</pre></div>
+</div>
+<p>This will print the error messages to the terminal &#8216;&#8217;stdout&#8217;&#8216;. Along with the output,
+the verbose mode produces a piechart plot of the results saved in the file
+<tt class="docutils literal"><span class="pre">generic_unittest_plot.pdf</span></tt>. An example of such a plot is given below</p>
+<div class="figure align-center" style="width: 800px">
+<a class="reference internal image-reference" href="../_images/generic_unittest_plot.png"><img alt="../_images/generic_unittest_plot.png" src="../_images/generic_unittest_plot.png" style="width: 800px;" /></a>
+<p class="caption">Example output of running the <tt class="docutils literal"><span class="pre">generic_unittest.py</span></tt> script from the command line</p>
+</div>
+<p>Another command line application of <a class="reference internal" href="../api/generated/pySPACE.tests.generic_unittest.html#module-pySPACE.tests.generic_unittest" title="pySPACE.tests.generic_unittest"><tt class="xref py py-mod docutils literal"><span class="pre">generic_unittest</span></tt></a>
+script is the testing of a singular node. The node can be called using the
+<tt class="docutils literal"><span class="pre">-sn</span> <span class="pre">SINGLENODE</span></tt> option. A concrete example of this would be:</p>
+<div class="highlight-python"><div class="highlight"><pre>./generic_unittest.py -v -sn SorSvmNode
+</pre></div>
+</div>
+<p>The node is called based on the key that it is represented by in the default
+node mapping.</p>
+<p>The default option of running the unittests and to evaluate the output is by
+the generation of an <tt class="docutils literal"><span class="pre">.html</span></tt> report that contains the results in a comfortable,
+human-readable form. This is done by simply calling</p>
+<div class="highlight-python"><div class="highlight"><pre>./generic_unittest.py -r
+</pre></div>
+</div>
+<p>from the command line. Executing the script suing this option will start a backend
+parser and test runner, called <a class="reference internal" href="../api/generated/pySPACE.tests.HTMLTestRunner.html#module-pySPACE.tests.HTMLTestRunner" title="pySPACE.tests.HTMLTestRunner"><tt class="xref py py-mod docutils literal"><span class="pre">HTMLTestRunner</span></tt></a> which executes
+the tests and outputs the results in HTML format.</p>
+<p>For more help regarding the usage of the script, type:</p>
+<div class="highlight-python"><div class="highlight"><pre>./generic_unittest.py -h
+</pre></div>
+</div>
+<p>on the command line.</p>
+</div>
 </div>
 </div>
 
@@ -290,8 +328,8 @@ hence the square brackets surrounding the input <tt class="docutils literal"><sp
     </div>
     <div class="footer">
         &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Jul 31, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.2.
+      Last updated on Oct 28, 2014.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
     </div>
   </body>
 </html>
