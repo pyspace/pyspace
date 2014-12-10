@@ -14,6 +14,7 @@ try: # Libsvm
 except ImportError:
     pass
 
+
 class OneClassClassifierBase(RegularizedClassifierBase):
     """ Base node to handle class labels during training to filter out irrelevant data
 
@@ -22,7 +23,7 @@ class OneClassClassifierBase(RegularizedClassifierBase):
             where first element is the relevant one
             and the second is the negative class.
     """
-    def train(self,data,label):
+    def train(self, data, label):
         """ Special mapping for one-class classification
 
         Reduce training data to the one main class.
@@ -48,7 +49,8 @@ class OneClassClassifierBase(RegularizedClassifierBase):
             return
         super(RegularizedClassifierBase, self).train(data,label)
 
-class LibsvmOneClassNode(OneClassClassifierBase,LibSVMClassifierNode):
+
+class LibsvmOneClassNode(LibSVMClassifierNode, OneClassClassifierBase):
     """ Interface to one-class SVM in Libsvm package
 
     **Parameters**
@@ -78,4 +80,7 @@ class LibsvmOneClassNode(OneClassClassifierBase,LibSVMClassifierNode):
                 max_iterations : 100
     """
     def __init__(self,**kwargs):
-        super(LibsvmOneClassNode, self).__init__(svm_type="one-class SVM",**kwargs)
+        LibSVMClassifierNode.__init__(self,svm_type="one-class SVM", **kwargs)
+
+    def train(self,data,label):
+        OneClassClassifierBase.train(self, data, label)
