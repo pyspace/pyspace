@@ -1,5 +1,7 @@
 """ Relative Margin Machines (original and some variants) """
 
+
+import timeit
 # the output is a prediction vector
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.missions.nodes.classification.base import RegularizedClassifierBase
@@ -20,6 +22,10 @@ import random
 import copy
 
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
+
+from pySPACE.missions.nodes.classification.svm_variants.external import LibSVMClassifierNode
+
+from pySPACE.missions.nodes.base_node import BaseNode
 
 
 class RMM2Node(RegularizedClassifierBase):
@@ -44,7 +50,7 @@ class RMM2Node(RegularizedClassifierBase):
         :journal:   Pattern Recognition Letters
         :publisher: Elsevier
         :doi:       10.1016/j.patrec.2013.09.018
-        :year:      2013
+        :year:      2014
 
     **Parameters**
 
@@ -206,6 +212,7 @@ class RMM2Node(RegularizedClassifierBase):
                                       bi=[],
                                       ci=[],
                                       dual_solution=None,
+                                      one_class=False,
                                       )
 
     def _execute(self, x):
@@ -374,11 +381,10 @@ class RMM2Node(RegularizedClassifierBase):
         The values are added to the corresponding list.
         This is done in a separate function, since it is also needed for adaption.
         """
+        self.bi.append(label*2-1)
         if label == 0:
-            self.bi.append(-1)
             self.ci.append(self.complexity*self.weight[0])
         else:
-            self.bi.append(1)
             self.ci.append(self.complexity*self.weight[1])
 
     def iteration_loop(self, M, reduced_indices=[]):
@@ -517,6 +523,9 @@ class RMM2Node(RegularizedClassifierBase):
                 fi = bi * (dot(xi.T, self.w) + self.b)
             elif self.version == "matrix":
                 fi = dot(M[i], dual_diff)
+                if self.one_class:
+                    # correction if offset should not be changed
+                    fi += self.bi[i] * self.b
             s1 = self.squ_factor / self.ci[i] * dual_1
             s2 = self.squ_factor / (self.ci[i] *
                                     self.complexity_correction) * dual_2
@@ -632,14 +641,7 @@ class RMM2Node(RegularizedClassifierBase):
         .. todo:: check, which parameters are necessary
         """
         if not self.random:
-            if current_dual.ndim == 2:
-                sort_dual = current_dual[:,0]+current_dual[:,1]
-            else:
-                sort_dual = current_dual
-                # sort the entries of the current dual and get the corresponding indices
-            sorted_indices = map(list,[numpy.argsort(sort_dual)])[0]
-            # highest first
-            sorted_indices.reverse()
+            sorted_indices = range(self.num_samples)
         else:
             sorted_indices = range(self.num_samples)
             random.shuffle(sorted_indices)
@@ -648,7 +650,7 @@ class RMM2Node(RegularizedClassifierBase):
         self.reduced_descent(current_dual, M,sorted_indices)
 
     def _inc_train(self,data,label):
-        """ Warm Start Implementation by Mario Krell
+        """ Warm Start Implementation by Mario Michael Krell
 
         The saved status of the algorithm, including the Matrix M, is used
         as a starting point for the iteration.
@@ -1297,6 +1299,176 @@ class RMMClassifierMatlabNode(RegularizedClassifierBase):
         self._log("Construction complete")
         self.delete_training_data()
 
+
+class RmmPerceptronNode(RMM2Node, BaseNode):
+    """ Online learning variants of the 2-norm RMM
+
+    **Parameters**
+
+        .. seealso:: :class:`RMM2Node`
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -   node : RmmPerceptronNode
+            parameters :
+                range : 3
+                complexity : 1.0
+                weight : [1,3]
+                class_labels : ['Standard', 'Target']
+
+    :Author:    Mario Michael Krell
+    :Created:   2014/01/02
+    """
+    def __init__(self, **kwargs):
+        RMM2Node.__init__(self, version="samples", kernel_type='LINEAR',
+                          **kwargs)
+
+    def _train(self, data, class_label):
+        """ Main method for incremental and normal training
+
+        Code is a shortened version from the batch algorithm.
+        """
+        if self.co_adaptive:
+            try:
+                hist_data = copy.deepcopy(data.history[self.history_index-1])
+            except IndexError:
+                self._log("No history data available for classifier! " +
+                          "Co-adaptivity is turned off.",
+                          level=logging.CRITICAL)
+                self.co_adaptive = False
+        data_array = data.view(numpy.ndarray)
+        # shortened initialization part from RegularizedClassifierBase
+        if self.feature_names is None:
+            try:
+                self.feature_names = data.feature_names
+            except AttributeError as e:
+                warnings.warn("Use a feature generator node before a " +
+                              "classification node.")
+                raise e
+            if self.dim is None:
+                self.dim = data.shape[1]
+        if class_label not in self.classes and not "REST" in self.classes:
+            warnings.warn("Please give the expected classes to the classifier! "
+                          + "%s unknown. "%class_label
+                          + "Therefore define the variable 'class_labels' in "
+                          + "your spec file, where you use your classifier. "
+                          + "For further info look at the node documentation.")
+            if not(len(self.classes) == 2):
+                self.classes.append(class_label)
+                self.set_permanent_attributes(classes=self.classes)
+        # individual initialization of classification vector
+        if self.w is None:
+            self.w = numpy.zeros(self.dim, dtype=numpy.float)
+        if self.samples is None:
+            self.samples = ["empty"]  # to suppress logging warning
+        # update part init for compatibility with batch mode formulas
+        i = 0
+        weight = self.weight[self.classes.index(class_label)]
+        self.ci = [float(self.complexity * weight)]
+        if not self.squ_factor:
+            M = [1.0/(numpy.linalg.norm(data_array)**2.0 + self.offset_factor)]
+        else:
+            M = [(1 / (numpy.linalg.norm(data_array)**2.0
+                  + self.offset_factor + 1 / self.ci[i]),
+                  1 / (numpy.linalg.norm(data_array)**2.0
+                  + self.offset_factor + 1 /
+                  (self.ci[i] * self.complexity_correction)))]
+        bi = float(self.classes.index(class_label) * 2 - 1)
+        xi = data_array[0, :]
+        fi = bi * (dot(xi.T, self.w) + self.b)
+        s1 = 0.0
+        s2 = 0.0
+        beta = False
+        old_dual = 0  # just used to have the same formulas as in batch version
+        current_dual = numpy.zeros((1, 2))
+        # update part
+        if self.squ_factor:
+            x = old_dual - self.omega * M[i][0] * (fi - 1 + s1)
+        elif not self.squ_factor:
+            x = old_dual - self.omega * M[i] * (fi - 1)
+        # no update of alpha but update of beta (eventually zero update)
+        if not x > 0:
+            beta = True
+            if self.squ_factor:
+                x = old_dual - self.omega * M[i][1] * (
+                    self.range - fi + s2)
+            elif not self.squ_factor:
+                x = old_dual - self.omega * M[i] * (
+                    self.range - fi + s2)
+        # map dual solution to the interval [0,C] in L1 case or
+        # just make it positive in the L2 case
+        # current_dual[i]=self.project(x,index=i)
+        if x <= 0:
+            current_dual[i] = [0, 0]
+        elif not beta and not self.squ_factor:
+            current_dual[i, 0] = min(x, self.ci[i])
+        elif beta and not self.squ_factor:
+            current_dual[i, 1] = min(x, self.ci[i] *
+                                     self.complexity_correction)
+        elif not beta and self.squ_factor:
+            current_dual[i, 0] = x
+        elif beta and self.squ_factor:
+            current_dual[i, 1] = x
+        # update w and b
+        delta = (current_dual[i, 0] + current_dual[i, 1]
+                 - old_dual) * bi
+        # for beta:  difference needed
+        if beta:
+            delta = -delta
+        # update classification function parameter w and b
+        # self.update_classification_function(delta=delta, index=i)
+        self.b += self.offset_factor * delta
+        if not self.co_adaptive:
+            self.w += delta * xi
+        else:
+            self.hist_b += delta
+            self.hist_w += delta * hist_data
+            self.update_from_history()
+
+    def train(self,data,label):
+        """ Prevent RegularizedClassifierBase method from being called """
+        #one vs. REST case
+        if "REST" in self.classes and not label in self.classes:
+            label = "REST"
+        # one vs. one case
+        if not self.multinomial and len(self.classes) == 2 and \
+                not label in self.classes:
+            return
+        start_time_stamp = timeit.default_timer()
+        BaseNode.train(self, data, label)
+        stop_time_stamp = timeit.default_timer()
+        if not self.classifier_information.has_key("Training_time(classifier)"):
+            self.classifier_information["Training_time(classifier)"] = \
+                stop_time_stamp - start_time_stamp
+        else:
+            self.classifier_information["Training_time(classifier)"] += \
+                stop_time_stamp - start_time_stamp
+
+    def _inc_train(self, data, label):
+        """ Incremental training and normal training are the same """
+        #one vs. REST case
+        if "REST" in self.classes and not label in self.classes:
+            label = "REST"
+        # one vs. one case
+        if not self.multinomial and len(self.classes) == 2 and \
+                not label in self.classes:
+            return
+        if self.co_adaptive == "double" or not self.co_adaptive:
+            self._train(data, label)
+        if self.co_adaptive:
+            self.update_from_history()
+
+    def _stop_training(self, debug=False):
+        """ Do nothing than suppressing mother method """
+        self.classifier_information["~~Solver_Iterations~~"] = 0
+        try:
+            self.classifier_information["~~offset~~"] = self.b
+            self.classifier_information["~~w0~~"] = self.w[0]
+            self.classifier_information["~~w1~~"] = self.w[1]
+        except:
+            pass
 
 _NODE_MAPPING = {"1RMM": RMM1ClassifierNode,
                 "2RMM": RMM2Node,
