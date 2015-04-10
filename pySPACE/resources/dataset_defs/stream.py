@@ -432,6 +432,10 @@ class StreamDataset(BaseDataset):
             elif "csv" in self.meta_data['storage_format']:
                 sf = self.meta_data.get("sampling_frequency", 1)
                 try:
+                    delimiter = self.meta_data["delimiter"]
+                except KeyError:
+                    delimiter=None
+                try:
                     mf = os.path.join(self.dataset_dir,
                                       self.meta_data["marker_file"])
                 except KeyError:
@@ -441,7 +445,8 @@ class StreamDataset(BaseDataset):
                 else:
                     marker = "marker"
                 self.reader = CsvReader(self.data_file, sampling_frequency=sf,
-                                        marker=marker, marker_file=mf)
+                                        marker=marker, marker_file=mf,
+                                        delimiter=delimiter)
         else:
             self.reader = EEGReader(self.data_file, blocksize=100)
 
@@ -516,9 +521,14 @@ class CsvReader(AbstractStreamReader):
             Here the absolute path is needed.
 
             (*optional, default: None*)
+
+        :delimiter:
+            Delimiter used in the csv file.
+
+            (*optional, default: None*)
     """
     def __init__(self, file_path, sampling_frequency=1, marker="marker",
-                 marker_file=None):
+                 marker_file=None, delimiter=None):
         try:
             self.file = open(file_path, "r")
         except IOError as io:
@@ -543,7 +553,10 @@ class CsvReader(AbstractStreamReader):
         self._markerids["null"] = 0
         self._markerNames[0] = "null"
 
-        self.DictReader = get_csv_handler(self.file)
+        if delimiter is None:
+            self.DictReader = get_csv_handler(self.file)
+        else:
+            self.DictReader = csv.DictReader(self.file, delimiter=delimiter)
 
         self.first_entry = self.DictReader.next()
         self._channelNames = self.first_entry.keys()

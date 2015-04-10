@@ -11,7 +11,7 @@ import logging
 import os
 
 from pySPACE.missions.nodes.base_node import BaseNode
-from pySPACE.missions.support.windower import Windower
+from pySPACE.missions.support.windower import Windower, WindowFactory
 from pySPACE.tools.memoize_generator import MemoizeGenerator
 
 
@@ -129,7 +129,7 @@ class TimeSeriesSourceNode(BaseNode):
         # Return a fresh copy of the generator
         return self.data_for_testing.fresh()
     
-    def getMetadata(self, key):
+    def get_metadata(self, key):
         """ Return the value corresponding to the given key from the dataset meta data of this source node. """
         return self.dataset.meta_data.get(key)
 
@@ -219,7 +219,7 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     input_types = ["TimeSeries"]
 
     def __init__(self, windower_spec_file=None, local_window_conf=False,
-                 nullmarker_stride_ms=None, no_overlap=False,
+                 nullmarker_stride_ms=1000, no_overlap=False,
                  continuous=False,
                  data_consistency_check=False, **kwargs):
 
@@ -228,15 +228,16 @@ class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
         assert not(nullmarker_stride_ms is None and windower_spec_file is None),\
             "No segmentation parameters specified!"
         if windower_spec_file is None:
-            windower_spec_file = ""
             no_overlap = True
             continuous = True
-        elif nullmarker_stride_ms is None:
-            nullmarker_stride_ms = 1000
+            wdefs = WindowFactory.default_windower_spec(
+                endoffsetms=nullmarker_stride_ms)
+        else:
+            wdefs = Windower._load_window_spec(windower_spec_file,
+                                               local_window_conf)
 
         self.set_permanent_attributes(
-            window_definition=Windower._load_window_spec(
-                windower_spec_file, local_window_conf),
+            window_definition=wdefs,
             nullmarker_stride_ms=nullmarker_stride_ms,
             no_overlap=no_overlap,
             data_consistency_check=data_consistency_check,

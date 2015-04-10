@@ -17,6 +17,12 @@ try: # import packages for plotting
     import pylab
     import matplotlib.pyplot
     import matplotlib
+    # uncomment for nice latex output
+    # pylab.rc('text', usetex=True)
+    # font = {'family': 'serif',
+    #         'size': 14}
+    # pylab.rc('font', **font)
+
 except:
     pass
 
@@ -37,15 +43,19 @@ import yaml
 import warnings
 import logging
 
-# csv handling
+# tools
 import pySPACE.tools.csv_analysis as csv_analysis
+from pySPACE.tools.conversion import python2yaml
+
 # base class
 from pySPACE.resources.dataset_defs.base import BaseDataset
+from pySPACE.tools.filesystem import get_author
 
 
 # roc imports
 import cPickle # load roc points
 from operator import itemgetter
+
 
 class PerformanceResultSummary(BaseDataset):
     """ Classification performance results summary
@@ -207,14 +217,16 @@ class PerformanceResultSummary(BaseDataset):
             # first occurrence
             if result_dict is None:
                 result_dict = csv_analysis.csv2dict(input_file_name)
-                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(result_dict, input_file_name)#
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(
+                    result_dict, input_file_name)
             else:
                 result = csv_analysis.csv2dict(input_file_name)
-                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(result, input_file_name)
-                csv_analysis.extend_dict(result_dict,result,retain_unique_items = True)
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(
+                    result, input_file_name)
+                csv_analysis.extend_dict(result_dict,result,
+                                         retain_unique_items=True)
         
         PerformanceResultSummary.translate_weka_key_schemes(result_dict)
-        PerformanceResultSummary.tranfer_Key_Dataset_to_parameters(result_dict)
         
         return (result_dict, pathlist)
     
@@ -230,7 +242,7 @@ class PerformanceResultSummary(BaseDataset):
                     key,str(value)
                     ))
         for key in self.identifiers:
-            if not type(self.data[key])==tuple:
+            if not type(self.data[key]) == tuple:
                 self.data[key] = tuple(self.data[key])
     
     @staticmethod
@@ -287,7 +299,7 @@ class PerformanceResultSummary(BaseDataset):
                         save_long_traces = False
                 
         # clean up
-        if not sorted_keys is None:
+        if sorted_keys is not None:
             name = 'traces.pickle'
             result_file = open(os.path.join(input_dir, name), "wb")
             result_file.write(cPickle.dumps(traces, protocol=2))
@@ -539,18 +551,7 @@ class PerformanceResultSummary(BaseDataset):
                         (*optional, default: 'Balanced_accuracy'*)
 
         """
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except:
-            author = "unknown"
-            self._log("Author could not be resolved.",level=logging.WARNING)
+        author = get_author()
         # Update the meta data
         self.update_meta_data({"type" : "result",
                                "storage_format": s_format,
@@ -568,8 +569,12 @@ class PerformanceResultSummary(BaseDataset):
             if main_metric in self.identifiers:
                 reduced_data = dict()
                 for key in self.get_variables():
-                    if len(list(set(self.data[key]))) > 1:
-                        reduced_data[key] = self.data[key]
+                    try:
+                        if len(list(set(self.data[key]))) > 1:
+                            reduced_data[key] = self.data[key]
+                    except TypeError:
+                        if len(list(set([python2yaml(item) for item in self.data[key]]))) > 1:
+                            reduced_data[key] = self.data[key]
                 reduced_data[main_metric] = self.data[main_metric]
                 metric_list = ["True_positives","True_negatives","False_negatives","False_positives"]
                 for metric in [x for x in self.data.keys() if x in metric_list]:
@@ -588,28 +593,55 @@ class PerformanceResultSummary(BaseDataset):
     def transfer_Key_Dataset_to_parameters(data_dict, input_file_name=None):
         if not data_dict.has_key("Key_Dataset"):
             return data_dict
-        
+
         for key_dataset in data_dict["Key_Dataset"]:
-            components = (key_dataset.strip("'}{")).split("}{")
-            for index, attribute in enumerate(components):
-                if index >= 1:
-                    # for compatibility with old data: index 1 might be the
-                    # specification file name
-                    if index == 1 and not ("#" in attribute):
-                        attribute_key = "__Template__"
+            if not "}{" in key_dataset and not input_file_name is None:
+                hash_name = input_file_name.split("test_")
+                if len(hash_name) > 1:
+                    hash_name = hash_name[-1][:-4]
+                else:
+                    hash_name = input_file_name.split("train_")[-1][:-4]
+#                hash_name = input_file_name.split("_")[-1][:-4]
+                result_folder_name = os.path.dirname(input_file_name)
+                metadata = yaml.load(open(os.path.join(
+                    result_folder_name, hash_name, "metadata.yaml")))
+                parameter_settings = metadata.get("parameter_setting", {})
+                hide_parameters = metadata.get("hide_parameters", [])
+                if not "__Dataset__" in data_dict:
+                    data_dict["__Dataset__"] = []
+                    data_dict["__hash__"] = []
+                    for key in parameter_settings:
+                        if key not in hide_parameters:
+                            data_dict[key] = []
+                data_dict["__Dataset__"].append(
+                    metadata["input_collection_name"].strip(os.sep).split(
+                        os.sep)[-1].strip("'}{").split("}{")[0])
+                for key in parameter_settings:
+                    if key not in hide_parameters:
+                        data_dict[key].append(parameter_settings[key])
+                data_dict["__hash__"].append(hash_name.strip("}{"))
+            else:
+                components = (key_dataset.strip("}{")).split("}{")
+                for index, attribute in enumerate(components):
+                    if index >= 1:
+                        # for compatibility with old data: index 1 might be the
+                        # specification file name
+                        if index == 1 and not ("#" in attribute):
+                            attribute_key = "__Template__"
+                            attribute_value = attribute
+                            continue
+                        try:
+                            attribute_key, attribute_value = attribute.split("#")
+                        except ValueError:
+                            warnings.warn("\tValueError when splitting attributes!")
+                            print "ValueError in result collection when splitting attributes."
+                            continue
+                    elif index == 0:
+                        attribute_key = "__Dataset__"
                         attribute_value = attribute
-                        continue
-                    try:
-                        attribute_key, attribute_value = attribute.split("#")
-                    except ValueError:
-                        warnings.warn("\tValueError when splitting attributes!")
-                        print "ValueError in result collection when splitting attributes."
-                        continue
-                elif index == 0:
-                    attribute_key = "__Dataset__"
-                    attribute_value = attribute
-                data_dict[attribute_key].append(attribute_value)
+                    data_dict[attribute_key].append(attribute_value)
         del data_dict["Key_Dataset"]
+        return data_dict
 
     def project_onto(self, proj_parameter, proj_values):
         """ Project result collection onto a subset that fulfills all criteria
@@ -708,9 +740,9 @@ class PerformanceResultSummary(BaseDataset):
         for parameter in parameters:
             try:
                 # Try to create a float of the first value of the parameter
-                [float(paramter_value) for paramter_value in self.data[parameter]]
+                [float(value) for value in self.data[parameter]]
                 # No exception and enough entities thus a numeric attribute
-                if len(set(self.data[parameter]))>=5:
+                if len(set(self.data[parameter])) >= 5:
                     continue
                 else:
                     yield parameter
@@ -924,7 +956,7 @@ class PerformanceResultSummary(BaseDataset):
         Z = Z / counter
         
         # Create the plot for this specific dependent variable 
-        cf = axes.contourf(X, Y, Z.T, N = 20)
+        cf = axes.contourf(X, Y, Z.T, 100)
         axes.get_figure().colorbar(cf)
         if scatter:
             axes.scatter(X,Y,marker='.',facecolors='None', alpha=0.1)
@@ -940,7 +972,8 @@ class PerformanceResultSummary(BaseDataset):
         # Return figure name
         return "%s_%s_vs_%s" % (value_key, axis_keys[0].strip("_").replace("_", " "), axis_keys[1].strip("_").replace("_", " "))
         
-    def plot_numeric_vs_nominal(self, axes, numeric_key, nominal_key, value_key,dependent_BA_plot=False, relative_plot=False):
+    def plot_numeric_vs_nominal(self, axes, numeric_key, nominal_key, value_key,
+            dependent_BA_plot=False, relative_plot=False, minimal=False):
         """ Plot for comparison of several different values of a nominal parameter
     
         A function that allows to create a plot that visualizes the effect of 
@@ -976,6 +1009,11 @@ class PerformanceResultSummary(BaseDataset):
                 with the other. Relative plots and dependent_BA plots can be combined.
 
                 (*optional, default: False*)
+
+          :minimal:
+                Do not plot labels and legends.
+
+                (*optional, default: False*)
         """
         colors = cycle(['b','r', 'g',  'c', 'm', 'y', 'k', 'brown', 'gray','orange'])
         linestyles = cycle(['-']*10 + ['-.']*10 + [':']*10 + ['--']*10)
@@ -985,7 +1023,7 @@ class PerformanceResultSummary(BaseDataset):
         # nominal -> (numeric -> performance)
         if (("time" in value_key) or ("Time" in value_key) or ("iterations" in value_key)) and dependent_BA_plot:
             dependent_key = value_key
-            value_key="Balanced_accuracy"
+            value_key = "Balanced_accuracy"
         else:
             dependent_key = False
             relative_plot = False
@@ -998,10 +1036,11 @@ class PerformanceResultSummary(BaseDataset):
             parameter_value = float(self.data[numeric_key][i])
             if value_key.count("#") == 0:
                 performance_value = float(self.data[value_key][i])
-            else: # A weighted cost function
+            else:  # A weighted cost function
                 weight1, value_key1, weight2, value_key2 = value_key.split("#")
-                performance_value = float(weight1) * float(self.data[value_key1][i]) \
-                                        + float(weight2) * float(self.data[value_key2][i])
+                performance_value = \
+                    float(weight1) * float(self.data[value_key1][i]) \
+                    + float(weight2) * float(self.data[value_key2][i])
             if relative_plot:
                 if curve_key == rel_par:
                     factor = 1
@@ -1039,7 +1078,7 @@ class PerformanceResultSummary(BaseDataset):
                             str(value_key),rel_par
                             ))
             else:
-                factor =  1
+                factor = 1
                 dependent_factor = 1
             if not dependent_key:
                 curves[curve_key][parameter_value].append(performance_value/factor)
@@ -1049,7 +1088,8 @@ class PerformanceResultSummary(BaseDataset):
         # Iterate over all values of the nominal parameter and create one curve
         # in the plot showing the mapping from numeric parameter to performance 
         # for this particular value of the nominal parameter
-        for curve_key, curve in curves.iteritems():
+        for curve_key, curve in sorted(curves.iteritems()):
+            curve_key = curve_key.strip("_").replace("_", " ")
             x_values = []
             y_values = []
             y_errs = []
@@ -1078,10 +1118,19 @@ class PerformanceResultSummary(BaseDataset):
                     x_errs.append(time_sem)
                     y_errs.append(metric_sem)
             if len(x_values)<101:
-                axes.errorbar(x_values, y_values, xerr = x_errs, yerr=y_errs, 
-                          label=curve_key, 
-                          color = colors.next(), linestyle=linestyles.next(),
-                          lw=2, elinewidth=0.8,capsize=3,marker='x')
+                if minimal:
+                    axes.errorbar(
+                        x_values, y_values, xerr = x_errs, yerr=y_errs,
+                        # label=curve_key,
+                        color=colors.next(), linestyle=linestyles.next(),
+                        # lw=2, elinewidth=0.8, capsize=3,marker='x')
+                        lw=4, elinewidth=0.8, capsize=3,marker='x')
+                else:
+                    axes.errorbar(
+                        x_values, y_values, xerr = x_errs, yerr=y_errs,
+                        label=curve_key,
+                        color=colors.next(), linestyle=linestyles.next(),
+                        lw=2, elinewidth=0.8, capsize=3,marker='x')
             else:
                 axes.errorbar(x_values, y_values, xerr = x_errs, yerr=y_errs, 
                           label=curve_key, 
@@ -1090,25 +1139,29 @@ class PerformanceResultSummary(BaseDataset):
 
         if dependent_key:
             numeric_key = dependent_key.strip("_") + " averaged dependent on " + numeric_key.strip("_")
-        axes.set_xlabel(numeric_key.strip("_").replace("_", " "))
         if relative_plot:
             value_key = value_key.strip("_")+" relative to "+ rel_par
-        if value_key.count("#") == 0:
-            axes.set_ylabel(value_key.strip("_").replace("_", " "))
+        if minimal:
+            axes.get_xaxis().set_visible(False)
+            axes.get_yaxis().set_visible(False)
         else:
-            axes.set_ylabel("%s*%s+%s*%s" % tuple(value_key.split("#")))
+            axes.set_xlabel(numeric_key.strip("_").replace("_", " "))
+            if value_key.count("#") == 0:
+                axes.set_ylabel(value_key.strip("_").replace("_", " "))
+            else:
+                axes.set_ylabel("%s*%s+%s*%s" % tuple(value_key.split("#")))
 
-        # display nearly invisible lines in the back for better orientation
-        axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',
-                        alpha=0.5)
-        axes.set_axisbelow(True)
+            # display nearly invisible lines in the back for better orientation
+            axes.yaxis.grid(True, linestyle='-', which='major',
+                            color='lightgrey', alpha=0.5)
+            axes.set_axisbelow(True)
 
-        # prop = matplotlib.font_manager.FontProperties(size='xx-small')
-        prop = matplotlib.font_manager.FontProperties(size='small')
-        if not nominal_key=="None":
-            lg=axes.legend(prop=prop, loc=0,fancybox=True,title=nominal_key.strip("_").replace("_", " "))
-            lg.get_frame().set_facecolor('0.90')
-            lg.get_frame().set_alpha(.3)
+            prop = matplotlib.font_manager.FontProperties(size='xx-small')
+            prop = matplotlib.font_manager.FontProperties(size='small')
+            if not nominal_key=="None":
+                lg=axes.legend(prop=prop, loc=0,fancybox=True,title=nominal_key.strip("_").replace("_", " "))
+                lg.get_frame().set_facecolor('0.90')
+                lg.get_frame().set_alpha(.3)
         # axes.set_xscale('log')
         # Return figure name
         return "%s_%s_vs_%s" % (value_key, nominal_key, numeric_key)
@@ -1141,14 +1194,14 @@ class PerformanceResultSummary(BaseDataset):
                 
             values[parameter_value].append(performance_value)
         
-        values = sorted(values.items())
+        values = sorted(values.items(), reverse=True)
         
         # the bottom of the subplots of the figure
         axes.figure.subplots_adjust(bottom = 0.3)
         axes.boxplot(map(lambda x: x[1], values))
         axes.set_xticklabels(map(lambda x: x[0], values))
         matplotlib.pyplot.setp(axes.get_xticklabels(), rotation=-90)
-        matplotlib.pyplot.setp(axes.get_xticklabels(), size='x-small')
+        matplotlib.pyplot.setp(axes.get_xticklabels(), size='small')
         axes.set_xlabel(x_key.replace("_", " "))
 
         # display nearly invisible lines in the back for better orientation
@@ -1198,7 +1251,7 @@ class PerformanceResultSummary(BaseDataset):
             nom2_key = self.data[nominal_key2][i]
             if value_key.count("#") == 0:
                 performance_value = float(self.data[value_key][i])
-            else: # A weighted cost function
+            else:  # A weighted cost function
                 weight1, value_key1, weight2, value_key2 = value_key.split("#")
                 performance_value = \
                             float(weight1) * float(self.data[value_key1][i]) \
@@ -1207,9 +1260,9 @@ class PerformanceResultSummary(BaseDataset):
             plot_data[nom1_key][nom2_key].append(performance_value)
         
         # Prepare data for boxplots
-        box_data=[]
-        nom1_keys=[]
-        for nom1_key, curve in plot_data.iteritems():
+        box_data = []
+        nom1_keys = []
+        for nom1_key, curve in sorted(plot_data.iteritems(), reverse=True):
             x_values = []
             y_values = []
             nom1_keys.append(nom1_key)
@@ -1218,21 +1271,21 @@ class PerformanceResultSummary(BaseDataset):
         
         # Make sure we always have enough colors available
         nom2_keys = sorted(plot_data[nom1_key].keys())
-        while len(nom2_keys)>len(boxColors):
-            boxColors+=boxColors
+        while len(nom2_keys) > len(boxColors):
+            boxColors += boxColors
         
         # the bottom of the subplots of the figure
-        axes.figure.subplots_adjust(bottom = 0.3)
+        axes.figure.subplots_adjust(bottom=0.3)
         # position the boxes in the range of +-0.25 around {1,2,3,...}
         box_positions=[]
         for i in range(len(nom1_keys)):
             if len(nom2_keys) > 1:
-                box_positions.extend([i+1 -.25 + a*.5/(len(nom2_keys)-1)
-                                          for a in range(len(nom2_keys))])
+                box_positions.extend([i+1 - .25 + a*.5/(len(nom2_keys)-1)
+                                      for a in range(len(nom2_keys))])
             else:
                 box_positions.extend([i+1])
         # actual plotting; width of the boxes:
-        w=.5 if len(nom2_keys)==1 else .35/(len(nom2_keys)-1)
+        w = .5 if len(nom2_keys) == 1 else .35/(len(nom2_keys)-1)
         bp = axes.boxplot(box_data, positions=box_positions, widths=w)
         # design of boxplot components
         matplotlib.pyplot.setp(bp['boxes'], color='black')
@@ -1242,7 +1295,7 @@ class PerformanceResultSummary(BaseDataset):
         axes.set_xticks([i+1 for i in range(len(nom1_keys))], minor=False)
         axes.set_xticklabels(nom1_keys)
         matplotlib.pyplot.setp(axes.get_xticklabels(), rotation=-90)
-        matplotlib.pyplot.setp(axes.get_xticklabels(), size='x-small')
+        matplotlib.pyplot.setp(axes.get_xticklabels(), size='small')
         axes.set_xlabel(nominal_key1.replace("_", " "))
         
         # Now fill the boxes with desired colors by superposing polygons
@@ -1283,21 +1336,21 @@ class PerformanceResultSummary(BaseDataset):
         # Background rectangle for the legend.
         rect = Rectangle([xy(0)[0]-.02*dxy[0], xy(0)[1]-.02*dxy[1]],
                          .2*dxy[0],(.05*(len(nom2_keys)+1)+0.0175)*dxy[1],
-                         facecolor='0.9', alpha=0.8)
+                         facecolor='lightgrey', fill=True, zorder=5)
         # legend "title"
         axes.text(xy(len(nom2_keys))[0]+.03*dxy[0], xy(len(nom2_keys))[1]+.005*dxy[1],
                   nominal_key2.strip("_").replace("_", " "),
-                  color='black', weight='roman', size='small')
+                  color='black', weight='roman', size='small', zorder=6)
 
         axes.add_patch(rect)
         # rect and text for each nom2-Value
         for key in range(len(nom2_keys)):
             rect = Rectangle(xy(key),.05*dxy[0],.035*dxy[1],
-                             facecolor=boxColors[len(nom2_keys)-key-1])
+                             facecolor=boxColors[len(nom2_keys)-key-1], zorder=6)
             axes.add_patch(rect)
             axes.text(xy(key)[0]+.06*dxy[0], xy(key)[1]+.005*dxy[1],
                       nom2_keys[len(nom2_keys)-key-1],
-                      color='black', weight='roman', size='small')
+                      color='black', weight='roman', size='small', zorder=6)
         
         # Add a horizontal grid to the plot
         axes.yaxis.grid(True, linestyle='-', which='major', color='lightgrey',

@@ -29,8 +29,9 @@ import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.tools.filesystem import create_directory
+from pySPACE.tools.filesystem import get_author
 
-    
+
 class WekaFilterOperation(Operation):
     """ Operation for feature selection using Weka
     
@@ -214,20 +215,7 @@ class WekaFilterOperation(Operation):
                     # Adjust collection metadata for the new collection
                     input_collection_meta["feature_names"] = feature_names
                     input_collection_meta["num_features"] = len(feature_names)
-                    try:
-                        import platform
-                        CURRENTOS = platform.system()
-                        if CURRENTOS == "Windows":
-                            import getpass
-                            author = getpass.getuser()
-                        else:
-                            import pwd
-                            author = pwd.getpwuid(os.getuid())[4]
-
-                        input_collection_meta["author"] = author
-                    except :
-                        input_collection_meta["author"] = "unknown"
-                        self._log("Author could not be resolved.",level=logging.WARNING)
+                    input_collection_meta["author"] = get_author()
                     input_collection_meta["date"] = time.strftime("%Y%m%d")
                     input_collection_meta["input_collection_name"] = input_collection_name
                     # Write the collection meta information into the folder

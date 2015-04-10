@@ -978,9 +978,6 @@ class BaseNode(object):
         # If this node does not require training
         if not self.is_trainable() or self.zero_training:
             self._log("Does not require training.")
-            # Get train data since that causes the predecessor nodes
-            # to be trained
-            train_set = self._get_train_set(use_test_data)
         # Check whether the node requires supervised training
         elif self.is_supervised(): # Supervised learning
             self._log("Supervised training started.")
@@ -1698,9 +1695,9 @@ class BaseNode(object):
             with open(filename, mode) as flh:
                 cPickle.dump(self, flh, protocol)
 
-    def getMetadata(self, key):
+    def get_metadata(self, key):
         if not self.input_node is None:
-            return self.input_node.getMetadata(key)
+            return self.input_node.get_metadata(key)
         else:
             return None
 

@@ -497,15 +497,17 @@ class RegularizedClassifierBase(BaseNode):
                 relevant = 1
             else:
                 relevant = 0
-            relevant_samples=[]
+            relevant_samples = []
             for i, label in enumerate(self.labels):
                 if label == relevant:
                     relevant_samples.append(self.samples[i])
             variance = numpy.median(numpy.var(numpy.array(self.samples),
                                               axis=0))
             self.gamma = 0.5/(variance*self.dim)
-            self._log("No gamma specified. Using: %f." % self.gamma,
-                      level=logging.WARNING)
+            self._log(
+                "No parameter gamma specified for the kernel. Using: %f."\
+                % self.gamma,
+                level=logging.WARNING)
         elif self.gamma is None:
             self.gamma = 0.001
 

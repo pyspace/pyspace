@@ -2,6 +2,24 @@
 import os
 import fnmatch
 import tarfile
+import warnings
+
+
+def get_author():
+    try:
+        import platform
+        CURRENTOS = platform.system()
+        if CURRENTOS == "Windows":
+            import getpass
+            author = getpass.getuser()
+        else:
+            import pwd
+            author = pwd.getpwuid(os.getuid())[4]
+    except:
+        author = "unknown"
+        warnings.warn("Author could not be resolved.")
+
+    return author
 
 def create_directory(path):
     """ Create the given directory path recursively """

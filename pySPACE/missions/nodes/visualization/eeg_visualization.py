@@ -252,7 +252,7 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
                 # Get the values for the respective class
                 data = values[class_label].view(numpy.ndarray)
 
-                ec = self.getMetadata("electrode_coordinates")
+                ec = self.get_metadata("electrode_coordinates")
                 if ec is None:
                     ec = StreamDataset.ec
                     

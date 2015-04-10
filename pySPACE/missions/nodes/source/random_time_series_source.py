@@ -170,6 +170,6 @@ class RandomTimeSeriesSourceNode(TimeSeriesSourceNode):
         return self.data_for_training.fresh()       
         
         
-    def getMetadata(self, key):
+    def get_metadata(self, key):
         """ This source node does not contain collection meta data. """
         return None

@@ -278,7 +278,7 @@ class TimeSeriesPlotNode(VisualizationBase):
             #    f.set_size_inches((4*11.7,  4*8.3))
             
             
-            ec = self.getMetadata("electrode_coordinates")
+            ec = self.get_metadata("electrode_coordinates")
             if ec is None:
                 ec = StreamDataset.ec
             
@@ -485,7 +485,7 @@ class SpectrumPlotNode(VisualizationBase):
                 data = values[class_label].view(numpy.ndarray)
                 
                 
-                ec = self.getMetadata("electrode_coordinates")
+                ec = self.get_metadata("electrode_coordinates")
                 if ec is None:
                     ec = StreamDataset.ec
                 

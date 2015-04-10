@@ -19,6 +19,7 @@ import os
 import warnings
 import numpy
 from pySPACE.resources.dataset_defs.base import BaseDataset
+from pySPACE.resources.dataset_defs.performance_result import PerformanceResultSummary
 
 class metricdict(defaultdict):
     """ Interface to dictionaries of metrics """
@@ -212,25 +213,38 @@ class BinaryClassificationDataset(BaseDataset):
         This table is later on merged with the other results
         to one big result table.
 
-        .. todo:: Try to use *PerformanceResultSummary* or *csv_analysis* methods and
-                  furthermore sort the keys.
+        .. todo:: Try to use *PerformanceResultSummary* or *csv_analysis*
+                  methods and furthermore sort the keys.
         """
         name = "results"
         if not s_format == "csv":
-            self._log("The format %s is not supported! Using default."%s_format, level=logging.CRITICAL)
+            self._log("The format %s is not supported! Using default." %
+                      s_format, level=logging.CRITICAL)
+        # Store meta data
+        # required before final replacement of Key Dataset to read out
+        # the parameter setting in case of working with hash names
+        # of the folders due to a too large size of the original folder names
+        if not os.path.exists(result_dir):
+            os.mkdir(result_dir)
+        BaseDataset.store_meta_data(result_dir, self.meta_data)
+
         for key, performance in self.data.iteritems():
             # Construct result directory
             result_path = result_dir
-            final_path = os.path.join(os.sep.join(result_path.split(os.sep)[:-1]))
+            # final path later on needed to read out metadata and decode hash
+            final_path = os.path.join(os.sep.join(
+                result_path.split(os.sep)[:-1]))
             if not os.path.exists(result_path):
                 os.mkdir(result_path)
-            key_str = "_r%s_sp%s_%s_" % key[0:] # run number, split number, if performance on training or test data
-            key_str += result_path.split(os.sep)[-1] # set name used for identifier
-            result_file = open(os.path.join(final_path,
-                                            name + key_str + ".csv"),
-                               "w") # Data saved in operation directory instead of current set directory
+            # run number, split number, if performance on training or test data
+            key_str = "_r%s_sp%s_%s_" % key[0:]
+            # set name used for identifier
+            key_str += result_path.split(os.sep)[-1]
+            result_file_path = os.path.join(final_path, name + key_str + ".csv")
+            # Data saved in operation directory instead of current set directory
+            result_file = open(result_file_path, "w")
 
-            performance["Key_Dataset"]=result_path.split(os.sep)[-1]
+            performance["Key_Dataset"] = result_path.split(os.sep)[-1]
             results_writer = csv.writer(result_file)
 
             # if dataset_pattern given, add keys/vals
@@ -245,15 +259,23 @@ class BinaryClassificationDataset(BaseDataset):
                         performance[new_keys[new_key_index]] = new_vals[new_key_index]
                 except IndexError:
                     warnings.warn("Using wrong dataset pattern '%s' on '%s'!"
-                        %(self.dataset_pattern,current_dataset))
+                        %(self.dataset_pattern, current_dataset))
                     self.dataset_pattern = None
+            # replace "Key_Dataset" by entries of relevant parameters
+            temp_key_dict = defaultdict(list)
+            temp_key_dict["Key_Dataset"] = [performance["Key_Dataset"]]
+            temp_key_dict = \
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(
+                    temp_key_dict, result_file_path)
+            for metric in temp_key_dict:
+                performance[metric] = temp_key_dict[metric][0]
+            del performance["Key_Dataset"]
+            # write result .csv file
             results_writer.writerow(performance.keys())
             results_writer.writerow(performance.values())
             result_file.close()
-        #Store meta data
-        BaseDataset.store_meta_data(result_dir,self.meta_data)
 
-    def add_split(self, performance, train, split = 0, run = 0):
+    def add_split(self, performance, train, split=0, run=0):
         """ Add a split to this dataset
 
         The method expects the following parameters:
@@ -394,7 +416,7 @@ class BinaryClassificationDataset(BaseDataset):
                           loss_restriction=2.0,time_periods=[],
                           calc_AUC=True,calc_loss=True,
                           weight=0.5, save_roc_points=False,
-                          decision_boundary=0.0):
+                          decision_boundary=0.0, scaling=5):
         """ Calculate performance measures from the given classifications
 
         :Returns: metricdict and the ROC points if save_roc_point is True
@@ -428,7 +450,8 @@ class BinaryClassificationDataset(BaseDataset):
                                          label,calc_soft_metrics=calc_soft_metrics,
                                          ir_class=ir_class, sec_class=sec_class,
                                          confusion_matrix=metrics,
-                                         decision_boundary=decision_boundary)
+                                         decision_boundary=decision_boundary,
+                                         scaling=scaling)
             if calc_loss:
                 BinaryClassificationDataset.update_loss_values(classification_vector=prediction_vector,
                                     label=label,
@@ -1097,11 +1120,11 @@ class MultinomialClassificationDataset(BinaryClassificationDataset):
     @staticmethod
     def calculate_metrics(classification_results,
                           time_periods=[],
-                          weight=None):
+                          weight=None,
+                          classes=[]):
         """ Calculate performance measures from the given classifications """
         # metric initializations
         metrics = metricdict(float)
-        classes = []
         for prediction_vector,label in classification_results:
             if not label in classes:
                 classes.append(label.strip())

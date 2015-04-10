@@ -94,7 +94,7 @@ class CSPNode(SpatialFilteringNode):
         
         # Make sure number of channels is even
         if not(retained_channels in [None, 'None']) and not (retained_channels % 2 == 0):
-            self.retained_channels -= 1
+            retained_channels -= 1
             self._log("CSP node should only retain an even number of channels!", level=logging.CRITICAL)
 
         filters = None

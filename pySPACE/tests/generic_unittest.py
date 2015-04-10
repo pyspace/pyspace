@@ -451,9 +451,9 @@ def multiple_node_testing(verbose=False, report=False):
         sys.stdout = open(os.devnull, 'w')
         pySPACE.configuration.min_log_level = 1000
 
-        # this list will be populated will unit testing suites for all the
-        # available nodes
-        the_report_suite = []
+    # this list will be populated will unit testing suites for all the
+    # available nodes
+    the_report_suite = []
 
     count = 0
 

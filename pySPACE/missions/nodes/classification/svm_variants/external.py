@@ -46,7 +46,7 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
             the first for classification.
 
             .. warning:: For using "one-class SVM" better use the
-                :class:`~pySPACE.missions.nodes.classification.one_class.LibsvmOneClassNode`
+                :class:`~pySPACE.missions.nodes.classification.one_class.LibsvmOneClassNode`.
 
             
             (*optional, default: 'C-SVC'*)
@@ -147,9 +147,9 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
     :Last change: 2011/05/06 Mario Krell old version deleted
     
     """
-    def __init__(self, svm_type = 'C-SVC', max_iterations = 0,
+    def __init__(self, svm_type='C-SVC', max_iterations=0,
                  str_label_function=None,
-                 complexities_path = None, **kwargs):
+                 complexities_path=None, **kwargs):
         if svm_type == 'C-SVC':
             regression = False
         else:
@@ -177,11 +177,11 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
                     e.args = (message,) + args
                 raise
 
-        self.set_permanent_attributes(str_label_function = str_label_function,
-                                      svm_type = svm_type,
-                                      max_iterations = int(max_iterations),
-                                      store_all_samples = True,
-                                      predictor_iterations = numpy.Inf)
+        self.set_permanent_attributes(str_label_function=str_label_function,
+                                      svm_type=svm_type,
+                                      max_iterations=int(max_iterations),
+                                      store_all_samples=True,
+                                      predictor_iterations=numpy.Inf)
 
     def _stop_training(self, debug=False):
         """ Finish the training, i.e. train the SVM """
@@ -325,7 +325,7 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
     def _execute(self, x):
         """ Executes the classifier on the given data vector x.
         prediction value = <w,data>+b in the linear case."""
-        data=x.view(numpy.ndarray)
+        data = x.view(numpy.ndarray)
         if self.svm_type == 'C-SVC':
             if self.kernel_type == 'LINEAR' and not self.multinomial:
                 return super(LibSVMClassifierNode, self)._execute(x)
@@ -467,9 +467,9 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
                 self.w[i] = -self.w[i]
             self.w[i] -= self.b 
         self.features = FeatureVector(numpy.atleast_2d(self.w).astype(
-                                      numpy.float64),self.feature_names)
+                                      numpy.float64), self.feature_names)
         try:
-            wf=[]
+            wf = []
             for i,feature in enumerate(self.feature_names):
                 if not self.w[i] == 0:
                     wf.append((self.w[i],feature))
@@ -493,22 +493,23 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
     """ Code Integration of external linear SVM classifier program
 
     http://www.csie.ntu.edu.tw/~cjlin/liblinear/
-    Implemented by the Libsvm programmers.
+    LIBLINEAR was implemented by the LIBSVM programmers.
     
     It is important to mention, that here (partially) the same modified SVM model
-    is used as in the SOR variant. (:mod:`pySPACE.missions.nodes.classification.svm_variants.SOR`)
+    is used as in the SOR variant.
+    (:mod:`pySPACE.missions.nodes.classification.svm_variants.SOR`)
 
     **Parameters**
 
-        :type:
-            0 -- L2-regularized logistic regression (primal)
-            1 -- L2-regularized L2-loss support vector classification (dual)
-            2 -- L2-regularized L2-loss support vector classification (primal)
-            3 -- L2-regularized L1-loss support vector classification (dual)
-            4 -- multi-class support vector classification by Crammer and Singer
-            5 -- L1-regularized L2-loss support vector classification
-            6 -- L1-regularized logistic regression
-            7 -- L2-regularized logistic regression (dual)
+        :svm_type:
+            :0: L2-regularized logistic regression (primal)
+            :1: L2-regularized L2-loss support vector classification (dual)
+            :2: L2-regularized L2-loss support vector classification (primal)
+            :3: L2-regularized L1-loss support vector classification (dual)
+            :4: multi-class support vector classification by Crammer and Singer
+            :5: L1-regularized L2-loss support vector classification
+            :6: L1-regularized logistic regression
+            :7: L2-regularized logistic regression (dual)
             
             Type 3 is the standard SVM with 
             b used in the target function as component of w (offset = True)
@@ -517,19 +518,27 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
             (*optional, default:3*)
     
         :tolerance:
-            tolerance of termination criterion, same default as in libsvm
+            Tolerance of termination criterion, same default as in libsvm.
             
-            .. todo:: same variable name in upper class for epsilon-SVR instead of
-                      tolerance.
+            .. todo:: Same variable name in upper class for epsilon-SVR
+                      instead of tolerance.
     
             (*optional, default: 0.001*)
         
         :offset:
-            If True, x is internally replaced by (x,1) to get an artificial offset b.
+            If True, x is internally replaced by (x,1)
+            to get an artificial offset b.
             Probably in this case b is regularized.
-            Otherwise the offset b in the classifier function (w^Tx+b) is set to zero.
+            Otherwise the offset b in the classifier function (w^Tx+b)
+            is set to zero.
             
             (*optional, default: True*)
+
+        :store:
+            Parameter of super-class. If *store* is True,
+            the classification vector is stored as a feature vector.
+
+            (*optional, default: False*)
 
     **Exemplary Call**
 
@@ -538,22 +547,25 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
         -
             node : lSVM
             parameters :
-                class_labels : ["Target","Standard"]
+                class_labels : ["Target", "Standard"]
 
     :Author: Mario Michael Krell (mario.krell@dfki.de)
     :Created: 2012/01/19
     """
 
-    def __init__(self,tolerance = 0.001,type=3, offset=True,**kwargs):
+    def __init__(self,tolerance=0.001, svm_type=3, offset=True, **kwargs):
         
         if offset:
             offset = 1
         else:
-            offset =-1
+            offset = -1
             
-        super(LiblinearClassifierNode,self).__init__(use_list=True,**kwargs)
+        super(LiblinearClassifierNode,self).__init__(use_list=True, **kwargs)
 
-        self.set_permanent_attributes(tolerance = tolerance,type=type,offset=offset)
+        # svm type is renamed such that C-SVC is still used in the super class
+        # this is currently especially advantageous in the execute method
+        self.set_permanent_attributes(
+            tolerance=tolerance, alg_num=svm_type, offset=offset)
 
     def _train(self, data, class_label):
         """ Trains the classifier on the given data
@@ -565,17 +577,19 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
                     and the method from libsvm can be used.
         """
         self._train_phase_started = True
-        if self.feature_names == None:
+        if self.feature_names is None:
             try:
                 self.feature_names = data.feature_names
             except AttributeError as e:
-                warnings.warn("Use a feature generator node before a classification node.")
+                warnings.warn(
+                    "Use a feature generator node before a classification node."
+                    )
                 raise e
-            if self.dim == None:
+            if self.dim is None:
                 self.dim = data.shape[1]
-            if self.samples == None:
+            if self.samples is None:
                 self.samples = []
-            if self.labels == None:
+            if self.labels is None:
                 self.labels = []
         if class_label not in self.classes:
             warnings.warn("Please give the expected classes to the classifier! %s unknown. "%class_label
@@ -583,25 +597,22 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
                 +"where you use your classifier. "
                 +"For further info look at the node documentation.")
             self.classes.append(class_label)
-            self.set_permanent_attributes(classes = self.classes)
+            self.set_permanent_attributes(classes=self.classes)
         
         # Collect the data
         data_array=data.view(numpy.ndarray)
         self.samples.append(map(float, list(data_array[0,:])))
         # LIBLINEAR does not accept numpy arrays so we have to change it to list
         #self.samples.append(data_array[0,:])
-        if self.svm_type == 'C-SVC':
-            self.labels.append(self.classes.index(class_label))
-        else: # regression!
-            self.labels.append(float(class_label))
+        self.labels.append(self.classes.index(class_label))
 
     def _stop_training(self, debug=False):
-        if self.str_label_function != None:
+        if not self.str_label_function is None:
             self.label_function = eval(self.str_label_function)
             self.labels = self.label_function()
 
         options = "-c %.42f  -e %.42f -s %d -B %d" % \
-             (self.complexity, self.tolerance, self.type,self.offset)
+             (self.complexity, self.tolerance, self.alg_num, self.offset)
         for i,w in enumerate(self.weight):
             options += " -w%d %.42f" % (i, w)
         if not self.debug:
@@ -623,7 +634,7 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
         """This method calculates from the given SVM model
         the related classification vector w and the offset b."""
         # ctypes liblinear bindings
-        if self.offset==1:
+        if self.offset == 1:
             self.b = model.w[self.dim]
         else:
             self.b = 0
@@ -634,14 +645,14 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
             self.w = -1*self.w
             self.b = -1*self.b
         self.features = FeatureVector(numpy.atleast_2d(self.w).astype(
-                                      numpy.float64),self.feature_names)
+                                      numpy.float64), self.feature_names)
         try:
             wf=[]
             for i,feature in enumerate(self.feature_names):
                 if not self.w[i] == 0:
                     wf.append((self.w[i],feature))
             wf.sort()
-            w = numpy.array(wf,dtype = '|S20')
+            w = numpy.array(wf, dtype = '|S20')
         except ValueError :
             print 'w could not be converted.'
         except IndexError :
@@ -652,7 +663,8 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
             self.w = w
         # only features without zero multiplier are relevant
         self.num_retained_features = len(w) 
-        self.classifier_information["~~Num_Retained_Features~~"] = self.num_retained_features
+        self.classifier_information["~~Num_Retained_Features~~"] =\
+            self.num_retained_features
         self.print_w = w
 
 

@@ -12,7 +12,7 @@ import logging
 
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.resources.data_types.feature_vector import FeatureVector
-
+from pySPACE.tools.filesystem import get_author
 
 class FeatureVectorDataset(BaseDataset):
     """ Feature vector dataset class
@@ -508,18 +508,7 @@ class FeatureVectorDataset(BaseDataset):
         """
         name = "features"
         # Update the meta data
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except:
-            author = "unknown"
-            self._log("Author could not be resolved.",level=logging.WARNING)
+        author = get_author()
         self.update_meta_data({"type": "feature_vector",
                                "storage_format": s_format,
                                "author": author,
@@ -539,6 +528,11 @@ class FeatureVectorDataset(BaseDataset):
         
         # Iterate through splits and runs in this dataset
         for key, feature_vectors in self.data.iteritems():
+            # test if dataset has already been loaded.
+            # Otherwise replace with iterator to loaded version.
+            if isinstance(feature_vectors, basestring):
+                feature_vectors = self.get_data(key[0], key[1], key[2])
+
             # Construct result directory
             result_path = result_dir + os.sep + "data" \
                             + "_run%s" % key[0]

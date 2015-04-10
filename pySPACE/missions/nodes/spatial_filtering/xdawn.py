@@ -352,7 +352,7 @@ class XDAWNNode(SpatialFilteringNode):
         # each channel at the position of the channel
         import pylab
         
-        ec = self.getMetadata("electrode_coordinates")
+        ec = self.get_metadata("electrode_coordinates")
         if ec is None:
             ec = StreamDataset.ec
         
