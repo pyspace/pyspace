@@ -83,7 +83,9 @@ import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.tools.filesystem import create_directory
 from pySPACE.resources.dataset_defs.base import BaseDataset
-    
+from pySPACE.tools.filesystem import get_author
+
+
 class ShuffleOperation(Operation):
     """ Forwards processing to process
 
@@ -273,19 +275,7 @@ class ShuffleProcess(Process):
                 output_dataset_meta = dict(input_dataset1_meta)
                 output_dataset_meta['train_test'] = True
                 output_dataset_meta['date'] = time.strftime("%Y%m%d_%H_%M_%S")
-                try:
-                    import platform
-                    CURRENTOS = platform.system()
-                    if CURRENTOS == "Windows":
-                        import getpass
-                        author = getpass.getuser()
-                    else:
-                        import pwd
-                        author = pwd.getpwuid(os.getuid())[4]
-                    output_dataset_meta['author'] = author
-                except :
-                    self._log("Author could not be resolved.",level=logging.WARNING)
-                    output_dataset_meta['author'] = "unknown"
+                output_dataset_meta['author'] = get_author()
                 BaseDataset.store_meta_data(target_dataset_dir,output_dataset_meta)
         
         ############## Clean up after benchmarking ##############

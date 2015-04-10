@@ -90,7 +90,7 @@ import logging
 import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.tools.filesystem import create_directory
-
+from pySPACE.tools.filesystem import get_author
 from pySPACE.resources.dataset_defs.base import BaseDataset
     
 class MergeOperation(Operation):
@@ -363,18 +363,7 @@ class MergeProcess(Process):
         # load a first collection, in which the data of all other collections 
         # is assembled
         target_collection = BaseDataset.load(source_collection_pathes[0])
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except:
-            author = "unknown"
-            self._log("Author could not be resolved.",level=logging.WARNING)
+        author = get_author()
         date = time.strftime("%Y%m%d_%H_%M_%S")
         # Delete node_chain file name
         try:

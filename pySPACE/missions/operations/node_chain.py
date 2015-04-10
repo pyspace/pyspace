@@ -237,6 +237,7 @@ import warnings
 import copy
 import random
 import gc
+import hashlib
 
 # processing was renamed in Python 2.6 to multiprocessing
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
@@ -255,6 +256,7 @@ from pySPACE.environments.chains.node_chain \
 
 from pySPACE.resources.dataset_defs.performance_result \
     import PerformanceResultSummary
+from pySPACE.tools.filesystem import get_author
 
 
 class NodeChainOperation(Operation):
@@ -280,7 +282,7 @@ class NodeChainOperation(Operation):
             operation_spec["templates"] = [yaml.load(x) for x in templates]
         else:
             operation_spec["templates"] = templates
- 
+
         super(NodeChainOperation, self).__init__(processes, operation_spec,
                                                  result_directory)
         self.operation_spec = templates
@@ -524,7 +526,8 @@ class NodeChainOperation(Operation):
                         run=run, split=split,
                         storage_format=storage_format,
                         result_dataset_directory=result_dataset_directory,
-                        store_node_chain=store_node_chain)
+                        store_node_chain=store_node_chain,
+                        hide_parameters=hide_parameters)
 
                     processes.put(process)
 
@@ -545,18 +548,7 @@ class NodeChainOperation(Operation):
             meta_data = BaseDataset.load_meta_data(dataset_path)
 
             # Determine author and date
-            try:
-                import platform
-                CURRENTOS = platform.system()
-                if CURRENTOS == "Windows":
-                    import getpass
-                    author = getpass.getuser()
-                else:
-                    import pwd
-                    author = pwd.getpwuid(os.getuid())[4]
-            except:
-                author = "unknown"
-                self._log("Author could not be resolved.",level=logging.WARNING)
+            author = get_author()
             date = time.strftime("%Y%m%d_%H_%M_%S")
 
             # Update meta data and store it
@@ -679,6 +671,54 @@ class NodeChainOperation(Operation):
         Determines the name of the result directory based on the
         input_dataset_dir, the node_chain_name and the parameter setting.
         """
+        # Determine the result_directory name
+        # String between Key and value changed from ":" to "#",
+        # because ot problems in windows and with windows file servers
+        def _get_result_dir_name(parameter_setting, hide_parameters, method = None):
+            """ internal function to create result dir name in different ways"""
+            if not method:
+                parameter_str = "}{".join(
+                  ("%s#%s" % (key, value)) for key, value in
+                  parameter_setting.iteritems() if key not in hide_parameters)
+            elif method == "hash":
+                parameter_str = "}{".join(
+                  ("%s#%s" % (key,hash(str(value).replace(' ', '')))) for key, value in
+                  parameter_setting.iteritems() if key not in hide_parameters)
+
+            parameter_str = parameter_str.replace("'", "")
+            parameter_str = parameter_str.replace(" ", "")
+            parameter_str = parameter_str.replace("[", "")
+            parameter_str = parameter_str.replace("]", "")
+            parameter_str = parameter_str.replace(os.sep, "")
+            result_name = "{%s}" % input_name
+
+            if parameter_str != "":
+                result_name += "{%s}" % (parameter_str)
+
+            # Determine the path where this result will be stored
+            # and create the directory if necessary
+            result_dir = base_dir
+            result_dir += os.sep + result_name
+            # filename is to long
+            # (longer than allowed including optional offsets for pyspace 
+            #  result csv naming conventions)
+            # create a md5 hash of the result name and use that one
+            import platform
+            CURRENTOS = platform.system()
+            if CURRENTOS == "Windows":
+                # the maximum length for a filename on Windows is 255
+                if len(result_dir) > 255 - 32:
+                    result_name = "{"+hashlib.md5(result_name).hexdigest()+"}"
+                    result_dir = base_dir
+                    result_dir += os.sep + result_name
+                return result_dir
+            else:
+                if len(result_dir) > os.pathconf(os.curdir, 'PC_NAME_MAX') - 32:
+                    result_name = "{"+hashlib.md5(result_name).hexdigest()+"}"
+                    result_dir = base_dir
+                    result_dir += os.sep + result_name
+                return result_dir
+
         input_name = input_dataset_dir.strip(os.sep).split(os.sep)[-1]
         input_name = input_name.strip("{}")
         # If the input is already the result of an operation
@@ -709,23 +749,15 @@ class NodeChainOperation(Operation):
             if isinstance(value, basestring) and value.count("'") > 1:
                 parameter_setting[key] = eval(value)
 
-        # Determine the result_directory name
-        # String between Key and value changed from ":" to "#",
-        # because ot problems in windows and with windows file servers
-        parameter_str = "}{".join(("%s#%s" % (key, value))
-                                        for key, value in parameter_setting.iteritems()
-                                            if key not in hide_parameters)
-
-        result_name =  "{%s}" % input_name
-
-        if parameter_str != "":
-            result_name += "{%s}" % (parameter_str)
-
-        # Determine the path where this result will be stored
-        # and create the directory if necessary
-        result_dir = base_dir
-        result_dir += os.sep + result_name
-        create_directory(result_dir)
+        result_dir = _get_result_dir_name(parameter_setting, hide_parameters)
+        try:
+            create_directory(result_dir)
+        except OSError as e:
+            if e.errno == 36:
+                # filename is too long
+                result_dir = _get_result_dir_name(parameter_setting,
+                                                  hide_parameters, "hash")
+            create_directory(result_dir)
 
         return result_dir
 
@@ -765,7 +797,8 @@ class NodeChainProcess(Process):
 
     def __init__(self, node_chain_spec, parameter_setting,
                  rel_dataset_dir, run, split, storage_format,
-                 result_dataset_directory, store_node_chain=False):
+                 result_dataset_directory, store_node_chain=False,
+                 hide_parameters=[]):
 
         super(NodeChainProcess, self).__init__()
 
@@ -780,6 +813,7 @@ class NodeChainProcess(Process):
                                             "persistency_run%s" % run])
         create_directory(self.persistency_dir)
         self.store_node_chain = store_node_chain
+        self.hide_parameters = hide_parameters
 
         # reduce_log_level for process creation
         try:
@@ -877,7 +911,8 @@ class NodeChainProcess(Process):
         # to the meta data
         meta_data = {"node_chain_spec": self.node_chain_spec,
                      "parameter_setting": self.parameter_setting,
-                     "input_collection_name": self.rel_dataset_dir}
+                     "input_collection_name": self.rel_dataset_dir,
+                     "hide_parameters": self.hide_parameters}
         result_collection.update_meta_data(meta_data)
 
         # Store the result collection to the hard disk

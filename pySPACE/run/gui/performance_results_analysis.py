@@ -252,7 +252,7 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         self.connect(self.hist_button, QtCore.SIGNAL('clicked()'), 
                      self._draw_histogram)
         
-        self.project_button = QtGui.QPushButton("&Project onto")
+        self.project_button = QtGui.QPushButton("&Filter")
         self.connect(self.project_button, QtCore.SIGNAL('clicked()'), 
                      self._project_popup)
         
@@ -508,7 +508,7 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         self.canvas.draw()
         
     def _project_popup(self):
-        """ Create 'project onto' pop up window """
+        """ Create 'Filter' pop up window """
         popup_frame = ProjectionPopup(self)
         
     def _get_selected_items(self, items):

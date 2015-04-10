@@ -235,10 +235,13 @@ class NodeChain(object):
             assert(self[0].is_source_node()), \
                  "Training of a node chain without source node requires a "\
                  "data_iterator argument!"
-            # This is accomplished by calling the train_sweep method
+            # Training is accomplished by requesting the iterator
             # of the last node of the chain. This node will recursively call
-            # the train method of all its predecessor nodes
-            self[-1].train_sweep(use_test_data = self.use_test_data)
+            # the train method of all its predecessor nodes.
+            # As soon as the first element is yielded the node has been trained.
+            for _ in self[-1].request_data_for_training(
+                    use_test_data=self.use_test_data):
+                return
 
     def iter_train(self, data_iterables):
         """ Train all trainable nodes in the NodeChain with data from iterator
@@ -398,14 +401,13 @@ class NodeChain(object):
         """
         Returns the output type of the entire node chain
 
-        The method implemented here, is the equivalent of the
-        `get_output_type` method which is currently implemented in
-        :mod:`~pySPACE.missions.nodes.base_node`
-
+        Recursively iterate over nodes in flow
         """
+        output = input_type
         for i in range(len(self.flow)):
             if i == 0:
-                output = self.flow[i].get_output_type(input_type, as_string=True)
+                output = self.flow[i].get_output_type(
+                    input_type, as_string=True)
             else:
                 output = self.flow[i].get_output_type(output, as_string=True)
 

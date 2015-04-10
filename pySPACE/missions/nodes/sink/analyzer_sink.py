@@ -50,6 +50,7 @@ BinaryFormat=INT_16\n\
 
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.tools.filesystem import get_author
 from pySPACE.resources.data_types.time_series import TimeSeries
 
 
@@ -94,18 +95,7 @@ class AnalyzerCollection(BaseDataset):
             self._log("The format %s is not supported!"%s_format, level=logging.CRITICAL)
             return
         # Update the meta data
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except:
-            author = "unknown"
-            self._log("Author could not be resolved.",level=logging.WARNING)
+        author = get_author()
         self.update_meta_data({"type": "only output of individual nodes stored",
                                       "storage_format": s_format,
                                       "author" : author,

@@ -556,6 +556,8 @@ def wrap_scikits_predictor(scikits_class):
             self.kwargs = kwargs
 
             self.set_permanent_attributes(kwargs=kwargs,
+                                          data=[],
+                                          labels=[],
                                           scikits_alg=scikits_class(**self.kwargs))
 
         # ---- re-direct training and execution to the wrapped algorithm
@@ -563,7 +565,7 @@ def wrap_scikits_predictor(scikits_class):
         def _train(self, data, y):
             x = data.view(numpy.ndarray)
             self.data.append(x[0])
-            self.labels.append(y)
+            self.labels.append(numpy.float64(y))
 
         def _stop_training(self, **kwargs):
             super(ScikitsPredictor, self)._stop_training(self)
@@ -584,6 +586,7 @@ def wrap_scikits_predictor(scikits_class):
                 raise type(e), \
                     type(e)("in node %s:\n\t"%self.__class__.__name__+e.args[0]), \
                     sys.exc_info()[2]
+
             if hasattr(self.scikits_alg, "predict_proba"):
                 try:
                     score = self.scikits_alg.predict_proba(x)[0, 1]
@@ -597,14 +600,15 @@ def wrap_scikits_predictor(scikits_class):
             elif hasattr(self.scikits_alg, "decision_function"):
                 score = self.scikits_alg.decision_function(x)[0]
             else:
+                # if nothing else works, we set the score of the
+                # prediction to be equal to the prediction itself.
                 score = prediction
-            label = self.class_labels[prediction]
-            return PredictionVector(label=label, prediction=score,
+
+            return PredictionVector(label=prediction, prediction=score,
                                     predictor=self)
         # ---- administrative details
 
-        @staticmethod
-        def is_trainable():
+        def is_trainable(self):
             """Return True if the node can be trained, False otherwise."""
             return hasattr(scikits_class, 'fit')
 
@@ -615,6 +619,9 @@ def wrap_scikits_predictor(scikits_class):
             """Return the list of dtypes supported by this node.
             The types can be specified in any format allowed by numpy.dtype."""
             return ['float32', 'float64']
+
+        def is_supervised(self):
+            return self.is_trainable()
 
     # modify class name and docstring
     ScikitsPredictor.__name__ = scikits_class.__name__ + 'SklearnNode'
@@ -683,8 +690,8 @@ def wrap_scikits_algorithms(scikits_class, nodes_list):
     elif hasattr(scikits_class, 'transform') and hasattr(scikits_class, 'fit'):
         nodes_list.append(wrap_scikits_transformer(scikits_class))
     elif hasattr(scikits_class, 'predict') and hasattr(scikits_class, 'fit'):
-        pass  # for the moment, we don't support predictors (regression in pySPACE)
-        # nodes_list.append(wrap_scikits_predictor(scikits_class))
+        # WARNING: THIS PART OF PYSPACE IS EXPERIMENTAL ONLY
+        nodes_list.append(wrap_scikits_predictor(scikits_class))
 
 if _sklearn_prefix:
     scikits_nodes = []

@@ -4,6 +4,7 @@ import logging
 import os
 import yaml
 from pySPACE.resources.dataset_defs.base import BaseDataset
+from pySPACE.tools.filesystem import get_author
 
 class DummyDataset(BaseDataset):
     """ Class to store only meta data of collection
@@ -32,18 +33,7 @@ class DummyDataset(BaseDataset):
             self._log("The format %s is not supported!"%s_format, level=logging.CRITICAL)
             return
         # Update the meta data
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except:
-            author = "unknown"
-            self._log("Author could not be resolved.",level=logging.WARNING)
+        author = get_author()
         self.update_meta_data({"type": "only output of individual nodes stored",
                                       "storage_format": s_format,
                                       "author" : author,

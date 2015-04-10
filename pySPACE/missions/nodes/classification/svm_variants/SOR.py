@@ -226,7 +226,6 @@ class SorSvmNode(RegularizedClassifierBase):
         return PredictionVector(label=label, prediction=prediction,
                                 predictor=self)
 
-
     def _stop_training(self, debug=False):
         """ Train the SVM with the SOR algorithm on the collected training data
         """
@@ -252,13 +251,13 @@ class SorSvmNode(RegularizedClassifierBase):
         elif self.version == "samples" and self.kernel_type == "LINEAR":
             self.M = [1 / (numpy.linalg.norm(self.samples[i])**2.0
                       + self.offset_factor
-                      + self.squ_factor / self.ci[i])
+                      + self.squ_factor / (2 * self.ci[i]))
                       for i in range(self.num_samples)]
             # changes of w and b are tracked in the samples version
             self.w = numpy.zeros(self.dim, dtype=numpy.float)
             self.b = 0.0
         else: # kernel case
-            ## iterative calculation of M
+            # iterative calculation of M
             self.M = numpy.zeros((self.num_samples, self.num_samples))
             for i in range(self.num_samples):
                 bi = self.bi[i]
@@ -320,7 +319,7 @@ class SorSvmNode(RegularizedClassifierBase):
         self.w = optimal_w
         self.dual_solution = optimal_dual_solution
 
-    def reduce_dual_weight(self,index):
+    def reduce_dual_weight(self, index):
         """ Change weight at index to zero """
         if self.version == "sample":
             old_weight = self.dual_solution[index]
@@ -338,7 +337,7 @@ class SorSvmNode(RegularizedClassifierBase):
             self.append_weights_and_class_factors(label)
             #care for zero sum
 
-    def append_weights_and_class_factors(self,label):
+    def append_weights_and_class_factors(self, label):
         """ Mapping between labels and weights/class factors
 
         The values are added to the corresponding list.
@@ -350,7 +349,7 @@ class SorSvmNode(RegularizedClassifierBase):
             self.bi.append(1)
             self.ci.append(self.complexity*self.weight[1])
 
-    def iteration_loop(self,M, reduced_indices=[]):
+    def iteration_loop(self, M, reduced_indices=[]):
         """ The algorithm is calling the :func:`reduced_descent<pySPACE.missions.nodes.classifiers.ada_SVM.SORSVMNode.reduced_descent>` method in loops over alpha
 
         In the first step it uses a complete loop over all components of alpha
@@ -468,14 +467,15 @@ class SorSvmNode(RegularizedClassifierBase):
 
             if self.version == "matrix":
                 # this step is kernel independent
-                x = old_dual - self.omega / (M[i][i] +
-                                             self.squ_factor/self.ci[i]) * \
+                x = old_dual - self.omega / (
+                    M[i][i] + self.squ_factor/(2 * self.ci[i])) * \
                     (dot(M[i], current_dual) - 1)
             elif self.version == "samples":
                 xi = self.samples[i]
                 bi = self.bi[i]
-                x = old_dual-self.omega * (M[i]) * \
-                    (bi * (dot(xi.T, self.w) + self.b) - 1)
+                x = old_dual - self.omega * (M[i]) * \
+                    (bi * (dot(xi.T, self.w) + self.b) - 1 +
+                     self.squ_factor * old_dual / (2 * self.ci[i]))
             # map dual solution to the interval [0,C]
             if x <= 0:
                 self.irrelevant_indices.append(i)

@@ -64,23 +64,23 @@ class SameInputLayerNode(BaseNode):
                                   frequency_band : [2.0, 8.0]
                                   frequency_resolution : 1.0
     """
-    input_types=["TimeSeries"]
+    input_types = ["TimeSeries"]
     def __init__(self, nodes,enforce_unique_names=True,
-                 store = False, **kwargs):
-        self.nodes = nodes # needed to find out dimensions and trainability, ...
+                 store=False, **kwargs):
+        self.nodes = nodes  # needed to find out dimensions and trainability,...
         super(SameInputLayerNode, self).__init__(**kwargs)
         self.permanent_state.pop("nodes")
-        self.set_permanent_attributes(output_type = None,
-                                      names = None,
-                                      unique = enforce_unique_names)
+        self.set_permanent_attributes(output_type=None,
+                                      names=None,
+                                      unique=enforce_unique_names)
 
     @staticmethod
     def node_from_yaml(layer_spec):
         """ Load the specs and initialize the layer nodes """
         # This node requires one parameters, namely a list of nodes
         assert("parameters" in layer_spec 
-                and "nodes" in layer_spec["parameters"]),\
-                   "SameInputLayerNode requires specification of a list of nodes!"
+               and "nodes" in layer_spec["parameters"]),\
+            "SameInputLayerNode requires specification of a list of nodes!"
         # Create all nodes that are packed together in this layer
         layer_nodes = []
         for node_spec in layer_spec["parameters"]["nodes"]:
@@ -88,7 +88,8 @@ class SameInputLayerNode(BaseNode):
             layer_nodes.append(node_obj)
         layer_spec["parameters"].pop("nodes")
         # Create the node object
-        node_obj = SameInputLayerNode(nodes = layer_nodes,**layer_spec["parameters"])
+        node_obj = SameInputLayerNode(
+            nodes=layer_nodes, **layer_spec["parameters"])
 
         return node_obj
 
@@ -231,7 +232,7 @@ class SameInputLayerNode(BaseNode):
             node_dir = os.path.join(result_dir, (self.__class__.__name__+str(index).split("None")[0]+str(i)))
             node.store_state(node_dir, index=i)
 
-    def _inc_train(self,data,label):
+    def _inc_train(self, data, label):
         """ Forward data to retrainable nodes
         
         So the single nodes do not need to buffer or *present_labels* does not
@@ -248,6 +249,12 @@ class SameInputLayerNode(BaseNode):
         super(SameInputLayerNode, self).set_run_number(run_number)
 
     def get_output_type(self, input_type, as_string=True):
+        """ Returns expected output from first node
+
+        Additionally the type is compared with the expected output of
+        the other nodes to ensure consistency.
+        """
+        output = None
         for node in self.nodes:
             if output is None:
                 output = node.get_output_type(input_type, as_string)
@@ -258,7 +265,10 @@ class SameInputLayerNode(BaseNode):
                 continue
         return output
 
-class EnsembleNotFoundException(Exception): pass
+
+class EnsembleNotFoundException(Exception):
+    """Error when loading of ensembles is not possible"""
+    pass
 
 
 class ClassificationFlowsLoaderNode(BaseNode):
@@ -340,19 +350,20 @@ class ClassificationFlowsLoaderNode(BaseNode):
             flow_pathes = tuple(flow_pathes[index] for index in flow_select_list)
 
         if len(flow_pathes) == 0: 
-            raise EnsembleNotFoundException("No ensemble found in %s for pattern %s" %
-                                            (ensemble_base_dir, ensemble_pattern))
+            raise EnsembleNotFoundException(
+                "No ensemble found in %s for pattern %s" %
+                (ensemble_base_dir, ensemble_pattern))
         
         self.feature_names = \
-                map(lambda s: "_".join(s.split(os.sep)[-1].split('_')[0:2]),
-                    flow_pathes)
+            map(lambda s: "_".join(s.split(os.sep)[-1].split('_')[0:2]),
+            flow_pathes)
 
-        self.set_permanent_attributes(ensemble = None,
-                                      flow_pathes = flow_pathes,
-                                      cache_dir = cache_dir,
-                                      cache = None,
-                                      cache_updated = False,
-                                      store = True) # always store cache
+        self.set_permanent_attributes(ensemble=None,
+                                      flow_pathes=flow_pathes,
+                                      cache_dir=cache_dir,
+                                      cache=None,
+                                      cache_updated=False,
+                                      store=True) # always store cache
     
     def _load_cache(self):
         self.cache = defaultdict(dict)

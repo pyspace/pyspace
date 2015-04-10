@@ -14,7 +14,7 @@ import warnings
 import glob
 from pySPACE.missions.support.WindowerInterface import AbstractStreamReader
 from pySPACE.missions.support.windower import MarkerWindower
-
+from pySPACE.tools.filesystem import get_author
 from pySPACE.resources.dataset_defs.base import BaseDataset
 
 
@@ -298,7 +298,6 @@ class TimeSeriesDataset(BaseDataset):
                         self.end_offset_ms = 1000.0
                         
                         whole_len = (self.start_offset_ms + self.end_offset_ms)*Fs/1000.0 + window
-                #        responses = numpy.zeros((12, 15, window, channels))
                         responses = numpy.zeros((12, 15, whole_len, channels))
                         for epoch in range(epochs):
                             rowcolcnt=numpy.ones(12)
@@ -308,15 +307,11 @@ class TimeSeriesDataset(BaseDataset):
                                     if n-24-self.start_offset_ms*Fs/1000.0 < 0:
                                         temp = signal[epoch,0:n+window+self.end_offset_ms*Fs/1000.0-24,:]
                                         temp = numpy.vstack((numpy.zeros((whole_len - temp.shape[0], temp.shape[1])), temp))
-                #                        print '1', temp.shape
                                     elif n+window+self.end_offset_ms*Fs/1000.0-24> signal.shape[1]:
                                         temp = signal[epoch,n-24-self.start_offset_ms*Fs/1000.0:signal.shape[1],:]
                                         temp = numpy.vstack((temp, numpy.zeros((whole_len-temp.shape[0], temp.shape[1]))))
-                #                        print '2', temp.shape
                                     else:
                                         temp = signal[epoch, n-24-self.start_offset_ms*Fs/1000.0:n+window+self.end_offset_ms*Fs/1000.0-24, :]
-                #                        print '3', temp.shape
-                #                    responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=signal[epoch,n-24:n+window-24,:]
                                     responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=temp
                                     rowcolcnt[rowcol-1]=rowcolcnt[rowcol-1]+1
                 
@@ -411,18 +406,7 @@ class TimeSeriesDataset(BaseDataset):
         if s_format == "csv" and s_type == "real":
             s_type = "%.18e"
         # Update the meta data
-        try:
-            import platform
-            CURRENTOS = platform.system()
-            if CURRENTOS == "Windows":
-                import getpass
-                author = getpass.getuser()
-            else:
-                import pwd
-                author = pwd.getpwuid(os.getuid())[4]
-        except Exception:
-            author = "unknown"
-            self._log("Author could not be resolved.", level=logging.WARNING)
+        author = get_author()
         self.update_meta_data({"type": "time_series",
                                "storage_format": s_format,
                                "author": author,
@@ -504,6 +488,74 @@ class TimeSeriesDataset(BaseDataset):
                 mdict[name + key_str] = collection_object 
                 import scipy.io
                 scipy.io.savemat(result_file, mdict=mdict)
+            elif s_format in ["eeg"]:
+
+                result_file = open(os.path.join(result_path,
+                                                name + key_str + ".eeg"),"a+")
+                result_file_mrk = open(os.path.join(result_path,
+                                                name + key_str + ".vmrk"),"w")
+
+                result_file_mrk.write("Brain Vision Data Exchange Marker File, "
+                                      "Version 1.0\n")
+                result_file_mrk.write("; Data stored by pySPACE\n")
+                result_file_mrk.write("[Common Infos]\n")
+                result_file_mrk.write("Codepage=UTF-8\n")
+                result_file_mrk.write("DataFile=%s\n" %
+                                      str(name + key_str + ".eeg"))
+                result_file_mrk.write("\n[Marker Infos]\n")
+
+                markerno = 1
+                datapoint = 1
+                sf = None
+                channel_names = None
+
+                for t in time_series:
+                    if sf is None:
+                        sf = t[0].sampling_frequency
+                    if channel_names is None:
+                        channel_names = t[0].get_channel_names()
+                    for mrk in t[0].marker_name.keys():
+                        for tm in t[0].marker_name[mrk]:
+                            result_file_mrk.write(str("Mk%d=Stimulus,%s,%d,1,0\n" %
+                                (markerno, mrk, datapoint+(tm*sf/1000.0))))
+                            markerno += 1
+                    data_ = t[0].astype(numpy.int16)
+                    data_.tofile(result_file)
+                    datapoint += data_.shape[0]
+
+                result_hdr = open(os.path.join(result_path,
+                                                name + key_str + ".vhdr"),"w")
+
+                result_hdr.write("Brain Vision Data Exchange Header "
+                                 "File Version 1.0\n")
+                result_hdr.write("; Data stored by pySPACE\n\n")
+                result_hdr.write("[Common Infos]\n")
+                result_hdr.write("Codepage=UTF-8\n")
+                result_hdr.write("DataFile=%s\n" %
+                                      str(name + key_str + ".eeg"))
+                result_hdr.write("MarkerFile=%s\n" %
+                                      str(name + key_str + ".vmrk"))
+                result_hdr.write("DataFormat=BINARY\n")
+                result_hdr.write("DataOrientation=MULTIPLEXED\n")
+                result_hdr.write("NumberOfChannels=%d\n" % len(channel_names))
+                result_hdr.write("SamplingInterval=%d\n\n" % (1000000/sf))
+                result_hdr.write("[Binary Infos]\n")
+                result_hdr.write("BinaryFormat=INT_16\n\n")
+                result_hdr.write("[Channel Infos]\n")
+
+                # TODO: Add Resolutions to time_series
+                # 0 = 0.1 [micro]V,
+                # 1 = 0.5 [micro]V,
+                # 2 = 10 [micro]V,
+                # 3 = 152.6 [micro]V (seems to be unused!)
+                resolutions_str = [unicode("0.1,%sV" % unicode(u"\u03BC")),
+                   unicode("0.5,%sV" % unicode(u"\u03BC")),
+                   unicode("10,%sV" % unicode(u"\u03BC")),
+                   unicode("152.6,%sV" % unicode(u"\u03BC"))]
+                for i in range(len(channel_names)):
+                    result_hdr.write(unicode("Ch%d=%s,,%s\n" %
+                        (i+1,channel_names[i],
+                        unicode(resolutions_str[0]))).encode('utf-8'))
             else:
                 NotImplementedError("Using unavailable storage format:%s!"
                                     % s_format)
@@ -572,32 +624,42 @@ class TimeSeriesClient(AbstractStreamReader):
         """connect and initialize client"""
         try:
             self._initialize(self.backup_iter.next())
-        except StopIteration:
+        except StopIteration as e:
+            print("timeseriesclient got no data: %s" % e)
             # if a StopIteration is catched right here there
             # is no data contained for the current modality (train/test)
             # in this datastream.
             pass
 
     def set_window_defs(self, window_definitions):
-        index = self.nmarkertypes
-        # Marker at which the windows are cut
+        """ Set all markers at which the windows are cut"""
+        # extract start and endmarker
+        marker_id_index = self.nmarkertypes
+        self._markerNames[marker_id_index] = window_definitions[0].startmarker
+        self._markerids[window_definitions[0].startmarker] = marker_id_index
+        marker_id_index += 1      
+        self._markerNames[marker_id_index] = window_definitions[0].endmarker
+        self._markerids[window_definitions[0].endmarker] = marker_id_index
+        marker_id_index += 1
+        
+        # extract all other markers
         for wdef in window_definitions:
             if not self.markerids.has_key(wdef.markername):
-                self.markerNames[index] = wdef.markername
-                self.markerids[wdef.markername] = index
-                index += 1
+                self._markerNames[marker_id_index] = wdef.markername
+                self._markerids[wdef.markername] = marker_id_index
+                marker_id_index += 1
             # Exclude definitions marker
             for edef in wdef.excludedefs:
                 if not self.markerids.has_key(edef.markername):
-                    self.markerNames[index] = edef.markername
-                    self.markerids[edef.markername] = index
-                    index += 1
+                    self._markerNames[marker_id_index] = edef.markername
+                    self._markerids[edef.markername] = marker_id_index
+                    marker_id_index += 1
             # Include definitions marker
             for idef in wdef.includedefs:
                 if not self.markerids.has_key(idef.markername):
-                    self.markerNames[index] = idef.markername
-                    self.markerids[idef.markername] = index
-                    index += 1
+                    self._markerNames[marker_id_index] = idef.markername
+                    self._markerids[idef.markername] = marker_id_index
+                    marker_id_index += 1
         self.nmarkertypes = len(self.markerNames.keys())
 
     def _initialize(self,item):
@@ -659,11 +721,8 @@ class TimeSeriesClient(AbstractStreamReader):
                 position_as_samples = numpy.int(position_as_ms / 1000.0 *
                                                 self.dSamplingInterval)
 
-                # found a new marker, add it to marker name buffer
-                if marker == -1 or not self.markerids.has_key(marker):
-                    self.nmarkertypes += 1
-                    self.markerNames[self.nmarkertypes] = marker
-                    self.markerids[marker] = self.nmarkertypes
+                if not self.markerids.has_key(marker):
+                    continue
 
                 markerid = self.markerids[marker]
 

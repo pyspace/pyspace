@@ -1046,8 +1046,7 @@ class WindowFactory(object):
 
     @staticmethod
     def default_windower_spec():
-
-        window_specs = {'skip_ranges': [{'start': 0, 'end': 1}],
+        window_specs = {'skip_ranges': [{'start': 0, 'end': 0}],
                         'window_defs':
                             {'window':
                                 {'classname': 'Window',

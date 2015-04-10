@@ -133,7 +133,7 @@ class ExternalGeneratorSourceNode(BaseNode):
         return odict
     
     
-    def getMetadata(self, key):
+    def get_metadata(self, key):
         """ This source node does not contain collection meta data. """
         return None
 

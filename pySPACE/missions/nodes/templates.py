@@ -1,4 +1,7 @@
-""" Tell the developer about general coding and documentation approaches for nodes """
+""" Tell the developer about general coding and documentation approaches for nodes
+
+A very useful tutorial can be found under :ref:`t_new_node`
+"""
 from pySPACE.missions.nodes.base_node import BaseNode
 import warnings
 import logging

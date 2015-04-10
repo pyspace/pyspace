@@ -262,7 +262,7 @@ class BaseDataset(object):
 
     def _log(self, message, level=logging.INFO):
         """ Logs  the given message  with the given logging level """
-        root_logger = logging.getLogger("%s-%s.%s" % (socket.gethostname(),
+        root_logger = logging.getLogger("%s.%s.%s" % (socket.gethostname(),
                                         os.getpid(),
                                         self))
         if len(root_logger.handlers) == 0:

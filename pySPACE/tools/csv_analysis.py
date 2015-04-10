@@ -298,10 +298,13 @@ def strip_dict(data_dict, cond_dict, invert_mask=False, limit2keys=None):
         
     return result_dict
 
+
 def merge_dicts(dict1,dict2):
-    """Merge two dictionaries into a new one, where both have ideally the same keys and lengths.
-    
-    The merge procedure is performed even if the keys are not identical, but a warning is elicited.
+    """Merge two dictionaries into a new one
+
+    Both have ideally the same keys and lengths.
+    The merge procedure is performed even if the keys are not identical,
+    but a warning is elicited.
         
     **Parameters**
     
@@ -310,26 +313,35 @@ def merge_dicts(dict1,dict2):
         :dict2:
             the other dictionary
     
-    :Author: Mario Krell
+    :Author: Mario Michael Krell
     :Created: 2010/11/09
     """
     
     import copy, warnings
 
-    result_dict=dict()
+    result_dict = dict()
     if not len(dict1.keys()) == len(dict2.keys()) or \
-        not all([key1 in dict2.keys() for key1 in dict1.keys()]):
+            not all([key1 in dict2.keys() for key1 in dict1.keys()]):
         warnings.warn('Inconsistency while merging: ' +
                       'The two directories have different keys!')
+        bad_keys = True
+    else:
+        bad_keys = False
     for key in dict1.keys():
         if dict2.has_key(key):
             result_dict[key] = copy.deepcopy(dict1[key])
             result_dict[key].extend(copy.deepcopy(dict2[key]))
         else:
             warnings.warn('Inconsistency while merging: Key ' + key + 
-                                        ' is only existing in one dictionary!')
+                          ' is only existing in one dictionary!')
+    if bad_keys:
+        for key in dict2.keys():
+            if not dict1.has_key(key):
+                warnings.warn('Inconsistency while merging: Key ' + key +
+                              ' is only existing in one dictionary!')
     return result_dict
-    
+
+
 def merge_multiple_dicts(dictlist):
     """ Merge multiple dictionaries into a single one
     
@@ -401,8 +413,9 @@ def add_key(orig_dict, key_str, key_list):
     orig_dict[key_str]=copy.deepcopy(key_list)
 
     return orig_dict
-    
-def extend_dict(orig_dict, extension_dict, retain_unique_items = True):
+
+
+def extend_dict(orig_dict, extension_dict, retain_unique_items=True):
     """ Extend one dictionary with another
     
     .. note:: This function returns a modified dictionary, even if the extension
@@ -416,25 +429,29 @@ def extend_dict(orig_dict, extension_dict, retain_unique_items = True):
         :extension_dict:
             the dictionary defining the extension
     
-    :Author: Sirko Straube, Mario Krell
+    :Author: Sirko Straube, Mario Michael Krell
     :Created: 2010/11/09
     """
     import copy, warnings
     
     if not len(orig_dict.keys()) == len(extension_dict.keys()) or \
-        not all([key1 in extension_dict.keys() for key1 in orig_dict.keys()]):
+            not all([key1 in extension_dict.keys() for key1 in orig_dict.keys()]):
         warnings.warn('Inconsistency while merging: ' +
-                  'The two directories have different keys!')
+                      'The two directories have different keys!')
     
     current_num_entries = len(orig_dict[orig_dict.keys()[0]])
     for key in extension_dict.keys():
-        if orig_dict.has_key(key) :
+        if orig_dict.has_key(key):
             orig_dict[key].extend(copy.deepcopy(extension_dict[key]))
         elif retain_unique_items:
             orig_dict[key] = current_num_entries*[None]
             orig_dict[key].extend(copy.deepcopy(extension_dict[key]))
+            warnings.warn('Key ' + key +
+                          ' retained during dictionary extension:' +
+                          ' Does not exist in all files!')
         else:
-            warnings.warn('Key ' + key + ' dismissed during dictionary extension:'+
+            warnings.warn('Key ' + key +
+                          ' dismissed during dictionary extension:' +
                           ' Does not exist in all files!')
     
     num_new_entries = len(extension_dict[extension_dict.keys()[0]])
@@ -443,14 +460,136 @@ def extend_dict(orig_dict, extension_dict, retain_unique_items = True):
             pass
         elif retain_unique_items:       
             orig_dict[key].extend(num_new_entries*[None])
+            warnings.warn('Key ' + key +
+                          ' retained during dictionary extension:' +
+                          ' Does not exist in all files!')
         else:
-            warnings.warn('Key ' + key + ' dismissed during dictionary extension:'+
+            warnings.warn('Key ' + key +
+                          ' dismissed during dictionary extension:' +
                           ' Does not exist in all files!')
             orig_dict.pop(key)
         
     return orig_dict
 
+def average_rows(data_dict, key_list, n=None, new_n=None):
+    """ Average across all values of the specified columns 
+    
+    Reduces the number of rows, i.e., the number of values in the lists, by
+    averaging all values of a specific key, e.g., across all splits or subjects.
 
+    .. note::
+        It is assumed that for two parameters A and B which have a and b
+        different values the number of rows to average is a*b. If you have 
+        certain constraints so that the number of rows to average is not a*b,
+        you have to specify them explicitly. 
+    
+    **Parameters**
+    
+        :data_dict:
+            Dictionary as returned by csv2dict.
+        
+        :key_list:
+            List of keys (equals column names in a csv table) over which the
+            average is computed.
+            
+        :n:
+            Number of rows that are averaged. If None it is determined 
+            automatically. default=None.
+        
+        :new_n:
+            Number of rows after averaging. If None it is determined 
+            automatically. default=None.
+            
+            
+    """
+    import warnings
+    import numpy
+    
+    # check some special keys
+    ignore_cols = []
+    if "__Split__" in key_list:
+        ignore_cols.append('__Key_Fold__')
+    elif "__Key_Fold__" in key_list:
+        ignore_cols.append('__Split__')
+    if "__Run__" in key_list:
+        ignore_cols.append('__Key_Run__')
+    elif "__Key_Run__" in key_list:
+        ignore_cols.append('__Run__')
+    
+    # determine dim of rows to average and result table
+    if n is None:
+        n = 1
+        for key in key_list:
+            n *= len(set(data_dict[key]))
+    if new_n is None:
+        new_n = len(data_dict[key_list[0]]) / n
+    # averaging over *key* means all other parameter columns have to be the same    
+    indices = [[] for _ in range(new_n)]
+    patterns = [[] for _ in range(new_n)]
+    values = [data_dict[key] for key in data_dict.keys() \
+              if (key.startswith('__') and not (key in key_list or key in \
+                                                                  ignore_cols))]
+    # determine indices of rows that are averaged
+    i = 0
+    for pattern in zip(*values):
+        inserted = False
+        for j in range(new_n):
+            if pattern in patterns[j]:
+                indices[j].append(i)
+                inserted = True
+                break
+            if patterns[j] == []:
+                patterns[j].append(pattern)
+                indices[j].append(i)
+                inserted = True
+                break
+        if inserted != True:
+            warnings.warn("Line %d not included in average! Check dimensions." % i)
+        i += 1
+    
+    # average the data
+    data_dict = parse_data(data_dict)
+    result_dict = empty_dict(data_dict)
+    for key in result_dict.keys():
+        for avg_inds in indices:
+            a = numpy.array(data_dict[key])[avg_inds]
+            # we can only average numbers
+            if isinstance(data_dict[key][0], (float,int)):
+                # since int would be converted to float by averaging we try to
+                # prevent that if possible
+                if (a == a[0]).all():
+                    result_dict[key].append(a[0])
+                else:
+                    result_dict[key].append(numpy.mean(a))
+            elif key in key_list or key in ignore_cols:
+                result_dict[key].append("averaged")
+            else:
+                result_dict[key].append(a[0])
+                # check if not equal!
+                if not((a == a[0]).all()):
+                    warnings.warn("Averaged across different conditions... %s" % str(a))
+    
+    return result_dict
+
+def parse_data(data_dict):
+    """ Parse the data of type string to int and float values where possible 
+    
+    **Parameters**
+    
+        :data_dict:
+            Dictionary as returned by csv2dict.
+    """
+    result_dict = empty_dict(data_dict)
+    for key in data_dict.keys():
+        for s in data_dict[key]:
+            try:
+                result_dict[key].append(int(s))
+            except ValueError:
+                try:
+                    result_dict[key].append(float(s))
+                except ValueError:
+                    result_dict[key].append(s)
+    return result_dict
 
 def check_for_failures(data, num_splits, conditions, remove_count=False):
     """ Compute a list of conditions for which the classification failed

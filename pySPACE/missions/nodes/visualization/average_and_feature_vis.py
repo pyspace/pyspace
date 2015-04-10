@@ -577,7 +577,7 @@ class AverageFeatureVisNode(BaseNode):
             else:
                 figTS.set_size_inches((4*11.7,  4*8.3))
                 
-            ec = self.getMetadata("electrode_coordinates")
+            ec = self.get_metadata("electrode_coordinates")
             if ec is None:
                 ec = StreamDataset.ec
             ec_2d = StreamDataset.project2d(ec)
