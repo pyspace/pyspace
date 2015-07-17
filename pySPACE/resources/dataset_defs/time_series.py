@@ -721,6 +721,11 @@ class TimeSeriesClient(AbstractStreamReader):
                 position_as_samples = numpy.int(position_as_ms / 1000.0 *
                                                 self.dSamplingInterval)
 
+                # found a new marker, add it to marker name buffer
+                if marker == -1 or not self.markerids.has_key(marker):
+                    self.nmarkertypes += 1
+                    self.markerNames[self.nmarkertypes] = marker
+                    self.markerids[marker] = self.nmarkertypes
                 if not self.markerids.has_key(marker):
                     continue
 

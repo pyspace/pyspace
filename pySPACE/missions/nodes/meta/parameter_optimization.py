@@ -316,7 +316,7 @@ class ParameterOptimizationBase(BaseNode):
         # or saved and the chosen parameter is used for training on the
         # whole data set, independent of the chosen algorithm
         self._log("Using parameterization %s with optimal performance %s for " \
-                  "metric %s." % (self.best_parametrization, 
+                  "metric %s." % (self.best_parametrization,
                                   self.best_performance, self.metric))
         # Fill in the final parameters in the flow template
         self.flow_template = NodeChainFactory.replace_parameters_in_node_chain(
@@ -427,16 +427,16 @@ class ParameterOptimizationBase(BaseNode):
     def get_sensor_ranking(self):
         """ Get the sensor ranking from the optimized trained flow """
         # The last node is the irrelevant 'sink node'. We need the previous one.
-        return self.flow[-1].get_sensor_ranking()
+        return self._get_flow()[-1].get_sensor_ranking()
 
-    def get_previous_transformations(self):
-        """ Recursively construct a list of (linear) transformations 
-        
+    def get_previous_transformations(self, sample=None):
+        """ Recursively construct a list of (linear) transformations
+
         Overwrites BaseNode function, since meta node needs to get
         transformations from subflow.
         """
-        transformations = self.input_node.get_previous_transformations()
-        own_transformations = self.flow[-1].get_previous_transformations()
+        transformations = self.input_node.get_previous_transformations(sample)
+        own_transformations = self._get_flow()[-1].get_previous_transformations(sample)
         transformations.extend(own_transformations)
         return transformations
 

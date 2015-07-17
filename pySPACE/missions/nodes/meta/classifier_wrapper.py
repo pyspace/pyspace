@@ -7,6 +7,7 @@ from pySPACE.missions.nodes.base_node import BaseNode
 # the output is a set of predictions
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 
+
 class SplitClassifierLayerNode(BaseNode):
     """ Split the overrepresented class in the training set for multiple training.
     

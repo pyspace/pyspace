@@ -43,7 +43,9 @@ class ProjectionPopup(QtGui.QMainWindow):
     
     This pop up window allows to select a parameter and its desired value.
     The result collection currently loaded in *main_window* is then projected
-    onto the subset where the chosen parameter has the chosen value.    
+    onto the subset where the chosen parameter has the chosen value.
+
+    For more intuitive usage, the process is named *Filter*.
     """
     
     def __init__(self, main_window, *args, **kwargs):
@@ -55,7 +57,7 @@ class ProjectionPopup(QtGui.QMainWindow):
         self.selected_values = None
         
         self.resize(640,480)
-        self.setWindowTitle('Project onto')
+        self.setWindowTitle('Filter')
         
         self._create_central_widget()
 
@@ -86,7 +88,7 @@ class ProjectionPopup(QtGui.QMainWindow):
                      self._value_selected)
         
         # Add button that need to be pressed to perform projection
-        self.project_button = QtGui.QPushButton("&Project")
+        self.project_button = QtGui.QPushButton("&Filter")
         self.connect(self.project_button, QtCore.SIGNAL('clicked()'), 
                      self._project)
         
@@ -125,7 +127,10 @@ class ProjectionPopup(QtGui.QMainWindow):
         self.selected_values = self.values_view.selectedItems()
     
     def _project(self):
-        """Called when user presses "project" button. Performs the actual projection."""
+        """Called when user presses "filter" button
+
+        Performs the actual projection/filtering.
+        """
         # Check that parameter and value have actually been selected
         if self.selected_variable is None or self.selected_values is None:
             warning_box = QtGui.QMessageBox()
@@ -271,7 +276,7 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         self.axes = self.fig.add_subplot(111)
         
         # Text showing projection parameters
-        self.project_params_label = QtGui.QLabel("No projections.")
+        self.project_params_label = QtGui.QLabel("No filtering.")
         self.project_params_label.setWordWrap(1)
         self.project_params_label.setFixedWidth(self.canvas.width())
         
@@ -316,7 +321,7 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         self.projection_parameters[selected_variable] = selected_values
         
         # Update projections label
-        self.project_params_label.setText("Projections: " +
+        self.project_params_label.setText("Filters: " +
                                           str(self.projection_parameters))
         self.project_params_label.adjustSize()
         
@@ -361,7 +366,7 @@ class PerformanceResultsAnalysisWidget(QtGui.QWidget):
         """ Reset working collection to originally loaded one"""
         self.current_collection = copy.deepcopy(self.result_collection)
         self.projection_parameters = {}
-        self.project_params_label.setText("No projections.")
+        self.project_params_label.setText("No filtering.")
         self._update_variable_selection()
 
         self.metrics_items = []
@@ -527,7 +532,7 @@ class PerformanceResultsAnalysisMainWindow(QtGui.QMainWindow):
         super(PerformanceResultsAnalysisMainWindow, self).__init__(parent)
         
         self.resize(1024, 768)
-        self.setWindowTitle('results analysis ')
+        self.setWindowTitle('pySPACE Performance Results Analysis GUI')
         
         self.central_widget = PerformanceResultsAnalysisWidget(
             results_file=results_file, parent=self)

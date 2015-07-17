@@ -159,7 +159,6 @@ class Operation(object):
         input_paths = glob.glob(input_path_pattern)
         obsolete_paths=[]
         for path in input_paths:
-            file_path = os.sep.join([path,"metadata.yaml"])
             if os.path.isfile(os.sep.join([path,"metadata.yaml"])):
                 continue
             elif os.path.isfile(os.sep.join([path,"collection.yaml"])):

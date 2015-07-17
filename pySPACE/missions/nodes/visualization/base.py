@@ -114,9 +114,8 @@ class VisualizationBase(BaseNode):
     :Limit the amount of data:
     
         :limit2class:
-            The string you specify here has to match the actual class label. 
-            Then, only the data belonging to this class is
-            plotted. 
+            List of strings. Only the data belonging to class labels in the
+            list are plotted.
         
             .. note:: If there is no match, no plot will be generated!
     
@@ -284,8 +283,8 @@ class VisualizationBase(BaseNode):
                 user_dir = '%s/' % os.getcwd()
 
             #add a folder with a timestamp
-            user_dir = user_dir + time.strftime("%Y%m%d_%H_%M_%S") + \
-                        '_Visualization_Plot/'
+            user_dir = os.path.join(user_dir,time.strftime("%Y%m%d_%H_%M_%S") + \
+                        '_Visualization_Plot/')
             
             create_directory(user_dir)
         else:
@@ -424,7 +423,7 @@ class VisualizationBase(BaseNode):
         
         if self.limit2class:
             # is the current label not the one the user is interested in?
-            if curr_label != self.limit2class:
+            if curr_label not in self.limit2class:
                 #skip it
                 self.skipped_trials.append(self.trial_counter)
                 return data
@@ -437,7 +436,7 @@ class VisualizationBase(BaseNode):
                 curr_label += '_Test'
                 
         #do we have data that we not requested?
-        elif (training_data and not self.request_training) \
+        elif (self._training_execution_phase and not self.request_training) \
                 or (not training_data and not self.request_test):
             #skip it!
             self.skipped_trials.append(self.trial_counter)

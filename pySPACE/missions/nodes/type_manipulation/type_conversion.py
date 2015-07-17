@@ -240,7 +240,8 @@ class FeatureVector2TimeSeriesNode(BaseNode):
                             self.reshape = False
                             break
             self.shape_test = True
-            self._log("Reshaping activated.", level=logging.INFO)
+            if not self.reshape:
+                self._log("Reshaping deactivated.", level=logging.INFO)
 
         data_array = data.view(numpy.ndarray)
         if not self.reshape:

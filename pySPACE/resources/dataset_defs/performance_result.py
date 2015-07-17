@@ -233,9 +233,10 @@ class PerformanceResultSummary(BaseDataset):
     def transform(self):
         """ Fix format problems like floats in metric columns and tuples instead of column lists """
         for key in self.get_metrics():
-            if not type(self.data[key][0])==float:
+            if not type(self.data[key][0]) == float:
                 try:
-                    l = [float(value) for value in self.data[key]]
+                    l = [float(value) if not value == "" else 0
+                         for value in self.data[key]]
                     self.data[key] = l
                 except:
                     warnings.warn("Metric %s has entry %s not of type float."%(
@@ -676,15 +677,16 @@ class PerformanceResultSummary(BaseDataset):
         metrics = []
         variables = self.get_gui_variables()
         for key in self.identifiers:
-            if (not(key in variables) \
-                or key in ['Key_Dataset']):
-                    metrics.append(key)
+            if not(key in variables) or key in ['Key_Dataset']:
+                metrics.append(key)
             # Add variables, that can be interpreted as metrics
-            if (key in ['__Num_Retained_Features__','__Num_Eliminated_Sensors__']\
-                or key.startswith("~") or "Pon" in key)\
-                and len(list(set(self.data[key]))) > 1\
-                and not (key in metrics):
-                    metrics.append(key)
+            if type(key) is str and \
+                    (key in ['__Num_Retained_Features__',
+                             '__Num_Eliminated_Sensors__']
+                     or key.startswith("~") or "Pon" in key) \
+                    and len(list(set(self.data[key]))) > 1 \
+                    and not (key in metrics):
+                metrics.append(key)
         return metrics
     
     def get_metrics(self):
@@ -692,38 +694,48 @@ class PerformanceResultSummary(BaseDataset):
         metrics = []
         variables = self.get_variables()
         for key in self.identifiers:
-            if not(key in variables) and not key.startswith("~") and not key=="None":
-                    metrics.append(key)
+            if not type(key) is str:
+                warnings.warn("Wrong key (%s) provided with type %s."
+                              % (str(key), type(key)))
+            elif not(key in variables) and not key.startswith("~") and \
+                    not key == "None":
+                metrics.append(key)
             # Add variables, that can be interpreted as metrics
-            if (key in ['__Num_Retained_Features__','__Num_Eliminated_Sensors__']):
-                 metrics.append(key)
+            if key in ['__Num_Retained_Features__',
+                       '__Num_Eliminated_Sensors__']:
+                metrics.append(key)
         return metrics
     
     def get_gui_variables(self):
-        """ Returns the column headings that correspond to'variables' to be visualized in the Gui """
+        """ Returns the column headings that correspond to 'variables' to be visualized in the Gui """
         variables = []
         for key in self.identifiers:
-            if (key == 'None'  #special key to get box plots without parameter dependencies
-                or ((key in ['__Dataset__', 'Kernel_Weight', 'Complexity',
-                           'Kernel_Exponent', 'Kernel_Gamma', 'Kernel_Offset',
-                           'Classifier_Type', 'Kernel_Type', 'Key_Scheme',
-                           'Key_Run', 'Key_Fold','Run','Split'] 
-                           # old variable names kept for 
-                or key.startswith('__')
-                or key.startswith('~')
-                ) and not key=="__Solver_Iterations__" # old naming :(
-                        and len(list(set(self.data[key]))) > 1)):
+            if not type(key) is str:
+                warnings.warn("Wrong key (%s) provided with type %s."
+                              % (str(key), type(key)))
+            # special key to get box plots without parameter dependencies
+            elif (key == 'None' or (
+                    (key in ['__Dataset__', 'Kernel_Weight', 'Complexity',
+                             'Kernel_Exponent', 'Kernel_Gamma', 'Kernel_Offset',
+                             'Classifier_Type', 'Kernel_Type', 'Key_Scheme',
+                             'Key_Run', 'Key_Fold', 'Run', 'Split']
+                     or key.startswith('__')
+                     or key.startswith('~'))
+                    and len(list(set(self.data[key]))) > 1)):
                 variables.append(key)
         return variables
     
     def get_variables(self):
         """ Variables are marked with '__' 
         
-        Everything else are metrics, meta metrics or processing informations.
+        Everything else are metrics, meta metrics, or processing information.
         """
         variables = []
         for key in self.identifiers:
-            if key.startswith('__') and not key=="__Solver_Iterations__":
+            if not type(key) is str:
+                warnings.warn("Wrong key (%s) provided with type %s."
+                              % (str(key), type(key)))
+            elif key.startswith('__'):
                 variables.append(key)
         return variables
     
@@ -883,8 +895,6 @@ class PerformanceResultSummary(BaseDataset):
                           yerr=map(scipy.stats.sem, curve_y),
                           elinewidth = 1, capsize = 5, label=y_key,
                           color = colors.next(), linestyle=linestyles.next())
-
-        axes.legend(loc = 0)
         axes.set_xlabel(x_key) 
         if y_key.count("#") == 0:
             axes.set_ylabel(y_key.strip("_").replace("_", " "))
@@ -974,8 +984,8 @@ class PerformanceResultSummary(BaseDataset):
         
     def plot_numeric_vs_nominal(self, axes, numeric_key, nominal_key, value_key,
             dependent_BA_plot=False, relative_plot=False, minimal=False):
-        """ Plot for comparison of several different values of a nominal parameter
-    
+        """ Plot for comparison of several different values of a nominal parameter with mean and standard error
+
         A function that allows to create a plot that visualizes the effect of 
         varying one numeric parameter onto the performance for several
         different values of a nominal parameter. 

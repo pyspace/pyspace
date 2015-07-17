@@ -499,6 +499,7 @@ class ClassificationFlowsLoaderNode(BaseNode):
         else:
             return PredictionVector
 
+
 class MultiClassLayerNode(SameInputLayerNode):
     """ Wrap the one vs. rest or one vs. one scheme around the given node
     

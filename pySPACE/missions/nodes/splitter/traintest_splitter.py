@@ -137,7 +137,7 @@ class TrainTestSplitterNode(BaseNode):
         # Create generator instead of loading all data
         if self.num_train_instances and not (self.random):
             self.train_data = []
-            input_generator=self.input_node.request_data_for_testing
+            input_generator=self.input_node.request_data_for_testing()
             for i in range(self.num_train_instances):
                 self.train_data.append(input_generator.next())
             self.test_data = input_generator
