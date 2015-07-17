@@ -39,6 +39,10 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
     http://www.csie.ntu.edu.tw/~cjlin/libsvm/oldfiles/
     
     **Parameters**
+
+    Some general parameters are only documented in the
+    :class:`RegularizedClassifierBase <pySPACE.missions.nodes.classification.base.RegularizedClassifierBase>`.
+
         :svm_type:
             Defines the used SVM type.
             One of the following Strings: 'C-SVC', 'one-class SVM',
@@ -150,6 +154,13 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
     def __init__(self, svm_type='C-SVC', max_iterations=0,
                  str_label_function=None,
                  complexities_path=None, **kwargs):
+
+        # set default svm_type 'C-SVC' if unsupported svm_type is selected
+        supported_types = ["C-SVC", "one-class SVM", "epsilon-SVR", "nu-SVR"]
+        if svm_type not in supported_types:
+            svm_type = 'C-SVC'
+            warnings.warn("SVM-type unknown. C-SVC will be used!")
+
         if svm_type == 'C-SVC':
             regression = False
         else:
@@ -252,10 +263,7 @@ class LibSVMClassifierNode(RegularizedClassifierBase):
             options += " -s 2"
         elif self.svm_type == 'epsilon-SVR':
             options += " -s 3"
-        else:
-            options += " -s 0"
-            self.svm_type = 'C-SVC'
-            warnings.warn("SVM-type unknown. C-SVC will be used!")
+
         if not self.debug:
             options += " -q"
             self._log("Libsvm is now quiet!")
@@ -500,6 +508,9 @@ class LiblinearClassifierNode(LibSVMClassifierNode):
     (:mod:`pySPACE.missions.nodes.classification.svm_variants.SOR`)
 
     **Parameters**
+
+    Some general parameters are only documented in the
+    :class:`RegularizedClassifierBase <pySPACE.missions.nodes.classification.base.RegularizedClassifierBase>`.
 
         :svm_type:
             :0: L2-regularized logistic regression (primal)

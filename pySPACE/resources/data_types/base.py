@@ -128,14 +128,17 @@ class BaseData(numpy.ndarray):
                 raise_error = True
                 #print a,b
                 warnings.warn(
-                    "Dimensions do not match. Better cast object to ndarray," +
-                    " before slicing! To locate the error check documentation" +
-                    " in base.py or uncomment the lower next two lines" +
-                    " and restart!")
+                    "Slicing was used on your data with type %s" % type(self) +
+                    "Better cast object to ndarray before slicing! " +
+                    "('new_array = data.view(numpy.ndarray)' " +
+                    "Metadata is probably not consistent anymore. " +
+                    "For further debugging check the implementation in " +
+                    "'pySPACE.resources.data_types.base.py.'"
+                    )
         except:
             pass
-            #        if raise_error:
-            #            raise TypeError("Use the traceback to find out, where you used slicing on the data. Replace the data by x=data.view(numpy.ndarray)!")
+#        if raise_error:
+#            raise TypeError("Use the traceback to find out, where you used slicing on the data. Replace the data by x=data.view(numpy.ndarray)!")
 
     def __reduce__(self):
         # Refer to 

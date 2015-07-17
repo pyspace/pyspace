@@ -100,9 +100,13 @@ the operation on.
 constraints
 -----------
 
-List of strings, where the parameters values are replaced and
-which is afterwards evaluated to check if is *True*.
-If it is not, the parameter is rejected.
+List of strings, where the place holders for the parameter values are replaced
+as in the node chain template.
+After creating all possible combinations of parameters, they are inserted
+into this string and the string is evaluated like a Python expression.
+If it is not evaluated to *True*, the parameter is rejected.
+The test is performed For each constraint (string). For being used later on,
+a parameter setting has to pass all tests.
 
 (*optional, default: []*)
 
@@ -125,7 +129,7 @@ the same name for different results.
 storage_format
 --------------
 
-Some datsets give the opportunity to choose between different
+Some datasets give the opportunity to choose between different
 formats for storing the result. The choice can be specified here.
 For details look at the :mod:`~pySPACE.resources.dataset_defs` documentation.
 If the format is not specified, the default of the
@@ -204,6 +208,22 @@ Exemplary Call
             node: Classification_Performance_Sink
             parameters:
                 ir_class: "Target"
+
+.. code-block:: yaml
+
+    type: node_chain
+
+    input_path: "example_data"
+    templates : ["example_flow.yaml"]
+    backend: "local"
+    parameter_ranges :
+        __LOWER_CUTOFF__ : [0.1, 1.0, 2.0]
+        __UPPER_CUTOFF__ : [2.0, 4.0]
+    constraints:
+        - "__LOWER_CUTOFF__ < __UPPER_CUTOFF__"
+
+
+    runs : 10
 
 .. code-block:: yaml
 

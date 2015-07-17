@@ -1124,7 +1124,7 @@ class BaseNode(object):
                 self.retraining_phase=True
                 self.start_retraining()
             else:
-                self._inc_train(self.retrain_data,self.retrain_label)
+                self._inc_train(self.retrain_data, self.retrain_label)
             new_data = self.execute(data)
             self.retrain_data = data
             self.retrain_label = label

@@ -52,6 +52,11 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
             If this option is True, channel names and channel coordinates.
         
             (*optional, default: False*)
+
+        :figtitle:
+            The title that is displayed. If None, the class name is used.
+
+            (*optional, default: None*)
         
         :single_plot:
             All results per window are plotted into one figure with columns
@@ -117,15 +122,9 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
     """
     input_types = ["TimeSeries"]
 
-    def __init__(self,
-                 clip = False,
-                 contourlines = False,
-                 limits = False,
-                 nose_ears = False,
-                 smooth_corners = False,
-                 add_info=False,
-                 single_plot=False,
-                 figlabels=False,
+    def __init__(self, clip=False, contourlines=False, limits=False,
+                 nose_ears=False, smooth_corners=False, add_info=False,
+                 single_plot=False, figlabels=False, figtitle=None,
                  **kwargs):
         
         super(ElectrodeCoordinationPlotNode, self).__init__(**kwargs)
@@ -133,21 +132,22 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
         if limits:
             limits = [float(i) for i in limits] #make sure limits consists of floats
             
-        # define electrode grid.
+        # define electrode grid
         xi = numpy.linspace(-125, 125, 200)
         yi = numpy.linspace(-100, 100, 200)
 
         self.set_permanent_attributes(xi=xi,
                                       yi=yi,
-                                      clip = clip,
-                                      contourlines = contourlines,
-                                      limits = limits,
-                                      nose_ears = nose_ears,
-                                      smooth_corners = smooth_corners,
-                                      add_info = add_info,
-                                      single_plot = single_plot,
-                                      figlabels = figlabels,
-                                      time_checked = False)
+                                      clip=clip,
+                                      contourlines=contourlines,
+                                      limits=limits,
+                                      nose_ears=nose_ears,
+                                      smooth_corners=smooth_corners,
+                                      add_info=add_info,
+                                      single_plot=single_plot,
+                                      figlabels=figlabels,
+                                      figtitle=figtitle,
+                                      time_checked=False)
  
     def _plotValues(self,
                     values,            #dict  TimeSeries values
@@ -341,7 +341,10 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
                 pylab.xlim(-125, 125)
                 pylab.ylim(-100, 100)
                 if not self.single_plot or time_index==0: #if single_plot=True do only for the first row
-                    pylab.title(class_label, fontsize=20)
+                    if self.figtitle:
+                        pylab.title(self.figtitle, fontsize=20)
+                    else:
+                        pylab.title(class_label, fontsize=20)
                 pylab.setp(pylab.gca(), xticks=[], yticks=[])
                 pylab.draw()
             

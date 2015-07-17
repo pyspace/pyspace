@@ -396,21 +396,24 @@ os.system(command)
                                       "launch.py"),
                          'w')
     shortcut_file.write(launch_shortcut)
-    os.fchmod(shortcut_file.fileno(), 0775)
+    if CURRENTOS != "Windows":
+        os.fchmod(shortcut_file.fileno(), 0775)
     shortcut_file.close()
 
     shortcut_file = open(os.path.join(pySPACEcenter_path,
                                       "launch_live.py"),
                          'w')
     shortcut_file.write(launch_live_shortcut)
-    os.fchmod(shortcut_file.fileno(), 0775)
+    if CURRENTOS != "Windows":
+        os.fchmod(shortcut_file.fileno(), 0775)
     shortcut_file.close()
 
     shortcut_file = open(os.path.join(pySPACEcenter_path,
                                       "performance_results_analysis.py"),
                          'w')
     shortcut_file.write(perf_res_analysis_shortcut)
-    os.fchmod(shortcut_file.fileno(), 0775)
+    if CURRENTOS != "Windows":
+        os.fchmod(shortcut_file.fileno(), 0775)
     shortcut_file.close()
 
 if __name__ == '__main__':

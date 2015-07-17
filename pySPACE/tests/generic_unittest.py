@@ -21,7 +21,6 @@ if pyspace_path not in sys.path:
     sys.path.append(pyspace_path)
 
 import pySPACE
-pySPACE.load_configuration()
 
 import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
                                             os.path.pardir))
@@ -154,9 +153,15 @@ class ParametrizedTestCase(TestCase):
         return yaml
 
     def _initialize_node(self):
-        """ initializes the node with the parameters from YAML """
+        """ initializes the node with the parameters from YAML
+
+        If no YAML specification exists at all, use default initialization.
+        """
         node_content = yaml.load(self._get_the_call())
-        the_node = bn.BaseNode.node_from_yaml(node_content[-1])
+        if not "".join(self._get_the_call().split()) == "":
+            the_node = bn.BaseNode.node_from_yaml(node_content[-1])
+        else:
+            the_node = self.the_node()
         return the_node
 
     def _which_input(self, node):
@@ -354,7 +359,7 @@ class GenericTestCase(ParametrizedTestCase):
 
     def test_has_documentation(self):
         """ check if the node has some sort of documentation """
-        self.assertNotEqual(self.the_node.__doc__, None)
+        self.assertTrue(self.the_node.__doc__ is not None)
 
     def test_has_exemplary_call(self):
         """ check if there is an exemplary call in the documentation """
@@ -596,7 +601,18 @@ if __name__ == '__main__':
                         help='Decides whether an HTML report should be ' +
                         'generated from the results of the unittest')
 
+    parser.add_argument('-c', '--configfile', default=None,
+                        help="Specify a different name for the configuration"
+                             "file that is to be used by pySPACE")
+
     args = parser.parse_args()
+
+    # if the user gave a different configuration file, use the new file
+
+    if args.configfile is not None:
+        pySPACE.load_configuration(args.configfile)
+    else:
+        pySPACE.load_configuration()
 
     # The single node execution is done by default under verbose mode
     if args.singlenode != "":

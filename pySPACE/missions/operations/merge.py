@@ -92,7 +92,8 @@ from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.tools.filesystem import create_directory
 from pySPACE.tools.filesystem import get_author
 from pySPACE.resources.dataset_defs.base import BaseDataset
-    
+
+
 class MergeOperation(Operation):
     """ Operation to create 'All_vs_One' datasets """
     def __init__(self, processes, operation_spec, result_directory,
