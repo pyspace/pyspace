@@ -11,7 +11,7 @@ import copy
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
-from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset as ClassificationCollection
+from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset as BinaryClassificationDataset
 
 
 class ThresholdOptimizationNode(BaseNode):
@@ -328,9 +328,9 @@ class ThresholdOptimizationNode(BaseNode):
 
     def _get_metric_fct(self):
         if self.metric == 'Mutual_information':
-            metric_fct = lambda TP, FP, TN, FN: ClassificationCollection.mutual_information(TN, FN, TP, FP)
+            metric_fct = lambda TP, FP, TN, FN: BinaryClassificationDataset.mutual_information(TN, FN, TP, FP)
         elif self.metric == 'Normalized_mutual_information':
-            metric_fct = lambda TP, FP, TN, FN: ClassificationCollection.normalized_mutual_information(TN, FN, TP, FP)
+            metric_fct = lambda TP, FP, TN, FN: BinaryClassificationDataset.normalized_mutual_information(TN, FN, TP, FP)
         elif self.metric == "Balanced_accuracy":
             metric_fct = self.balanced_accuracy
         elif '{TP}' in self.metric or '{FP}' in self.metric or '{TN}' in self.metric or '{FN}' in self.metric:
@@ -340,7 +340,7 @@ class ThresholdOptimizationNode(BaseNode):
                                                                         FN=float(FN)))
         elif self.inverse_metric:
             metric_fct = lambda TP, FP, TN, FN: \
-                (-1.0)*ClassificationCollection.calculate_confusion_metrics(
+                (-1.0)*BinaryClassificationDataset.calculate_confusion_metrics(
                     {"True_negatives": TN,
                      "True_positives": TP,
                      "False_positives": FP,
@@ -348,7 +348,7 @@ class ThresholdOptimizationNode(BaseNode):
                     weight=self.weight,)[self.metric]
         else: 
             metric_fct = lambda TP, FP, TN, FN: \
-                ClassificationCollection.calculate_confusion_metrics(
+                BinaryClassificationDataset.calculate_confusion_metrics(
                     {"True_negatives": TN,
                      "True_positives": TP,
                      "False_positives": FP,

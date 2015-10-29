@@ -488,14 +488,14 @@ f.close()
 
 ######################### operation example list #############################
 
-#examples operations
-fname=os.path.join(os.path.dirname(__file__),"examples","operations.rst")
+# examples operations
+fname = os.path.join(os.path.dirname(__file__),"examples","operations.rst")
 if os.access(fname,os.F_OK):
     os.remove(fname)
 
-specs_path=os.path.join(os.path.dirname(__file__),"examples","specs")
+specs_path = os.path.join(os.path.dirname(__file__),"examples","specs")
 
-examples=os.path.join(specs_path,"operations","examples")
+examples = os.path.join(specs_path,"operations","examples")
 
 f=open(fname,"a")
        
@@ -513,7 +513,8 @@ for folder, _, files in os.walk(examples):
         f.write(fname + "\n")
         f.write("------------------------------------------\n")
         f.write("\n")
-        f.write(".. literalinclude:: " + os.path.join("specs","operations","examples",fname) + "\n")
+        f.write(".. literalinclude:: " +
+                os.path.join("specs", "operations", "examples", fname) + "\n")
         f.write("\t" + ":language: yaml" + "\n")
         f.write("\n")
 f.close()
@@ -521,9 +522,9 @@ f.close()
 ######################### operation chain example list ########################
 
 #examples operation_chains
-examples=os.path.join(specs_path,"operation_chains","examples")
+examples = os.path.join(specs_path,"operation_chains","examples")
 
-fname=os.path.join(os.path.dirname(__file__),"examples","operation_chains.rst")
+fname = os.path.join(os.path.dirname(__file__),"examples","operation_chains.rst")
 if os.access(fname,os.F_OK):
     os.remove(fname)
 
@@ -543,7 +544,8 @@ for folder, _, files in os.walk(examples):
         f.write(fname + "\n")
         f.write("------------------------------------------\n")
         f.write("\n")
-        f.write(".. literalinclude:: " + os.path.join("specs","operation_chains","examples",fname) + "\n")
+        f.write(".. literalinclude:: " + os.path.join(
+            "specs", "operation_chains", "examples",fname) + "\n")
         f.write("\t" + ":language: yaml" + "\n")
         f.write("\n")
 f.close()

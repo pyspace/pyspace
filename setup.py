@@ -197,58 +197,63 @@ def setup_package():
     dest_conf_file = os.path.join(home, "pySPACEcenter","config.yaml")
     save_copy(src_conf_file,dest_conf_file)
 
-    examples = os.path.join(src_path,"docs","examples")
-    # copying examples folder
-    for folder, _, files in os.walk(examples):
-        new_folder=os.path.join(home, "pySPACEcenter", "examples",
-                                folder[len(examples)+1:])
-        for file in files:
-            if not file.startswith("."):
-                create_directory(new_folder)
-                save_copy(os.path.join(src_path, folder, file),
-                          os.path.join(new_folder, file))
+    examples = os.path.join(src_path, "docs","examples")
+    # # copying examples folder
+    # for folder, _, files in os.walk(examples):
+    #     new_folder = os.path.join(home, "pySPACEcenter", "examples",
+    #                             folder[len(examples)+1:])
+    #     for filename in files:
+    #         if not filename.startswith("."):
+    #             create_directory(new_folder)
+    #             save_copy(os.path.join(src_path, folder, filename),
+    #                       os.path.join(new_folder, filename))
+    
     # copying important examples to normal structure to have a start
     for folder, _, files in os.walk(examples):
-        new_folder=os.path.join(home, "pySPACEcenter",folder[len(examples)+1:])
-        for file in files:
-            if  "conf" in folder[len(examples)+1:] or \
-                ".rst" in file or \
-                file.startswith("."):
-                    pass
-            #"example" in file or "example_summary" in folder:
-            elif "example" in file \
+        new_folder = os.path.join(home, "pySPACEcenter",folder[len(examples)+1:])
+        for filename in files:
+            if "conf" in folder[len(examples)+1:] or \
+                    ".rst" in filename or filename.startswith("."):
+                pass
+            # "example" in filename or "example_summary" in folder:
+            elif "example" in filename \
                     or "example_summary" in folder[len(examples)+1:] \
-                    or file=="functions.yaml"\
-                    or "template" in file\
+                    or filename == "functions.yaml"\
+                    or "template" in filename\
                     or folder.endswith("templates") \
                     or folder.endswith("examples"):
                 create_directory(new_folder)
-                save_copy(os.path.join(src_path, folder,file),
-                          os.path.join(new_folder, file))
+                save_copy(os.path.join(src_path, folder, filename),
+                          os.path.join(new_folder, filename))
 
     print "The pySPACEcenter should be available now."
 
 def generate_blacklist():
     """
-    This function tries to import all the pySPACE modules available.
+    This function tries to import all the pySPACE node modules available.
     If a certain module does not have the necessary dependencies installed,
     it will be blacklisted and not imported in further usages of the software
 
     Once the user installs the missing dependency, he or she can run the setup
     script with the soft option enabled i.e.::
 
-        python setup.py --soft
+        python setup.py --blacklist
 
     which will only refresh the blacklisted nodes.
     """
     blacklist = []
     missing_dependencies = []
+    import pySPACE
+    import pySPACE.missions.nodes
     for dirpath, dirnames, files in os.walk('pySPACE'):
-        for file in files:
-            if "__init__" in file or file.endswith(".py") == False:
+        if 'nodes' not in dirpath or 'missions' not in dirpath:
+            continue
+
+        for filename in files:
+            if "__init__" in filename or filename.endswith(".py") == False:
                 continue
 
-            the_module = os.path.join(dirpath, file)
+            the_module = os.path.join(dirpath, filename)
             if CURRENTOS == 'Windows':
                 the_module = the_module.replace('\\', '.')[:-3]
             else:
@@ -257,21 +262,20 @@ def generate_blacklist():
                 __import__(the_module)
             except Exception, e:
                 missing_dependencies.append(e.message)
-                blacklist.append(file)
+                blacklist.append(filename)
             except:
                 pass
 
-
-
     try:
-        latest_config = home+'/pySPACEcenter/config.yaml'
+        latest_config = home + os.sep + 'pySPACEcenter' + os.sep + 'config.yaml'
         config_file = open(latest_config, 'r+')
     except:
         import glob
         print "The default config file was not found. Modifying the latest" \
               "version available."
-        latest_config = max(glob.iglob(home+'/pySPACEcenter/*.yaml'),
-                            key=os.path.getctime)
+        latest_config = max(glob.iglob(
+            home + os.sep + 'pySPACEcenter' + os.sep + '*.yaml'),
+            key=os.path.getctime)
         config_file = open(latest_config, 'r+')
 
     content = config_file.read()
