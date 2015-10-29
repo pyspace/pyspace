@@ -17,20 +17,20 @@ class SSNRSinkNode(BaseNode):
     and virtual sensor space (ssnr_vs). For virtual sensor space, it computes
     additionally the SSNR on unseen test data (if available), meaning that the
     mapping to virtual sensor space is computed on training data and the
-    SSNRis computed on test data that was not used for learning this mapping.
+    SSNR is computed on test data that was not used for learning this mapping.
 
     **Parameters**
-          :erp_class_label: Label of the class for which an ERP should be evoked.
-               For instance "Target" for a P300 oddball paradigm.
+        :erp_class_label: Label of the class for which an ERP should be
+            evoked. For instance "Target" for a P300 oddball paradigm.
 
-          :retained_channels: The number of channels that are retained after
-               xDAWN-based spatial filtering. The SSNR is computed in the
-               virtual sensor space consisting of these retained channels.
-               This quantity is only relevant for the SSNR metrics that are
-               computed in the virtual sensor space. If this quantity is not
-               defined, all channels are retained
+        :retained_channels: The number of channels that are retained after
+            xDAWN-based spatial filtering. The SSNR is computed in the
+            virtual sensor space consisting of these retained channels.
+            This quantity is only relevant for the SSNR metrics that are
+            computed in the virtual sensor space. If this quantity is not
+            defined, all channels are retained.
 
-              (*optional, default: None*)
+            (*optional, default: None*)
 
     **Exemplary Call**
 
@@ -45,28 +45,31 @@ class SSNRSinkNode(BaseNode):
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2011/11/14
 
-    .. todo:: It would be desirable to compute the SSNR within a node chain and write
-              it along with other metrics in a result file in a later sink node.
-              This could work the following way: Write the SSNR metrics in
+    .. todo:: It would be desirable to compute the SSNR within a node chain and
+              write it along with other metrics in a result file in a later sink
+              node. This could work the following way: Write the SSNR metrics in
               BaseData type, and read these in the
               :class:`~pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode`.
               A further sink node should be added that stores only metrics
               contained in BaseData type.
     """
+    input_types = ["TimeSeries"]
 
     def __init__(self, erp_class_label, retained_channels=None):
         super(SSNRSinkNode, self).__init__()
 
         # We reuse the ClassificationCollection (maybe this should be renamed to
         # MetricsDataset?)
-        self.set_permanent_attributes(# Object for handling SSNR related calculations
-                                      ssnr=SSNR(erp_class_label, retained_channels),
-                                      # Result collection
-                                      ssnr_collection=BinaryClassificationDataset(),
-                                      erp_class_label=erp_class_label)
+        self.set_permanent_attributes(
+            # Object for handling SSNR related calculations
+            ssnr=SSNR(erp_class_label, retained_channels),
+            # Result collection
+            ssnr_collection=BinaryClassificationDataset(),
+            erp_class_label=erp_class_label)
 
     def reset(self):
-        """ Reset the node to the clean state it had after its initialization. """
+        """ Reset the node to the clean state it had after its initialization
+        """
         # We have to create a temporary reference since we remove
         # the self.permanent_state reference in the next step by overwriting
         # self.__dict__
@@ -102,8 +105,8 @@ class SSNRSinkNode(BaseNode):
 
         # Compute performance metrics SSNR_AS and SSNR_vs on the training
         # data
-        performance = {"ssnr_as": self.ssnr.ssnr_as(),
-                       "ssnr_vs": self.ssnr.ssnr_vs()}
+        performance = {"ssnr_as" : self.ssnr.ssnr_as(),
+                       "ssnr_vs" : self.ssnr.ssnr_vs()}
 
         # Collect test data (if any)
         X_test = None
@@ -115,13 +118,14 @@ class SSNRSinkNode(BaseNode):
                 D = numpy.zeros((data.shape[0], data.shape[0]))
 
             if X_test is None:
-                X_test = deepcopy(data)  # TODO: Why deep copy? data is not used anymore afterwards!
+                X_test = deepcopy(data)
                 D_test = D
             else:
                 X_test = numpy.vstack((X_test, data))
                 D_test = numpy.vstack((D_test, D))
 
-        # If there was separate test data: compute metrics that require test data
+        # If there was separate test data:
+        # compute metrics that require test data
         if X_test is not None:
             performance["ssnr_vs_test"] = self.ssnr.ssnr_vs_test(X_test, D_test)
 

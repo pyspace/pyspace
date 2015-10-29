@@ -488,7 +488,7 @@ class TimeSeriesDataset(BaseDataset):
                 mdict[name + key_str] = collection_object 
                 import scipy.io
                 scipy.io.savemat(result_file, mdict=mdict)
-            elif s_format in ["eeg"]:
+            elif s_format in ["bp_eeg"]:
 
                 result_file = open(os.path.join(result_path,
                                                 name + key_str + ".eeg"),"a+")

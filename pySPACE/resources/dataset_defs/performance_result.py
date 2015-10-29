@@ -208,11 +208,12 @@ class PerformanceResultSummary(BaseDataset):
         # A list of all result files (one per classification process)
         pathlist = glob.glob(os.path.join(input_dir,
                                           "results_*"))
-        if len(pathlist)==0:
-            warnings.warn('No files in the format "results_*" found for merging results!')
+        if len(pathlist) == 0:
+            warnings.warn(
+                'No files in the format "results_*" found for merging results!')
             return
         result_dict = None
-        # For all result files of the WEKA processes
+        # For all result files of the WEKA processes or hashed files
         for input_file_name in pathlist:
             # first occurrence
             if result_dict is None:
@@ -248,9 +249,9 @@ class PerformanceResultSummary(BaseDataset):
     
     @staticmethod
     def merge_traces(input_dir):
-        """ Traverse directory tree, merge the classification trace files and store them
+        """ Merge and store the classification trace files in directory tree
         
-        The collected results are stored in a common file in the input *input_dir*.
+        The collected results are stored in a common file in the *input_dir*.
         """
         import cPickle
         traces = dict()
@@ -258,8 +259,8 @@ class PerformanceResultSummary(BaseDataset):
         save_long_traces = True
         sorted_keys = None
         # save merged files to delete them later
-        merged_files=[]
-        for dir_path,dir_names,files in os.walk(input_dir):
+        merged_files = []
+        for dir_path, dir_names, files in os.walk(input_dir):
             for filename in files:
                 if filename.startswith("trace_sp"):
                     pass
@@ -271,20 +272,24 @@ class PerformanceResultSummary(BaseDataset):
                 # add a temporal Key_Dataset, deleted in next step 
                 temp_key_dict["Key_Dataset"] = [main_directory]
                 # read parameters from key dataset
-                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(temp_key_dict)
-                key_dict=dict([(key,value[0]) for key,value in temp_key_dict.items()])
+                PerformanceResultSummary.transfer_Key_Dataset_to_parameters(
+                    temp_key_dict,
+                    input_file_name=os.path.join(dir_path, filename))
+                key_dict = dict([(key,value[0]) for key, value in
+                                 temp_key_dict.items()])
                 # add run/split identifiers
-                split_number = int(filename[8:-7]) # from trace_spX.pickle
+                split_number = int(filename[8:-7])  # from trace_spX.pickle
                 key_dict["__Key_Fold__"] = split_number
-                run_number = int(dir_path.split(os.sep)[-2][15:]) # from persistency_runX
+                # from persistency_runX
+                run_number = int(dir_path.split(os.sep)[-2][15:])
                 key_dict["__Key_Run__"] = run_number
                 # transfer keys to hashable tuple of values
                 # the keys should always be the same
                 if sorted_keys is None:
                     sorted_keys = sorted(key_dict.keys())
-                    traces["parameter_keys"]=sorted_keys
-                    long_traces["parameter_keys"]=sorted_keys
-                identifier=[]
+                    traces["parameter_keys"] = sorted_keys
+                    long_traces["parameter_keys"] = sorted_keys
+                identifier = []
                 for key in sorted_keys:
                     identifier.append(key_dict[key])
                 # load the actual classification trace

@@ -105,7 +105,7 @@ as in the node chain template.
 After creating all possible combinations of parameters, they are inserted
 into this string and the string is evaluated like a Python expression.
 If it is not evaluated to *True*, the parameter is rejected.
-The test is performed For each constraint (string). For being used later on,
+The test is performed for each constraint (string). For being used later on,
 a parameter setting has to pass all tests.
 
 (*optional, default: []*)

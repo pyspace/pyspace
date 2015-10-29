@@ -81,7 +81,7 @@ class AnalyzerCollection(BaseDataset):
     def __init__(self, dataset_md =  None):
           super(AnalyzerCollection, self).__init__(dataset_md = dataset_md)
     
-    def store(self, result_dir, s_format = "BrainVision"):
+    def store(self, result_dir, s_format = "bp_eeg"):
         self.merged = False
         scale = 10.0 # is used to scale up the eeg sample values.  The data samples are converted to int16
                     # when saving, so scaling is necessary to keep maintain the resolutions. 
@@ -91,7 +91,7 @@ class AnalyzerCollection(BaseDataset):
         # or use default name from this collection
         else:
             name = "Analyzer"
-        if not s_format == "BrainVision":
+        if not s_format == "bp_eeg":
             self._log("The format %s is not supported!"%s_format, level=logging.CRITICAL)
             return
         # Update the meta data
