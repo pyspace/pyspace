@@ -262,7 +262,7 @@ def generate_blacklist():
                 __import__(the_module)
             except Exception, e:
                 missing_dependencies.append(e.message)
-                blacklist.append(filename)
+                blacklist.append(filename + ", " + dirpath)
             except:
                 pass
 
@@ -433,7 +433,14 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if args.blacklist == True:
+    try:
+        os.chdir("./pySPACE/missions/support/CPP/variance_tools")
+        os.system("python setup.py build_ext --inplace")
+        os.chdir("../../../../../")
+    except:
+        pass
+
+    if args.blacklist:
         # If the soft version of the install is desired, the only action
         # performed by the script is to refresh the blacklisted nodes
         # which did not initially have the necessary dependencies

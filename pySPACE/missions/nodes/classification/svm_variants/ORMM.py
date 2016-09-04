@@ -248,7 +248,7 @@ class SvddPassiveAggressiveNode(OcRmmPerceptronNode):
     **References**
 
         :author:    Crammer, K. and Dekel, O. and Keshet, J. and Shalev-Shwartz, S. and Singer, Y.
-        :title:     `Online Passive-Aggressive Algorithms`
+        :title:     `Online Passive-Aggressive Algorithms <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
         :journal:   Journal of Machine Learning Research
         :volume:    7
         :year:      2006

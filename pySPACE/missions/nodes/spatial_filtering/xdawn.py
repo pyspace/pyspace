@@ -2,23 +2,13 @@
 
 import os
 import cPickle
-from copy import deepcopy, copy
-import warnings
+from copy import deepcopy
 
 import numpy
-from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
 
 
-try:
-    import scipy
-    if map(int, __import__("scipy").__version__.split('.')) < [0,8,0]:
-        from scipy.linalg.decomp import qr
-    else:
-        from scipy.linalg import qr
-except:
-    pass
+from scipy.linalg import qr
 
-from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.missions.nodes.spatial_filtering.spatial_filtering \
     import SpatialFilteringNode
 
@@ -158,7 +148,8 @@ class XDAWNNode(SpatialFilteringNode):
             filters=filters,
             # Determines whether the filters are stored after training
             visualize_pattern=visualize_pattern,
-            xDAWN_channel_names=None)
+            xDAWN_channel_names=None,
+            )
         if self.visualize_pattern:
             self.set_permanent_attributes(store=True)
     
@@ -177,11 +168,16 @@ class XDAWNNode(SpatialFilteringNode):
             self.channel_names = data.channel_names
             if self.retained_channels in [None, 'None']:
                 self.retained_channels = len(self.channel_names)
+            else:
+                self.retained_channels = int(self.retained_channels)
                 
         if len(self.channel_names) < self.retained_channels:
             self.retained_channels = len(self.channel_names)
-            self._log("To many channels chosen for the retained channels! "
+            self._log("Too many channels chosen for the retained channels! "
                       "Replaced by maximum number.", level=logging.CRITICAL)
+        elif self.retained_channels < 1:
+            self._log("Too little channels chosen for the retained channels! "
+                      "Replaced by minimum number (1).", level=logging.CRITICAL)
 
         # Iteratively construct Toeplitz matrix D and data matrix X
         if label == self.erp_class_label:
@@ -213,9 +209,6 @@ class XDAWNNode(SpatialFilteringNode):
             Qx, Rx = qr(self.X, overwrite_a=True, econ=True)
             # QR decompositions of D
             Qd, Rd = qr(self.D, overwrite_a=True, econ=True)
-            
-        # self.X = None # Free memory
-        # self.D = None # Free memory
 
         # Singular value decomposition of Qd.T Qx
         # NOTE: full_matrices=True required since otherwise we do not get 
@@ -599,172 +592,6 @@ class SparseXDAWNNode(XDAWNNode):
                                   "electrode selection.")
 
 
-class SSNR(BaseNode):
-    """ Helper-class that encapsulates SSNR related computations.
-    
-    Use as follows: add training examples one-by-one along with their labels
-    using the method add_example. Once all training data has been added, metrics
-    values can be computed using ssnr_as, ssnr_vs, and ssnr_vs_test
-    
-    """
-    
-    def __init__(self, erp_class_label, retained_channels=None):
-        self.retained_channels = retained_channels
-        self.erp_class_label = erp_class_label
-        
-        self.X = None # The data matrix (will be constructed iteratively)
-        self.D = None # The Toeplitz matrix (will be constructed iteratively)
-
-    def add_example(self, data, label):
-        """ Add the example *data* for class *label*. """
-        if self.retained_channels is None:
-            self.retained_channels = data.shape[1]
-        else:
-            self.retained_channels = min(self.retained_channels, data.shape[1])
-        
-        # Iteratively construct Toeplitz matrix D and data matrix X
-        if label == self.erp_class_label:
-            D = numpy.diag(numpy.ones(data.shape[0]))
-        else:
-            D = numpy.zeros((data.shape[0], data.shape[0]))
-            
-        if self.X is None:
-            self.X = deepcopy(data)
-            self.D = D
-        else:
-            self.X = numpy.vstack((self.X, data))
-            self.D = numpy.vstack((self.D, D))
-
-    def ssnr_as(self, selected_electrodes=None):
-        """ SSNR for given electrode selection in actual sensor space. 
-        
-        If no electrode selection is given, the SSNR of all electrodes is 
-        computed.
-        """
-        if selected_electrodes is None:
-            selected_electrodes = range(self.X.shape[1])
-            
-        self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
-        
-        filters = numpy.zeros(shape=(self.X.shape[1], self.X.shape[1]))
-        for electrode_index in selected_electrodes:
-            filters[electrode_index, electrode_index] = 1
-
-        # Return the SSNR that these filters would obtain on training data            
-        return self._ssnr(filters, self.Sigma_1, self.Sigma_X)
-
-    def ssnr_vs(self, selected_electrodes=None):
-        """ SSNR for given electrode selection in virtual sensor space. 
-        
-        If no electrode selection is given, the SSNR of all electrodes is 
-        computed.
-        """
-        if selected_electrodes is None:
-            selected_electrodes = range(self.X.shape[1])
-            
-        self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
-        
-        # Determine spatial filter using xDAWN that would be obtained if
-        # only the selected electrodes would be available
-        partial_filters = \
-            self._compute_xDAWN_filters(self.X[:, selected_electrodes], 
-                                        self.D)
-        # Expand partial filters to a filter for all electrodes (by setting
-        # weights of inactive electrodes to 0)
-        filters = numpy.zeros((self.X.shape[1], self.retained_channels))
-        # Iterate over electrodes with non-zero weights
-        for index, electrode_index in enumerate(selected_electrodes):
-            # Iterate over non-zero spatial filters
-            for j in range(min(filters.shape[1], partial_filters.shape[1])):
-                filters[electrode_index, j] = partial_filters[index, j]
-
-        # Return the SSNR that these filters would obtain on training data            
-        return self._ssnr(filters, self.Sigma_1, self.Sigma_X)
-    
-    def ssnr_vs_test(self, X_test, D_test, selected_electrodes=None):
-        """ SSNR for given electrode selection in virtual sensor space. 
-        
-        Note that the training of the xDAWN spatial filter for mapping to 
-        virtual sensor space and the computation of the SSNR in this virtual 
-        sensor space are done on different data sets. 
-        
-        If no electrode selection is given, the SSNR of all electrodes is 
-        computed.
-        """
-        if selected_electrodes is None:
-            selected_electrodes = range(self.X.shape[1])
-                    
-        # Determine spatial filter using xDAWN that would be obtained if
-        # only the selected electrodes would be available
-        partial_filters = \
-            self._compute_xDAWN_filters(self.X[:, selected_electrodes], 
-                                        self.D)
-        # Expand partial filters to a filter for all electrodes (by setting
-        # weights of inactive electrodes to 0)
-        filters = numpy.zeros((self.X.shape[1], self.retained_channels))
-        # Iterate over electrodes with non-zero weights
-        for index, electrode_index in enumerate(selected_electrodes):
-            # Iterate over non-zero spatial filters
-            for j in range(min(filters.shape[1], partial_filters.shape[1])):
-                filters[electrode_index, j] = partial_filters[index, j]
-
-        # Return the SSNR that these filters would obtain on test data
-        Sigma_1_test, Sigma_X_test = self._compute_Sigma(X_test, D_test)
-        return self._ssnr(filters, Sigma_1_test, Sigma_X_test)
-        
-    def _compute_Sigma(self, X, D):
-        if D is None:
-            warnings.warn("No data given for sigma computation.")
-        elif not(1 in D):
-            warnings.warn("No ERP data (%s) provided." % self.erp_class_label)
-        # Estimate of the signal for class 1 (the erp_class_label class)
-        A_1 = numpy.dot(numpy.dot(numpy.linalg.inv(numpy.dot(D.T, D)), D.T), X)
-        # Estimate of Sigma 1 and Sigma X
-        Sigma_1 = numpy.dot(numpy.dot(numpy.dot(A_1.T, D.T), D), A_1)
-        Sigma_X = numpy.dot(X.T, X)
-        
-        return Sigma_1, Sigma_X        
-        
-    def _ssnr(self, v, Sigma_1, Sigma_X):
-        # Compute SSNR after filtering  with v.
-        a = numpy.trace(numpy.dot(numpy.dot(v.T, Sigma_1), v))
-        b = numpy.trace(numpy.dot(numpy.dot(v.T, Sigma_X), v))
-        return a / b
-    
-    def _compute_xDAWN_filters(self, X, D):
-        # Compute xDAWN spatial filters
-                      
-        # QR decompositions of X and D
-        if map(int, __import__("scipy").__version__.split('.')) >= [0,9,0]:
-            # NOTE: mode='economy'required since otherwise the memory 
-            # consumption is excessive
-            Qx, Rx = qr(X, overwrite_a=True, mode='economic')     
-            Qd, Rd = qr(D, overwrite_a=True, mode='economic')
-        else:
-            # NOTE: econ=True required since otherwise the memory consumption 
-            # is excessive 
-            Qx, Rx = qr(X, overwrite_a=True, econ=True)      
-            Qd, Rd = qr(D, overwrite_a=True, econ=True)       
-
-        # Singular value decomposition of Qd.T Qx
-        # NOTE: full_matrices=True required since otherwise we do not get 
-        #       num_channels filters. 
-        Phi, Lambda, Psi = numpy.linalg.svd(numpy.dot(Qd.T, Qx), 
-                                           full_matrices=True)
-        Psi = Psi.T
-
-        # Construct the spatial filters
-        for i in range(Psi.shape[1]):
-            # Construct spatial filter with index i as Rx^-1*Psi_i
-            ui = numpy.dot(numpy.linalg.inv(Rx), Psi[:,i])
-            if i == 0:
-                filters = numpy.atleast_2d(ui).T
-            else:
-                filters = numpy.hstack((filters, numpy.atleast_2d(ui).T))
-                
-        return filters
-
-
 class AXDAWNNode(XDAWNNode):
     """ Adaptive xDAWN spatial filter for enhancing event-related potentials.
     
@@ -790,12 +617,15 @@ class AXDAWNNode(XDAWNNode):
     Optionally, update coefficients can be used for adapting the filter
     estimate.
 
+    For using regularization techniques, the noise autocorrelation is
+    initialized with the regularization matrix instead of using zeros.
+
     **References**
 
         ========= ==============================================================
         main      source: axDAWN
         ========= ==============================================================
-        author    Woehrle, H. and Krell, M. M. and Straube, S. and Kim, S. U., Kirchner, E. A. and Kirchner, F.
+        author    Woehrle, H. and Krell, M. M. and Straube, S. and Kim, S. U. and Kirchner, E. A. and Kirchner, F.
         title     `An Adaptive Spatial Filter for User-Independent Single Trial Detection of Event-Related Potentials <http://dx.doi.org/10.1109/TBME.2015.2402252>`_
         journal   IEEE Transactions on Biomedical Engineering
         publisher IEEE
@@ -803,6 +633,17 @@ class AXDAWNNode(XDAWNNode):
         volume    62
         issue     7
         pages     1696 - 1705
+        year      2015
+        ========= ==============================================================
+
+        ========= ==============================================================
+        main      source: raxDAWN
+        ========= ==============================================================
+        author    Krell, M. M. and Seeland, A. and Woehrle, H.
+        title     `raxDAWN: Circumventing Overfitting of the Adaptive xDAWN`
+        book      Proceedings of the International Congress on Neurotechnology, Electronics and Informatics
+        publisher SciTePress
+        doi       10.5220/0005657500680075
         year      2015
         ========= ==============================================================
 
@@ -836,6 +677,24 @@ class AXDAWNNode(XDAWNNode):
 
             (*optional, default: 0.01*)
 
+        :regularization: Currently only *Tikhonov* regularization is
+            implemented. By default no regularization is active using *False*.
+            For the regularization, the *lambda_reg* parameter should be
+            optimized.
+
+            (*optional, default: False*)
+
+        :lambda_reg:
+            Positive regularization constant to weight between
+            signal-plus-noise energy and chosen regularization term
+            (see also the *regularization* parameter).
+            Values between 100 and 1000 seem to be appropriate.
+            Values below 1 won't have a real effect.
+            This parameter should be roughly optimized, when used.
+
+            (*optional, default: 100*)
+
+
     **Exemplary Call**
     
     .. code-block:: yaml
@@ -848,6 +707,7 @@ class AXDAWNNode(XDAWNNode):
                 store : True
                 lambda_signal : 0.99
                 lambda_noise : 0.99
+                lambda_reg : 100
 
     :Author: Hendrik Woehrle (hendrik.woehrle@dfki.de)
     :Created: 2012/05/25
@@ -858,8 +718,18 @@ class AXDAWNNode(XDAWNNode):
                  lambda_noise=1.0,
                  delta=0.25,
                  w_ini=0.01,
+                 regularization=False,
+                 lambda_reg=100,
                  **kwargs):
         super(AXDAWNNode, self).__init__(**kwargs)
+
+        delta = float(delta)
+        lambda_reg=float(lambda_reg)
+        if not delta > 0:
+            raise NotImplementedError("Delta < 0 is not supported.")
+        if not lambda_reg > 0:
+            raise NotImplementedError("Lambda_reg < 0 is not supported.")
+
 
         self.set_permanent_attributes(
             class_labels=[],
@@ -869,6 +739,8 @@ class AXDAWNNode(XDAWNNode):
             predict_lambda_noise=1.0,
             delta=delta,
             w_ini=w_ini,
+            regularization=regularization,
+            lambda_reg=lambda_reg,
             ai=None,
             R1=None,
             R2=None,
@@ -886,10 +758,21 @@ class AXDAWNNode(XDAWNNode):
             self.ai = numpy.zeros(data.shape)
             self.R1 = numpy.zeros((self.retained_channels, data.shape[1],
                                    data.shape[1]))
-            self.R2 = numpy.zeros((data.shape[1], data.shape[1]))
+            if not self.regularization:
+                self.R2 = numpy.zeros((data.shape[1], data.shape[1]))
+                self.R2inv = \
+                    self.delta * numpy.eye(data.shape[1], data.shape[1])
+            elif self.regularization == "Tikhonov":
+                self.R2 = self.lambda_reg * \
+                    numpy.eye(data.shape[1], data.shape[1])
+                self.R2inv = 1 / self.lambda_reg * \
+                    numpy.eye(data.shape[1], data.shape[1])
+            else:
+                raise NotImplementedError(
+                    "'%s' is not supported. Use 'Tikhonov' or False!"
+                    % self.regularization)
             self.wi = self.w_ini * numpy.random.rand(
                 data.shape[1], self.retained_channels)
-            self.R2inv = self.delta * numpy.eye(data.shape[1], data.shape[1])
             self.filters = self.wi
     
     def _train(self, data, class_label):
@@ -902,16 +785,16 @@ class AXDAWNNode(XDAWNNode):
         if class_label not in self.class_labels:
             self.class_labels.append(class_label)
 
+        data = data.view(numpy.ndarray)
         self.initialize_filters(data)
 
-        data = data.view(numpy.ndarray)
         # a target => signal
         if class_label == self.erp_class_label:
             # update signal estimation
             self.num_signals += 1
             self.ai = self.predict_lambda_signal * self.ai + \
                 (data - self.ai) / self.num_signals
-            self.R1[0] = numpy.dot(self.ai.T,self.ai)
+            self.R1[0] = numpy.dot(self.ai.T, self.ai)
             # update noise estimation
             self.adapt_inverse_noise_correlation(data)
         else:

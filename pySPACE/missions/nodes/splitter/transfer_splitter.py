@@ -70,7 +70,7 @@ class TransferSplitterNode(BaseNode):
                              determines how many instances of *wdefs_split* are
                              in one split.
 
-        - set_flag    :
+         - set_flag    :
                              When the data has been merged with the concatenate
                              operation before, a flag 'new_set' has been inserted
                              to the time series specs. Splits are based on this
@@ -78,6 +78,15 @@ class TransferSplitterNode(BaseNode):
                              cross validation. For example you merged 3 sets: 
                              'A', 'B', 'C', then there are 3 splits generated:
                              'A'+'B' vs 'C', 'A'+'C' vs 'B' and 'B'+'C' vs 'A'.
+
+         - set_flag_reverse:
+                             When the data has been merged with the concatenate
+                             operation before, a flag 'new_set' has been inserted
+                             to the time series specs. Splits are based on this
+                             flag, i.e. the splits behave like a reverse-inter-set
+                             cross validation. For example you merged 3 sets: 
+                             'A', 'B', 'C', then there are 3 splits generated:
+                             'A' vs 'C'+'B', 'B' vs 'A'+'C' and 'C' vs 'A'+'B'.
 
      :random:
          If True, the data is randomized before splitting.
@@ -480,6 +489,29 @@ class TransferSplitterNode(BaseNode):
                     split_indices_train[i].extend([ind for ind in data_set[j] \
                             if j != i and self.data[ind][0].specs['wdef_name'] \
                                           in self.wdefs_train])
+        elif self.split_method == 'set_flag_reverse':
+            # divide the data according to *new_set* flag in time series specs
+            data_set = {0:[]}
+            key_fold = 0
+            for (ind, (win, lab)) in enumerate(self.data):
+                if win.specs['new_set']:
+                    key_fold += 1
+                    data_set[key_fold]=[ind]
+                else:
+                    data_set[key_fold].append(ind)
+                    
+            self.splits = len(data_set.keys())
+            
+            split_indices_train = [[] for i in range(self.splits)]
+            split_indices_test = [[] for i in range(self.splits)]
+            for i in range(self.splits):
+                split_indices_train[i].extend([ind for ind in data_set[i] \
+                                    if self.data[ind][0].specs['wdef_name'] \
+                                                            in self.wdefs_train])
+                for j in range(self.splits):
+                    split_indices_test[i].extend([ind for ind in data_set[j] \
+                            if j != i and self.data[ind][0].specs['wdef_name'] \
+                                          in self.wdefs_test])
             
         self.split_indices_train = split_indices_train
         self.split_indices_test = split_indices_test

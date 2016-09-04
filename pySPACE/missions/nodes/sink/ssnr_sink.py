@@ -1,12 +1,179 @@
 """ Sink-Node for the Signal-to-Signal-Plus-Noise Ratio. """
 
 from copy import copy, deepcopy
+import warnings
 
 import numpy
+from scipy.linalg import qr
 
 from pySPACE.missions.nodes.base_node import BaseNode
-from pySPACE.missions.nodes.spatial_filtering.xdawn import SSNR
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
+
+
+class SSNR(object):
+    """ Helper-class that encapsulates SSNR related computations.
+
+    Use as follows: add training examples one-by-one along with their labels
+    using the method add_example. Once all training data has been added, metrics
+    values can be computed using ssnr_as, ssnr_vs, and ssnr_vs_test
+
+    """
+
+    def __init__(self, erp_class_label, retained_channels=None):
+        self.retained_channels = retained_channels
+        self.erp_class_label = erp_class_label
+
+        self.X = None # The data matrix (will be constructed iteratively)
+        self.D = None # The Toeplitz matrix (will be constructed iteratively)
+
+    def add_example(self, data, label):
+        """ Add the example *data* for class *label*. """
+        if self.retained_channels is None:
+            self.retained_channels = data.shape[1]
+        else:
+            self.retained_channels = min(self.retained_channels, data.shape[1])
+
+        # Iteratively construct Toeplitz matrix D and data matrix X
+        if label == self.erp_class_label:
+            D = numpy.diag(numpy.ones(data.shape[0]))
+        else:
+            D = numpy.zeros((data.shape[0], data.shape[0]))
+
+        if self.X is None:
+            self.X = deepcopy(data)
+            self.D = D
+        else:
+            self.X = numpy.vstack((self.X, data))
+            self.D = numpy.vstack((self.D, D))
+
+    def ssnr_as(self, selected_electrodes=None):
+        """ SSNR for given electrode selection in actual sensor space.
+
+        If no electrode selection is given, the SSNR of all electrodes is
+        computed.
+        """
+        if selected_electrodes is None:
+            selected_electrodes = range(self.X.shape[1])
+
+        self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
+
+        filters = numpy.zeros(shape=(self.X.shape[1], self.X.shape[1]))
+        for electrode_index in selected_electrodes:
+            filters[electrode_index, electrode_index] = 1
+
+        # Return the SSNR that these filters would obtain on training data
+        return self._ssnr(filters, self.Sigma_1, self.Sigma_X)
+
+    def ssnr_vs(self, selected_electrodes=None):
+        """ SSNR for given electrode selection in virtual sensor space.
+
+        If no electrode selection is given, the SSNR of all electrodes is
+        computed.
+        """
+        if selected_electrodes is None:
+            selected_electrodes = range(self.X.shape[1])
+
+        self.Sigma_1, self.Sigma_X = self._compute_Sigma(self.X, self.D)
+
+        # Determine spatial filter using xDAWN that would be obtained if
+        # only the selected electrodes would be available
+        partial_filters = \
+            self._compute_xDAWN_filters(self.X[:, selected_electrodes],
+                                        self.D)
+        # Expand partial filters to a filter for all electrodes (by setting
+        # weights of inactive electrodes to 0)
+        filters = numpy.zeros((self.X.shape[1], self.retained_channels))
+        # Iterate over electrodes with non-zero weights
+        for index, electrode_index in enumerate(selected_electrodes):
+            # Iterate over non-zero spatial filters
+            for j in range(min(filters.shape[1], partial_filters.shape[1])):
+                filters[electrode_index, j] = partial_filters[index, j]
+
+        # Return the SSNR that these filters would obtain on training data
+        return self._ssnr(filters, self.Sigma_1, self.Sigma_X)
+
+    def ssnr_vs_test(self, X_test, D_test, selected_electrodes=None):
+        """ SSNR for given electrode selection in virtual sensor space.
+
+        Note that the training of the xDAWN spatial filter for mapping to
+        virtual sensor space and the computation of the SSNR in this virtual
+        sensor space are done on different data sets.
+
+        If no electrode selection is given, the SSNR of all electrodes is
+        computed.
+        """
+        if selected_electrodes is None:
+            selected_electrodes = range(self.X.shape[1])
+
+        # Determine spatial filter using xDAWN that would be obtained if
+        # only the selected electrodes would be available
+        partial_filters = \
+            self._compute_xDAWN_filters(self.X[:, selected_electrodes],
+                                        self.D)
+        # Expand partial filters to a filter for all electrodes (by setting
+        # weights of inactive electrodes to 0)
+        filters = numpy.zeros((self.X.shape[1], self.retained_channels))
+        # Iterate over electrodes with non-zero weights
+        for index, electrode_index in enumerate(selected_electrodes):
+            # Iterate over non-zero spatial filters
+            for j in range(min(filters.shape[1], partial_filters.shape[1])):
+                filters[electrode_index, j] = partial_filters[index, j]
+
+        # Return the SSNR that these filters would obtain on test data
+        Sigma_1_test, Sigma_X_test = self._compute_Sigma(X_test, D_test)
+        return self._ssnr(filters, Sigma_1_test, Sigma_X_test)
+
+    def _compute_Sigma(self, X, D):
+        if D is None:
+            warnings.warn("No data given for sigma computation.")
+        elif not(1 in D):
+            warnings.warn("No ERP data (%s) provided." % self.erp_class_label)
+        # Estimate of the signal for class 1 (the erp_class_label class)
+        A_1 = numpy.dot(numpy.dot(numpy.linalg.inv(numpy.dot(D.T, D)), D.T), X)
+        # Estimate of Sigma 1 and Sigma X
+        Sigma_1 = numpy.dot(numpy.dot(numpy.dot(A_1.T, D.T), D), A_1)
+        Sigma_X = numpy.dot(X.T, X)
+
+        return Sigma_1, Sigma_X
+
+    def _ssnr(self, v, Sigma_1, Sigma_X):
+        # Compute SSNR after filtering  with v.
+        a = numpy.trace(numpy.dot(numpy.dot(v.T, Sigma_1), v))
+        b = numpy.trace(numpy.dot(numpy.dot(v.T, Sigma_X), v))
+        return a / b
+
+    def _compute_xDAWN_filters(self, X, D):
+        # Compute xDAWN spatial filters
+
+        # QR decompositions of X and D
+        if map(int, __import__("scipy").__version__.split('.')) >= [0,9,0]:
+            # NOTE: mode='economy'required since otherwise the memory
+            # consumption is excessive
+            Qx, Rx = qr(X, overwrite_a=True, mode='economic')
+            Qd, Rd = qr(D, overwrite_a=True, mode='economic')
+        else:
+            # NOTE: econ=True required since otherwise the memory consumption
+            # is excessive
+            Qx, Rx = qr(X, overwrite_a=True, econ=True)
+            Qd, Rd = qr(D, overwrite_a=True, econ=True)
+
+        # Singular value decomposition of Qd.T Qx
+        # NOTE: full_matrices=True required since otherwise we do not get
+        #       num_channels filters.
+        Phi, Lambda, Psi = numpy.linalg.svd(numpy.dot(Qd.T, Qx),
+                                           full_matrices=True)
+        Psi = Psi.T
+
+        # Construct the spatial filters
+        for i in range(Psi.shape[1]):
+            # Construct spatial filter with index i as Rx^-1*Psi_i
+            ui = numpy.dot(numpy.linalg.inv(Rx), Psi[:,i])
+            if i == 0:
+                filters = numpy.atleast_2d(ui).T
+            else:
+                filters = numpy.hstack((filters, numpy.atleast_2d(ui).T))
+
+        return filters
 
 
 class SSNRSinkNode(BaseNode):

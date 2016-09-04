@@ -68,7 +68,8 @@ class ParameterOptimizationBase(BaseNode):
         :parallelization:
             This parameter dictionary is used for parallelization of subflow 
             execution. Possible parameters so far are *processing_modality*, 
-            *pool_size* and *batch_size*. See :class:`~pySPACE.environments.chains.node_chain.SubflowHandler`
+            *pool_size* and *batch_size*. See
+            :class:`~pySPACE.environments.chains.node_chain.SubflowHandler`
             for more information.
         
         :validation_set:
@@ -107,7 +108,8 @@ class ParameterOptimizationBase(BaseNode):
                 .. note:: Not yet implemented
         
         :evaluation:
-            Specification of the sink node and the corresponding evaluation function
+            Specification of the sink node and the corresponding evaluation
+            function
         
             :performance_sink_node:
                 Specify a different sink node in YAML node syntax.
@@ -129,6 +131,12 @@ class ParameterOptimizationBase(BaseNode):
                 or even soft metrics or loss metrics.
                 
                 (*recommended, default: 'Balanced_accuracy'*)
+                
+            :inverse_metric:
+                If True, metric values are multiplied by -1. In this way, loss
+                metrics can be used for parameter optimization.
+                
+                (*optional, boolean, default: False*)
         
             :std_weight:
                 Cross validation gives several values for the estimated 
@@ -184,19 +192,22 @@ class ParameterOptimizationBase(BaseNode):
 
     :Author: Mario Krell (mario.krell@dfki.de)
     :Created: 2011/08/03
-    :LastChange: 2012/09/03 Anett Seeland - structural revision due to parallelization improvements
+    :LastChange: 2012/09/03 Anett Seeland - new structure for parallelization
     """
     def __init__(self, flow_template, variables=[], metric='Balanced_accuracy', 
-                 std_weight=0, runs=1, nominal_ranges=None, debug=False, 
-                 validation_parameter_settings={}, 
+                 std_weight=0, inverse_metric=False, runs=1,
+                 nominal_ranges=None, debug=False,
+                 validation_parameter_settings={},
                  final_training_parameter_settings={},
                  **kwargs):
         super(ParameterOptimizationBase, self).__init__(**kwargs)
+
         self.set_permanent_attributes(
             flow_template=flow_template,
             variables=variables,
             metric=metric,
             w=std_weight,
+            inverse_metric=-1 if inverse_metric else 1,
             runs=runs,
             nom_rng=nominal_ranges,
             debug=debug,
@@ -251,6 +262,8 @@ class ParameterOptimizationBase(BaseNode):
             param_spec["runs"] = validation_set["runs"] 
         if evaluation.has_key("metric"): 
             param_spec["metric"] = evaluation["metric"]
+        if evaluation.has_key("inverse_metric"):
+            param_spec["inverse_metric"] = evaluation["inverse_metric"]
         if evaluation.has_key("std_weight"): 
             param_spec["std_weight"] = evaluation['std_weight']
         
@@ -430,13 +443,13 @@ class ParameterOptimizationBase(BaseNode):
         return self._get_flow()[-1].get_sensor_ranking()
 
     def get_previous_transformations(self, sample=None):
-        """ Recursively construct a list of (linear) transformations
-
+        """ Recursively construct a list of (linear) transformations 
+        
         Overwrites BaseNode function, since meta node needs to get
         transformations from subflow.
         """
         transformations = self.input_node.get_previous_transformations(sample)
-        own_transformations = self._get_flow()[-1].get_previous_transformations(sample)
+        own_transformations = self.flow[-1].get_previous_transformations(sample)
         transformations.extend(own_transformations)
         return transformations
 
@@ -527,7 +540,37 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
             names by "~~". In the example below, the two parameters are 
             called "~~OUTLIERS~~" and "~~COMPLEXITY~~", each having 3 values.
             This results in 9 parameter combinations to be tested.
-    
+
+        :grid:
+            From the ranges parameter a grid is generated.
+            As a replacement, the grid can be specified directly using
+            this parameter. Therefore, a list of dictionaries is used.
+
+            For example a ranges parametrization like
+            '{~~OUTLIERS~~ : [0, 5, 10], ~~COMPLEXITY~~ : [0.01, 0.1, 1.0]}'
+            could be transferred to:
+
+            .. code-block:: yaml
+
+                - ~~OUTLIERS~~ : 0
+                  ~~COMPLEXITY~~ : 0.01
+                - ~~OUTLIERS~~ : 0
+                  ~~COMPLEXITY~~ : 0.1
+                - ~~OUTLIERS~~ : 0
+                  ~~COMPLEXITY~~ : 1
+                - ~~OUTLIERS~~ : 5
+                  ~~COMPLEXITY~~ : 0.01
+                - ~~OUTLIERS~~ : 5
+                  ~~COMPLEXITY~~ : 0.1
+                - ~~OUTLIERS~~ : 5
+                  ~~COMPLEXITY~~ : 1
+                - ~~OUTLIERS~~ : 10
+                  ~~COMPLEXITY~~ : 0.01
+                - ~~OUTLIERS~~ : 10
+                  ~~COMPLEXITY~~ : 0.1
+                - ~~OUTLIERS~~ : 10
+                  ~~COMPLEXITY~~ : 1
+
     **Exemplary Call**
     
     .. code-block:: yaml
@@ -574,25 +617,28 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
                             kernel_type : 'LINEAR'
 
     """
-    def __init__(self, ranges, parallelization={}, **kwargs):
-        ParameterOptimizationBase.__init__(self, **kwargs)
+    def __init__(self, ranges=None, grid=None, *args, **kwargs):
+        ParameterOptimizationBase.__init__(self, *args, **kwargs)
         # extract parallelization dict for subflow handler
-        SubflowHandler.__init__(self, **parallelization)
-        self.set_permanent_attributes(grid=self.search_grid(ranges))
-
+        SubflowHandler.__init__(self, **kwargs.get('parallelization',{}))
+        self.set_permanent_attributes(
+            grid=self.search_grid(ranges) if ranges is not None else grid)
+            
     @staticmethod
     def node_from_yaml(node_spec):
         """ Create the node based on the node_spec """
         node_spec = copy.deepcopy(node_spec)
         # call parent class method for most of the work
         node_spec["parameters"], flow_template = \
-             ParameterOptimizationBase.check_parameters(node_spec["parameters"])
+            ParameterOptimizationBase.check_parameters(node_spec["parameters"])
         # check grid search specific params
         optimization = node_spec["parameters"].pop("optimization")
-        assert("ranges" in optimization), "Grid Search needs *ranges* parameter"
+        assert("ranges" in optimization or "grid" in optimization), \
+            "Grid Search needs *ranges* or *grid* parameter"
         BaseNode.eval_dict(optimization)
-        node_obj = GridSearchNode(ranges=optimization["ranges"], 
-                                  flow_template=flow_template, 
+        node_obj = GridSearchNode(ranges=optimization.get("ranges", None),
+                                  grid=optimization.get("grid", None),
+                                  flow_template=flow_template,
                                   **node_spec["parameters"])
         return node_obj
 
@@ -602,26 +648,28 @@ class GridSearchNode(ParameterOptimizationBase, SubflowHandler):
         """
         performance_dict = {}
         # create subflows 
-        subflows = [self.generate_subflow(self.flow_template, grid_node) for \
-                                                         grid_node in self.grid]
+        subflows = [self.generate_subflow(self.flow_template, grid_node) for
+                    grid_node in self.grid]
         # execute subflows
         result_collections = self.execute_subflows(self.train_instances, 
                                                    subflows, self.runs)
         for grid_node, result in zip(self.grid, result_collections):
             key = self.p2key(grid_node)
-            performance = result.get_average_performance(self.metric) - \
-                                self.w * result.get_performance_std(self.metric)
+            performance = self.inverse_metric * (result.get_average_performance(
+                self.metric) - self.w * result.get_performance_std(self.metric))
+
             performance_dict[key] = performance
         
         del subflows, result_collections
         # Determine the flow-parameterization that performed optimal with regard
         # to the specified metric on the grid
-        best_parametrization, performance = self.get_best_dict_entry(performance_dict)
+        best_parametrization, performance = \
+            self.get_best_dict_entry(performance_dict)
         self.iterations = len(self.grid)
         self.search_history=[{"best_parameter":best_parametrization,
-                                    "best_performance":performance,
-                                    "performance_dict":performance_dict,
-                                    "iterations":self.iterations}]
+                              "best_performance":performance,
+                              "performance_dict":performance_dict,
+                              "iterations":self.iterations}]
         return best_parametrization, performance
 
 
@@ -744,11 +792,10 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
     def __init__(self, start=[], directions=[], start_step_size=1.0, 
                  stop_step_size=1e-10, scaling_factor=0.5, up_scaling_factor=1, 
                  max_iter=inf, max_bound=[], min_bound=[], red_pars=[],
-                 parallelization={},
                  **kwargs):
         ParameterOptimizationBase.__init__(self, **kwargs)
         # extract parallelization dict for subflow handler
-        SubflowHandler.__init__(self, parallelization)
+        SubflowHandler.__init__(self, **kwargs.get('parallelization',{}))
                             
         dim = len(self.variables)
         if start != []:
@@ -817,8 +864,10 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
         result_collections = self.execute_subflows(self.train_instances, 
                                                   [subflow], self.runs)
         
-        f_max = result_collections[0].get_average_performance(self.metric) \
-               - self.w * result_collections[0].get_performance_std(self.metric)
+        f_max = self.inverse_metric * \
+                   (result_collections[0].get_average_performance(self.metric) \
+                    - self.w * result_collections[0].get_performance_std(
+                                                                   self.metric))
         
         self.set_permanent_attributes(f_max = f_max,
                                       t_performance_dict = {x_opt_key: f_max})
@@ -914,8 +963,9 @@ class PatternSearchNode(ParameterOptimizationBase, SubflowHandler):
                                                    subflows, self.runs)
         for grid_node, result in zip(red_grid, result_collections):
             key = self.p2key(grid_node)
-            performance = result.get_average_performance(self.metric) - \
-                                self.w * result.get_performance_std(self.metric)
+            performance = self.inverse_metric * (result.get_average_performance(
+                            self.metric) - self.w * result.get_performance_std(
+                                                                   self.metric))
             self.t_performance_dict[key] = performance
             performance_dict[key] = performance
 

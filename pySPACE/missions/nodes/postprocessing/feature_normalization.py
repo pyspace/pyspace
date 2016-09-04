@@ -64,6 +64,9 @@ class FeatureNormalizationNode(BaseNode):
     def is_trainable(self):
         return self.load_path == None
 
+    def get_own_transformation(self, sample=None):
+        return (self.mult, -self.translation*self.mult,self.feature_names, "feature normalization")
+
     def store_state(self, result_dir, index=None): 
         """ Stores transformation and feature names in the given directory *result_dir* """
         if self.store:

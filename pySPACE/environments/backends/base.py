@@ -193,19 +193,29 @@ class Backend(object):
     def _stop_logging(self):
         """ Stops the logging of this operation """
         self._log("Stopping the TCP logging server...")
-        self.tcpserver.abort = True
-        self.tcpserver.join()
-        self.tcpserver.shutdown()
-        self._log("Stopping the TCP logging server... Done!")
-        
-        self._log("Logging stopped")
+        if hasattr(self, "tcpserver"):
+            self.tcpserver.abort = True
+            self.tcpserver.join()
+            self.tcpserver.shutdown()
+            del(self.tcpserver)
+
+        # self._log("Stopping the TCP logging server... Done!")
+        # self._log("Logging stopped")
+
+        root_logger = logging.getLogger("%s-%s.%s" % (socket.gethostname(),
+                                        os.getpid(),
+                                        self))
+        for handler in root_logger.handlers:
+            handler.close()
+            root_logger.removeHandler(handler)
+        del(root_logger)
 
     def _log(self, message, level = logging.INFO):
         """ Logs  the given message  with the given logging level """
         root_logger = logging.getLogger("%s-%s.%s" % (socket.gethostname(),
                                         os.getpid(),
                                         self))
-        if len(root_logger.handlers)==0:
+        if len(root_logger.handlers) == 0:
             root_logger.addHandler(logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT))
 

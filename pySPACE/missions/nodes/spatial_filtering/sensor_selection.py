@@ -551,7 +551,7 @@ class SensorSelectionSSNRNode(SensorSelectionBase):
             "Unknown objective function %s. Must be in %s." % \
             (objective_function, objective_functions)
 
-        from pySPACE.missions.nodes.spatial_filtering.xdawn import SSNR
+        from pySPACE.missions.nodes.sink.ssnr_sink import SSNR
         # Set permanent attributes
         self.set_permanent_attributes(
             # Label of the class for which an ERP should be evoked.

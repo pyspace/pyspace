@@ -101,3 +101,7 @@ class SpatialFilteringNode(BaseNode):
 
     def get_filters(self):
         return self.filters
+
+    def get_own_transformation(self, sample=None):
+        # TODO: give virtual channel names and use them for retransformation!!!
+        return (self.filters[:,:self.retained_channels], None,self.channel_names, "spatial filter")

@@ -11,11 +11,6 @@ from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.time_series import TimeSeries
 
 try:
-    import pyublas
-except:
-    pass
-
-try:
     from pySPACE.missions.support.CPP.variance_tools import variance_tools as vt
 except:
     pass
@@ -312,6 +307,20 @@ class FIRFilterNode(BaseNode):
             Window function to use. See scipy doc for possible windows.
 
             (*optional, default: 'hamming'*)
+
+        :comp_type:
+            Type of computation, e.g.
+            'normal': the computations are performed using scipy
+            'parallel': the computations are performed using the adappt module
+
+            (*optional, default: 'normal'*)
+
+        :skip:
+            Number of values that are skipped during
+            convolution, for e.g. in decimation.
+            Needs the comp_type set to 'parallel'.
+
+            (*optional, default: 0*)
 
         :time_shift:
             Normally, the convolution is performed as follows:
@@ -773,27 +782,19 @@ class VarianceFilterNode(BaseNode):
     def __init__(self,
                  width = 50,
                  standardization = False,
+                 normalize = False,
+                 lenNormalize = 1,
                  **kwargs):
 
         super(VarianceFilterNode, self).__init__(**kwargs)
-        if(width < 1):
-            print "Width have to be greater or equal to 1!\nWidth is now set to 1, therefore the data won't be changed!!!"
-            width = 1
 
         #Try to import the c-implementation of the variance and the standardization
         try:
-            import pyublas
+            from pySPACE.missions.support.CPP.variance_tools import variance_tools as vt
             var_tools = True
         except:
-            warnings.warn("Pyublas is not installed\nIf you are using the varianceFilterNode\nit is going to be very slow...")
+            warnings.warn("The variance_tools module is not compiled\nIt is located in missions/support/CPP/variance_tools\nPlease compile it using python \"setup.py build_ext --inplace\"")
             var_tools = False
-
-        if var_tools:
-            try:
-                from pySPACE.missions.support.CPP.variance_tools import variance_tools as vt
-            except:
-                warnings.warn("The variance_tools module is not compiled\nIt is located in missions/support/CPP/variance_tools\nPlease compile it using qmake and make")
-                var_tools = False
 
         self.set_permanent_attributes(ringbuffer = None,    # List with ringbuffers for the last n samples used for calculating the variance
                                       variables = None,     # List with the variables needed to calculate (0=variance, 1=mean)
@@ -801,7 +802,10 @@ class VarianceFilterNode(BaseNode):
                                       width = width,        # Window size of the variance
                                       standardization = standardization, # Use standardization?
                                       nChannels = None,     # Number of channels
-                                      var_tools = var_tools)# C-implementation of var/std
+                                      var_tools = var_tools,# C-implementation of var/std
+                                      normalize = normalize,
+                                      lenNormalize = lenNormalize,
+                                      ringbufferNormalize = None)
 
     def _execute(self, data):
         # Initialize the ringbuffers and variables one for each channel
@@ -812,6 +816,12 @@ class VarianceFilterNode(BaseNode):
             self.ringbuffer = numpy.zeros((self.width,self.nChannels),dtype=numpy.double)
             self.variables = numpy.zeros((2,self.nChannels),dtype=numpy.double)
             self.index = numpy.zeros(self.nChannels,'i')
+        if(self.width <= 1):
+            warnings.warn("Width have to be greater than 1!\nThe data won't be changed!!!")
+            return data
+
+        if(self.normalize and self.ringbufferNormalize == None):
+            self.ringbufferNormalize = numpy.zeros((self.lenNormalize,self.nChannels),dtype=numpy.double)
 
         # Convert the input data to double
         x = data.view(numpy.ndarray).astype(numpy.double)
@@ -853,6 +863,11 @@ class VarianceFilterNode(BaseNode):
                     # The module vt (variance_tools) is implemented in c using boost to wrap the code in python
                     # The module is located in trunk/library/variance_tools and have to be compiled
                     self.index[channel_index] = vt.filter(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
+                    if self.normalize:
+                        lenData = len(processing_filtered_data)
+                        self.ringbufferNormalize[0:-lenData,channel_index] = self.ringbufferNormalize[lenData:,channel_index]
+                        self.ringbufferNormalize[-lenData:,channel_index] = processing_filtered_data[:]
+                        processing_filtered_data /= numpy.max((50,numpy.max(self.ringbufferNormalize[:,channel_index])))
                 else:
                     self.index[channel_index] = self.variance(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
                 # Copy the processing lists back to the local variables

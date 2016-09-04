@@ -29,12 +29,27 @@ The input datasets must not contain split data.
 
 (*obligatory*)
 
+name_pattern
+------------
+String to customize 'Rest' in the name of the result dataset.
+
+(*optional, default: 'Rest'*)
+
 reverse
 -------
 
 Switch to use *One_vs_Rest* scheme instead of *Rest_vs_one* scheme
 
 (*optional, default: False*)
+
+set_flag
+-----------
+
+If *set_flag* is True, the first time series object, that is merged from a 
+different dataset, gets a flag. This is only done if data is stored in pickle
+format.
+
+(*optional, default: True*)
 
 collection_constraints
 ----------------------
@@ -116,30 +131,29 @@ class MergeOperation(Operation):
         collection_constraints = []
         if "collection_constraints" in operation_spec:
             collection_constraints.extend(operation_spec["collection_constraints"])
-        if "reverse" in operation_spec:
-            reverse = operation_spec["reverse"]
-        else:
-            reverse = False
 
+        reverse = operation_spec.get("reverse", False)
+        set_flag = operation_spec.get("set_flag", True)
+        name_pattern = operation_spec.get("name_pattern", "Rest")
         # merging is not distributed over different processes
         number_processes = 1
         processes = processing.Queue()
         
         # Create the Merge Process 
         cls._createProcesses(processes, input_paths, result_directory,
-                             collection_constraints, reverse)
+                             collection_constraints, reverse, set_flag, name_pattern)
                            
         # create and return the merge operation object
         return cls(processes, operation_spec, result_directory, number_processes)
 
     @classmethod
     def _createProcesses(cls, processes, input_collections, result_directory,
-                         collection_constraints, reverse):
+                         collection_constraints, reverse, set_flag, name_pattern):
         """[factory method] Create the MergeProcess object."""
         
         # Create the merge process and put it in the execution queue
         processes.put(MergeProcess(input_collections, result_directory,
-                                    collection_constraints, reverse))
+                                    collection_constraints, reverse, set_flag, name_pattern))
         # give executing process the sign that creation is now finished
         processes.put(False)    
     
@@ -158,13 +172,15 @@ class MergeProcess(Process):
     """
     
     def __init__(self, input_collection, result_directory, 
-                 collection_constraints, reverse):
+                 collection_constraints, reverse, set_flag, name_pattern):
         super(MergeProcess, self).__init__()
         
         self.input_collections = input_collection
         self.result_directory = result_directory
         self.collection_constraints = collection_constraints
         self.reverse = reverse
+        self.set_flag = set_flag
+        self.name_pattern = name_pattern
     
     def __call__(self):
         """ Executes this process on the respective modality """
@@ -200,12 +216,12 @@ class MergeProcess(Process):
             if self.reverse:
                 target_collection_name = source_test_collection_name.replace(
                                          test_base_collection_name,
-                                         test_base_collection_name + "_vs_Rest")
+                                         test_base_collection_name + "_vs_" + self.name_pattern)
                 key = "train"
             else:
                 target_collection_name = source_test_collection_name.replace(
                                          test_base_collection_name,
-                                         "Rest_vs_" + test_base_collection_name)
+                                         self.name_pattern + "_vs_" + test_base_collection_name)
                 key = "test"
                 
             target_collection_path = os.sep.join([self.result_directory,
@@ -226,14 +242,11 @@ class MergeProcess(Process):
                 target_test_file_path = os.sep.join([target_collection_path,
                                        "data_run0","features_sp0_"+key+".arff"])
             
-            elif source_file_name.endswith("pickle"):
-                file_ending = "pickle"
+            else:
+                file_ending = source_file_name.split(".")[-1]
                 source_test_file_path = source_test_collection_path
                 target_test_file_path = target_collection_path
-            else:
-                raise NotImplementedError("File type not supported in " \
-                                                               "MergeOperation")
-            
+
             source_train_pathes = []
             for source_train_collection_path in self.input_collections:
                 source_train_collection_name = \
@@ -272,23 +285,16 @@ class MergeProcess(Process):
                                       os.sep.join([source_train_collection_path, 
                                                 "data_run0", "features_sp0_" + \
                                                train_set_name_suffix + ".arff"])
-                elif "pickle" == file_ending:
-                    source_train_file_path = source_train_collection_path
-
                 else:
-                    raise NotImplementedError("File type not supported in " \
-                                                              "MergeOperation!")     
+                    source_train_file_path = source_train_collection_path 
                     
                 source_train_pathes.append(source_train_file_path)
             
             if "arff" == file_ending:
                 target_train_file_path = os.sep.join([target_collection_path,
                                        "data_run0","features_sp0_"+key+".arff"])
-            elif "pickle" == file_ending:
-                target_train_file_path = target_collection_path
             else:
-                raise NotImplementedError("File type not supported in "
-                                                              "MergeOperation!")     
+                target_train_file_path = target_collection_path 
             
             if len(source_train_pathes) == 0:
                 continue
@@ -309,22 +315,19 @@ class MergeProcess(Process):
                 # TODO: Adapt to new collection
                 input_meta = BaseDataset.load_meta_data(source_test_collection_path)
                 BaseDataset.store_meta_data(target_collection_path,input_meta)
-            elif "pickle" == file_ending:
-                self._copy_pickle_file(source_test_collection_path,
-                                       target_collection_path,
-                                       train_set_name_suffix)
-
-                self._merge_pickle_files(target_train_file_path, 
-                                         source_train_pathes, 
-                                         train_set_name_suffix,
-                                         target_collection_params)
             else:
-                raise NotImplementedError("File type not supported in merge_operation")
+                self._copy_file(source_test_collection_path,
+                                target_collection_path,
+                                train_set_name_suffix)
+
+                self._merge_files(target_train_file_path, 
+                                  source_train_pathes, 
+                                  train_set_name_suffix,
+                                  target_collection_params)
             
         ############## Clean up after benchmarking ##############
         super(MergeProcess, self).post_benchmarking()
         
-
     def _merge_arff_files(self, target_arff_file_path, merge_arff_file_pathes,
                           target_collection_name):
         """ Copy the instances from the merge arff files to the target arff file"""
@@ -356,10 +359,28 @@ class MergeProcess(Process):
         file.writelines(content)
         file.close()
         
-    def _merge_pickle_files(self, target_collection_path, source_collection_pathes,
-                                  train_set_name_suffix, target_collection_params):
+    def _merge_files(self, target_collection_path, source_collection_pathes,
+                     train_set_name_suffix, target_collection_params):
         """ Merge all collections in source_collection_pathes and store them \
-            in the target collection"""
+            in the target collection
+            
+        **Parameters**
+        
+            :target_collection_path:
+                Path of the dataset, in which the data of all other datasets
+                is assembled.
+                
+            :source_collection_pathes:
+                Paths of the datasets to be merged.
+                
+            :train_set_name_suffix:
+                Either 'train' or 'test'. Specifies if datasets are merged for
+                training or testing.
+                
+            :target_collection_params:
+                Dictionary with all the parameters of the target dataset.
+                
+        """
         
         # load a first collection, in which the data of all other collections 
         # is assembled
@@ -391,10 +412,29 @@ class MergeProcess(Process):
             source_collection = BaseDataset.load(source_collection_path)
             for run in source_collection.get_run_numbers():
                 for split in source_collection.get_split_numbers():
-                    data = source_collection.get_data(run, split, 
-                                                          train_set_name_suffix)
                     target_data = target_collection.get_data(run, split, 
                                                           train_set_name_suffix)
+                    
+                    if self.set_flag:
+                        for ts, l in target_data:
+                            if ts.specs == None:
+                                ts.specs = {"new_set": False}
+                            elif ts.specs.has_key("new_set"):
+                                break
+                            else:
+                                ts.specs["new_set"]= False
+                    
+                    data = source_collection.get_data(run, split, 
+                                                          train_set_name_suffix)
+                    
+                    if self.set_flag:
+                        for i, (ts, l) in enumerate(data):
+                            # flag first element of the concatenated data list
+                            if ts.specs == None:
+                                ts.specs = {"new_set": i==0}
+                            else:
+                                ts.specs["new_set"] = (i==0)
+                    
                     # actual data is stored in a list that has to be extended
                     target_data.extend(data)
                     
@@ -407,13 +447,27 @@ class MergeProcess(Process):
                 value = target_collection.data.pop(key)
                 key = (key[0],key[1],"train")
                 target_collection.data[key] = value
-                    
-        target_collection.store(target_collection_path)
+        # we store the data in the same format as before
+        target_collection.store(target_collection_path, 
+            target_collection.meta_data["storage_format"])
         
         
-    def _copy_pickle_file(self, source_collection_path, target_collection_path,
-                          train_set_name_suffix):
+    def _copy_file(self, source_collection_path, target_collection_path,
+                   train_set_name_suffix):
+        """ Copy a dataset to a new destination 
         
+        **Parameters**
+        
+            :source_collection_path:
+                The path to the dataset that has to be copied.
+                
+            :target_collection_path:
+                The path to where the dataset should be copied.
+                
+            :train_set_name_suffix:
+                Either 'train' or 'test'. Specifies if the target dataset is
+                handeled as training or testing data. 
+        """ 
         source_collection = BaseDataset.load(source_collection_path)
         # if only test data was given, the "Rest_vs" collection is stored as 
         # training data
@@ -424,4 +478,6 @@ class MergeProcess(Process):
                 value = source_collection.data.pop(key)
                 key = (key[0],key[1],"train")
                 source_collection.data[key] = value
-        source_collection.store(target_collection_path)
+        # we store the data in the same format as before
+        source_collection.store(target_collection_path, 
+            source_collection.meta_data["storage_format"])

@@ -1,13 +1,13 @@
 # -*- coding:utf-8; -*-
-""" Wrap the algorithms defined in `scikits.learn <http://scikit-learn.org/>`_ in pySPACE nodes
+""" Wrap the algorithms defined in `scikit.learn <http://scikit-learn.org/>`_ in pySPACE nodes
 
 For details on parameter usage look at the
-`scikits documentation <http://scikit-learn.org/>`_ or
+`scikit documentation <http://scikit-learn.org/>`_ or
 the wrapped documentation of pySPACE: :ref:`scikit_nodes`.
 The parameters given in the node specification are filtered, to check if they
 are available, and then directly forwarded to the scikit algorithm.
 
-This module is based heavily on the scikits.learn wrapper for the "Modular
+This module is based heavily on the scikit.learn wrapper for the "Modular
 toolkit for Data Processing"
 (MDP, version 3.3, http://mdp-toolkit.sourceforge.net/).
 All credit goes to the MDP authors.
@@ -63,6 +63,8 @@ import re
 import numpy
 import logging
 import warnings
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 import sys
 
 from pySPACE.missions.nodes.base_node import BaseNode
@@ -71,8 +73,8 @@ from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
 
-class ScikitsException(Exception):
-    """Base class for exceptions in nodes wrapping scikits algorithms."""
+class ScikitException(Exception):
+    """Base class for exceptions in nodes wrapping scikit algorithms."""
     pass
 
 
@@ -91,16 +93,16 @@ def _version_too_old(version, known_good):
     return False
 
 if not _sklearn_prefix:
-    scikits_modules = []
+    scikit_modules = []
 elif _version_too_old(sklearn.__version__, (0, 8)):
-    scikits_modules = ['ann', 'cluster', 'covariance', 'feature_extraction',
+    scikit_modules = ['ann', 'cluster', 'covariance', 'feature_extraction',
                        'feature_selection', 'features', 'gaussian_process', 'glm',
                        'linear_model', 'preprocessing', 'svm',
                        'pca', 'lda', 'hmm', 'fastica', 'grid_search', 'mixture',
                        'naive_bayes', 'neighbors', 'qda']
 elif _version_too_old(sklearn.__version__, (0, 9)):
     # package structure has been changed in 0.8
-    scikits_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
+    scikit_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
                        'mixture', 'hmm', 'cluster', 'decomposition', 'lda',
                        'covariance', 'cross_val', 'grid_search',
                        'feature_selection.rfe', 'feature_extraction.image',
@@ -108,24 +110,35 @@ elif _version_too_old(sklearn.__version__, (0, 9)):
                        'gaussian_process', 'qda']
 elif _version_too_old(sklearn.__version__, (0, 11)):
     # from release 0.9 cross_val becomes cross_validation and hmm is deprecated
-    scikits_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
+    scikit_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
                        'mixture', 'cluster', 'decomposition', 'lda',
                        'covariance', 'cross_validation', 'grid_search',
                        'feature_selection.rfe', 'feature_extraction.image',
                        'feature_extraction.text', 'pipelines', 'pls',
                        'gaussian_process', 'qda', 'ensemble', 'manifold',
                        'metrics', 'preprocessing', 'tree']
-else:
-    scikits_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
+elif _version_too_old(sklearn.__version__, (0, 17)):
+    scikit_modules = ['svm', 'linear_model', 'naive_bayes', 'neighbors',
                        'mixture', 'cluster', 'decomposition', 'lda',
                        'covariance', 'cross_validation', 'grid_search',
                        'feature_selection', 'feature_extraction',
                        'pipeline', 'pls', 'gaussian_process', 'qda',
                        'ensemble', 'manifold', 'metrics', 'preprocessing',
                        'semi_supervised', 'tree', 'hmm']
+else:
+    scikit_modules = ['calibration', 'cluster', 'covariance',
+                       'cross_decomposition', 'cross_validation',
+                       'decomposition', 'discriminant_analysis',
+                       'ensemble', 'feature_extraction', 'feature_selection',
+                       'gaussian_process', 'grid_search', 'isotonic',
+                       'kernel_approximation', 'kernel_ridge', 'learning_curve',
+                       'linear_model', 'manifold', 'metrics', 'mixture',
+                       'multiclass', 'naive_bayes', 'neighbors',
+                       'neural_network', 'preprocessing', 'random_projection',
+                       'semi_supervised', 'svm', 'tree']
 
 
-for name in scikits_modules:
+for name in scikit_modules:
     # not all modules may be available due to missing dependencies
     # on the user system.
     # we just ignore failing imports
@@ -151,7 +164,7 @@ _DOC_TEMPLATE = """
 This node has been automatically generated by wrapping the
 `%s.%s <http://scikit-learn.org/stable/modules/generated/%s.%s.html>`_ class
 from the ``sklearn`` library.  The wrapped instance can be accessed
-through the ``scikits_alg`` attribute.
+through the ``scikit_alg`` attribute.
 
 %s
 """
@@ -227,7 +240,7 @@ def _gen_docstring(object, docsource=None):
 # TODO: inverse <-> generate/rvs
 # TODO: deal with input_dim/output_dim
 # TODO: change signature of overwritten functions
-# TODO: wrap_scikits_instance
+# TODO: wrap_scikit_instance
 # TODO: add sklearn availability to test info strings
 # TODO: which tests ? (test that particular algorithm are / are not trainable)
 # XXX: if class defines n_components, allow output_dim, otherwise throw exception
@@ -235,10 +248,10 @@ def _gen_docstring(object, docsource=None):
 #      Problem: sometimes they call it 'k' (e.g., algorithms in sklearn.cluster)
 
 
-def apply_to_scikits_algorithms(current_module, action,
+def apply_to_scikit_algorithms(current_module, action,
                                 processed_modules=None,
                                 processed_classes=None):
-    """ Function that traverses a module to find scikits algorithms.
+    """ Function that traverses a module to find scikit algorithms.
 
     'sklearn' algorithms are identified by the 'fit' 'predict',
     or 'transform' methods. The 'action' function is applied to each found
@@ -267,12 +280,16 @@ def apply_to_scikits_algorithms(current_module, action,
                         or hasattr(member, 'transform'))
                         and not member.__module__.endswith('_')):
                     processed_classes.append(member)
-                    action(member)
+                    try:
+                        action(member)
+                    # ignore failed imports
+                    except:
+                        warnings.warn("Could not wrap sklearn nodes.")
 
             # other modules
             elif (inspect.ismodule(member) and
                   member.__name__.startswith(_sklearn_prefix)):
-                apply_to_scikits_algorithms(member, action, processed_modules,
+                apply_to_scikit_algorithms(member, action, processed_modules,
                                             processed_classes)
     return processed_classes
 
@@ -284,7 +301,7 @@ arguments (e.g., 'n_components', or 'k'). See the docstring of
 this class for details."""
 
 
-def wrap_scikits_classifier(scikits_class):
+def wrap_scikit_classifier(scikit_class):
     """Wrap a sklearn classifier as a BaseNode subclass.
 
     The wrapper maps these node methods to their sklearn equivalents:
@@ -296,7 +313,8 @@ def wrap_scikits_classifier(scikits_class):
     newaxis = numpy.newaxis
 
     # create a wrapper class for a sklearn classifier
-    class ScikitsClassifier(BaseNode):
+    class ScikitClassifier(BaseNode):
+        input_types = ["FeatureVector"]
 
         def __init__(self, input_dim=None, output_dim=None, dtype=None,
                      class_labels=None, **kwargs):
@@ -306,23 +324,28 @@ def wrap_scikits_classifier(scikits_class):
                 if 'n_components' in kwargs:
                     msg = ("Dimensionality set both by "
                            "output_dim=%d and n_components=%d""")
-                    raise ScikitsException(msg % (output_dim,
+                    raise ScikitException(msg % (output_dim,
                                                   kwargs['n_components']))
-
-            super(ScikitsClassifier, self).__init__(input_dim=input_dim,
-                                                    output_dim=output_dim,
-                                                    dtype=dtype)
             try:
-                accepted_args = inspect.getargspec(scikits_class.__init__)[0]
+                accepted_args = inspect.getargspec(scikit_class.__init__)[0]
+                base_kwargs = {}
                 for key in kwargs.keys():
                     if key not in accepted_args:
-                        kwargs.pop(key)
+                        base_kwargs[key] = kwargs.pop(key)
+                del(key)
+                del(accepted_args)
             except TypeError:  # happens for GaussianNBSklearnNode
+                base_kwargs = kwargs
                 kwargs = {}
+
+            super(ScikitClassifier, self).__init__(
+                input_dim=input_dim, output_dim=output_dim, dtype=dtype,
+                **base_kwargs)
+
             self.kwargs = kwargs
 
             self.set_permanent_attributes(kwargs=kwargs,
-                                          scikits_alg=scikits_class(**self.kwargs),
+                                          scikit_alg=scikit_class(**self.kwargs),
                                           data=[],
                                           labels=[],
                                           class_labels=class_labels)
@@ -335,7 +358,7 @@ def wrap_scikits_classifier(scikits_class):
             self.labels.append(y)
 
         def _stop_training(self, **kwargs):
-            super(ScikitsClassifier, self)._stop_training(self)
+            super(ScikitClassifier, self)._stop_training(self)
             if self.class_labels is None:
                 self.class_labels = sorted(list(set(self.labels)))
 
@@ -344,7 +367,7 @@ def wrap_scikits_classifier(scikits_class):
                 numpy.array(map(lambda s: self.class_labels.index(s),
                                 self.labels))
             try:
-                return self.scikits_alg.fit(data, label_values, **kwargs)
+                return self.scikit_alg.fit(data, label_values, **kwargs)
             except Exception as e:
                 raise type(e), \
                 type(e)("in node %s:\n\t"%self.__class__.__name__+e.args[0]),\
@@ -353,42 +376,48 @@ def wrap_scikits_classifier(scikits_class):
         def _execute(self, data):
             x = data.view(numpy.ndarray)
             try:
-                prediction = self.scikits_alg.predict(x)[0]
+                prediction = self.scikit_alg.predict(x)[0]
             except Exception as e:
                 raise type(e), \
                 type(e)("in node %s:\n\t"%self.__class__.__name__+e.args[0]), \
                 sys.exc_info()[2]
-            if hasattr(self.scikits_alg, "predict_proba"):
+            if hasattr(self.scikit_alg, "predict_proba"):
                 try:
-                    score = self.scikits_alg.predict_proba(x)[0, 1]
+                    score = self.scikit_alg.predict_proba(x)[0, 1]
                 except Exception as e:
                     warnings.warn("%s in node %s:\n\t"\
                             %(type(e).__name__,self.__class__.__name__)+e.args[0])
                     try:
-                        score = self.scikits_alg.decision_function(x)[0]
+                        score = self.scikit_alg.decision_function(x)[0]
                     except:
                         score = prediction
-            elif hasattr(self.scikits_alg, "decision_function"):
-                score = self.scikits_alg.decision_function(x)[0]
+            elif hasattr(self.scikit_alg, "decision_function"):
+                score = self.scikit_alg.decision_function(x)[0]
             else:
                 score = prediction
             label = self.class_labels[prediction]
             return PredictionVector(label=label, prediction=score,
                                     predictor=self)
 
+        def get_output_type(self, input_type, as_string=True):
+            if as_string:
+                return "PredictionVector"
+            else:
+                return PredictionVector
+
         # ---- administrative details
 
         @staticmethod
         def is_trainable():
             """Return True if the node can be trained, False otherwise."""
-            return hasattr(scikits_class, 'fit')
+            return hasattr(scikit_class, 'fit')
 
         @staticmethod
         def is_supervised():
             """Return True if the node requires labels for training, False otherwise."""
             return True
 
-        # NOTE: at this point scikits nodes can only support up to
+        # NOTE: at this point scikit nodes can only support up to
         # 64-bits floats because some call numpy.linalg.svd, which for
         # some reason does not support higher precisions
         def _get_supported_dtypes(self):
@@ -397,39 +426,44 @@ def wrap_scikits_classifier(scikits_class):
             return ['float32', 'float64']
 
     # modify class name and docstring
-    ScikitsClassifier.__name__ = scikits_class.__name__ + 'SklearnNode'
-    ScikitsClassifier.__doc__ = _gen_docstring(scikits_class)
+    if "Classifier" not in scikit_class.__name__:
+        ScikitClassifier.__name__ = scikit_class.__name__ + \
+            'ClassifierSklearnNode'
+    else:
+        ScikitClassifier.__name__ = scikit_class.__name__ + 'SklearnNode'
+
+    ScikitClassifier.__doc__ = _gen_docstring(scikit_class)
 
     # Class must be permanently accessible from module level
-    globals()[ScikitsClassifier.__name__] = ScikitsClassifier
+    globals()[ScikitClassifier.__name__] = ScikitClassifier
 
     # change the docstring of the methods to match the ones in sklearn
 
-    # methods_dict maps ScikitsNode method names to sklearn method names
+    # methods_dict maps ScikitNode method names to sklearn method names
     methods_dict = {'__init__': '__init__',
                     'stop_training': 'fit',
                     'execute': 'predict'}
-    #if hasattr(scikits_class, 'predict_proba'):
+    #if hasattr(scikit_class, 'predict_proba'):
     #    methods_dict['prob'] = 'predict_proba'
 
-    for pyspace_name, scikits_name in methods_dict.items():
-        pyspace_method = getattr(ScikitsClassifier, pyspace_name)
-        scikits_method = getattr(scikits_class, scikits_name)
-        if hasattr(scikits_method, 'im_func'):
-            # some scikits algorithms do not define an __init__ method
+    for pyspace_name, scikit_name in methods_dict.items():
+        pyspace_method = getattr(ScikitClassifier, pyspace_name)
+        scikit_method = getattr(scikit_class, scikit_name)
+        if hasattr(scikit_method, 'im_func'):
+            # some scikit algorithms do not define an __init__ method
             # the one inherited from 'object' is a
             # "<slot wrapper '__init__' of 'object' objects>"
             # which does not have a 'im_func' attribute
-            pyspace_method.im_func.__doc__ = _gen_docstring(scikits_class,
-                                                           scikits_method.im_func)
+            pyspace_method.im_func.__doc__ = _gen_docstring(scikit_class,
+                                                           scikit_method.im_func)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsClassifier.__init__.im_func.__doc__ = _gen_docstring(scikits_class)
+    if scikit_class.__init__.__doc__ is None:
+        ScikitClassifier.__init__.im_func.__doc__ = _gen_docstring(scikit_class)
 
-    return ScikitsClassifier
+    return ScikitClassifier
 
 
-def wrap_scikits_transformer(scikits_class):
+def wrap_scikit_transformer(scikit_class):
     """ Wrap a sklearn transformer as a pySPACE BaseNode subclass
 
     The wrapper maps these pySPACE methods to their sklearn equivalents:
@@ -439,22 +473,26 @@ def wrap_scikits_transformer(scikits_class):
     """
 
     # create a wrapper class for a sklearn transformer
-    class ScikitsTransformer(BaseNode):
+    class ScikitTransformer(BaseNode):
+        input_types = ["FeatureVector"]
 
         def __init__(self, input_dim=None, output_dim=None, dtype=None, **kwargs):
             if output_dim is not None:
-                raise ScikitsException(_OUTPUTDIM_ERROR)
-            super(ScikitsTransformer, self).__init__(input_dim=input_dim,
-                                                     output_dim=output_dim,
-                                                     dtype=dtype)
-            accepted_args = inspect.getargspec(scikits_class.__init__)[0]
+                raise ScikitException(_OUTPUTDIM_ERROR)
+            accepted_args = inspect.getargspec(scikit_class.__init__)[0]
+            base_kwargs = {}
             for key in kwargs.keys():
                 if key not in accepted_args:
-                    kwargs.pop(key)
+                    base_kwargs[key] = kwargs.pop(key)
+            del(key)
+            del(accepted_args)
+            super(ScikitTransformer, self).__init__(
+                input_dim=input_dim, output_dim=output_dim, dtype=dtype,
+                **base_kwargs)
             self.kwargs = kwargs
 
             self.set_permanent_attributes(kwargs=kwargs,
-                                          scikits_alg=scikits_class(**self.kwargs),
+                                          scikit_alg=scikit_class(**self.kwargs),
                                           data=[],
                                           feature_names=None)
 
@@ -462,18 +500,18 @@ def wrap_scikits_transformer(scikits_class):
 
         def _train(self, data):
             assert type(data) == FeatureVector, \
-                "Scikits-Learn Transformer nodes only support FeatureVector inputs."
+                "Scikit-Learn Transformer nodes only support FeatureVector inputs."
             x = data.view(numpy.ndarray)
             self.data.append(x[0])
 
         def _stop_training(self, **kwargs):
-            super(ScikitsTransformer, self)._stop_training(self)
+            super(ScikitTransformer, self)._stop_training(self)
             data = numpy.array(self.data)
-            return self.scikits_alg.fit(data, **kwargs)
+            return self.scikit_alg.fit(data, **kwargs)
 
         def _execute(self, data):
             x = data.view(numpy.ndarray)
-            out = self.scikits_alg.transform(x[0])
+            out = self.scikit_alg.transform(x[0])
             if self.feature_names is None:
                 self.feature_names = \
                     ["%s_%s" % (self.__class__.__name__, i)
@@ -485,14 +523,14 @@ def wrap_scikits_transformer(scikits_class):
         @staticmethod
         def is_trainable():
             """Return True if the node can be trained, False otherwise."""
-            return hasattr(scikits_class, 'fit')
+            return hasattr(scikit_class, 'fit')
 
         @staticmethod
         def is_supervised():
             """Return True if the node requires labels for training, False otherwise."""
             return False
 
-        # NOTE: at this point scikits nodes can only support up to
+        # NOTE: at this point scikit nodes can only support up to
         # 64-bits floats because some call numpy.linalg.svd, which for
         # some reason does not support higher precisions
         def _get_supported_dtypes(self):
@@ -500,38 +538,49 @@ def wrap_scikits_transformer(scikits_class):
             The types can be specified in any format allowed by numpy.dtype."""
             return ['float32', 'float64']
 
+        def get_output_type(self, input_type, as_string=True):
+            if as_string:
+                return "FeatureVector"
+            else:
+                return FeatureVector
+
     # modify class name and docstring
-    ScikitsTransformer.__name__ = scikits_class.__name__ + 'SklearnNode'
-    ScikitsTransformer.__doc__ = _gen_docstring(scikits_class)
+    if "Transformer" not in scikit_class.__name__:
+        ScikitTransformer.__name__ = scikit_class.__name__ + \
+            'TransformerSklearnNode'
+    else:
+        ScikitTransformer.__name__ = scikit_class.__name__ + 'SklearnNode'
+
+    ScikitTransformer.__doc__ = _gen_docstring(scikit_class)
 
     # Class must be permanently accessible from module level
-    globals()[ScikitsTransformer.__name__] = ScikitsTransformer
+    globals()[ScikitTransformer.__name__] = ScikitTransformer
 
 
     # change the docstring of the methods to match the ones in sklearn
 
-    # methods_dict maps ScikitsNode method names to sklearn method names
+    # methods_dict maps ScikitNode method names to sklearn method names
     methods_dict = {'__init__': '__init__',
                     'stop_training': 'fit',
                     'execute': 'transform'}
 
-    for pyspace_name, scikits_name in methods_dict.items():
-        pyspace_method = getattr(ScikitsTransformer, pyspace_name)
-        scikits_method = getattr(scikits_class, scikits_name, None)
-        if hasattr(scikits_method, 'im_func'):
-            # some scikits algorithms do not define an __init__ method
+    for pyspace_name, scikit_name in methods_dict.items():
+        pyspace_method = getattr(ScikitTransformer, pyspace_name)
+        scikit_method = getattr(scikit_class, scikit_name, None)
+        if hasattr(scikit_method, 'im_func'):
+            # some scikit algorithms do not define an __init__ method
             # the one inherited from 'object' is a
             # "<slot wrapper '__init__' of 'object' objects>"
             # which does not have a 'im_func' attribute
-            pyspace_method.im_func.__doc__ = _gen_docstring(scikits_class,
-                                                            scikits_method.im_func)
+            pyspace_method.im_func.__doc__ = _gen_docstring(scikit_class,
+                                                            scikit_method.im_func)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsTransformer.__init__.im_func.__doc__ = _gen_docstring(scikits_class)
-    return ScikitsTransformer
+    if scikit_class.__init__.__doc__ is None:
+        ScikitTransformer.__init__.im_func.__doc__ = _gen_docstring(scikit_class)
+    return ScikitTransformer
 
 
-def wrap_scikits_predictor(scikits_class):
+def wrap_scikit_predictor(scikit_class):
     """ Wrap a sklearn predictor as an pySPACE BaseNode subclass
 
     The wrapper maps these pySPACE methods to their sklearn equivalents:
@@ -541,24 +590,28 @@ def wrap_scikits_predictor(scikits_class):
     """
 
     # create a wrapper class for a sklearn predictor
-    class ScikitsPredictor(BaseNode):
+    class ScikitPredictor(BaseNode):
+        input_types = ["FeatureVector"]
 
         def __init__(self, input_dim=None, output_dim=None, dtype=None, **kwargs):
             if output_dim is not None:
-                raise ScikitsException(_OUTPUTDIM_ERROR)
-            super(ScikitsPredictor, self).__init__(input_dim=input_dim,
-                                                   output_dim=output_dim,
-                                                   dtype=dtype)
-            accepted_args = inspect.getargspec(scikits_class.__init__)[0]
+                raise ScikitException(_OUTPUTDIM_ERROR)
+            accepted_args = inspect.getargspec(scikit_class.__init__)[0]
+            base_kwargs = {}
             for key in kwargs.keys():
                 if key not in accepted_args:
-                    kwargs.pop(key)
+                    base_kwargs[key] = kwargs.pop(key)
+            del(key)
+            del(accepted_args)
+            super(ScikitPredictor, self).__init__(
+                input_dim=input_dim, output_dim=output_dim, dtype=dtype,
+                **base_kwargs)
             self.kwargs = kwargs
 
             self.set_permanent_attributes(kwargs=kwargs,
                                           data=[],
                                           labels=[],
-                                          scikits_alg=scikits_class(**self.kwargs))
+                                          scikit_alg=scikit_class(**self.kwargs))
 
         # ---- re-direct training and execution to the wrapped algorithm
 
@@ -568,11 +621,11 @@ def wrap_scikits_predictor(scikits_class):
             self.labels.append(numpy.float64(y))
 
         def _stop_training(self, **kwargs):
-            super(ScikitsPredictor, self)._stop_training(self)
+            super(ScikitPredictor, self)._stop_training(self)
             data = numpy.array(self.data)
             label_values = numpy.array(self.labels)
             try:
-                return self.scikits_alg.fit(data, label_values, **kwargs)
+                return self.scikit_alg.fit(data, label_values, **kwargs)
             except Exception as e:
                 raise type(e), \
                     type(e)("in node %s:\n\t"%self.__class__.__name__+e.args[0]), \
@@ -581,24 +634,24 @@ def wrap_scikits_predictor(scikits_class):
         def _execute(self, data):
             x = data.view(numpy.ndarray)
             try:
-                prediction = self.scikits_alg.predict(x)[0]
+                prediction = self.scikit_alg.predict(x)[0]
             except Exception as e:
                 raise type(e), \
                     type(e)("in node %s:\n\t"%self.__class__.__name__+e.args[0]), \
                     sys.exc_info()[2]
 
-            if hasattr(self.scikits_alg, "predict_proba"):
+            if hasattr(self.scikit_alg, "predict_proba"):
                 try:
-                    score = self.scikits_alg.predict_proba(x)[0, 1]
+                    score = self.scikit_alg.predict_proba(x)[0, 1]
                 except Exception as e:
                     warnings.warn("%s in node %s:\n\t" \
                                   %(type(e).__name__,self.__class__.__name__)+e.args[0])
                     try:
-                        score = self.scikits_alg.decision_function(x)[0]
+                        score = self.scikit_alg.decision_function(x)[0]
                     except:
                         score = prediction
-            elif hasattr(self.scikits_alg, "decision_function"):
-                score = self.scikits_alg.decision_function(x)[0]
+            elif hasattr(self.scikit_alg, "decision_function"):
+                score = self.scikit_alg.decision_function(x)[0]
             else:
                 # if nothing else works, we set the score of the
                 # prediction to be equal to the prediction itself.
@@ -610,9 +663,9 @@ def wrap_scikits_predictor(scikits_class):
 
         def is_trainable(self):
             """Return True if the node can be trained, False otherwise."""
-            return hasattr(scikits_class, 'fit')
+            return hasattr(scikit_class, 'fit')
 
-        # NOTE: at this point scikits nodes can only support up to 64-bits floats
+        # NOTE: at this point scikit nodes can only support up to 64-bits floats
         # because some call numpy.linalg.svd, which for some reason does not
         # support higher precisions
         def _get_supported_dtypes(self):
@@ -623,34 +676,45 @@ def wrap_scikits_predictor(scikits_class):
         def is_supervised(self):
             return self.is_trainable()
 
+        def get_output_type(self, input_type, as_string=True):
+            if as_string:
+                return "PredictionVector"
+            else:
+                return PredictionVector
+
     # modify class name and docstring
-    ScikitsPredictor.__name__ = scikits_class.__name__ + 'SklearnNode'
-    ScikitsPredictor.__doc__ = _gen_docstring(scikits_class)
+    if "Regression" not in scikit_class.__name__ and \
+            "Regressor" not in scikit_class.__name__:
+        ScikitPredictor.__name__ = scikit_class.__name__ + \
+            'RegressorSklearnNode'
+    else:
+        ScikitPredictor.__name__ = scikit_class.__name__ + 'SklearnNode'
+    ScikitPredictor.__doc__ = _gen_docstring(scikit_class)
 
     # Class must be permanently accessible from module level
-    globals()[ScikitsPredictor.__name__] = ScikitsPredictor
+    globals()[ScikitPredictor.__name__] = ScikitPredictor
 
     # change the docstring of the methods to match the ones in sklearn
 
-    # methods_dict maps ScikitsPredictor method names to sklearn method names
+    # methods_dict maps ScikitPredictor method names to sklearn method names
     methods_dict = {'__init__': '__init__',
                     'stop_training': 'fit',
                     'execute': 'predict'}
 
-    for pyspace_name, scikits_name in methods_dict.items():
-        pyspace_method = getattr(ScikitsPredictor, pyspace_name)
-        scikits_method = getattr(scikits_class, scikits_name)
-        if hasattr(scikits_method, 'im_func'):
-            # some scikits algorithms do not define an __init__ method
+    for pyspace_name, scikit_name in methods_dict.items():
+        pyspace_method = getattr(ScikitPredictor, pyspace_name)
+        scikit_method = getattr(scikit_class, scikit_name)
+        if hasattr(scikit_method, 'im_func'):
+            # some scikit algorithms do not define an __init__ method
             # the one inherited from 'object' is a
             # "<slot wrapper '__init__' of 'object' objects>"
             # which does not have a 'im_func' attribute
-            pyspace_method.im_func.__doc__ = _gen_docstring(scikits_class,
-                                                        scikits_method.im_func)
+            pyspace_method.im_func.__doc__ = _gen_docstring(scikit_class,
+                                                        scikit_method.im_func)
 
-    if scikits_class.__init__.__doc__ is None:
-        ScikitsPredictor.__init__.im_func.__doc__ = _gen_docstring(scikits_class)
-    return ScikitsPredictor
+    if scikit_class.__init__.__doc__ is None:
+        ScikitPredictor.__init__.im_func.__doc__ = _gen_docstring(scikit_class)
+    return ScikitPredictor
 
 
 #list candidate nodes
@@ -664,11 +728,8 @@ def print_public_members(class_):
         if not attr_name.startswith('_') and inspect.ismethod(attr):
             print ' -', attr_name
 
-#apply_to_scikits_algorithms(sklearn, print_public_members)
-
-
-def wrap_scikits_algorithms(scikits_class, nodes_list):
-    """ Check *scikits_class* and append new wrapped class to *nodes_list*
+def wrap_scikit_algorithms(scikit_class, nodes_list):
+    """ Check *scikit_class* and append new wrapped class to *nodes_list*
 
     Currently only classifiers subclassing ``sklearn.base.ClassifierMixin``
     and having a *fit* method were integrated and tested.
@@ -677,31 +738,31 @@ def wrap_scikits_algorithms(scikits_class, nodes_list):
     of regression in pySPACE.
     """
 
-    name = scikits_class.__name__
-    if (name[:4] == 'Base' or name == 'LinearModel'
-            or name.startswith('EllipticEnvelop')
-            or name.startswith('ForestClassifier')):
+    class_name = scikit_class.__name__
+    if (class_name[:4] == 'Base' or class_name == 'LinearModel'
+            or class_name.startswith('EllipticEnvelop')
+            or class_name.startswith('ForestClassifier')):
         return
 
-    if issubclass(scikits_class, sklearn.base.ClassifierMixin) and \
-            hasattr(scikits_class, 'fit'):
-        nodes_list.append(wrap_scikits_classifier(scikits_class))
+    if sklearn.base.is_classifier(scikit_class) \
+            and hasattr(scikit_class, 'fit'):
+        nodes_list.append(wrap_scikit_classifier(scikit_class))
+    elif sklearn.base.is_regressor(scikit_class) \
+            and hasattr(scikit_class, 'fit'):
+        # WARNING: Regression is not sufficiently tested in pySPACE
+        nodes_list.append(wrap_scikit_predictor(scikit_class))
     # Some (abstract) transformers do not implement fit.
-    elif hasattr(scikits_class, 'transform') and hasattr(scikits_class, 'fit'):
-        nodes_list.append(wrap_scikits_transformer(scikits_class))
-    elif hasattr(scikits_class, 'predict') and hasattr(scikits_class, 'fit'):
-        # WARNING: THIS PART OF PYSPACE IS EXPERIMENTAL ONLY
-        nodes_list.append(wrap_scikits_predictor(scikits_class))
+    elif hasattr(scikit_class, 'transform') and hasattr(scikit_class, 'fit'):
+        nodes_list.append(wrap_scikit_transformer(scikit_class))
 
 if _sklearn_prefix:
-    scikits_nodes = []
-    apply_to_scikits_algorithms(sklearn,
-                                lambda c: wrap_scikits_algorithms(
-                                    c, scikits_nodes))
-    # add scikits nodes to dictionary
-    #scikits_module = new.module('scikits')
-    for wrapped_c in scikits_nodes:
+    scikit_nodes = []
+    apply_to_scikit_algorithms(
+        sklearn, lambda c: wrap_scikit_algorithms(c, scikit_nodes))
+    # add scikit nodes to dictionary
+    for wrapped_c in scikit_nodes:
         DEFAULT_NODE_MAPPING[wrapped_c.__name__] = wrapped_c
         NODE_MAPPING[wrapped_c.__name__] = wrapped_c
         NODE_MAPPING[wrapped_c.__name__[:-4]] = wrapped_c
-    del(wrapped_c)
+    if not len(scikit_nodes) == 0:
+        del(wrapped_c)
