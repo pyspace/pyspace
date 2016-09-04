@@ -32,7 +32,7 @@ class TimeSeriesDataset(BaseDataset):
     in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.
     
     The standard *storage_format* is 'pickle',
-    but it is also possible to load, e.g.,
+    but it is also possible to load Matlab format ('mat') or
     BrainComputerInterface-competition data. For that, ``storage_format`` has
     to be set in the format **bci_comp_[competition number]_[dataset number]**
     in the metadata.yaml file. For example, **bci_comp_2_4** means loading of 
@@ -78,11 +78,13 @@ class TimeSeriesDataset(BaseDataset):
             dataset_dir = self.meta_data["dataset_directory"]
             s_format = self.meta_data["storage_format"]
             if type(s_format) == list:
-                s_format = s_format[0]
+                f_format = s_format[0]
+            else:
+                f_format = s_format
             # Loading depends on whether data is split into
             # training and test data, whether different splits exist and whether
             # several runs have been conducted.
-            if s_format == "pickle" and not self.meta_data["train_test"] \
+            if f_format in ["pickle", "mat"] and not self.meta_data["train_test"] \
                     and self.meta_data["splits"] == 1 \
                     and self.meta_data["runs"] == 1:
                 # The dataset consists only of a single set of data, for
@@ -94,7 +96,7 @@ class TimeSeriesDataset(BaseDataset):
                 ts_file = os.path.join(dataset_dir, data)
                 # Current data will be loaded lazily
                 self.data[(0, 0, "test")] = ts_file
-            elif s_format == "pickle":
+            elif f_format in ["pickle", "mat"]:
                 for run_nr in range(self.meta_data["runs"]):
                     for split_nr in range(self.meta_data["splits"]):
                         for train_test in ["train", "test"]:
@@ -109,13 +111,13 @@ class TimeSeriesDataset(BaseDataset):
                             ts_file = os.path.join(dataset_dir,data)
                             # Actual data will be loaded lazily
                             self.data[(run_nr, split_nr, train_test)] = ts_file
-            elif s_format.startswith("bci_comp"):
+            elif f_format.startswith("bci_comp"):
                 # get bci competion and dataset number
                 try:
-                    self.comp_number, self.comp_set = s_format.split('_')[2:]
+                    self.comp_number, self.comp_set = f_format.split('_')[2:]
                 except Exception:
                     raise Exception, "%s --- Could not extract BCI competition"\
-                                     " and dataset number!" % s_format
+                                     " and dataset number!" % f_format
                 if self.comp_number == "2":
                     if self.comp_set == "4":
                         
@@ -183,7 +185,7 @@ class TimeSeriesDataset(BaseDataset):
                                               " dataset %s not supported " \
                                             % (self.comp_number, self.comp_set))
                         
-            else:  # s_format=="csv":
+            else: # s_format == "csv":
                 if "file_name" in self.meta_data.keys():
                     ts_file = os.path.join(dataset_dir,
                                            self.meta_data["file_name"])
@@ -210,6 +212,7 @@ class TimeSeriesDataset(BaseDataset):
                         if "metadata.yaml" in ts_file:
                             ts_file = pathlist[1]
                 self.data[(0, 0, "test")] = ts_file
+               
         self.sort_string = sort_string if sort_string is not None else None
 
     def get_data(self, run_nr, split_nr, train_test):
@@ -232,8 +235,10 @@ class TimeSeriesDataset(BaseDataset):
                                                             split_nr))
             s_format = self.meta_data["storage_format"]
             if type(s_format) == list:
-                s_format = s_format[0]
-            if s_format == "pickle":
+                f_format = s_format[0]
+            else:
+                f_format = s_format
+            if f_format == "pickle":
                 # Load the time series from a pickled file
                 f = open(self.data[(run_nr, split_nr, train_test)], 'r')
                 try:
@@ -249,7 +254,26 @@ class TimeSeriesDataset(BaseDataset):
                     self.data[(run_nr, split_nr, train_test)] = cPickle.load(f)
                     del sys.modules['abri_dp.types.time_series']
                 f.close()
-            elif s_format.startswith("bci_comp"):
+            elif f_format in ["mat", "matlab", "MATLAB"]:
+                from scipy.io import loadmat
+                from pySPACE.resources.data_types.time_series import TimeSeries
+                ts_fname = self.data[(run_nr, split_nr, train_test)]
+                dataset = loadmat(ts_fname)
+                channel_names = [name.strip() for name in dataset['channel_names']]
+                sf = dataset["sampling_frequency"][0][0]
+                self.data[(run_nr, split_nr, train_test)] = []
+                # assume third axis to be trial axis
+                if "channelXtime" in s_format:
+                    for i in range(dataset["data"].shape[2]):
+                        self.data[(run_nr, split_nr, train_test)].append(\
+                            (TimeSeries(dataset["data"][:,:,i].T, channel_names,
+                                        sf), dataset["labels"][i].strip()))
+                else:
+                    for i in range(dataset["data"].shape[2]):
+                        self.data[(run_nr, split_nr, train_test)].append(\
+                            (TimeSeries(dataset["data"][:,:,i], channel_names,
+                                        sf), dataset["labels"][i].strip()))                    
+            elif f_format.startswith("bci_comp"):
                 from scipy.io import loadmat
                 from pySPACE.resources.data_types.time_series import TimeSeries
                 if self.comp_number == "2":
@@ -373,20 +397,30 @@ class TimeSeriesDataset(BaseDataset):
               
               (*optional, default: "time_series"*)
               
-          :format:
+          :s_format:
               The format in which the actual data sets should be stored.
               
-              Possible formats are *pickle*, *text*, *csv* and *MATLAB* (.mat)
-              format.
-
-              In the MATLAB and text format, all time series objects are
-              concatenated to a single large table containing only integer
-              values.
-              For the csv format comma separated values are taken as default
-              or a specified Python format string.
+              Possible formats are 'pickle', 'text', 'csv' and 'mat' (matlab)
+              format. If s_format is a list, the second element further 
+              specifies additional options for storing.
               
-              The MATLAB format is a struct that contains the data, the
-              sampling frequency and the channel names.
+              - pickle  :
+                  Standard python format.
+                  
+              - text    :
+                  In the text format, all time series objects are concatenated 
+                  to a single large table containing only integer values.
+                  
+              - csv     :
+                  For the csv format comma separated values are taken as default
+                  or a specified Python format string.
+                  
+              - mat  :
+                  Scipy's savemat function is used for storing. Thereby the data
+                  is stored as 3 dimensional array. Also meta data information,
+                  like sampling frequency and channel names are saved.
+                  As an additional parameter the orientation of the data arrays 
+                  can be given as 'channelXtime' or 'timeXchannel'
               
               .. note:: For the text and MATLAB format, markers could be added 
                         by using a Marker_To_Mux node before
@@ -394,16 +428,23 @@ class TimeSeriesDataset(BaseDataset):
               (*optional, default: "pickle"*)
 
         .. todo:: Put marker to the right time point and also write marker channel.
+        
+        .. todo:: Shouldn't be 'text' and 'csv' format part of the stream data
+                  set?!
         """
         name = "time_series"
+        # for some storage procedures we need further specifications
+        s_type = None
         if type(s_format) == list:
-            s_type = s_format[1]
-            s_format = s_format[0]
+            # file format is first position
+            f_format = s_format[0]
+            if len(s_format) > 1:
+                s_type = s_format[1]
         else:
-            s_type = "%.18e"
-        if s_format in ["text", "matlab"]:
+            f_format = s_format
+        if f_format == "text" and s_type is None:
             s_type = "%i"
-        if s_format == "csv" and s_type == "real":
+        elif f_format == "csv" and s_type == "real":
             s_type = "%.18e"
         # Update the meta data
         author = get_author()
@@ -411,12 +452,12 @@ class TimeSeriesDataset(BaseDataset):
                                "storage_format": s_format,
                                "author": author,
                                "data_pattern": "data_run" + os.sep 
-                                               + name + "_sp_tt." + s_format})
+                                               + name + "_sp_tt." + f_format})
 
         # Iterate through splits and runs in this dataset
         for key, time_series in self.data.iteritems():
             # load data, if necessary 
-            # (due to the  lazy loading, the data might be not loaded already)
+            # (due to the lazy loading, the data might be not loaded already)
             if isinstance(time_series, basestring):
                 time_series = self.get_data(key[0], key[1], key[2])
             if self.sort_string is not None:
@@ -428,11 +469,12 @@ class TimeSeriesDataset(BaseDataset):
             
             key_str = "_sp%s_%s" % key[1:]
             # Store data depending on the desired format
-            if s_format in ["pickle", "cpickle", "cPickle"]:
+            if f_format in ["pickle", "cpickle", "cPickle"]:
                 result_file = open(os.path.join(result_path,
                                                 name+key_str+".pickle"), "w")
                 cPickle.dump(time_series, result_file, cPickle.HIGHEST_PROTOCOL)
-            elif s_format in ["text","csv"]:
+                result_file.close()
+            elif f_format in ["text","csv"]:
                 self.update_meta_data({
                     "type": "stream",
                     "marker_column": "marker"})
@@ -440,11 +482,11 @@ class TimeSeriesDataset(BaseDataset):
                                                 name + key_str + ".csv"), "w")
                 csvwriter = csv.writer(result_file)
                 channel_names = copy.deepcopy(time_series[0][0].channel_names)
-                if s_format == "csv":
+                if f_format == "csv":
                     channel_names.append("marker")
                 csvwriter.writerow(channel_names)
                 for (data, key) in time_series:
-                    if s_format == "text":
+                    if f_format == "text":
                         numpy.savetxt(result_file, data, delimiter=",", fmt=s_type)
                         if not key is None:
                             result_file.write(str(key))
@@ -469,26 +511,32 @@ class TimeSeriesDataset(BaseDataset):
                                 first_line = False
                                 marker = ""
                         result_file.flush()
-            elif s_format in ["mat"]:
-                result_file = open(os.path.join(result_path,
-                                                name + key_str + ".mat"),"w")
-                # extract a first time series object to get meta data 
-                merged_time_series = time_series.pop(0)[0]
-                # collect all important information in the collection_object
-                collection_object = {
-                    "sampling_frequency": merged_time_series.sampling_frequency,
-                    "channel_names": merged_time_series.channel_names}
-
-                # merge all data 
-                for (data,key) in time_series:
-                    merged_time_series = numpy.vstack((merged_time_series,
-                                                       data))
-                collection_object["data"] = merged_time_series 
-                mdict = dict()
-                mdict[name + key_str] = collection_object 
+                result_file.close()
+            elif f_format in ["matlab", "mat", "MATLAB"]:
+                # todo: handle all the other attributes of ts objects!
                 import scipy.io
-                scipy.io.savemat(result_file, mdict=mdict)
-            elif s_format in ["bp_eeg"]:
+                result_file_name = os.path.join(result_path, 
+                                                name + key_str + ".mat")
+                # extract a first time series object to get meta data 
+                ts1 = time_series[0][0]
+                
+                # collect all important information in the collection_object
+                dataset_dict = {
+                    "sampling_frequency": ts1.sampling_frequency,
+                    "channel_names": ts1.channel_names}
+                
+                # we have to extract the data and labels separatly
+                if 'channelXtime' in s_format:
+                    dataset_dict["data"] = [data.T for data, _ in time_series] 
+                else:
+                    dataset_dict["data"] = [data for data, _ in time_series]
+                dataset_dict["labels"] = [label for _, label in time_series]
+                # construct numpy 3d array (e.g., channelXtimeXtrials)
+                dataset_dict["data"] = numpy.rollaxis(numpy.array(
+                    dataset_dict["data"]), 0, 3)
+                
+                scipy.io.savemat(result_file_name, mdict=dataset_dict)
+            elif f_format in ["bp_eeg"]:
 
                 result_file = open(os.path.join(result_path,
                                                 name + key_str + ".eeg"),"a+")
@@ -556,10 +604,10 @@ class TimeSeriesDataset(BaseDataset):
                     result_hdr.write(unicode("Ch%d=%s,,%s\n" %
                         (i+1,channel_names[i],
                         unicode(resolutions_str[0]))).encode('utf-8'))
+                result_file.close()
             else:
                 NotImplementedError("Using unavailable storage format:%s!"
-                                    % s_format)
-            result_file.close()
+                                    % f_format)
         self.update_meta_data({
             "channel_names": copy.deepcopy(time_series[0][0].channel_names),
             "sampling_frequency": time_series[0][0].sampling_frequency

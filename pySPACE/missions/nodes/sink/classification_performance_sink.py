@@ -92,7 +92,7 @@ class PerformanceSinkNode(BaseNode):
             ::
             
                 [ [c_est, cresult, nr_feat], c_true ]
-            
+
             (*optional, default: False*)
 
         :save_roc_points:
@@ -105,7 +105,10 @@ class PerformanceSinkNode(BaseNode):
             
                 ( [(fp_rate_1,tp_rate_1), ... ,(fp_rate_n,tp_rate_n)],
                   [(0.0,0.0), (fp_rate, tp_rate), (1.0,1.0)])
-            
+
+            For comparing ROC curves, you can use the analysis GUI
+            (*performance_results_analysis.py*).
+
             (*optional, default: False*)
 
         :weight:

@@ -271,6 +271,16 @@ class BaseDataset(object):
 
         root_logger.log(level, message)
 
+    def __del__(self):
+        """ Remove logging handler """
+        root_logger = logging.getLogger("%s.%s.%s" % (socket.gethostname(),
+                                        os.getpid(),
+                                        self))
+        for handler in root_logger.handlers:
+            handler.close()
+            root_logger.removeHandler(handler)
+        del(root_logger)
+
     def __repr__(self):
         """ Return a string representation of this class"""
         return self.__class__.__name__

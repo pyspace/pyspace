@@ -941,7 +941,8 @@ class BinaryClassificationDataset(BaseDataset):
     @staticmethod
     def calculate_AUC(classification_outcome, ir_class, save_roc_points,
                       performance,inverse_ordering=False):
-        """ AUC and ROC points by an algorithm from Fawcett, "An introduction to ROC analysis", 2005
+        """ AUC and ROC points by an algorithm from Fawcett,
+        "An introduction to ROC analysis", 2005
         Also possible would be to calculate the Mann-Whitney-U-Statistik
 
         .. math:: \\sum_i^m{\\sum_j^n{S(X_i,Y_i)}} \\text{ with } S(X,Y) = 1 \\text{ if } Y < X\\text{, otherwise } 0
@@ -951,8 +952,19 @@ class BinaryClassificationDataset(BaseDataset):
         from operator import itemgetter
         sorted_outcome = sorted(classification_outcome,
                                 key=itemgetter(0), reverse=not inverse_ordering)
-        P = performance["Positives"] # number of True instances
-        N = performance["Negatives"] # number of False instances
+        P = performance["Positives"]  # number of True instances
+        N = performance["Negatives"]  # number of False instances
+
+        if P == 0:
+            warnings.warn(
+                "Problem occurred in AUC/ROC calculation. No positive examples"
+                "were found. TPR set to zero.")
+            P = 1
+        elif N == 0:
+            warnings.warn(
+                "Problem occurred in AUC/ROC calculation. No negative examples"
+                "were found. TNR set to zero.")
+            N = 1
 
         FP = 0
         TP = 0
@@ -962,7 +974,7 @@ class BinaryClassificationDataset(BaseDataset):
         AUC = 0
         # first, list of roc points, second, the weka-roc-point
         R = ([],[(0.0,0.0),(performance["False_positive_rate"],
-                performance["True_positive_rate"]),(1.0,1.0)])
+                            performance["True_positive_rate"]),(1.0,1.0)])
         axis_change = True
         axis_y = False
         axis_x = False
@@ -977,9 +989,9 @@ class BinaryClassificationDataset(BaseDataset):
         for classification_outcome in sorted_outcome:
             if round(classification_outcome[0],3) != prediction_prev:
                 AUC += _trapezoid_area(FP, FP_prev, TP, TP_prev)
-                prediction_prev = round(classification_outcome[0],3)
+                prediction_prev = round(classification_outcome[0], 3)
                 if save_roc_points and axis_change:
-                    R[0].append((1.0*FP_prev/N,1.0*TP_prev/P))
+                    R[0].append((1.0 * FP_prev / N, 1.0 * TP_prev / P))
                     axis_change = False
                 FP_prev = FP
                 TP_prev = TP
@@ -999,20 +1011,12 @@ class BinaryClassificationDataset(BaseDataset):
                     axis_y = False
 
         if save_roc_points and axis_change:
-            R[0].append((1.0*FP_prev/N,1.0*TP_prev/P))
+            R[0].append((1.0 * FP_prev / N, 1.0 * TP_prev / P))
 
         AUC += _trapezoid_area(N, FP_prev, P, TP_prev)
-        try:
-            AUC = float(AUC) / (P*N) # scale from (P*N) to the unit square
-            if save_roc_points:
-                R[0].append((1.0*FP/N,1.0*TP/P)) # This is (1,1)
-        except ZeroDivisionError:
-            if P == 0:
-                warnings.warn("AUC could no be computed since there are no "
-                              "positive examples.")
-            else:
-                warnings.warn("AUC could no be computed since there are no "
-                              "negative examples.")
+        AUC = float(AUC) / (P * N)  # scale from (P*N) to the unit square
+        if save_roc_points:
+            R[0].append((1.0 * FP / N, 1.0 * TP / P))  # This is (1,1)
         return AUC, R
 
     @staticmethod
@@ -1028,34 +1032,35 @@ class BinaryClassificationDataset(BaseDataset):
         FN = float(FN)
         TP = float(TP)
         FP = float(FP)
-        P = TP + FN # positive examples
-        N = FP + TN # negative examples
-        K = TP+FP+TN+FN # Total number of examples
+        P = TP + FN  # positive examples
+        N = FP + TN  # negative examples
+        K = TP + FP + TN + FN  # Total number of examples
 
         def term(y, t):
-            if y: # prediction is positive
-                p_y = (TP + FP) / K # ratio of positive predictions
+            if y:  # prediction is positive
+                p_y = (TP + FP) / K  # ratio of positive predictions
                 if p_y == 0.0:
-                    p_t_y = 1 # Doesn't matter anyway since multiplied with 0
-                elif t: # actually a positive
-                    p_t_y = TP / (TP + FP) # ratio of true positives
-                else: # actually a negative
-                    p_t_y = FP / (TP + FP)# ratio of false positives
-            else: # prediction is negative
-                p_y = (TN + FN) / K # ratio of negative predictions
+                    p_t_y = 1  # Doesn't matter anyway since multiplied with 0
+                elif t:  # actually a positive
+                    p_t_y = TP / (TP + FP)  # ratio of true positives
+                else:  # actually a negative
+                    p_t_y = FP / (TP + FP)  # ratio of false positives
+            else:  # prediction is negative
+                p_y = (TN + FN) / K  # ratio of negative predictions
                 if p_y == 0.0:
-                    p_t_y = 1 # Doesn't matter anyway since multiplied with 0
+                    p_t_y = 1  # Doesn't matter anyway since multiplied with 0
                 elif t: # actually a positive
-                    p_t_y = FN / (TN + FN) # ratio of false negatives
+                    p_t_y = FN / (TN + FN)  # ratio of false negatives
                 else: # actually a negative
-                    p_t_y = TN / (TN + FN) # ratio of true negatives
+                    p_t_y = TN / (TN + FN)  # ratio of true negatives
 
             if t: # Actually a positive
                 p_t =  P / (P + N) # ratio of positive examples
             else: # Actually a negative
                 p_t =  N / (P + N) # ratio of positive examples
 
-            if p_t == 0.0: # We don't have any examples for this class (should not happen)
+            if p_t == 0.0: # We don't have any examples for this class
+                # (should not happen)
                 # There is no uncertainty about class and thus no information
                 # gain. We return 0
                 return 0.0
@@ -1286,18 +1291,27 @@ class RegressionDataset(BinaryClassificationDataset):
 
     """
     @staticmethod
-    def calculate_metrics(regression_results,
-                          time_periods=[],
-                          weight=None):
+    def calculate_metrics(regression_results, time_periods=[], weight=None):
         """ Calculate performance measures from the given classifications """
         # metric initializations
         metrics = metricdict(float)
+        if len(regression_results) == 0:
+            return metrics
         # transform results to distinct lists
         predicted_val = []
         actual_val = []
-        for prediction_vector,label in regression_results:
+        for prediction_vector, label in regression_results:
             predicted_val.append(prediction_vector.prediction)
             actual_val.append(label)
+
+        # cast list of numpy.ndarray to list of list
+        if type(actual_val[0]) == numpy.ndarray:
+            for i in range(len(actual_val)):
+                actual_val[i] = actual_val[i].tolist()
+        if type(predicted_val[0]) == numpy.ndarray:
+            for i in range(len(predicted_val)):
+                predicted_val[i] = predicted_val[i].tolist()
+
         if type(actual_val[0]) == list and type(predicted_val[0]) == list:
             vector_regression = True
         elif type(predicted_val[0]) == list and len(predicted_val[0]) == 1:
@@ -1305,26 +1319,28 @@ class RegressionDataset(BinaryClassificationDataset):
             # --> automatic parameter mapping to numbers
             for i in range(len(predicted_val)):
                 predicted_val[i] = predicted_val[i][0]
+            vector_regression = False
         elif type(actual_val[0]) == list or type(predicted_val[0]) == list:
-            raise TypeError("Prediction (%s) and "%type(predicted_val[0]) +
-                            "real value/label (%s) should"%type(actual_val[0]) +
-                            " have the same format (list or number/string)")
+            raise TypeError(
+                "Prediction (%s) and " % type(predicted_val[0]) +
+                "real value/label (%s) should" % type(actual_val[0]) +
+                " have the same format (list or number/string)")
         else:
             vector_regression = False
         p = numpy.array(predicted_val).astype("float64")
         a = numpy.array(actual_val).astype("float64")
         if not vector_regression:
-            metrics["mean-squared_error"] = numpy.mean((p-a)**2)
-            metrics["root_mean-squared_error"] = \
-                numpy.sqrt(metrics["mean-squared_error"])
-            metrics["mean_absolute_error"] = numpy.mean(numpy.abs(p-a))
-            metrics["relative_squared_error"] = \
-                metrics["mean-squared_error"]/numpy.var(a)
-            metrics["root_relative_squared_error"] = \
+            metrics["Mean-squared_error"] = numpy.mean((p-a)**2)
+            metrics["Root_mean-squared_error"] = \
+                numpy.sqrt(metrics["Mean-squared_error"])
+            metrics["Mean_absolute_error"] = numpy.mean(numpy.abs(p-a))
+            metrics["Relative_squared_error"] = \
+                metrics["Mean-squared_error"]/numpy.var(a)
+            metrics["Root_relative_squared_error"] = \
                 numpy.sqrt(metrics["relative_squared_error"])
-            metrics["relative absolute error"] = \
-                metrics["mean_absolute_error"]/numpy.mean(numpy.abs(a-a.mean()))
-            metrics["correlation_coefficient"] = numpy.corrcoef(a,p)[0,1]
+            metrics["Relative absolute error"] = \
+                metrics["Mean_absolute_error"]/numpy.mean(numpy.abs(a-a.mean()))
+            metrics["Correlation_coefficient"] = numpy.corrcoef(a,p)[0,1]
         else:
             # treat arrays like flatten arrays!
             metrics["micro_mean-squared_error"] = numpy.mean((p-a)**2)
@@ -1342,28 +1358,28 @@ class RegressionDataset(BinaryClassificationDataset):
                 numpy.corrcoef(numpy.reshape(a, a.shape[0]*a.shape[1]),
                                numpy.reshape(p, p.shape[0]*p.shape[1]))[0,1]
             pre_str = []
-            metric_names=["mean-squared_error","root_mean-squared_error",
-                          "mean_absolute_error", "relative_squared_error",
-                          "root_relative_squared_error",
-                          "relative absolute error", "correlation_coefficient"]
+            metric_names=["Mean-squared_error","Root_mean-squared_error",
+                          "Mean_absolute_error", "relative_squared_error",
+                          "Root_relative_squared_error",
+                          "relative absolute error", "Correlation_coefficient"]
             # project onto one component and calculate separate performance
             for i in range(len(predicted_val[0])):
                 s = "component_"+str(i)+"_"
                 pre_str.append(s)
                 pi = p[:,i]
                 ai = a[:,i]
-                metrics[s+"mean-squared_error"] = numpy.mean((pi-ai)**2)
-                metrics[s+"root_mean-squared_error"] = \
-                    numpy.sqrt(metrics[s+"mean-squared_error"])
-                metrics[s+"mean_absolute_error"] = numpy.mean(numpy.abs(pi-ai))
+                metrics[s+"Mean-squared_error"] = numpy.mean((pi-ai)**2)
+                metrics[s+"Root_mean-squared_error"] = \
+                    numpy.sqrt(metrics[s+"Mean-squared_error"])
+                metrics[s+"Mean_absolute_error"] = numpy.mean(numpy.abs(pi-ai))
                 metrics[s+"relative_squared_error"] = \
-                    metrics[s+"mean-squared_error"]/numpy.var(ai)
-                metrics[s+"root_relative_squared_error"] = \
-                    numpy.sqrt(metrics[s+"relative_squared_error"])
-                metrics[s+"relative absolute error"] = \
-                    metrics[s+"mean_absolute_error"] / \
+                    metrics[s+"Mean-squared_error"]/numpy.var(ai)
+                metrics[s+"Root_relative_squared_error"] = \
+                    numpy.sqrt(metrics[s+"Relative_squared_error"])
+                metrics[s+"Relative absolute error"] = \
+                    metrics[s+"Mean_absolute_error"] / \
                     numpy.mean(numpy.abs(ai-ai.mean()))
-                metrics[s+"correlation_coefficient"] = \
+                metrics[s+"Correlation_coefficient"] = \
                     numpy.corrcoef(ai,pi)[0,1]
             for metric in metric_names:
                 l = []

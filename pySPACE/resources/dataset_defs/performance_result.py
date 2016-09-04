@@ -1455,7 +1455,7 @@ class ROCCurves(object):
         # Draw an additional "axis" (the identity) to show skew/centroid of
         # ROC curves
         axis.plot([0.0, 1.0], [0.0, 1.0], c='k', lw=2)
-        for k in numpy.linspace(0.0, 1.0, 10):
+        for k in numpy.linspace(0.0, 1.0, 11):
             axis.plot([k+0.01, k-0.01], [k-0.01, k+0.01], c='k', lw=1)
     
         # Create a color dict
@@ -1463,14 +1463,16 @@ class ROCCurves(object):
         
         # Some helper function
         def create_roc_function(roc_curve):
-            """ Create a function mapping FPR onto TPR for the given roc_curve """
+            """ Create a function mapping FPR onto TPR for the given roc_curve
+            """
             def roc_function(query_fpr):
                 """ Map FPR onto TPR using linear interpolation on ROC curve."""
                 if query_fpr == 0.0: return 0.0 # Avoid division by zero
                 last_fpr, last_tpr = 0.0, 0.0
                 for fpr, tpr in roc_curve:
                     if fpr >= query_fpr:
-                        return (query_fpr - last_fpr)/(fpr - last_fpr) * (tpr - last_tpr) + last_tpr
+                        return (query_fpr - last_fpr) / (fpr - last_fpr) * \
+                            (tpr - last_tpr) + last_tpr
                     last_fpr, last_tpr = fpr, tpr
                 return tpr
 
@@ -1488,17 +1490,19 @@ class ROCCurves(object):
                 """
                 if k == 0.0: return 0.0 # Avoid division by zero
                 for fpr, tpr in zip(x_values, mean_curve):
-                    if 0.5*fpr + 0.5*tpr >= k:
-                        return 2*(0.5*fpr - 0.5*tpr)**2
+                    if 0.5 * fpr + 0.5 * tpr >= k:
+                        return 2 * (0.5 * fpr - 0.5 * tpr)**2
                 return 0.0
 
             return weight_function
         
         # Create mapping parameterization -> ROC functions
         roc_fct_dict = defaultdict(list)
-        for parametrization, roc_curve in self._project_onto_subset(self.roc_curves, 
-                                                                    projection_parameter):
-            key = parametrization[selected_variable] if selected_variable != None and selected_variable in parametrization.keys() else "Global"
+        for parametrization, roc_curve in self._project_onto_subset(
+                self.roc_curves, projection_parameter):
+            key = parametrization[selected_variable] \
+                if selected_variable is not None and selected_variable \
+                in parametrization.keys() else "Global"
             roc_fct_dict[key].append(create_roc_function(roc_curve))
             
         # Iterate over all parametrization and average ROC functions and compute
@@ -1524,7 +1528,8 @@ class ROCCurves(object):
             else:
                 color = color_dict[param]
 
-            axis.plot(x_values, mean_curve, c=color, label=str(param))
+            axis.plot(x_values, mean_curve, c=color,
+                      label=str(param).replace("_"," ").strip())
             axis.errorbar(x_values[::25], mean_curve[::25],
                           yerr=map(scipy.stats.sem, roc_values)[::25],
                           c=color, fmt='.')
@@ -1538,7 +1543,7 @@ class ROCCurves(object):
         axis.set_ylim(0.0, 1.0)
         axis.legend(loc=0)
         if selected_variable is not None:
-            axis.set_title(str(selected_variable))
+            axis.set_title(str(selected_variable).replace("_"," ").strip())
 
         
     def plot_all(self, axis, projection_parameter, collection=None):
@@ -1572,9 +1577,10 @@ class ROCCurves(object):
             tokens = subdir.strip("}{").split("}{")
             parametrization["__Dataset__"] = tokens[0]
             for token in tokens[1:]:
-                # TODO if anything else then node chain template has no # this will fail;
-                # delete as soon as no more data with node chain templates in folder names
-                # circulate
+                # TODO if anything else then node chain template
+                # has no # this will fail;
+                # delete as soon as no more data with node chain templates
+                # in folder names circulate
                 if '#' not in token:
                     parametrization["__Template__"] = token
                     continue
@@ -1602,16 +1608,17 @@ class ROCCurves(object):
                     all_roc_curves.append((rs_parametrization, roc_curves[0]))
                     
         return all_roc_curves
-    
+
     def _project_onto_subset(self, roc_curves, constraints):
-        """Retain only roc_curves that fulfill the given constraints. """
+        """ Retain only roc_curves that fulfill the given constraints. """
         for parametrization, roc_curve in roc_curves:
             # Check constraints
             constraints_fulfilled = True
-            for constraint_key, constraint_value in constraints.iteritems():
-                if not constraint_key in parametrization \
-                         or parametrization[constraint_key] != constraint_value:
+            for constraint_key, constraint_values in constraints.iteritems():
+                if not constraint_key in parametrization or not \
+                        parametrization[constraint_key] in constraint_values:
                     constraints_fulfilled = False
+                    break
             if constraints_fulfilled:
                 yield (parametrization, roc_curve)
 

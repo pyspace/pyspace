@@ -1,3 +1,5 @@
+.. _t_new_node:
+
 Writing new nodes
 =================
 

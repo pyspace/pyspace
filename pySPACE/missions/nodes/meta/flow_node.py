@@ -6,6 +6,7 @@ import copy
 import logging
 import warnings
 import itertools
+import numpy
 
 import pySPACE.missions.nodes
 from pySPACE.missions.nodes.base_node import BaseNode
@@ -14,6 +15,11 @@ import ExternalGeneratorSourceNode
 from pySPACE.missions.nodes.splitter.all_train_splitter import AllTrainSplitterNode
 from pySPACE.environments.chains.node_chain import NodeChain
 from pySPACE.tools.memoize_generator import MemoizeGenerator
+
+# BacktransformationNode imports
+from pySPACE.resources.data_types.feature_vector import FeatureVector
+from pySPACE.resources.data_types.time_series import TimeSeries
+from pySPACE.missions.nodes.feature_generation.time_domain_features import TimeDomainFeaturesNode
 
 
 class FlowNode(BaseNode):
@@ -96,7 +102,7 @@ class FlowNode(BaseNode):
                 :number: optional number of occurrence in the node (default: 1).
 
             By default we assume, that node parameters and program variables are
-            identical. This default is implemented in the BaseNOde and
+            identical. This default is implemented in the BaseNode and
             can be overwritten by the relevant node with the function
             *_change_parameters*.
 
@@ -137,6 +143,7 @@ class FlowNode(BaseNode):
                                 selected_channels: ["EMG1","EMG2"]
               
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
+    :Created: 2010/07/28
     """
     
     def __init__(self, nodes=None, load_path=None, trainable=False,
@@ -185,7 +192,7 @@ class FlowNode(BaseNode):
             pass
         # Now we can call the superclass constructor
         super(FlowNode, self).__init__(input_dim=input_dim, 
-                                        output_dim=output_dim,
+                                       output_dim=output_dim,
                                        dtype=dtype, **kwargs)
         
         self.set_permanent_attributes(trainable = trainable,
@@ -268,8 +275,7 @@ class FlowNode(BaseNode):
             member_dict["nodes"] = flow
             member_dict["trainable"] = trainable
             member_dict["supervised"] = supervised
-            
-            
+
             return member_dict
         
 
@@ -364,7 +370,7 @@ class FlowNode(BaseNode):
 
     def is_retrainable(self):
         """ Retraining needed if one node is retrainable """
-        if self.is_retrainable:
+        if self.retrainable:
             return True
         else:
             for node in self._get_flow():
@@ -412,6 +418,66 @@ class FlowNode(BaseNode):
         return flow.get_output_type(input_type, as_string)
 
 
+class UnsupervisedRetrainingFlowNode(FlowNode):
+    """ Use classified label for retraining
+
+    All the other functionality is as described in :class:`FlowNode`.
+
+    **Parameters**
+
+      :confidence_boundary:
+        Minimum distance to decision boundary which is required for retraining.
+        By default every result is used.
+        For regression algorithms, this option cannot be used.
+
+        (*optional, default: 0*)
+
+      :decision_boundary:
+        Threshold for decision used for calculating classifier confidence.
+
+        (*optional, default: 0*)
+
+      .. seealso:: :class:`FlowNode`
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        - node : UnsupervisedRetrainingFlow
+          parameters :
+            retrain : True
+            nodes :
+              - node : 2SVM
+                parameters :
+                  retrain : True
+
+    :Author: Mario Michael Krell (mario.krell@dfki.de)
+    :Created: 2015/02/07
+    """
+    def __init__(self, decision_boundary=0, confidence_boundary=0, **kwargs):
+        super(UnsupervisedRetrainingFlowNode, self).__init__(**kwargs)
+        self.set_permanent_attributes(decision_boundary=decision_boundary,
+                                      confidence_boundary=confidence_boundary)
+
+    @staticmethod
+    def node_from_yaml(nodes_spec):
+        """ Create the FlowNode node and the contained chain """
+        node_obj = UnsupervisedRetrainingFlowNode(
+            **FlowNode._prepare_node_chain(nodes_spec))
+        return node_obj
+
+    def _inc_train(self, data, class_label=None):
+        """ Execute for label guess and retrain if appropriate """
+        result = self._execute(data)
+        if not type(result.prediction) == list and\
+                (abs(result.prediction - self.decision_boundary) >=
+                    self.confidence_boundary):
+            super(UnsupervisedRetrainingFlowNode, self)._inc_train(
+                data, result.label)
+        else:  # no adaptation because prediction is not confident
+            pass
+
+
 class BatchAdaptSubflowNode(FlowNode):
     """ Load and retrain a pre-trained NodeChain for recalibration
     
@@ -448,13 +514,14 @@ class BatchAdaptSubflowNode(FlowNode):
     :Created: 2012/06/20
     """
     
-    def __init__(self, load_path,**kwargs):
-        super(BatchAdaptSubflowNode, self).__init__(load_path=load_path,**kwargs)
+    def __init__(self, load_path, **kwargs):
+        super(BatchAdaptSubflowNode, self).__init__(
+            load_path=load_path, **kwargs)
         self.set_permanent_attributes(batch_labels=None)
     
     @staticmethod
     def node_from_yaml(nodes_spec):
-        """ Creates the FlowNode node and the contained chain based on the node_spec """
+        """ Create the FlowNode node and the contained chain """
         node_obj = BatchAdaptSubflowNode(**FlowNode._prepare_node_chain(nodes_spec))
         
         return node_obj
@@ -477,6 +544,581 @@ class BatchAdaptSubflowNode(FlowNode):
         # the nodes are retrained with this labels on the previously buffered samples.
         self._get_flow()[-1].present_label(self.batch_labels)
         self.batch_labels = None
+
+class BacktransformationNode(FlowNode):
+    """ Determine underlying linear transformation of classifier or regression algorithm
+
+    The resulting linear transformation can be accessed with the method:
+    *get_previous_transformations* of the following node, e.g., for
+    visualization and sensor ranking.
+    It is stored in the same format as the input data.
+
+    .. warning:: This node makes sense if and only if the underlying
+        transformations are linear. For nonlinear transformations a
+        more generic approach needs to be implemented.
+        This implementation is not using direct access to the internal
+        algorithms but determining the transformation by testing a large
+        number of samples, which is not efficient but most generic.
+
+    .. warning:: Currently this node requires stationary processing and does
+        not catch the changing transformation from incremental learning.
+
+    **References**
+
+        ========= ==========================================================================================
+        main      source: Backtransformation
+        ========= ==========================================================================================
+        author    Krell, M. M. and Straube, S.
+        journal   Advances in Data Analysis and Classification
+        title     `Backtransformation: a new representation of data processing chains with a scalar decision function <http://dx.doi.org/10.1007/s11634-015-0229-3>`_
+        year      2015
+        doi       10.1007/s11634-015-0229-3
+        pages     1-25
+        ========= ==========================================================================================
+
+    **Parameters**
+
+        .. seealso:: :class:`FlowNode`
+
+        :eps:
+            the step of the difference method :math:`\\varepsilon`. Should be set manually for each
+            differentiation
+
+            (*default: 2.2e-16*)
+
+        :method:
+            the method that should be used for the derivation. The available
+            methods are encoded as strings
+
+            * Forward difference method -> ``method="forward_difference"``
+            * Central difference method -> ``method="central_difference"``
+            * Central difference method using a half step -> ``method="central_difference_with_halfstep"``
+
+        :mode:
+            the method used to obtain the backtransformation. The choice of
+            method depends to the current dataset and hence
+
+            * Linear, affine datasets -> ``mode="linear"``
+            * Non-linear datasets -> ``mode="nonlinear"``
+
+        :store_format:
+            specify the format in which the data is to be stored. The options
+            here are:
+
+                * `txt` file - this file is generated automatically
+                    using `numpy.savetxt`
+                * `pickle` file - this file is generated using `pickle.dump`
+                * `mat` file - saved using the scipy matlab interface
+
+            If no format is specified, no file will be stored.
+
+            (*optional, default: None*)
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -   
+            node : Backtransformation
+            parameters :
+                nodes :
+                    -   
+                        node : FFTBandPassFilter
+                        parameters :
+                            pass_band : [0.0, 4.0]
+                    -   
+                        node : TimeDomainFeatures
+                    -
+                        node : LinearDiscriminantAnalysisClassifier
+
+    :Author: Mario Michael Krell
+    :Created: 2013/12/24
+    """
+    input_types=["TimeSeries", "FeatureVector"]
+    def __init__(self, mode="linear", method="central_difference",
+                 eps=2.2*1e-16, store_format=None, **kwargs):
+        super(BacktransformationNode, self).__init__(**kwargs)
+        self.set_permanent_attributes(trafo=None, offset=0.0, example=None,
+                                      mode=mode, method=method, eps=eps,
+                                      num_samples=0, covariance=None,
+                                      store_format=store_format)
+
+    def _execute(self, data):
+        """ Determine example at first call, forward normal processing """
+        # generate example at first call
+        if self.example is None:
+            self.example = copy.deepcopy(data)
+            result = super(BacktransformationNode, self)._execute(data)
+            return result
+        return super(BacktransformationNode, self)._execute(data)
+
+    def _train(self, data, label):
+        """ Update covariance matrix and forward training """
+        super(BacktransformationNode, self)._train(data, label)
+        flattened_data = numpy.atleast_2d(data.get_data().flatten())
+        if self.covariance is None:
+            self.covariance = flattened_data * flattened_data.T
+        else:
+            self.covariance += flattened_data * flattened_data.T
+        self.num_samples += 1
+
+    def _stop_training(self):
+        """ Update covariance matrix and forward training """
+        super(BacktransformationNode, self)._stop_training()
+        self.covariance = 1.0 * self.covariance / self.num_samples
+
+    def get_own_transformation(self, sample=None):
+        """ Return the transformation parameters """
+        if sample is None:
+            sample = self.example
+        if self.example is None:
+            self._log("No transformation generated!", level=logging.ERROR)
+            return None
+        elif self.trafo is None and self.mode == "linear":
+            self.generate_affine_backtransformation()
+        elif self.mode == "nonlinear":
+            self.get_derivative(sample=sample)
+        if type(self.example) == TimeSeries:
+            return (self.trafo, (self.offset, self.covariance),
+                    self.example.channel_names, "generic_backtransformation")
+        elif type(self.example) == FeatureVector:
+            return (self.trafo, (self.offset, self.covariance),
+                    self.example.feature_names, "generic_backtransformation")
+
+    def generate_affine_backtransformation(self):
+        """ Generate synthetic examples and test them to determine transformation
+
+        This is the key method!
+        """
+        if type(self.example) == FeatureVector:
+            testsample = FeatureVector.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            self.offset = numpy.longdouble(self._execute(testsample))
+            self.trafo = FeatureVector.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            for j in range(len(self.example.feature_names)):
+                testsample = FeatureVector.replace_data(
+                    self.example,
+                    numpy.zeros(self.example.shape))
+                testsample[0][j] = 1.0
+                self.trafo[0][j] = \
+                    numpy.longdouble(self._execute(testsample) - self.offset)
+        elif type(self.example) == TimeSeries:
+            testsample = TimeSeries.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            self.offset = numpy.longdouble(numpy.squeeze(
+                self._execute(testsample)))
+            self.trafo = TimeSeries.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            for i in range(self.example.shape[0]):
+                for j in range(self.example.shape[1]):
+                    testsample = TimeSeries.replace_data(
+                        self.example, numpy.zeros_like(self.example))
+                    testsample[i][j] = 1.0
+                    self.trafo[i][j] = \
+                        numpy.longdouble(numpy.squeeze(self._execute(testsample))
+                                       - self.offset)
+
+    def normalization(self, sample):
+        """ normalizes the results of the transformation to the same norm as the input
+
+        **Principle**
+
+        The function first computes the norm of the input and then applies the same norm to
+        the self.trafo variable such that the results will be on the same scale
+
+        .. note::
+
+            If either the input or the derivative have not been computed already
+            the node will will raise an IOError.
+        """
+        if self.trafo is None:
+            raise IOError("The derivative has not be computed. Cannot perform normalization.")
+        if sample is None:
+            raise IOError("The initial sample has not been given. Cannot perform normalization.")
+        initial = sample.view(numpy.ndarray)
+        a = initial[0,:]
+        norm_a = numpy.linalg.norm(a)
+        if norm_a == 0:
+            norm_a = 1
+
+        initial = self.trafo.view(numpy.ndarray)
+        b = initial[0,:]
+        norm_b = numpy.linalg.norm(b)
+        if norm_b == 0:
+            norm_b = 1
+
+        self.trafo = FeatureVector.replace_data(self.trafo, b*norm_a/norm_b)
+
+    def get_derivative(self, sample=None):
+        """ obtain the derivative of the entire transformation
+
+        The method is just a wrapper for different methods of derivation
+        that are called by the method. The first order derivative is saved
+        to a variable called ``self.trafo`` and can be visualised using
+        specific methods
+
+        The methods used in the following pieces of code are described in
+        `Numerical Methods in Engineering with Python <http://books.google.de/books?id=WiDie-hev1kC>`_
+        by Jaan Kiusalaas. Namely, the three methods implemented here are:
+
+        * Forward difference method
+        * Central difference method
+        * Central difference method using a half step
+
+        More details about the implementations can be found in the descriptions
+        of the functions
+
+        **Parameters**
+
+            :sample:
+                the initial values on which the derivative is to be computed. If no
+                sample is provided, the default ``self.example`` variable is used.
+
+            (*default: None*)
+        """
+        if sample is None:
+            warnings.warn("No new sample was given. Using the default example.")
+            sample = self.example
+        if self.method == "forward_difference":
+            self.forward_difference_method(sample=sample)
+        elif self.method == "central_difference":
+            self.central_difference_method(sample=sample)
+        elif self.method == "central_difference_with_halfstep":
+            self.central_difference_with_halfstep_method(sample=sample)
+        else:
+            warnings.warn("Method " + self.method + " is not know. "
+                                               "Using the forward difference approach")
+            self.forward_difference_method(sample=sample)
+
+        #self.normalization(sample)
+
+    def forward_difference_method(self, sample):
+        """ implementation of the forward difference method
+
+        **Principle**
+
+        The principle applied by this method of numerical differentiation is
+
+        .. math::
+
+            f'(x)=\\frac{f(x+h)-f(x)}{h}
+
+        where :math:`h` is the step of the differentiation that is computed
+        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and
+        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.
+
+        The differentiation method distinguishes between ``FeatureVector`` and
+        ``TimeSeries`` inputs and applies the derivative according to the
+        input type.
+
+        **Parameters**
+
+            :sample:
+                the initial value used for the derivation
+
+        .. note::
+
+            Out of the three numerical differentiation methods, this one has the
+            least overhead. Nonetheless, this method is less accurate than the
+            half step method.
+        """
+        initial_value = self._execute(sample)
+        if type(sample) == FeatureVector:
+            self.trafo = FeatureVector.replace_data(
+                    self.example, numpy.zeros(self.example.shape))
+            for j in range(len(sample.feature_names)):
+                data_with_offset = copy.deepcopy(sample)
+                if data_with_offset[0][j] == 0.:
+                    diff = numpy.sqrt(self.eps)
+                else:
+                    diff = numpy.sqrt(self.eps)*data_with_offset[0][j]
+                orig = data_with_offset[0][j]
+                data_with_offset[0][j] += diff
+                diff = data_with_offset[0][j] - orig
+                new_feature_vector = FeatureVector.replace_data(
+                    sample,
+                    data_with_offset
+                )
+                self.trafo[0][j] = \
+                    numpy.longdouble((self._execute(new_feature_vector) -
+                                   initial_value)/diff)
+        elif type(sample) == TimeSeries:
+            self.trafo = TimeSeries.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            for i in range(sample.shape[0]):
+                for j in range(sample.shape[1]):
+                    data_with_offset = copy.deepcopy(sample)
+                    if data_with_offset[i][j] == 0.:
+                        diff = numpy.sqrt(self.eps)
+                    else:
+                        diff = numpy.sqrt(self.eps)*data_with_offset[0][j]
+                    data_with_offset[i][j] += diff
+                    new_time_series = TimeSeries.replace_data(
+                        sample,
+                        data_with_offset)
+                    self.trafo[i][j] = \
+                        numpy.longdouble((numpy.squeeze(self._execute(new_time_series))
+                                       - numpy.squeeze(initial_value))/diff)
+
+    def central_difference_method(self, sample):
+        """ implementation of the central difference method
+
+        **Principle**
+
+        The principle applied by the central difference method is
+
+        .. math::
+
+            f'(x)=\\frac{f(x+h)-f(x-h)}{2h}
+
+        where :math:`h` is the step of the differentiation that is computed
+        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and
+        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.
+
+        **Parameters**
+
+            :sample:
+                the initial value used for the derivation
+        """
+        if type(sample) == FeatureVector:
+            self.trafo = FeatureVector.replace_data(
+                    sample, numpy.zeros(sample.shape))
+            for j in range(len(sample.feature_names)):
+                positive_offset = copy.deepcopy(sample)
+                negative_offset = copy.deepcopy(sample)
+                if positive_offset[0][j] == 0.:
+                    diff = numpy.sqrt(self.eps)
+                else:
+                    diff = numpy.sqrt(self.eps)*positive_offset[0][j]
+                positive_offset[0][j] += diff
+                negative_offset[0][j] -= diff
+                diff = (positive_offset[0][j]-negative_offset[0][j])/2.
+
+                positive_vector = FeatureVector.replace_data(
+                    sample,
+                    positive_offset
+                )
+                negative_vector = FeatureVector.replace_data(
+                    sample,
+                    negative_offset
+                )
+                self.trafo[0][j] = \
+                    numpy.longdouble((self._execute(positive_vector) -
+                                   self._execute(negative_vector))/(2.*diff))
+        elif type(sample) == TimeSeries:
+            self.trafo = TimeSeries.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            for i in range(sample.shape[0]):
+                for j in range(sample.shape[1]):
+                    positive_offset = copy.deepcopy(sample)
+                    negative_offset = copy.deepcopy(sample)
+                    if positive_offset[i][j] == 0.:
+                        diff = numpy.sqrt(self.eps)
+                    else:
+                        diff = numpy.sqrt(self.eps)*positive_offset[i][j]
+
+                    positive_offset[i][j] += diff
+                    negative_offset[i][j] -= diff
+                    diff = (positive_offset[i][j]-negative_offset[i][j])/2.
+
+                    positive_series = TimeSeries.replace_data(
+                        sample,
+                        positive_offset
+                    )
+                    negative_series = TimeSeries.replace_data(
+                        sample,
+                        negative_offset
+                    )
+                    self.trafo[i][j] = \
+                        numpy.longdouble((self._execute(positive_series) -
+                                       self._execute(negative_series))/(2.*diff))
+
+    def central_difference_with_halfstep_method(self, sample):
+        """ implementation of the central difference method with a half step
+
+        **Principle**
+
+        The principle applied by the central difference method with a half step is
+
+        .. math::
+
+            f'(x)=\\frac{f(x-h)-8f(x-\\frac{h}{2})+8f(x+\\frac{h}{2})-f(x-h)}{6h}
+
+        where :math:`h` is the step of the differentiation that is computed
+        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and
+        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.
+
+        **Parameters**
+
+            :sample:
+                the initial value used for the derivation
+
+        .. note::
+
+            This method is the most accurate differentiation method but also
+            has the greatest overhead.
+        """
+        if type(sample) == FeatureVector:
+            self.trafo = FeatureVector.replace_data(
+                    self.example, numpy.zeros(self.example.shape))
+            for j in range(len(sample.feature_names)):
+                positive_offset = copy.deepcopy(sample)
+                negative_offset = copy.deepcopy(sample)
+                half_positive_offset = copy.deepcopy(sample)
+                half_negative_offset = copy.deepcopy(sample)
+
+                if positive_offset[0][j] == 0.:
+                    diff = numpy.sqrt(self.eps)
+                else:
+                    diff = numpy.sqrt(self.eps)*positive_offset[0][j]
+                positive_offset[0][j] += diff
+                negative_offset[0][j] -= diff
+                half_positive_offset[0][j] += diff/2.
+                half_negative_offset[0][j] -= diff/2.
+                
+                diff = (positive_offset[0][j]-negative_offset[0][j])/2.
+
+                positive_vector = FeatureVector.replace_data(
+                    sample,
+                    positive_offset
+                )
+                negative_vector = FeatureVector.replace_data(
+                    sample,
+                    negative_offset
+                )
+                half_positive_vector = FeatureVector.replace_data(
+                    sample,
+                    half_positive_offset
+                )
+                half_negative_vector = FeatureVector.replace_data(
+                    sample,
+                    half_negative_offset
+                )
+                self.trafo[0][j] = \
+                    numpy.longdouble((self._execute(negative_vector) -
+                                    8*self._execute(half_negative_vector) +
+                                    8*self._execute(half_positive_vector) -
+                                    self._execute(positive_vector))/(6.*diff))
+        elif type(sample) == TimeSeries:
+            self.trafo = TimeSeries.replace_data(
+                self.example, numpy.zeros(self.example.shape))
+            for i in range(sample.shape[0]):
+                for j in range(sample.shape[1]):
+                    positive_offset = copy.deepcopy(sample)
+                    negative_offset = copy.deepcopy(sample)
+                    half_positive_offset = copy.deepcopy(sample)
+                    half_negative_offset = copy.deepcopy(sample)
+
+                    if positive_offset[i][j] == 0.:
+                        diff = numpy.sqrt(self.eps)
+                    else:
+                        diff = numpy.sqrt(self.eps)*positive_offset[i][j]
+                    positive_offset[i][j] += diff
+                    negative_offset[i][j] -= diff
+                    half_positive_offset[i][j] += diff/2.
+                    half_negative_offset[i][j] -= diff/2.
+                    
+                    diff = (positive_offset[i][j]-negative_offset[i][j])/2.
+
+                    positive_series = TimeSeries.replace_data(
+                        sample,
+                        positive_offset
+                    )
+                    negative_series = TimeSeries.replace_data(
+                        sample,
+                        negative_offset
+                    )
+                    half_positive_series = TimeSeries.replace_data(
+                        sample,
+                        half_positive_offset
+                    )
+                    half_negative_series = TimeSeries.replace_data(
+                        sample,
+                        half_negative_offset
+                    )
+                    self.trafo[i][j] = \
+                        numpy.longdouble((self._execute(negative_series) -
+                                        8*self._execute(half_negative_series) +
+                                        8*self._execute(half_positive_series) -
+                                        self._execute(positive_series))/(6.*diff))
+
+    def get_sensor_ranking(self):
+        """ Transform the transformation to a sensor ranking by adding the respective absolute values
+
+        This method is following the principles as implemented in
+        :class:`~pySPACE.missions.nodes.classification.base.RegularizedClassifierBase`.
+        There might be some similarities in the code.
+        """
+        self.generate_backtransformation()
+        ## interfacing to code from RegularizedClassifierBase
+        if type(self.trafo) == FeatureVector:
+            trafo = self.trafo
+        elif type(self.trafo) == TimeSeries:
+            # canonic mapping of time series to feature vector for simplicity
+            node = TimeDomainFeaturesNode()
+            trafo = node._execute(self.trafo)
+        ## code from RegularizedClassifierBase with ``trafo`` instead of
+        ## ``self.features``
+        # channel name is what comes after the first underscore
+        feat_channel_names = [chnames.split('_')[1]
+                              for chnames in trafo.feature_names]
+        from collections import defaultdict
+        ranking_dict = defaultdict(float)
+        for i in range(len(trafo[0])):
+            ranking_dict[feat_channel_names[i]] += abs(trafo[0][i])
+        ranking = sorted(ranking_dict.items(),key=lambda t: t[1])
+        return ranking
+
+    def _inc_train(self, data, class_label=None):
+        """ This method is not yet implemented """
+        self._log("Incremental backtransformation is not yet available!",
+                  level=logging.ERROR)
+        super(BacktransformationNode,self)._inc_train(data, class_label)
+
+    @staticmethod
+    def node_from_yaml(nodes_spec):
+        """ Creates the FlowNode node and the contained chain based on the node_spec """
+        node_obj = BacktransformationNode(**FlowNode._prepare_node_chain(nodes_spec))
+        return node_obj
+
+    def store_state(self, result_dir, index=None):
+        """ Store the results
+
+        This method stores the transformation matrix, the offset, the
+        covariance matrix and the channel names. The `store_format` variable
+        must be set to either of the 3 corresponding formats: `txt`, `pickle`
+        or `mat`. If the `store_format` variable is `None`, the output will
+        not be stored.
+        """
+        import os
+
+        if self.store_format == "txt" :
+            numpy.set_printoptions(threshold='nan')
+            file_name = os.path.join(result_dir, "backtransformation.txt")
+            numpy.savetxt(file_name, self.get_own_transformation(), delimiter=" ", fmt="%s")
+        elif self.store_format == "pickle":
+            import pickle
+            file_name = os.path.join(result_dir, "backtransformation.pickle")
+            pickle.dump(self.get_own_transformation(), open(file_name, "w"))
+        elif self.store_format == "mat":
+            import scipy.io
+            file_name = os.path.join(result_dir, "backtransformation.mat")
+            result = self.get_own_transformation()
+            result_dict = {
+                "Transformation matrix":result[0],
+                "Offset":result[1][0],
+                "Covariance matrix":result[1][1],
+                "Feature/Channel names": result[2],
+                "Transformation name": result[3]
+            }
+            scipy.io.savemat(open(file_name, "w"), result_dict)
+        elif self.store_format is not None:
+            message = ("Storage format \"%s\" unrecognized. " +
+                       "Please choose between \"mat\",\"txt\""+
+                       " and \"pickle\"") % self.store_format
+            warnings.warn(message)
+
 
 _NODE_MAPPING = {"Flow_Node": FlowNode,
                 "Batch_Adapt_Subflow" : BatchAdaptSubflowNode}

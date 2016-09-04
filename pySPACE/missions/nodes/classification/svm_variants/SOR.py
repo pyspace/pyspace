@@ -6,8 +6,16 @@ SOR is used as abbreviation for Successive Overrelaxation.
 import numpy
 from numpy import dot
 
+import matplotlib.pyplot as plt
+
+import scipy.spatial.distance
+
 import logging
 import warnings
+
+import matplotlib as mpl
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.unicode'] = True
 
 # the output is a prediction vector
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
@@ -21,12 +29,16 @@ import copy
 # needed for loo-metrics
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
 
+
 class SorSvmNode(RegularizedClassifierBase):
-    """ Classify with 2-norm SVM relaxation (b in target function) using SOR algorithm
+    """ Classify with 2-norm SVM relaxation using the SOR algorithm
 
     This node extends the algorithm with some variants.
+    SOR means successive overrelaxation.
+    The offset b becomes part of the target function, which simplifies
+    the optimization algorithm and allows for some dual gradient descent.
 
-    For further details, have a look at the given sources
+    For further details, have a look at the given references
     and the *reduced_descent* which is an elemental processing step.
 
     **References**
@@ -110,11 +122,20 @@ class SorSvmNode(RegularizedClassifierBase):
 
             (*optional, default: False*)
 
-        :use_offset:
-            If False, the offset b is set to zero, otherwise it is used as normal
-            and as it is done in the literature.
+        :offset_factor:
+            Reciprocal weight, for offset treatment in the model
 
-            (*optional, default: True*)
+                :0: Use no offset
+                :1: Normal affine approach from augmented feature vectors
+                :high: Only small punishment of offset, enabling larger offsets
+                      (*danger of numerical instability*)
+
+            If 0 is used, the offset b is set to zero, otherwise it is used via
+            augmented feature vectors with different augmentation factors.
+            The augmentation value corresponds to 1/*offset_factor*,
+            where 1/0 corresponds to infinity.
+
+            (*optional, default: 1*)
 
         :squared_loss:
             Use L2 loss (optional) instead of L1 loss (default).
@@ -148,7 +169,7 @@ class SorSvmNode(RegularizedClassifierBase):
     def __init__(self, random=False, omega=1.0,
                  max_iterations=numpy.inf,
                  version="samples", reduce_non_zeros=True,
-                 calc_looCV=False, use_offset=True, squared_loss=False,
+                 calc_looCV=False, squared_loss=False, offset_factor=1,
                  **kwargs):
         self.old_difference=numpy.inf
         # instead of lists, arrays are concatenated in training
@@ -158,17 +179,21 @@ class SorSvmNode(RegularizedClassifierBase):
             self._log("Version %s is not available. Default to 'samples'!"%version, level=logging.WARNING)
             version = "samples"
         if not self.kernel_type == 'LINEAR' and not version == "matrix":
-            self._log("Version %s is not available for nonlinear kernel. Default to 'matrix'!"%version, level=logging.WARNING)
+            self._log("Version %s is not available for nonlinear" % version +
+                      "kernel. Default to 'matrix'!", level=logging.WARNING)
             version = "matrix"
         if self.tolerance > 0.1 * self.complexity:
             self.set_permanent_attributes(tolerance=0.1*self.complexity)
             warnings.warn("Using to high tolerance." +
                           " Reduced to 0.1 times complexity (tolerance=%f)."
                           % self.tolerance)
-        # mapping of the binary variable to {0,1}
-        if not use_offset:
-            offset_factor = 0
+
+        if float(offset_factor) or offset_factor >= 0:
+            offset_factor = float(offset_factor)
         else:
+            warnings.warn(
+                "'offset_factor' parameter must be nonnegative float. " +
+                "But it is '%s'. Now set to 1." % str(offset_factor))
             offset_factor = 1
 
         if not squared_loss:
@@ -206,6 +231,12 @@ class SorSvmNode(RegularizedClassifierBase):
 
         prediction value = <w,data>+b
         """
+        if self.zero_training and self.num_samples == 0:
+            self.w = numpy.zeros(x.shape[1], dtype=numpy.float)
+            self.b = 0.0
+            self.dual_solution = numpy.zeros(self.num_samples)
+            return PredictionVector(label=self.classes[0], prediction=0,
+                                    predictor=self)
         if self.kernel_type == 'LINEAR':
             return super(SorSvmNode, self)._execute(x)
             # else:
@@ -227,6 +258,12 @@ class SorSvmNode(RegularizedClassifierBase):
                                 predictor=self)
 
     def _stop_training(self, debug=False):
+        """ Forward process to complete training cycle """
+        if not self.is_trained:
+            self._complete_training(debug)
+            self.relabel_training_set()
+        
+    def _complete_training(self, debug=False):
         """ Train the SVM with the SOR algorithm on the collected training data
         """
         self._log("Preprocessing of SOR SVM")
@@ -235,10 +272,11 @@ class SorSvmNode(RegularizedClassifierBase):
                      self.labels.count(self.classes.index(self.classes[0])),
                      self.classes[1],
                      self.labels.count(self.classes.index(self.classes[1]))))
-        ## initializations of relevant values and objects ##
+        # initializations of relevant values and objects #
         self.calculate_weigts_and_class_factors()
         self.num_samples = len(self.samples)
         self.max_iterations = self.max_iterations_factor*self.num_samples
+        
         self.dual_solution = numpy.zeros(self.num_samples)
 
         if self.version == "matrix" and self.kernel_type == "LINEAR":
@@ -263,12 +301,12 @@ class SorSvmNode(RegularizedClassifierBase):
                 bi = self.bi[i]
                 si = self.samples[i]
                 for j in range(self.num_samples):
-                    if i>j:
+                    if i > j:
                         self.M[i][j] = self.M[j][i]
                     else:
                         self.M[i][j] = bi * self.bi[j] * (
-                            self.kernel_func(si, self.samples[j])
-                            + self.offset_factor)
+                            self.kernel_func(si, self.samples[j]) +
+                            self.offset_factor)
 
         ## SOR Algorithm ##
         self.iteration_loop(self.M)
@@ -314,7 +352,7 @@ class SorSvmNode(RegularizedClassifierBase):
             prediction_vectors,
             ir_class=self.classes[1],
             sec_class=self.classes[0])
-        #undo changes
+        # undo changes
         self.b = optimal_b
         self.w = optimal_w
         self.dual_solution = optimal_dual_solution
@@ -422,7 +460,7 @@ class SorSvmNode(RegularizedClassifierBase):
             # self.w = numpy.array([self.w]).T
             pass
 
-    def reduced_descent(self,current_dual,M,relevant_indices):
+    def reduced_descent(self, current_dual, M, relevant_indices):
         """ Basic iteration step over a set of indices, possibly subset of all
 
         The main principle is to make a descent step with just one index,
@@ -498,6 +536,7 @@ class SorSvmNode(RegularizedClassifierBase):
                 self.difference = current_difference
             self.sub_iterations += 1
             self.iterations += 1
+            
             if not (self.sub_iterations < self.max_sub_iterations
                     and self.iterations < self.max_iterations):
                 break
@@ -520,7 +559,7 @@ class SorSvmNode(RegularizedClassifierBase):
         self.b = self.b + self.offset_factor * delta * bi
         self.w = self.w + delta * bi * self.samples[index]
 
-    def project(self,value,index):
+    def project(self, value, index):
         """ Projection method of *soft_relax* """
         if value <= 0:
             self.irrelevant_indices.append(index)
@@ -528,7 +567,7 @@ class SorSvmNode(RegularizedClassifierBase):
         else:
             return min(value, self.ci[index])
 
-    def total_descent(self,current_dual,M,reduced_indices=[]):
+    def total_descent(self, current_dual, M, reduced_indices=[]):
         """ Different sorting of indices and iteration over all indices
 
         .. todo:: check, which parameters are necessary
@@ -545,6 +584,335 @@ class SorSvmNode(RegularizedClassifierBase):
             random.shuffle(sorted_indices)
         for index in reduced_indices:
             sorted_indices.remove(index)
-        self.reduced_descent(current_dual, M,sorted_indices)
+        self.reduced_descent(current_dual, M, sorted_indices)
+
+# Code for forgetting strategies
+    def remove_no_border_points(self, retraining_required):
+        """ Discard method to remove all samples from the training set that are
+            not in the border of their class.
+            
+            The border is determined by a minimum distance from the center of
+            the class and a maximum distance.
+        
+            :param retraining_required: flag if retraining is
+                    required (the new point is a potential sv or a removed
+                    one was a sv)
+        """
+        # get centers of each class
+        targetSamples = [s for (s, l) in zip(self.samples, self.labels)\
+                         if l == 1]  # self.classes.index("Target")]
+        standardSamples = [s for (s, l) in zip(self.samples, self.labels)\
+                           if l == 0]  # self.classes.index("Standard")]
+        
+        if self.training_set_ratio == "KEEP_RATIO_AS_IT_IS":
+            # subtract one from the class for which a new sample was added
+            num_target = len(targetSamples) - (self.labels[-1] == 1)
+            num_standard = len(standardSamples) - (self.labels[-1] == 0)
+            
+            num_target = 1.0 * num_target / (num_target + num_standard) * \
+                self.basket_size
+            num_standard = self.basket_size - num_target
+         
+        # mean vector of each class (its center)
+        mTarget = numpy.mean(targetSamples, axis=0)
+        mStandard = numpy.mean(standardSamples, axis=0)
+         
+        # euclidean distance between the class centers
+        R = scipy.spatial.distance.euclidean(mTarget, mStandard)
+         
+        if self.show_plot:
+            dim = numpy.shape(self.samples)[1]
+            if dim == 2:
+                self.plot_class_borders(
+                    mStandard, mTarget, R,
+                    self.scale_factor_small, self.scale_factor_tall)
+         
+        # get distance of each point to its class center
+        distances = []
+        for i, (s, l) in enumerate(zip(self.samples, self.labels)):
+            if i >= len(self.dual_solution):
+                ds = 1.0
+            else:
+                ds = self.dual_solution[i]
+            if l == self.classes.index("Target"):
+                r_1 = scipy.spatial.distance.euclidean(s, mTarget)
+                r_2 = scipy.spatial.distance.euclidean(s, mStandard)
+                distances.append([i, s, l, r_1, ds, r_2/(r_1+r_2)])
+            else:
+                r_1 = scipy.spatial.distance.euclidean(s, mStandard)
+                r_2 = scipy.spatial.distance.euclidean(s, mTarget)
+                distances.append([i, s, l, r_1, ds, r_2/(r_1+r_2)])
+
+        if self.border_handling == "USE_ONLY_BORDER_POINTS":
+            # remove all points that are not in the border (in a specific
+            # radius) around the center
+            # does not guarantee that demanded number of samples are
+            # contained in the new training set
+            distances = filter(lambda x: (
+                self.scale_factor_small*R < x[3] < self.scale_factor_tall*R) or
+                x[4] != 0, distances)
+            # sort according to weight
+            distances.sort(key=lambda x: x[5])
+            # pay attention to the basket size
+            distances = distances[:self.basket_size]
+        elif self.border_handling == "USE_DIFFERENCE":
+            # take that point that differ most
+            # first sort by distance,
+            # support vectors are prioritized by (x[4]==0), then sort by weight
+            distances.sort(key=lambda x:\
+                           (abs(x[3] - \
+                               ((self.scale_factor_tall - \
+                                 self.scale_factor_small) / 2.0) * R)\
+                           * (x[4] == 0\
+                              and x[0] != len(self.samples)),\
+                              x[5]))
+        else:
+            # use only support vectors and new data point
+            distances = filter(lambda x: x[4] != 0 \
+                               or x[0] == len(self.samples), distances)
+         
+        if self.border_handling == "USE_ONLY_BORDER_POINTS":
+            # pay attention to the basket size
+            distances = distances[:self.basket_size]
+        elif self.training_set_ratio == "KEEP_RATIO_AS_IT_IS":
+            distances_tmp = []
+            for d in distances:
+                if d[2] == 1 and num_target > 0:
+                    num_target -= 1
+                    distances_tmp.append(d)
+                elif d[2] == 0 and num_standard > 0:
+                    num_standard -= 1
+                    distances_tmp.append(d)
+            distances = distances_tmp
+        elif self.training_set_ratio == "BALANCED_RATIO":
+            distances_tmp = []
+            num_target = 0
+            num_standard = 0
+            for d in distances:
+                if d[2] == 1 and num_target < (self.basket_size/2):
+                    num_target += 1
+                    distances_tmp.append(d)
+                elif d[2] == 0 and num_standard < (self.basket_size/2):
+                    num_standard += 1
+                    distances_tmp.append(d)
+            distances = distances_tmp
+        else:
+            # pay attention to the basket size
+            distances = distances[:self.basket_size]
+         
+        [idxs, _, _, _, _, _] = zip(*distances)
+        retraining_required = self.remove_samples(list(
+            set(numpy.arange(self.num_samples)) - set(idxs))) \
+            or retraining_required
+        return retraining_required
+
+    def add_new_sample(self, data, class_label=None, default=False):
+        """ Add a new sample to the training set.
+        
+            :param data:  A new sample for the training set.
+            :type  data:  list of float
+            :param class_label:    The label of the new sample.
+            :type  class_label:    str
+            :param default:  Specifies if the sample is added to the current
+                             training set or to a future training set
+            :param default:  bool
+        """
+        # use a separate knowledge base when old samples will be totally removed
+        if (self.discard_type == "CDT" or self.discard_type == "INC_BATCH")\
+                and default is False:
+            self.future_samples.append(data)
+            self.future_labels.append(class_label)
+            
+            # the sample size for the new knowledge base is limited
+            # to basket size, so pop oldest
+            while len(self.future_samples) > self.basket_size:
+                self.future_samples.pop(0)
+                self.future_labels.pop(0)
+        else:  # (copy from *incremental_training*)
+            # add new data
+            self._train_sample(data, class_label)
+            # here it is important to use the mapped label
+            self.append_weights_and_class_factors(self.labels[-1])
+            self.num_samples += 1
+
+            # The new example is at first assumed to be irrelevant (zero weight)
+            if self.dual_solution is None:
+                self.dual_solution = numpy.zeros(1)
+            else:
+                self.dual_solution = numpy.append(self.dual_solution, 0.0)
+
+            # update of the relevant matrix
+            if self.version == "matrix":
+                # very inefficient!!!
+                M = self.M
+                self.M = numpy.zeros((self.num_samples, self.num_samples))
+                self.M[:-1, :-1] = M
+                del M
+                bj = self.bi[-1]
+                d = self.samples[-1]
+                # calculation of missing entries of matrix M by hand
+                for i in range(self.num_samples):
+                    self.M[-1, i] = bj*self.bi[i]*(
+                        self.kernel_func(d, self.samples[i]) +
+                                            self.offset_factor)
+                    self.M[i, -1] = self.M[-1, i]
+
+            elif self.version == "samples":
+                # very efficient :)
+                if self.M is None:
+                    self.M = []
+                self.M.append(1.0/(numpy.linalg.norm(self.samples[-1])**2.0 +
+                              self.offset_factor +
+                              self.squ_factor / (2 * self.ci[-1])))
+
+    def remove_samples(self, idxs):
+        """ Remove the samples at the given indices from the training set.
+        
+            :param: idxs: Indices of the samples to remove.
+            :type:  idxs: list of int
+            :rtype: bool - True if a support vector was removed.
+        """
+        ret = False
+        # reverse sort of indices
+        # this enables removing first the higher indices such that the low
+        # indices are still valid and do not need to be shifted
+        # according to the removed index
+        idxs.sort(reverse=True)
+        for idx in idxs:
+            # TODO: reduce efficiently the training size (tests)
+            if not self.dual_solution[idx] == 0:
+                ret = True
+            self.reduce_dual_weight(idx)
+
+            self.samples.pop(idx)
+            self.labels.pop(idx)
+            self.ci.pop(idx)
+            self.bi.pop(idx)
+
+            if self.add_type == "UNSUPERVISED_PROB":
+                self.decisions.pop(idx)
+            self.dual_solution = numpy.delete(self.dual_solution, idx)
+            self.num_samples -= 1
+
+            # update of the relevant matrix
+            if self.version == "matrix":
+                # very inefficient!!!
+                M_temp = numpy.delete(self.M, idx, axis=0)
+                del self.M
+                self.M = numpy.delete(M_temp, idx, axis=1)
+            elif self.version == "samples":
+                # very efficient :)
+                self.M.pop(idx)
+        return ret
+    
+    def remove_non_support_vectors(self):
+        """ Remove all samples that are no support vectors.
+        """
+        idxs = numpy.where(self.dual_solution == 0.0)
+        self.remove_samples(list(idxs[0]))
+    
+    def incremental_training(self, data, class_label):
+        """ Warm Start Implementation by Mario Michael Krell
+
+        The saved status of the algorithm, including the Matrix M, is used
+        as a starting point for the iteration.
+        Only the problem has to be lifted up one dimension.
+        """
+        self._train_sample(data, class_label)
+        # here it is important to use the mapped label
+        self.append_weights_and_class_factors(self.labels[-1])
+        self.num_samples += 1
+
+        # The new example is at first assumed to be irrelevant (zero weight).
+        if self.dual_solution is None:
+            self.dual_solution = numpy.zeros(1)
+        else:
+            self.dual_solution = numpy.append(self.dual_solution, 0.0)
+        # update of the relevant matrix
+        if self.version == "matrix":
+            # very inefficient!!!
+            M = self.M
+            self.M = numpy.zeros((self.num_samples, self.num_samples))
+            self.M[:-1, :-1] = M
+            del M
+            bj = self.bi[-1]
+            d = self.samples[-1]
+            # calculation of missing entries of matrix M by hand
+            for i in range(self.num_samples):
+                self.M[-1, i] = bj*self.bi[i]*(
+                    self.kernel_func(d,self.samples[i])+self.offset_factor)
+                self.M[i, -1] = self.M[-1, i]
+        elif self.version == "samples":
+            # very efficient :)
+            if self.M is None:
+                self.M = []
+            self.M.append(1.0/(numpy.linalg.norm(self.samples[-1])**2.0 +
+                          self.offset_factor +
+                          self.squ_factor / (2 * self.ci[-1])))
+
+        prediction = self._execute(data)
+        if not prediction.label == class_label or \
+                abs(prediction.prediction) < 1:
+            if self.version == "matrix":
+                # relevant parameters for getting w and b
+                # updates should be done using old variables
+                self.A = numpy.array(self.samples)
+                self.D = numpy.diag(self.bi)
+            temp_iter = self.iterations
+            self.iteration_loop(self.M)
+            self.iterations += temp_iter
+
+    def retrain_SVM(self):
+        """ Retrain the svm with the current training set """
+        # reset all parameters
+        self.old_difference = numpy.inf
+
+        # start retraining process (copy from *incremental_training*)
+        if self.version == "matrix":
+            # relevant parameters for getting w and b
+            # updates should be done using old variables
+            self.A = numpy.array(self.samples)
+            self.D = numpy.diag(self.bi)
+
+        temp_iter = self.iterations
+        self.iteration_loop(self.M)
+        self.iterations += temp_iter
+
+        self.future_samples = []
+        self.future_labels = []
+
+        if self.discard_type == "CDT":
+            self.learn_CDT()
+
+    def visualize(self):
+        """ Show the training samples, the support vectors if possible and the
+            current decision function.
+        """
+        dim = numpy.shape(self.samples)[1]
+        if dim == 2:
+            ax = plt.gca()
+            ax.set_xlabel(r'$x_0$')
+            ax.set_ylabel(r'$x_1$')
+            
+            super(SorSvmNode, self).plot_samples()
+            super(SorSvmNode, self).plot_hyperplane()
+            super(SorSvmNode, self).plot_support_vectors()
+        elif dim == 3:
+            ax = plt.gca(projection='3d')
+            ax.set_xlabel(r'$x_0$')
+            ax.set_ylabel(r'$x_1$')
+            ax.set_zlabel(r'$x_2$')
+            
+            super(SorSvmNode, self).plot_samples_3D()
+            super(SorSvmNode, self).plot_hyperplane_3D()
+        
+        if dim == 2 or dim == 3:
+            plt.draw()
+            if self.save_plot is True:
+                imagename = "%s/tmp%010d.png"\
+                            % (self.plot_storage, self.m_counter_i)
+                self.m_counter_i += 1
+                plt.savefig(imagename)
+
 
 _NODE_MAPPING = {"SOR": SorSvmNode}

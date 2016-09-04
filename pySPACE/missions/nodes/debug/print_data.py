@@ -4,10 +4,13 @@
 import numpy
 import time
 import warnings
+import logging
+import itertools
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 from pySPACE.resources.data_types.time_series import TimeSeries
+from pySPACE.tools.memoize_generator import MemoizeGenerator
 
 class PrintDataNode(BaseNode):
     """Print out formatted data.
@@ -87,8 +90,87 @@ class PrintDataNode(BaseNode):
                                       print_samples = print_samples,
                                       print_shape = print_shape
                                       )
+    def process(self):
+        """ Processes all data that is provided by the input node
 
-    def _execute(self, data):
+        Returns a generator that yields the data after being processed by this
+        node.
+        """
+        assert(self.input_node != None), "No input node specified!"
+        # Assert  that this node has already been trained
+        assert(not self.is_trainable() or
+               self.get_remaining_train_phase() == 0), "Node not trained!"
+        self._log("Processing data.", level=logging.DEBUG)
+        data_generator = \
+                itertools.imap(lambda (data, label):
+                               self.print_data(data, label),
+                               self.input_node.process())
+        return data_generator
+
+    def request_data_for_training(self, use_test_data):
+        """ Returns data for training of subsequent nodes of the node chain
+
+        A call to this method might involve training of the node chain up this
+        node. If use_test_data is true, all available data is used for
+        training, otherwise only the data that is explicitly for training.
+        """
+        assert(self.input_node != None)
+
+        self._log("Data for training is requested.", level = logging.DEBUG)
+
+        # If we haven't computed the data for training yet
+        if self.data_for_training == None:
+            self._log("Producing data for training.", level = logging.DEBUG)
+            # Train this node
+            self.train_sweep(use_test_data)
+            # Compute a generator the yields the train data and
+            # encapsulate it in an object that memoizes its outputs and
+            # provides a "fresh" method that returns a new generator that'll
+            # yield the same sequence
+            # This line crashes without the NodeMetaclass bug fix
+            train_data_generator = \
+                 itertools.imap(lambda (data, label) :
+                                self.print_data(data, label),
+                                self.input_node.request_data_for_training(
+                                                                use_test_data))
+            self.data_for_training = MemoizeGenerator(train_data_generator,
+                                                      caching=self.caching)
+
+        self._log("Data for training finished", level = logging.DEBUG)
+        # Return a fresh copy of the generator
+        return self.data_for_training.fresh()
+
+    def request_data_for_testing(self):
+        """ Returns data for testing of subsequent nodes of the node chain
+
+        A call to this node might involve evaluating the whole node chain
+        up to this node.
+        """
+        assert(self.input_node != None)
+
+        self._log("Data for testing is requested.", level = logging.DEBUG)
+
+        # If we haven't computed the data for testing yet
+        if self.data_for_testing == None:
+            # Assert  that this node has already been trained
+            assert(not self.is_trainable() or
+                   self.get_remaining_train_phase() == 0)
+            # Compute a generator the yields the test data and
+            # encapsulate it in an object that memoizes its outputs and
+            # provides a "fresh" method that returns a new generator that'll
+            # yield the same sequence
+            self._log("Producing data for testing.", level = logging.DEBUG)
+            test_data_generator = \
+                itertools.imap(lambda (data, label):
+                               self.print_data(data, label),
+                               self.input_node.request_data_for_testing())
+            self.data_for_testing = MemoizeGenerator(test_data_generator,
+                                                     caching=self.caching)
+        self._log("Data for testing finished", level = logging.DEBUG)
+        # Return a fresh copy of the generator
+        return self.data_for_testing.fresh()
+    
+    def print_data(self, data, label):
         """
         Print the data according to the specified constraints.
         """
@@ -101,9 +183,9 @@ class PrintDataNode(BaseNode):
             print "%s" % (str(type(data)))
 
         if issubclass(FeatureVector, type(data)):
-            print "%04d: %s" % (self.item, data.tag)
+            print "%04d: %s %s" % (self.item, data.tag, label)
         elif issubclass(TimeSeries, type(data)):
-            print "%04d: %s %s" % (self.item, data.name, data.marker_name)
+            print "%04d: %s %s %s" % (self.item, data.name, data.marker_name, label)
 
         # backup printoptions
         if self.numpy_printoptions:
@@ -132,7 +214,7 @@ class PrintDataNode(BaseNode):
 
         self.item += 1
 
-        return data
+        return (data, label)
         
 
 class EstimateBandwidthNode(BaseNode):

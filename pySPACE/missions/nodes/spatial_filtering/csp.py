@@ -12,6 +12,7 @@ import cPickle
 import numpy
 import scipy
 import logging
+import warnings
 
 from pySPACE.missions.nodes.spatial_filtering.spatial_filtering import SpatialFilteringNode
 from pySPACE.resources.data_types.time_series import TimeSeries
@@ -320,7 +321,13 @@ class CSPNode(SpatialFilteringNode):
         yi = numpy.linspace(-125, 125, 100)
         
         # grid the data.
-        zi = pylab.griddata(x, y, spatial_values, xi, yi)
+        try:
+            zi = pylab.griddata(x, y, spatial_values, xi, yi)
+        except RuntimeError:
+            warnings.warn(
+                "Natbib packackage is not available for interpolating a"
+                " grid. Using linear interpolation instead.")
+            zi = pylab.griddata(x, y, spatial_values, xi, yi, interpl='linear')
         
         # contour the gridded data, plotting dots at the nonuniform data points.
         ax.contour(xi, yi, zi, 15, linewidths=0.5, colors='k')

@@ -306,7 +306,7 @@ class BaseNode(object):
 
         assert retrain in [True, False], \
             "Passing inappropriate value %s for parameter 'retrain'." \
-                                                                 % retrain
+            % retrain
         self.store = store
         self.retrainable = retrain
 
@@ -380,18 +380,17 @@ class BaseNode(object):
         self.retrain_data = None
         self.retrain_label = None
 
-        # Set the default run number which gives the number of the current 
-        # iteration
-        self.run_number = 0
-
         # Switch for in-/homogenous data (e.g. data with different sampling
         # frequencies). Has to be handled from the node which can deal with 
         # inhomogenous data.
         self.homogenous = kwargs.get("homogenous", True)
 
+        # Set the default run number which gives the number of the current 
+        # iteration
+        self.run_number = 0
+
         # Every Parameter is stored since we reset them with every new spit.
         self.permanent_state = copy.deepcopy(self.__dict__)
-
         if kwargs_warning:
             remove_kwargs = ["homogeneous", "keep_in_history", "load_path",
                              "save_intermediate_results", "zero_training",
@@ -402,7 +401,7 @@ class BaseNode(object):
                         % (key, self.__class__.__name__) +
                         " Either you specified it on purpose, you spelled it " +
                         "wrong, or there is an implementation inconsistency.")
-
+        
 
     ###### Methods, which can be overwritten by inheriting nodes ######
     def _train(self, x):
@@ -412,7 +411,8 @@ class BaseNode(object):
         Optionally the :func:`_stop_training` method can be additionally implemented.
         """
         if self.is_trainable():
-            raise NotImplementedError("The node %s is not trainable"%self.__class__.__name__)
+            raise NotImplementedError("The node %s is not trainable"
+                                      % self.__class__.__name__)
 
     def _stop_training(self, *args, **kwargs):
         """ Called method after the training data went through the node
@@ -469,7 +469,16 @@ class BaseNode(object):
         """
         return False
 
-    @ classmethod
+    def get_own_transformation(self, sample=None):
+        """ If the node has a transformation, it should overwrite this method
+
+        The format should be::
+
+             (main transformation, offset and further parameters, relevant names, transformation type)
+        """
+        return None
+
+    @classmethod
     def get_input_types(cls, as_string = True):
         """ Return all available input types from the node
 
@@ -633,11 +642,12 @@ class BaseNode(object):
                 self.input_dim=shape[0]
             else:
                 self.input_dim=shape
-        # check the input dimension
-        if not x.shape == self.input_dim and not x.shape[1]==self.input_dim:
-            error_str = "Class %s: x has dimension %s, should be %s" \
-                % (self.__class__.__name__, str(x.shape), str(self.input_dim))
-            raise NodeException(error_str)
+        # in case of homogenous data control the dimension x
+        if self.homogenous:
+            if not x.shape == self.input_dim and not x.shape[1]==self.input_dim:
+                error_str = "Class %s: x has dimension %s, should be %s" \
+                    % (self.__class__.__name__, str(x.shape), str(self.input_dim))
+                raise NodeException(error_str)
 
     ### Handle the data types of the data
     def _get_supported_dtypes(self):
@@ -1242,7 +1252,8 @@ class BaseNode(object):
             attr_dict = self.__getstate__()
             # matlab doesn't like Nones.. replace Nones with 0's
             attr_dict = format_dict(attr_dict)
-            scipy.io.savemat(result_file,mdict=attr_dict)
+            
+            scipy.io.savemat(result_file, mdict=attr_dict)
             
 
     def _log(self, message, level = logging.INFO):
@@ -1251,13 +1262,21 @@ class BaseNode(object):
             return
 
         if not hasattr(self,"root_logger") or self.root_logger == None:
-            self.root_logger = logging.getLogger("%s-%s.%s" % (socket.gethostname(),
+            self.root_logger = logging.getLogger("%s.%s.%s" % (socket.gethostname(),
                                                                os.getpid(),
                                                                self))
-        if len(self.root_logger.handlers)==0:
+        if len(self.root_logger.handlers) == 0:
             self.root_logger.addHandler(logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT))
         self.root_logger.log(level, message)
+
+    def __del__(self):
+        # Stop logging
+        if hasattr(self,"root_logger") and self.root_logger is not None:
+            for handler in self.root_logger.handlers:
+                handler.close()
+                self.root_logger.removeHandler(handler)
+            del(self.root_logger)
 
     def _trace(self, x, key_str):
         """ Every call of this function creates a time-stamped log entry """
@@ -1324,6 +1343,63 @@ class BaseNode(object):
                                                 '%i' % self.current_split)
         self.load_path = self.load_path.replace('__RUN__',
                                                 '%i' % self.run_number)
+
+    def get_previous_transformations(self, sample=None):
+        """ Recursively construct a list of (linear) transformations
+
+        These transformations, applied on the data are needed later on for
+        visualization. So the new classifier can be visualized relative
+        to a previous linear processing step.
+
+        .. todo:: Check if splitter node works together with this node.
+        """
+        if self.is_source_node():
+            return []
+        else:
+            transformations = self.input_node.get_previous_transformations(sample)
+            own_transformation = self.get_own_transformation(sample)
+            if own_transformation is None:
+                # generic extraction of transformation for meta nodes
+                try:
+                    if "flow" in self.__dict__:
+                        own_transformations = self.flow[-1].get_previous_transformations(sample)
+                        transformations.extend(own_transformations)
+                        return transformations
+                    elif "nodes" in self.__dict__:
+                        own_transformations = self.nodes[-1].get_previous_transformations(sample)
+                        transformations.extend(own_transformations)
+                        return transformations
+                    elif "node" in self.__dict__:
+                        own_transformation = self.node.get_own_transformation(sample)
+                except:
+                    pass
+            if not (own_transformation is None):
+                transformations.append(own_transformation)
+            return transformations
+
+    def get_previous_execute(self,data, number=numpy.inf):
+        """ Get execution from previous nodes on *data*
+
+        *data* should be forwarded to the previous *number* input nodes and the
+        the result should be returned. By default, the data is recursively
+        executed from the source node.
+
+        This function is needed for the implementation of the classifier
+        application of the backtransformation concept, where the classifier
+        function is kept in a state before transformation to track changes in
+        the processing chain.
+        """
+        if self.is_source_node():
+            if not number == numpy.inf:
+                self._log("Index %s to large for recursive execute!" % number,
+                        level=logging.ERROR)
+            return self._execute(data)
+        elif number == 1:
+            return self.input_node._execute(data)
+        else:
+            number -= 1
+            return self.input_node._execute(
+                self.input_node.get_previous_execute(data, number))
 
     ### properties, copied from MDP without change
 
@@ -1465,8 +1541,9 @@ class BaseNode(object):
 
         self._if_training_stop_training()
 
-        # control the dimension x
-        self._check_input(x)
+        # in case of homogenous data control the dimension x
+        if self.homogenous:
+            self._check_input(x)
 
         # set the output dimension if necessary
         if self.output_dim is None:
@@ -1560,9 +1637,7 @@ class BaseNode(object):
 
         if self.keep_in_history:
             # Append current data to history
-            result.add_to_history(result, self.node_specs) 
-        if self.save_intermediate_results:
-            self.export_intermediate_results(result)
+            result.add_to_history(result, self.node_specs)
 
         # # set the dtype if necessary
         # if self.dtype is None:
@@ -1610,8 +1685,9 @@ class BaseNode(object):
             err_str = "The training phase of node %s has already finished." \
                 % self.__class__.__name__
             raise TrainingFinishedException(err_str)
-
-        self._check_input(x)
+        # in case of homogenous data control the dimension x
+        if self.homogenous:
+            self._check_input(x)
         self._check_train_args(x, *args, **kwargs)
 
         self._train_phase_started = True
@@ -1700,6 +1776,7 @@ class BaseNode(object):
             return self.input_node.get_metadata(key)
         else:
             return None
+        
 
 
 # Specify special node names, different to standard names

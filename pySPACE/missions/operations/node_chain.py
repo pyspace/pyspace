@@ -106,7 +106,11 @@ After creating all possible combinations of parameters, they are inserted
 into this string and the string is evaluated like a Python expression.
 If it is not evaluated to *True*, the parameter is rejected.
 The test is performed for each constraint (string). For being used later on,
-a parameter setting has to pass all tests.
+a parameter setting has to pass all tests. Example:
+
+.. code-block:: yaml
+
+    __alg__ in ['A','B','C'] and __par__ == 0.1 or __alg__ == 'D'
 
 (*optional, default: []*)
 
@@ -298,11 +302,10 @@ class NodeChainOperation(Operation):
         # temporary replacement of template keyword for better layout when
         # source_operation.yaml file is saved to result folder
         templates = operation_spec.pop("templates")
-        if type(templates[0]) is str or type(templates[0]) is basestring:
+        if type(templates[0]) is basestring:
             operation_spec["templates"] = [yaml.load(x) for x in templates]
         else:
             operation_spec["templates"] = templates
-
         super(NodeChainOperation, self).__init__(processes, operation_spec,
                                                  result_directory)
         self.operation_spec = templates

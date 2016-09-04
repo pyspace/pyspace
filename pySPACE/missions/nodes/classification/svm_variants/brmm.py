@@ -1,12 +1,12 @@
 """ Relative Margin Machines (original and some variants) """
 
-
-import timeit
 # the output is a prediction vector
+import timeit
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.missions.nodes.classification.base import RegularizedClassifierBase
 # classification vector may be saved as a feature vector
 from pySPACE.resources.data_types.feature_vector import FeatureVector
+from pySPACE.resources.data_types.time_series import TimeSeries
 # timeout package
 import signal
 
@@ -84,6 +84,12 @@ class RMM2Node(RegularizedClassifierBase):
 
             (*optional, default: True*)
 
+        :linear_weighting:
+            Add a linear weighting in the loss term.
+            We use the index as weight and normalize it to have a total sum of 1.
+
+            (*optional, default: False*)
+
         :calc_looCV:
             Calculate the leave-one-out metrics on the training data
 
@@ -107,13 +113,15 @@ class RMM2Node(RegularizedClassifierBase):
 
                 :0: Use no offset
                 :1: Normal affine approach from augmented feature vectors
-                :high: Only small punishment, enabling larger offset
-                      (danger of numerical instability)
+                :high: Only small punishment of offset, enabling larger offsets
+                      (*danger of numerical instability*)
 
-            If False, the offset b is set to zero, otherwise it is used as normal
-            and as it is done in the literature.
+            If 0 is used, the offset b is set to zero, otherwise it is used via
+            augmented feature vectors with different augmentation factors.
+            The augmentation value corresponds to 1/*offset_factor*,
+            where 1/0 corresponds to infinity.
 
-            (*optional, default: True*)
+            (*optional, default: 1*)
 
         :squared_loss:
             Use L2 loss (optional) instead of L1 loss (default).
@@ -152,9 +160,10 @@ class RMM2Node(RegularizedClassifierBase):
     def __init__(self, random=False, omega=1.0,
                  max_iterations=numpy.inf,
                  version="samples", reduce_non_zeros=True,
-                 calc_looCV=False,
+                 linear_weighting=False, calc_looCV=False,
                  range=numpy.inf, outer_complexity=None,
                  offset_factor=1, squared_loss=False,
+                 co_adaptive=False, co_adaptive_index=numpy.inf, history_index=1,
                  **kwargs):
         self.old_difference = numpy.inf
         # instead of lists, arrays are concatenated in training
@@ -206,6 +215,7 @@ class RMM2Node(RegularizedClassifierBase):
                                       outer_complexity=outer_complexity,
                                       complexity_correction=
                                       complexity_correction,
+                                      linear_weighting=linear_weighting,
                                       range=range,  # RBF for zero training
                                       b=0,
                                       w=None,
@@ -213,6 +223,9 @@ class RMM2Node(RegularizedClassifierBase):
                                       ci=[],
                                       dual_solution=None,
                                       one_class=False,
+                                      co_adaptive=co_adaptive,
+                                      co_adaptive_index=co_adaptive_index,
+                                      history_index=history_index
                                       )
 
     def _execute(self, x):
@@ -278,10 +291,10 @@ class RMM2Node(RegularizedClassifierBase):
                      for sample in self.samples]
             else:
                 self.M = [(1 / (numpy.linalg.norm(self.samples[i])**2.0
-                          + self.offset_factor + 1 / self.ci[i]),
+                          + self.offset_factor + 1 / (2 * self.ci[i])),
                           1 / (numpy.linalg.norm(self.samples[i])**2.0
                           + self.offset_factor + 1 /
-                          (self.ci[i] * self.complexity_correction)))
+                          (2 * self.ci[i] * self.complexity_correction)))
                           for i in range(self.num_samples)]
             # changes of w and b are tracked in the samples version
             self.w = numpy.zeros(self.dim, dtype=numpy.float)
@@ -374,6 +387,10 @@ class RMM2Node(RegularizedClassifierBase):
         self.num_samples = len(self.samples)
         for label in self.labels:
             self.append_weights_and_class_factors(label)
+            #care for zero sum
+        if self.linear_weighting:
+            c = 1/(self.num_samples*(self.num_samples+1)*0.5)
+            self.ci = [c*value for value in self.ci]
 
     def append_weights_and_class_factors(self, label):
         """ Mapping between labels and weights/class factors
@@ -383,9 +400,15 @@ class RMM2Node(RegularizedClassifierBase):
         """
         self.bi.append(label*2-1)
         if label == 0:
-            self.ci.append(self.complexity*self.weight[0])
+            if self.linear_weighting:
+                self.ci.append(self.complexity*self.weight[0]*self.num_samples)
+            else:
+                self.ci.append(self.complexity*self.weight[0])
         else:
-            self.ci.append(self.complexity*self.weight[1])
+            if self.linear_weighting:
+                self.ci.append(self.complexity*self.weight[1]*self.num_samples)
+            else:
+                self.ci.append(self.complexity*self.weight[1])
 
     def iteration_loop(self, M, reduced_indices=[]):
         """ The algorithm is calling the :func:`reduced_descent<pySPACE.missions.nodes.classifiers.ada_SVM.SORSVMNode.reduced_descent>` method in loops over alpha
@@ -526,25 +549,26 @@ class RMM2Node(RegularizedClassifierBase):
                 if self.one_class:
                     # correction if offset should not be changed
                     fi += self.bi[i] * self.b
-            s1 = self.squ_factor / self.ci[i] * dual_1
-            s2 = self.squ_factor / (self.ci[i] *
+            s1 = self.squ_factor / (2 * self.ci[i]) * dual_1
+            s2 = self.squ_factor / (2 * self.ci[i] *
                                     self.complexity_correction) * dual_2
             if dual_1 > 0:  # alpha update
                 old_dual = dual_1
                 if self.version == "matrix":
                     x = old_dual - \
-                        self.omega/(M[i][i] + self.squ_factor / self.ci[i]) \
-                        * (fi-1 + s1)
+                        self.omega / (M[i][i]
+                                      + self.squ_factor / (2 * self.ci[i])) \
+                        * (fi - 1 + s1)
                 elif self.version == "samples" and self.squ_factor:
                     x = old_dual - self.omega * M[i][0] * (fi - 1 + s1)
                 elif self.version == "samples" and not self.squ_factor:
                     x = old_dual - self.omega * M[i] * (fi - 1)
-            elif dual_2 > 0: # beta update
+            elif dual_2 > 0:  # beta update
                 old_dual = dual_2
                 if self.version == "matrix":
                     x = old_dual - \
                         self.omega / (M[i][i] + self.squ_factor /
-                        (self.ci[i] * self.complexity_correction)) \
+                        (2 * self.ci[i] * self.complexity_correction)) \
                         * (self.range - fi + s2)
                 elif self.version == "samples" and self.squ_factor:
                     x = old_dual - self.omega * M[i][1] \
@@ -559,7 +583,8 @@ class RMM2Node(RegularizedClassifierBase):
                 old_dual = 0 # just used to have the same formulas as above
                 if self.version == "matrix":
                     x = old_dual - \
-                        self.omega/(M[i][i] + self.squ_factor / self.ci[i]) \
+                        self.omega/(M[i][i]
+                                    + self.squ_factor / (2 * self.ci[i])) \
                         * (fi - 1 + s1)
                 elif self.version == "samples" and self.squ_factor:
                     x = old_dual - self.omega * M[i][0] * (fi - 1 + s1)
@@ -571,7 +596,7 @@ class RMM2Node(RegularizedClassifierBase):
                     if self.version == "matrix":
                         x = old_dual - \
                             self.omega / (M[i][i] + self.squ_factor /
-                            (self.ci[i] * self.complexity_correction)) \
+                            (2 * self.ci[i] * self.complexity_correction)) \
                             * (self.range - fi + s2)
                     elif self.version == "samples" and self.squ_factor:
                         x = old_dual - self.omega * M[i][1] * (
@@ -642,6 +667,15 @@ class RMM2Node(RegularizedClassifierBase):
         """
         if not self.random:
             sorted_indices = range(self.num_samples)
+            # if current_dual.ndim == 2:
+            #     sort_dual = current_dual[:,0]+current_dual[:,1]
+            # else:
+            #     sort_dual = current_dual
+            # # highest first
+            # sort_dual = sort_dual * -1.0
+            # # sort the entries of the current dual and get the corresponding indices
+            # sorted_indices = map(list,[numpy.argsort(sort_dual)])[0]
+            # #sorted_indices.reverse()
         else:
             sorted_indices = range(self.num_samples)
             random.shuffle(sorted_indices)
@@ -666,6 +700,13 @@ class RMM2Node(RegularizedClassifierBase):
         self._train(data, label)
         # here it is important to use the mapped label
         self.append_weights_and_class_factors(self.labels[-1])
+        if self.linear_weighting:
+            self.ci[-1] = self.ci[-1] * 2 / (
+                self.num_samples * (self.num_samples + 1))
+            scaling = self.num_samples/(self.num_samples+2)
+            self.ci = [value * scaling for value in self.ci]
+            self.b *= scaling
+            self.w *= scaling
 
         self.num_samples += 1
 
@@ -702,14 +743,16 @@ class RMM2Node(RegularizedClassifierBase):
             else:
                 self.M.append(
                     (1 / (numpy.linalg.norm(self.samples[-1])**2.0
-                          + self.offset_factor + 1 / self.ci[-1]),
+                          + self.offset_factor + 1 / (2 * self.ci[-1])),
                      1 / (numpy.linalg.norm(self.samples[-1])**2.0
                           + self.offset_factor + 1 /
-                          (self.ci[-1] * self.complexity_correction))
+                          (2 * self.ci[-1] * self.complexity_correction))
                     ))
         prediction = self._execute(data)
         if (not prediction.label == label or abs(prediction.prediction) < 1 or
                 (self.range and abs(prediction.prediction) > self.range)):
+            if self.co_adaptive:
+                self.update_data()
             if self.version == "matrix":
                 # relevant parameters for getting w and b
                 # updates should be done using old variables
@@ -718,6 +761,96 @@ class RMM2Node(RegularizedClassifierBase):
             temp_iter = self.iterations
             self.iteration_loop(self.M)
             self.iterations += temp_iter
+
+    def reiterate(self, parameters):
+        """ Change the parameters in the model and reiterate """
+        changed_c = False
+        for parameter in parameters:
+            p = parameter.strip("~")
+            if p.startswith("log"):
+                value = 10 ** parameters[parameter]
+                p = p[4:]
+            else:
+                value = parameters[parameter]
+            if p in ["range", "R", "Range"]:
+                self.range = value
+            elif p in ["complexity","C", "Complexity"] \
+                    and not value == self.complexity:
+                changed_c = True
+                difference = abs(self.complexity-value)
+                self.complexity = value
+                if self.tolerance > 0.1 * difference:
+                    self.set_permanent_attributes(tolerance=0.1*difference)
+                # # fix ci
+                # scaling = 1.0 * self.complexity / old_complexity
+                # self.ci = [value * scaling for value in self.ci]
+            elif p in ["w1", "W1", "weight1", "Weight1"] \
+                    and not value == self.weight[0]:
+                changed_c = True
+                difference = abs(self.weight[0]-value)
+                if self.tolerance > 0.1 * difference:
+                    self.set_permanent_attributes(tolerance=0.1*difference)
+                self.weight[0] = value
+            elif p in ["w2", "W2", "weight2", "Weight2"] \
+                    and not value == self.weight[1]:
+                changed_c = True
+                difference = abs(self.weight[1]-value)
+                if self.tolerance > 0.1 * difference:
+                    self.set_permanent_attributes(tolerance=0.1*difference)
+                self.weight[1] = value
+        # recalculate ci
+        if changed_c:
+            self.calculate_weigts_and_class_factors()
+        # fix M
+        if self.version == "samples" and self.kernel_type == "LINEAR" \
+                and self.squ_factor and changed_c:
+            self.M = [(1 / (numpy.linalg.norm(self.samples[i])**2.0
+                      + self.offset_factor + 1 / (2 * self.ci[i])),
+                      1 / (numpy.linalg.norm(self.samples[i])**2.0
+                      + self.offset_factor + 1 /
+                      (2 * self.ci[i] * self.complexity_correction)))
+                      for i in range(self.num_samples)]
+        self.iteration_loop(self.M)
+
+    def append_sample(self, sample):
+        super(RMM2Node, self).append_sample(sample)
+        if self.co_adaptive:
+            try:
+                hist_data = copy.deepcopy(sample.history[self.history_index-1])
+            except IndexError:
+                self._log("No history data available for classifier! " +
+                          "Co-adaptivity is turned off.",
+                          level=logging.CRITICAL)
+                self.co_adaptive = False
+            if not "hist_samples" in self.__dict__:
+                self.hist_samples = []
+            self.hist_samples.append(hist_data)
+
+    def update_data(self):
+        """ Recalculate w, samples and M """
+        # initialize w
+        self.w = numpy.zeros(self.dim, dtype=numpy.float)
+        for i in range(self.num_samples):
+            # recalculate sample
+            new_sample = self.get_previous_execute(
+                data=self.hist_samples[i], number=self.co_adaptive_index)
+            data_array = new_sample.view(numpy.ndarray)
+            self.samples[i] = data_array[0, :]
+            # recalculate w
+            self.w += data_array[0, :] * self.bi[i] * \
+                (self.dual_solution[i][0] - self.dual_solution[i][1])
+        if not self.squ_factor:
+            self.M = \
+                [1.0/(numpy.linalg.norm(sample)**2.0 + self.offset_factor)
+                 for sample in self.samples]
+        else:
+            self.M = [(1 / (numpy.linalg.norm(self.samples[i])**2.0
+                      + self.offset_factor + 1 / (2 * self.ci[i])),
+                      1 / (numpy.linalg.norm(self.samples[i])**2.0
+                      + self.offset_factor + 1 /
+                      (2 * self.ci[i] * self.complexity_correction)))
+                      for i in range(self.num_samples)]
+
 
 # ===========================================================================
 
@@ -1161,6 +1294,16 @@ class RMM1ClassifierNode(RegularizedClassifierBase):
 
 # ===========================================================================
 
+
+class SVR2BRMMNode(LibSVMClassifierNode):
+    """ Simple wrapper around epsilon-SVR with BRMM parameter mapping """
+
+    def __init__(self, range=3, complexity=1, **kwargs):
+        super(SVR2BRMMNode, self).__init__(
+            epsilon=(range-1.0)/(range+1.0),
+            complexity=2.0*complexity/(range+1.0),
+            svm_type ='epsilon-SVR',
+            **kwargs)
 class RMMClassifierMatlabNode(RegularizedClassifierBase):
     """ Classify with Relative Margin Machine using original matlab code
     
@@ -1301,11 +1444,27 @@ class RMMClassifierMatlabNode(RegularizedClassifierBase):
 
 
 class RmmPerceptronNode(RMM2Node, BaseNode):
-    """ Online learning variants of the 2-norm RMM
+    """ Online Learning variants of the 2-norm RMM
 
     **Parameters**
 
         .. seealso:: :class:`RMM2Node`
+
+        :co_adaptive:
+            Integrate backtransformation into classifier to catch
+            changing preprocessing
+
+            (*optional, default: False*)
+
+        :co_adaptive_index:
+            Number of nodes to go back
+
+            (*optional, default: numpy.inf*)
+
+        :history_index:
+            Number of history index of original data used for co-adaptation
+
+            (*optional, default: 1*)
 
     **Exemplary Call**
 
@@ -1321,9 +1480,17 @@ class RmmPerceptronNode(RMM2Node, BaseNode):
     :Author:    Mario Michael Krell
     :Created:   2014/01/02
     """
-    def __init__(self, **kwargs):
-        RMM2Node.__init__(self, version="samples", kernel_type='LINEAR',
+    def __init__(self, version="samples", kernel_type='LINEAR',
+                 co_adaptive=False, co_adaptive_index=numpy.inf,
+                 history_index=1, **kwargs):
+        RMM2Node.__init__(self, version=version, kernel_type=kernel_type,
                           **kwargs)
+        self.set_permanent_attributes(co_adaptive=co_adaptive,
+                                      co_adaptive_index=co_adaptive_index,
+                                      history_index=history_index,
+                                      hist_w=None,
+                                      hist_b=0,
+                                      zero_s=None)
 
     def _train(self, data, class_label):
         """ Main method for incremental and normal training
@@ -1361,8 +1528,19 @@ class RmmPerceptronNode(RMM2Node, BaseNode):
         # individual initialization of classification vector
         if self.w is None:
             self.w = numpy.zeros(self.dim, dtype=numpy.float)
+        if self.co_adaptive and (self.hist_w is None or self.zero_s is None):
+            if type(hist_data) == FeatureVector:
+                self.hist_w = FeatureVector.replace_data(
+                    hist_data, numpy.zeros(hist_data.shape, dtype=numpy.float))
+                self.zero_s = FeatureVector.replace_data(
+                    hist_data, numpy.zeros(hist_data.shape, dtype=numpy.float))
+            elif type(hist_data) == TimeSeries:
+                self.hist_w = TimeSeries.replace_data(
+                    hist_data, numpy.zeros(hist_data.shape, dtype=numpy.float))
+                self.zero_s = TimeSeries.replace_data(
+                    hist_data, numpy.zeros(hist_data.shape, dtype=numpy.float))
         if self.samples is None:
-            self.samples = ["empty"]  # to suppress logging warning
+            self.samples = ["empty"] # to suppress logging warning
         # update part init for compatibility with batch mode formulas
         i = 0
         weight = self.weight[self.classes.index(class_label)]
@@ -1371,10 +1549,10 @@ class RmmPerceptronNode(RMM2Node, BaseNode):
             M = [1.0/(numpy.linalg.norm(data_array)**2.0 + self.offset_factor)]
         else:
             M = [(1 / (numpy.linalg.norm(data_array)**2.0
-                  + self.offset_factor + 1 / self.ci[i]),
+                  + self.offset_factor + 1 / (2 * self.ci[i])),
                   1 / (numpy.linalg.norm(data_array)**2.0
                   + self.offset_factor + 1 /
-                  (self.ci[i] * self.complexity_correction)))]
+                  (2 * self.ci[i] * self.complexity_correction)))]
         bi = float(self.classes.index(class_label) * 2 - 1)
         xi = data_array[0, :]
         fi = bi * (dot(xi.T, self.w) + self.b)
@@ -1426,6 +1604,15 @@ class RmmPerceptronNode(RMM2Node, BaseNode):
             self.hist_b += delta
             self.hist_w += delta * hist_data
             self.update_from_history()
+
+    def update_from_history(self):
+        """ Update w from historic data to catch changing preprocessing """
+        temp_w = self.get_previous_execute(
+            data=self.hist_w, number=self.co_adaptive_index)
+        temp_T = self.get_previous_execute(
+            data=self.zero_s, number=self.co_adaptive_index)
+        temp_w += (self.hist_b-1.0)*temp_T
+        self.w = temp_w.view(numpy.ndarray)[0, :]
 
     def train(self,data,label):
         """ Prevent RegularizedClassifierBase method from being called """

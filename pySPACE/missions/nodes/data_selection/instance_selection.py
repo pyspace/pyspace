@@ -36,12 +36,35 @@ class InstanceSelectionNode(BaseNode):
             is forwarded to successor node.
 
             (*optional, default: 100*)
-
+            
         :reduce_class:
             If you want only to reduce one class, choose this parameter
             otherwise, both classes are reduced in a balanced fashion.
 
             (*optional, default: False*)
+            
+        :num_train_instances:
+             Instead of specifying *train_percentage_selected*, this option 
+             allows to specify the absolute number of training instances of 
+             class *class_label* that should be in the training set. 
+             All instances that occur until *num_train_instances* are found are
+             used for training.
+         
+             (*optional, default: None*)
+        
+        :class_label:
+             If *num_train_instances*-option is used, this string determines the
+             class of which training examples are count.
+
+            (*optional, default: 'Target'*)
+            
+        :random:
+             If *False*, the order of the data is retained. I.e. the first X
+             percent or number of train instances are used for training. If 
+             *True*, the training data is sampled randomly without taking into 
+             consideration the data's order.
+         
+             (*optional, default: True*)
 
     **Exemplary call**
     
@@ -57,16 +80,36 @@ class InstanceSelectionNode(BaseNode):
     :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)
     :Created: 2010/03/31
     """
-    def __init__(self, train_percentage_selected=100,
-                 test_percentage_selected=100,
-                 reduce_class=False,
+    def __init__(self, train_percentage_selected=100, 
+                 test_percentage_selected=100, reduce_class=False,
+                 num_train_instances=None, class_label='Target', random=True,
                  **kwargs):
         super(InstanceSelectionNode, self).__init__(**kwargs)
         
         self.set_permanent_attributes(
             train_percentage_selected=train_percentage_selected,
             test_percentage_selected=test_percentage_selected,
-            reduce_class=reduce_class)
+            reduce_class=reduce_class,
+            num_train_instances=num_train_instances,
+            class_label=class_label, random=random)
+
+    def get_num_data(self, iterator):
+        """ Return a list of instances that contain *num_train_instances* many 
+            instances of class *class_label* and all other instances that occur
+            up to this point
+        """
+        counter = 0
+        retained_instances = []
+        while counter < self.num_train_instances:
+            try:
+                instance, label = iterator.next()
+            except: #TODO: give some warning to user
+                break
+            else:
+                if label == self.class_label:
+                    counter += 1
+                retained_instances.append((instance,label))
+        return retained_instances
 
     def request_data_for_training(self, use_test_data):
         """ Returns data for training of subsequent nodes
@@ -87,7 +130,8 @@ class InstanceSelectionNode(BaseNode):
             self.train_percentage_selected = 100
         self._log("Data for training is requested.", level=logging.DEBUG)
 
-        if self.train_percentage_selected == 100:
+        if self.train_percentage_selected == 100 and \
+                self.num_train_instances is None:
             return super(InstanceSelectionNode, self).request_data_for_training(
                 use_test_data)
 
@@ -97,36 +141,51 @@ class InstanceSelectionNode(BaseNode):
             # Train this node
             self.train_sweep(use_test_data)
             
-            # Divide available instances according to label
-            all_instances = defaultdict(list)
-            for instance, label in self.input_node.request_data_for_training(
-                    use_test_data):
-                all_instances[label].append(instance)
-                
-            self._log("Keeping only %s percent of training data" %
-                      self.train_percentage_selected,
-                      level=logging.DEBUG)
-            r = random.Random(self.run_number)
-            # Retain only *percentage_selected* percent of the data
-            retained_instances = []
+            if not self.num_train_instances is None and self.random == False:
+                retained_instances = self.get_num_data(
+                    self.input_node.request_data_for_training(use_test_data))
+            else:
+                # Store all data
+                if self.num_train_instances is None:
+                    all_instances = defaultdict(list)
+                    for instance, label in self.input_node.request_data_for_training(
+                        use_test_data):
+                        all_instances[label].append(instance)
+                else:
+                    all_instances = list(
+                        self.input_node.request_data_for_traning(use_test_data))
 
-            for label, instances in all_instances.iteritems():
-                # enable random choice of samples
-                r.shuffle(instances)
-                if not self.reduce_class or \
-                        self.train_percentage_selected == 100:
-                    end_index = int(round(len(instances) *
-                                          self.train_percentage_selected / 100))
-                elif not (self.reduce_class == label):
-                    end_index = len(instances)
-                else:  # self.reduce_class==label--> reduction needed
-                    end_index = int(round(len(instances) *
-                                          self.train_percentage_selected / 100))
+                if self.random:
+                    r = random.Random(self.run_number)
 
-                retained_instances.extend(zip(instances[0:end_index],
-                                              [label]*end_index))
-            # mix up samples between the different labels
-            r.shuffle(retained_instances)
+                if not self.num_train_instances is None and self.random:
+                    r.shuffle(all_instances)
+                    retained_instances = self.get_num_data(
+                        all_instances.__iter__())
+                else:
+                    retained_instances = []
+                    self._log("Keeping only %s percent of training data" %
+                          self.train_percentage_selected,
+                          level=logging.DEBUG)
+                    # Retain only *percentage_selected* percent of the data
+                    for label, instances in all_instances.iteritems():
+                        # enable random choice of samples
+                        r.shuffle(instances)
+                        if not self.reduce_class or \
+                                self.train_percentage_selected == 100:
+                            end_index = int(round(len(instances) *
+                                                  self.train_percentage_selected / 100))
+                        elif not (self.reduce_class == label):
+                            end_index = len(instances)
+                        else:  # self.reduce_class==label--> reduction needed
+                            end_index = int(round(len(instances) *
+                                                  self.train_percentage_selected / 100))
+        
+                        retained_instances.extend(zip(instances[0:end_index],
+                                                      [label]*end_index))
+            if self.random:
+                # mix up samples between the different labels
+                r.shuffle(retained_instances)
             # Compute a generator the yields the train data and
             # encapsulate it in an object that memoizes its outputs and
             # provides a "fresh" method that returns a new generator that will

@@ -269,17 +269,12 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
 
                 ec_2d = StreamDataset.project2d(ec)
                 
-                # Define x and y coordinates of electrodes in the order of the channels
-                # of data
+                # Define x and y coordinates of electrodes in the order of
+                # the channels of the data
                 x = numpy.array([ec_2d[key][0] for key in channel_names])
                 y = numpy.array([ec_2d[key][1] for key in channel_names])
-            
-#                x = numpy.array([self.electrode_coordinates[key][0] * numpy.cos(self.electrode_coordinates[key][1]/180*numpy.pi)
-#                                        for key in channel_names])
-#                y = numpy.array([self.electrode_coordinates[key][0] * numpy.sin(self.electrode_coordinates[key][1]/180*numpy.pi) 
-#                                        for key in channel_names])
-                
-                # The values of the electrodes at this point of time 
+
+                # The values of the electrodes at this point of time
                 pos=list(all_tpoints).index(tpoints[time_index])
                 
                 z = data[pos, :]
@@ -287,20 +282,29 @@ class ElectrodeCoordinationPlotNode(VisualizationBase):
                 if self.smooth_corners:
                     x,y,z = self._smooth_corners(x,y,z, data, channel_names, pos)
                 
-                #griddata returns a masked array
-                #you can get the data via zi[~zi.mask]            
-                zi = griddata(x, y, z, self.xi, self.yi)
+                # griddata returns a masked array
+                # you can get the data via zi[~zi.mask]
+                try:
+                    zi = griddata(x, y, z, self.xi, self.yi)
+                except RuntimeError:
+                    warnings.warn(
+                        "Natbib packackage is not available for interpolating a"
+                        " grid. Using linear interpolation instead.")
+                    zi = griddata(x, y, z, self.xi, self.yi, interpl='linear')
                 
-                #clip values
+                # clip values
                 if self.clip and self.limits:
-                    zi=numpy.clip(zi, self.limits[0], self.limits[1]) #minimum and maximum
+                    # minimum and maximum
+                    zi = numpy.clip(zi, self.limits[0], self.limits[1])
                     
                 # contour the gridded data,
                 # plotting dots at the nonuniform data points.
                 
-                cs=pylab.contourf(self.xi, self.yi, zi, 15, cmap=pylab.cm.jet, levels=levels)
+                cs=pylab.contourf(self.xi, self.yi, zi, 15, cmap=pylab.cm.jet,
+                                  levels=levels)
                 if self.contourlines:
-                    pylab.contour(self.xi, self.yi, zi, 15, linewidths=0.5, colors='k', levels=levels)
+                    pylab.contour(self.xi, self.yi, zi, 15, linewidths=0.5,
+                                  colors='k', levels=levels)
                 
                 if self.figlabels:
                     # plot data points.

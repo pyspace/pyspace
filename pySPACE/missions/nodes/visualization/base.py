@@ -43,6 +43,7 @@ from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 from pySPACE.resources.data_types.time_series import TimeSeries
 
+
 class VisualizationBase(BaseNode):
     """ Base node for visualization
     
@@ -51,13 +52,16 @@ class VisualizationBase(BaseNode):
     
     This base class provides the following functionality:
 
-        - you can insert this node at any place in your node chain where the input data is a TimeSeries or a FeatureVector
+        - you can insert this node at any place in your node chain
         - you can optionally plot single trials and/or averages (the latter also accumulating over time)
         - you can either plot in online or in offline mode (see below)
         - data is sorted according to labels
         - optionally training and test data are distinguished
         - feature vectors are automatically transferred to time series
+        - prediction vectors are evaluated according to the transformation they were generated from
+        - optionally you can add backward computing of previous transformations (e.g. spatial filters) to get better visualizations
         - electrodes come with defined positions
+        - history values can be taken into account for plot
        
     The node has a number of parameters to define what should be plotted, e.g.
     whether to plot single trials, accumulated average and/or average, or 
@@ -191,6 +195,51 @@ class VisualizationBase(BaseNode):
             
             (*optional, default: True*)
         
+        :history_index:
+            This parameter only has effects if the node is used with a
+            prediction vector (i.e. after a classification). Then the predictor
+            property of the prediction vector is always scanned for a
+            FeatureVector for plotting (if it is not found, then the history is
+            scanned for another prediction vector). The parameter history_index
+            now introduces a further switch:
+            When set (between 1 and infinity), it specifies the depth in the
+            history where the history is additionally used for the plot output
+            (i.e. the corresponding node used keep_in_history=True). When the
+            history is not used for something else, this depth is usually 1. The
+            values usually correspond to the original feature values and are of
+            type TimeSeries or FeatureVector. Then, the product of feature value
+            and weight (i.e. the feature vector from the predictor) is computed
+            for each data point. The result is finally plotted 
+            as topography.
+            
+            (*optional, default: None*)
+            
+        :use_SF:
+            When the node gets a FeatureVector or PredictionVector this option
+            controls whether the transformation of a preceding spatial filter
+            (SF) is taken into account. If True, all *artificial* channels of
+            the filter are transformed back to their original electrode
+            counterparts. For full flexibility in what should be plotted, this
+            option can be combined with *history_index*, *use_FN*, *SF_channels*
+            and *use_transformation*.
+            
+            (*optional, default: True*)
+        
+        :use_FN:
+            documentation in progress
+            
+            (*optional, default: True*)
+        
+        :SF_channels:
+            documentation in progress
+            
+            (*optional, default: All*)
+
+        :use_transformation:
+            documentation in progress
+            
+            (*optional, default: False*)
+        
     :Saving Options:
     
         :store:
@@ -242,7 +291,13 @@ class VisualizationBase(BaseNode):
                  user_dir='./',
                  limit2class=None,
                  physiological_arrangement=True,
+                 history_index=None,
+                 use_FN=True,
+                 use_SF=True,
+                 SF_channels=None,
+                 use_transformation=False,
                  rand_initial_fig=True,
+                 covariancing=False,
                  **kwargs):
         """ Used to initialize the environment.
            Called by VisualizationBase child-node.
@@ -289,31 +344,39 @@ class VisualizationBase(BaseNode):
             create_directory(user_dir)
         else:
             user_dir = None #either offline plotting or store=False
-        
+
         self.set_permanent_attributes(
             request_training=request_training,
-            request_test=request_test,
-            separate_training_and_test=separate_training_and_test,
-            averaging=averaging,
-            accum_avg=accum_avg,
-            single_trial=single_trial,
-            time_stamps=time_stamps,
-            create_movie=create_movie,
-            timeshift=timeshift,
-            online=online,
-            limit2class=limit2class,
-            user_dir=user_dir,
-            store_data=store_data,
-            store=store,
-            trial_counter=0,
-            avg_values=dict(),
-            accum_list=list(),
-            st_list=list(),
-            label_counter=defaultdict(int),
-            skipped_trials=list(),  # list of not evaluated trials whenever
-                                    # _execute was called
-            physiological_arrangement=physiological_arrangement,
-            initial_fig_num=initial_fig_num)
+                request_test=request_test,
+                separate_training_and_test=separate_training_and_test,
+                averaging=averaging,
+                accum_avg=accum_avg,
+                single_trial=single_trial,
+                time_stamps=time_stamps,
+                create_movie=create_movie,
+                timeshift=timeshift,
+                online=online,
+                limit2class=limit2class,
+                user_dir=user_dir,
+                store_data=store_data,
+                store = store,
+                trial_counter=0,
+                avg_values=dict(),
+                accum_list=list(),
+                st_list=list(),
+                label_counter=defaultdict(int),
+                skipped_trials=list(),  #list of not evaluated trials
+                # whenever _execute was called
+                current_trafo_TS=None,
+                physiological_arrangement=physiological_arrangement,
+                history_index=history_index,
+                use_FN=use_FN,
+                use_SF=use_SF,
+                SF_channels=SF_channels,
+                use_transformation=use_transformation,
+                initial_fig_num=initial_fig_num,
+                covariancing=covariancing,
+                )
     
     def is_trainable(self):
         """ Returns whether this node is trainable.
@@ -378,30 +441,45 @@ class VisualizationBase(BaseNode):
             Called by base_node.
             
             .. note::
-                Currently the label is based on the tag. This should be fixed in the near future!
+                Currently the label is based on the tag.
+                This should be fixed in the near future!
                 
             Returns:       unmodified data
         """
-        
-        if pylab_import_error:
-            warnings.warn("VisualizationBase::Pylab could not be imported. Plotting not supported.")
+
+        if pylab_import_error and not \
+                (self.online and hasattr(self, "_plotValues")):
+            warnings.warn("VisualizationBase::Pylab could not be imported. "
+                          "Plotting not supported.")
             return data
 
         #convert any datatype internally into TimeSeries
         #evaluate the datatype and prepare data accordingly
         dattype = type(data)
         if dattype == TimeSeries:
-            # TimeSeries are used as they are
-            prepared_data = data
+            if not self.use_transformation:
+                # TimeSeries are used as they are
+                prepared_data = data
+            else:  # TODO: back-transform data!
+                prepared_data = data
         elif dattype == FeatureVector:
             # Feature Vectors are transformed into TimeSeries
             prepared_data = \
                 type_conversion.FeatureVector2TimeSeriesNode()._execute(data)
+            #if previous data transformations should be included
+            if self.use_transformation:
+                prepared_data=self._prepare_FV(prepared_data)
         elif dattype == PredictionVector:
-            warnings.warn("VisualizationBase:: Unsupported data type " + \
+            # Prediction Vectors are checked for a FeatureVector as predictor
+            try:
+                prepared_data = self._prepare_prediction(data)
+            except RuntimeError:
+                prepared_data = None
+            if prepared_data is None:
+                warnings.warn("VisualizationBase:: Unsupported data type " + \
                               str(dattype) + "! Plotting ignored!")
-            return data
-        else:  # should never occur
+                return data
+        else:  #should never occur
             warnings.warn("VisualizationBase:: Unsupported data type " + \
                           str(dattype) + "! Plotting ignored!")
             return data
@@ -635,6 +713,142 @@ class VisualizationBase(BaseNode):
         #change dir back to old one
         os.chdir(former_dir)
 
+    def _inc_train(self, data, class_label=None):
+        # todo: insert sparse_update switch
+        if data.label != class_label:
+            self.current_trafo_TS = None
+
+    def _prepare_prediction(self, data): #PredictionVector    Data to work with.
+        """ Convert prediction vector to time series object for visualization
+
+        Using the function *get_previous_transformations* the node history is
+        searched for the respective transformation parametrizations and then
+        the transformations are combined tog et a complete picture of the
+        data processing chain.
+
+        A special case is, when the
+        :class:`~pySPACE.missions.nodes.meta.flow_node.BacktransformationNode`
+
+
+        **Parameters**
+
+            :data: This is a Prediction Vector, which might contain data in its
+                   history component which is used for multiplication with
+                   the transformation or which is used as sample for
+                   calculating the derivative of the processing chain for the
+                   backtransformation.
+        """
+        if self.current_trafo_TS is None: #needed only once
+            transformation_list = self.get_previous_transformations(data)
+            classifier = transformation_list[-1]
+            if classifier[3] == "generic_backtransformation":
+                current_trafo = classifier[0]
+                if type(current_trafo) == FeatureVector:
+                    current_trafo_TS = type_conversion.\
+                        FeatureVector2TimeSeriesNode()._execute(current_trafo)
+                elif type(current_trafo) == TimeSeries:
+                    current_trafo_TS = current_trafo
+                if self.covariancing:
+                    shape = current_trafo_TS.shape
+                    covariance = classifier[1][1]
+                    new_TS_array = numpy.dot(
+                        covariance, current_trafo_TS.flatten()).reshape(shape)
+                    current_trafo_TS = TimeSeries.replace_data(
+                        current_trafo_TS, new_TS_array)
+            elif classifier[3] == "linear classifier":
+                classifier_FV = FeatureVector(numpy.atleast_2d(classifier[0]),
+                                              feature_names=classifier[2])
+                current_trafo = classifier_FV
+                if self.use_FN:
+                    try:
+                        FN = transformation_list[-2]
+                        assert(FN[3]=="feature normalization")
+                        assert(classifier[2]==FN[2]),"VisualizationBase:: Feature names do not match!"
+                        FN_FV = FeatureVector(numpy.atleast_2d(FN[0]),
+                                              feature_names = FN[2])
+                        current_trafo = FeatureVector(current_trafo*FN_FV,
+                                              feature_names = FN_FV.feature_names)
+                    except:
+                        warnings.warn("VisualizationBase:: Did not get any feature normalization!")
+                        pass #raise
+                current_trafo_TS = type_conversion.FeatureVector2TimeSeriesNode()._execute(current_trafo)
+                if self.use_SF:
+                    try:
+                        # TODO CHECK fitting of channel names
+                        SF = transformation_list[-2]
+                        if not SF[3] == "spatial filter":
+                            SF = transformation_list[-3]
+                        assert(SF[3] == "spatial filter")
+                        new_channel_names = SF[2]
+                        SF_trafo = SF[0]
+                        current_trafo_TS = TimeSeries(numpy.dot(current_trafo_TS,SF_trafo.T),
+                                            channel_names = new_channel_names,
+                                            sampling_frequency = current_trafo_TS.sampling_frequency)
+                    except:
+                        warnings.warn("VisualizationBase:: Did not get any spatial filter!")
+                        pass #raise
+            else:
+                warnings.warn("VisualizationBase:: "+
+                              "Did not get any classifier transformation!")
+                raise RuntimeError
+            # the reordering should have been done in the type conversion
+            current_trafo_TS.reorder(sorted(current_trafo_TS.channel_names))
+            self.current_trafo_TS=current_trafo_TS
+        prepared_prediction = self.current_trafo_TS
+        
+        if self.history_index:
+            found_in_history=False
+            if data.has_history():
+                try:
+                    prepared_history = copy.deepcopy(data.history[self.history_index-1])
+                    if type(prepared_history)==FeatureVector:
+                        prepared_history=type_conversion.FeatureVector2TimeSeriesNode()._execute(prepared_history)
+                    found_in_history=True
+                except:
+                    pass
+            if found_in_history:
+                prepared_history.reorder(self.current_trafo_TS.channel_names)
+                prepared_prediction = copy.deepcopy(prepared_prediction)*prepared_history
+            else:
+                warnings.warn("VisualizationBase:: No FeatureVector or TimeSeries found in history. Parameter history_index ignored!")
+        
+        return prepared_prediction
+
+    def _prepare_FV(self, data):
+        """ Convert FeatureVector into TimeSeries and use it for plotting.
+
+        .. note:: This function is not yet working as it should be.
+                  Work in progress.
+                  Commit due to LRP-Demo (DLR Review)
+        """
+        # visualization of transformation or history data times visualization
+        if self.current_trafo_TS is None:
+            transformation_list = self.get_previous_transformations(data)
+            transformation_list.reverse() #first element is previous node
+
+            for elem in transformation_list:
+                if self.use_FN and elem[3]=="feature normalization":
+                    # visualize Feature normalization scaling as feature vector
+                    FN_FV = FeatureVector(numpy.atleast_2d(elem[0]),
+                                      feature_names = elem[2])
+                    self.current_trafo_TS = type_conversion.FeatureVector2TimeSeriesNode()._execute(FN_FV)
+                    self.current_trafo_TS.reorder(sorted(self.current_trafo_TS.channel_names))
+                    break
+
+
+                # visualize spatial filter as times series,
+                # where the time axis is the number of channel or virtual
+                # channel name
+                if self.use_SF and elem[3]=="spatial filter":
+                    new_channel_names = elem[2]
+                    SF_trafo = elem[0]
+                    self.current_trafo_TS = TimeSeries(SF_trafo.T,
+                                channel_names = new_channel_names,
+                                sampling_frequency = 1)
+                    self.current_trafo_TS.reorder(sorted(self.current_trafo_TS.channel_names))
+                    break
+        
+        return self.current_trafo_TS
 
 #    def _get_electrode_coordinates(self, coordinates):
 #        """ 
@@ -659,4 +873,3 @@ class VisualizationBase(BaseNode):
 #    #            y *= 4.0/3.0
 #        
 #        return [x, y, w, h]
-
