@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../../../index.html">
               <img class="logo" src="../../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.nodes.classification.svm_variants.SOR</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; SVM variants using the SOR or dual gradient descent algorithm</span>
+<span></span><span class="sd">&quot;&quot;&quot; SVM variants using the SOR or dual gradient descent algorithm</span>
 
 <span class="sd">All these variants have their offset in the target function.</span>
 <span class="sd">SOR is used as abbreviation for Successive Overrelaxation.</span>
@@ -76,27 +73,39 @@
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">dot</span>
 
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+
+<span class="kn">import</span> <span class="nn">scipy.spatial.distance</span>
+
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 
-<span class="c"># the output is a prediction vector</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="kn">as</span> <span class="nn">mpl</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;text.usetex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;text.latex.unicode&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="c1"># the output is a prediction vector</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="kn">import</span> <span class="n">RegularizedClassifierBase</span>
 
-<span class="c"># needed for speed up</span>
-<span class="c"># order of examined samples is shuffled</span>
+<span class="c1"># needed for speed up</span>
+<span class="c1"># order of examined samples is shuffled</span>
 <span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 
-<span class="c"># needed for loo-metrics</span>
+<span class="c1"># needed for loo-metrics</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="kn">import</span> <span class="n">BinaryClassificationDataset</span>
 
+
 <div class="viewcode-block" id="SorSvmNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode">[docs]</a><span class="k">class</span> <span class="nc">SorSvmNode</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot; Classify with 2-norm SVM relaxation (b in target function) using SOR algorithm</span>
+    <span class="sd">&quot;&quot;&quot; Classify with 2-norm SVM relaxation using the SOR algorithm</span>
 
 <span class="sd">    This node extends the algorithm with some variants.</span>
+<span class="sd">    SOR means successive overrelaxation.</span>
+<span class="sd">    The offset b becomes part of the target function, which simplifies</span>
+<span class="sd">    the optimization algorithm and allows for some dual gradient descent.</span>
 
-<span class="sd">    For further details, have a look at the given sources</span>
+<span class="sd">    For further details, have a look at the given references</span>
 <span class="sd">    and the *reduced_descent* which is an elemental processing step.</span>
 
 <span class="sd">    **References**</span>
@@ -180,11 +189,20 @@
 
 <span class="sd">            (*optional, default: False*)</span>
 
-<span class="sd">        :use_offset:</span>
-<span class="sd">            If False, the offset b is set to zero, otherwise it is used as normal</span>
-<span class="sd">            and as it is done in the literature.</span>
+<span class="sd">        :offset_factor:</span>
+<span class="sd">            Reciprocal weight, for offset treatment in the model</span>
 
-<span class="sd">            (*optional, default: True*)</span>
+<span class="sd">                :0: Use no offset</span>
+<span class="sd">                :1: Normal affine approach from augmented feature vectors</span>
+<span class="sd">                :high: Only small punishment of offset, enabling larger offsets</span>
+<span class="sd">                      (*danger of numerical instability*)</span>
+
+<span class="sd">            If 0 is used, the offset b is set to zero, otherwise it is used via</span>
+<span class="sd">            augmented feature vectors with different augmentation factors.</span>
+<span class="sd">            The augmentation value corresponds to 1/*offset_factor*,</span>
+<span class="sd">            where 1/0 corresponds to infinity.</span>
+
+<span class="sd">            (*optional, default: 1*)</span>
 
 <span class="sd">        :squared_loss:</span>
 <span class="sd">            Use L2 loss (optional) instead of L1 loss (default).</span>
@@ -217,28 +235,32 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="SorSvmNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">omega</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
                  <span class="n">max_iterations</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
-                 <span class="n">version</span><span class="o">=</span><span class="s">&quot;samples&quot;</span><span class="p">,</span> <span class="n">reduce_non_zeros</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                 <span class="n">calc_looCV</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">use_offset</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">squared_loss</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">version</span><span class="o">=</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="n">reduce_non_zeros</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">calc_looCV</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">squared_loss</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">offset_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">old_difference</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
-        <span class="c"># instead of lists, arrays are concatenated in training</span>
+        <span class="c1"># instead of lists, arrays are concatenated in training</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">use_list</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">version</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;samples&quot;</span><span class="p">,</span> <span class="s">&quot;matrix&quot;</span><span class="p">]):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Version </span><span class="si">%s</span><span class="s"> is not available. Default to &#39;samples&#39;!&quot;</span><span class="o">%</span><span class="n">version</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-            <span class="n">version</span> <span class="o">=</span> <span class="s">&quot;samples&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&#39;LINEAR&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">version</span> <span class="o">==</span> <span class="s">&quot;matrix&quot;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Version </span><span class="si">%s</span><span class="s"> is not available for nonlinear kernel. Default to &#39;matrix&#39;!&quot;</span><span class="o">%</span><span class="n">version</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-            <span class="n">version</span> <span class="o">=</span> <span class="s">&quot;matrix&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">version</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="s2">&quot;matrix&quot;</span><span class="p">]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Version </span><span class="si">%s</span><span class="s2"> is not available. Default to &#39;samples&#39;!&quot;</span><span class="o">%</span><span class="n">version</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;samples&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s1">&#39;LINEAR&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Version </span><span class="si">%s</span><span class="s2"> is not available for nonlinear&quot;</span> <span class="o">%</span> <span class="n">version</span> <span class="o">+</span>
+                      <span class="s2">&quot;kernel. Default to &#39;matrix&#39;!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+            <span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;matrix&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">&gt;</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.1</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="p">)</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Using to high tolerance.&quot;</span> <span class="o">+</span>
-                          <span class="s">&quot; Reduced to 0.1 times complexity (tolerance=</span><span class="si">%f</span><span class="s">).&quot;</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Using to high tolerance.&quot;</span> <span class="o">+</span>
+                          <span class="s2">&quot; Reduced to 0.1 times complexity (tolerance=</span><span class="si">%f</span><span class="s2">).&quot;</span>
                           <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span><span class="p">)</span>
-        <span class="c"># mapping of the binary variable to {0,1}</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_offset</span><span class="p">:</span>
-            <span class="n">offset_factor</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="nb">float</span><span class="p">(</span><span class="n">offset_factor</span><span class="p">)</span> <span class="ow">or</span> <span class="n">offset_factor</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">offset_factor</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">offset_factor</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;&#39;offset_factor&#39; parameter must be nonnegative float. &quot;</span> <span class="o">+</span>
+                <span class="s2">&quot;But it is &#39;</span><span class="si">%s</span><span class="s2">&#39;. Now set to 1.&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">offset_factor</span><span class="p">))</span>
             <span class="n">offset_factor</span> <span class="o">=</span> <span class="mi">1</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">squared_loss</span><span class="p">:</span>
@@ -246,9 +268,9 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">squ_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
 
-        <span class="c"># Weights for soft margin (dependent on class or time)</span>
+        <span class="c1"># Weights for soft margin (dependent on class or time)</span>
         <span class="n">ci</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c"># Mapping from class to value of classifier (-1,1)</span>
+        <span class="c1"># Mapping from class to value of classifier (-1,1)</span>
         <span class="n">bi</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">random</span><span class="o">=</span><span class="n">random</span><span class="p">,</span>
@@ -269,16 +291,22 @@
                                       <span class="n">dual_solution</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                                       <span class="n">max_iterations</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span>
                                       <span class="n">b</span><span class="o">=</span><span class="mi">0</span>
-                                      <span class="p">)</span>
-</div>
+                                      <span class="p">)</span></div>
+
 <div class="viewcode-block" id="SorSvmNode._execute"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Executes the classifier on the given data vector in the linear case</span>
 
 <span class="sd">        prediction value = &lt;w,data&gt;+b</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&#39;LINEAR&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">zero_training</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">prediction</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                    <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s1">&#39;LINEAR&#39;</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-            <span class="c"># else:</span>
+            <span class="c1"># else:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
         <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span>
@@ -287,78 +315,84 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="n">dual</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">prediction</span> <span class="o">+=</span> <span class="n">dual</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> \
                     <span class="bp">self</span><span class="o">.</span><span class="n">kernel_func</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-        <span class="c"># Look up class label</span>
-        <span class="c"># prediction --&gt; {-1,1} --&gt; {0,1} --&gt; Labels</span>
+        <span class="c1"># Look up class label</span>
+        <span class="c1"># prediction --&gt; {-1,1} --&gt; {0,1} --&gt; Labels</span>
         <span class="k">if</span> <span class="n">prediction</span> <span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
             <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">prediction</span><span class="o">=</span><span class="n">prediction</span><span class="p">,</span>
-                                <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+                                <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div>
 
-</div>
 <div class="viewcode-block" id="SorSvmNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Forward process to complete training cycle &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_trained</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_complete_training</span><span class="p">(</span><span class="n">debug</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">relabel_training_set</span><span class="p">()</span></div>
+        
+<div class="viewcode-block" id="SorSvmNode._complete_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode._complete_training">[docs]</a>    <span class="k">def</span> <span class="nf">_complete_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Train the SVM with the SOR algorithm on the collected training data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Preprocessing of SOR SVM&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Instances of Class </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Preprocessing of SOR SVM&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Instances of Class </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span>
                   <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">])),</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
-        <span class="c">## initializations of relevant values and objects ##</span>
+        <span class="c1"># initializations of relevant values and objects #</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">calculate_weigts_and_class_factors</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations_factor</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span>
+        
         <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;matrix&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&quot;LINEAR&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s2">&quot;LINEAR&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">,</span>
                          <span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">*</span>
                              <span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)),</span>
                              <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;samples&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&quot;LINEAR&quot;</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s2">&quot;LINEAR&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">**</span><span class="mf">2.0</span>
                       <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span>
-                      <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                      <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
                       <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)]</span>
-            <span class="c"># changes of w and b are tracked in the samples version</span>
+            <span class="c1"># changes of w and b are tracked in the samples version</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c"># kernel case</span>
-            <span class="c">## iterative calculation of M</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># kernel case</span>
+            <span class="c1"># iterative calculation of M</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">):</span>
                 <span class="n">bi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">si</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">):</span>
-                    <span class="k">if</span> <span class="n">i</span><span class="o">&gt;</span><span class="n">j</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">j</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">bi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_func</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">j</span><span class="p">])</span>
-                            <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span><span class="p">)</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">kernel_func</span><span class="p">(</span><span class="n">si</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">j</span><span class="p">])</span> <span class="o">+</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span><span class="p">)</span>
 
-        <span class="c">## SOR Algorithm ##</span>
+        <span class="c1">## SOR Algorithm ##</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s">&quot;~~Solver_Iterations~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
-        <span class="c">## calculate leave one out metrics ##</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~Solver_Iterations~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
+        <span class="c1">## calculate leave one out metrics ##</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_looCV</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">looCV</span><span class="p">()</span>
-</div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">looCV</span><span class="p">()</span></div>
+
 <div class="viewcode-block" id="SorSvmNode.looCV"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.looCV">[docs]</a>    <span class="k">def</span> <span class="nf">looCV</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calculate leave one out metrics &quot;&quot;&quot;</span>
-        <span class="c"># remember original solution</span>
+        <span class="c1"># remember original solution</span>
         <span class="n">optimal_w</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
         <span class="n">optimal_b</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
         <span class="n">optimal_dual_solution</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">)</span>
-        <span class="c"># preparation of sorting</span>
+        <span class="c1"># preparation of sorting</span>
         <span class="n">sort_dual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span>
-        <span class="c"># sort indices --&gt; zero weights do not need any changing and</span>
-        <span class="c"># low weights are less relevant for changes</span>
+        <span class="c1"># sort indices --&gt; zero weights do not need any changing and</span>
+        <span class="c1"># low weights are less relevant for changes</span>
         <span class="n">sorted_indices</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sort_dual</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">sorted_indices</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
 
@@ -366,14 +400,14 @@
         <span class="n">using_initial_solution</span> <span class="o">=</span> <span class="bp">True</span>
         <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">sorted_indices</span><span class="p">:</span>
             <span class="n">d_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-            <span class="c"># delete each index from the current observation</span>
+            <span class="c1"># delete each index from the current observation</span>
             <span class="k">if</span> <span class="n">d_i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">using_initial_solution</span><span class="p">:</span>
-                <span class="c"># no change in classifier necessary</span>
+                <span class="c1"># no change in classifier necessary</span>
                 <span class="k">pass</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="c"># set weight to zero and track the corresponding changes</span>
+                <span class="c1"># set weight to zero and track the corresponding changes</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">reduce_dual_weight</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-                <span class="c"># reiterate till convergence but skip current index</span>
+                <span class="c1"># reiterate till convergence but skip current index</span>
                 <span class="n">temp_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="o">=</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="n">temp_iter</span>
@@ -385,30 +419,30 @@
             <span class="n">prediction_vectors</span><span class="p">,</span>
             <span class="n">ir_class</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
             <span class="n">sec_class</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="c">#undo changes</span>
+        <span class="c1"># undo changes</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">optimal_b</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">optimal_w</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">optimal_dual_solution</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.reduce_dual_weight"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.reduce_dual_weight">[docs]</a>    <span class="k">def</span> <span class="nf">reduce_dual_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">optimal_dual_solution</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.reduce_dual_weight"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.reduce_dual_weight">[docs]</a>    <span class="k">def</span> <span class="nf">reduce_dual_weight</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Change weight at index to zero &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;sample&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;sample&quot;</span><span class="p">:</span>
             <span class="n">old_weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">update_classification_function</span><span class="p">(</span><span class="n">delta</span><span class="o">=-</span><span class="n">old_weight</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">index</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c"># the matrix algorithm doesn&#39;t care for the old weights</span>
+            <span class="c1"># the matrix algorithm doesn&#39;t care for the old weights</span>
             <span class="k">pass</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span></div>
+
 <div class="viewcode-block" id="SorSvmNode.calculate_weigts_and_class_factors"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.calculate_weigts_and_class_factors">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_weigts_and_class_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Calculate weights in the loss term and map label to -1 and 1 &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="o">=</span><span class="mi">0</span>
         <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">append_weights_and_class_factors</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
-            <span class="c">#care for zero sum</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.append_weights_and_class_factors"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.append_weights_and_class_factors">[docs]</a>    <span class="k">def</span> <span class="nf">append_weights_and_class_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">label</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append_weights_and_class_factors</span><span class="p">(</span><span class="n">label</span><span class="p">)</span></div>
+            <span class="c1">#care for zero sum</span>
+
+<div class="viewcode-block" id="SorSvmNode.append_weights_and_class_factors"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.append_weights_and_class_factors">[docs]</a>    <span class="k">def</span> <span class="nf">append_weights_and_class_factors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Mapping between labels and weights/class factors</span>
 
 <span class="sd">        The values are added to the corresponding list.</span>
@@ -418,9 +452,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.iteration_loop"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.iteration_loop">[docs]</a>    <span class="k">def</span> <span class="nf">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="o">=</span><span class="p">[]):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.iteration_loop"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.iteration_loop">[docs]</a>    <span class="k">def</span> <span class="nf">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="o">=</span><span class="p">[]):</span>
         <span class="sd">&quot;&quot;&quot; The algorithm is calling the :func:`reduced_descent&lt;pySPACE.missions.nodes.classifiers.ada_SVM.SORSVMNode.reduced_descent&gt;` method in loops over alpha</span>
 
 <span class="sd">        In the first step it uses a complete loop over all components of alpha</span>
@@ -429,26 +463,26 @@
 
 <span class="sd">        *reduced_indices* will be skipped in observation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c">## Definition of tracking variables ##</span>
+        <span class="c1">## Definition of tracking variables ##</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">difference</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
-        <span class="c">## outer iteration loop ##</span>
+        <span class="c1">## outer iteration loop ##</span>
         <span class="k">while</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">difference</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="ow">and</span>
                <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
-            <span class="c"># inner iteration loop only on active vectors/alpha (non zero) ##</span>
+            <span class="c1"># inner iteration loop only on active vectors/alpha (non zero) ##</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sub_iterations</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="c"># sorting or randomizing non zero indices</span>
-            <span class="c"># arrays are mapped to lists for later iteration</span>
+            <span class="c1"># sorting or randomizing non zero indices</span>
+            <span class="c1"># arrays are mapped to lists for later iteration</span>
             <span class="n">sort_dual</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span>
 
             <span class="n">num_non_zeros</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span><span class="n">sort_dual</span><span class="o">.</span><span class="n">nonzero</span><span class="p">())[</span><span class="mi">0</span><span class="p">])</span>
             <span class="n">max_values</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span>
                                  <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">sort_dual</span> <span class="o">==</span> <span class="n">sort_dual</span><span class="o">.</span><span class="n">max</span><span class="p">()))[</span><span class="mi">0</span><span class="p">])</span>
-            <span class="c"># sort the entries of the current dual</span>
-            <span class="c"># and get the corresponding indices</span>
+            <span class="c1"># sort the entries of the current dual</span>
+            <span class="c1"># and get the corresponding indices</span>
             <span class="n">sorted_indices</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sort_dual</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">num_non_zeros</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">num_non_zeros</span><span class="o">==</span><span class="n">max_values</span><span class="p">:</span>
-                <span class="c"># skip sub iteration if everything is zero or maximal</span>
+                <span class="c1"># skip sub iteration if everything is zero or maximal</span>
                 <span class="n">non_zero_indices</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">non_zero_indices</span> <span class="o">=</span> <span class="n">sorted_indices</span><span class="p">[</span><span class="o">-</span><span class="n">num_non_zeros</span><span class="p">:</span><span class="o">-</span><span class="n">max_values</span><span class="p">]</span>
@@ -464,36 +498,36 @@
             <span class="k">while</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">difference</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="ow">and</span>
                    <span class="bp">self</span><span class="o">.</span><span class="n">sub_iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_sub_iterations</span>
                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
-                <span class="c">## iteration step ##</span>
+                <span class="c1">## iteration step ##</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">reduced_descent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">non_zero_indices</span><span class="p">)</span>
-                <span class="c">## outer loop ##</span>
+                <span class="c1">## outer loop ##</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
                 <span class="k">break</span>
-            <span class="c"># For the first run, the previous reduced descent is skipped</span>
-            <span class="c"># but for retraining it is important</span>
-            <span class="c"># to have first the small loop, since normally, this is sufficient.</span>
-            <span class="c"># Furthermore having it at the end simplifies the stop criterion</span>
+            <span class="c1"># For the first run, the previous reduced descent is skipped</span>
+            <span class="c1"># but for retraining it is important</span>
+            <span class="c1"># to have first the small loop, since normally, this is sufficient.</span>
+            <span class="c1"># Furthermore having it at the end simplifies the stop criterion</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_sub_iterations</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">total_descent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="p">)</span>
-            <span class="c">## Final solution ##</span>
-        <span class="c"># in the case without kernels, we have to calculate the result</span>
-        <span class="c"># by hand new for each incoming sample</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;matrix&quot;</span><span class="p">:</span>
+            <span class="c1">## Final solution ##</span>
+        <span class="c1"># in the case without kernels, we have to calculate the result</span>
+        <span class="c1"># by hand new for each incoming sample</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">*</span> <span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">)</span>
-            <span class="c"># self.w = self.samples[0]*self.dual_solution[0]*self.bi[0]</span>
-            <span class="c"># for i in range(self.num_samples-1):</span>
-            <span class="c">#     self.w = self.w + self.bi[i+1] * self.samples[i+1] *</span>
-            <span class="c">#         self.dual_solution[i+1]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&quot;LINEAR&quot;</span><span class="p">:</span>
+            <span class="c1"># self.w = self.samples[0]*self.dual_solution[0]*self.bi[0]</span>
+            <span class="c1"># for i in range(self.num_samples-1):</span>
+            <span class="c1">#     self.w = self.w + self.bi[i+1] * self.samples[i+1] *</span>
+            <span class="c1">#         self.dual_solution[i+1]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s2">&quot;LINEAR&quot;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dot</span><span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">A</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span><span class="p">),</span>
                                           <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">)])</span><span class="o">.</span><span class="n">T</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;samples&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s">&quot;LINEAR&quot;</span><span class="p">:</span>
-            <span class="c"># w and b are pre-computed in the loop</span>
-            <span class="c"># transferring of 1-d array to 2d array</span>
-            <span class="c"># self.w = numpy.array([self.w]).T</span>
-            <span class="k">pass</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.reduced_descent"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.reduced_descent">[docs]</a>    <span class="k">def</span> <span class="nf">reduced_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">current_dual</span><span class="p">,</span><span class="n">M</span><span class="p">,</span><span class="n">relevant_indices</span><span class="p">):</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s2">&quot;LINEAR&quot;</span><span class="p">:</span>
+            <span class="c1"># w and b are pre-computed in the loop</span>
+            <span class="c1"># transferring of 1-d array to 2d array</span>
+            <span class="c1"># self.w = numpy.array([self.w]).T</span>
+            <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.reduced_descent"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.reduced_descent">[docs]</a>    <span class="k">def</span> <span class="nf">reduced_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_dual</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">relevant_indices</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Basic iteration step over a set of indices, possibly subset of all</span>
 
 <span class="sd">        The main principle is to make a descent step with just one index,</span>
@@ -533,20 +567,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">difference</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">relevant_indices</span><span class="p">:</span>
             <span class="n">old_dual</span> <span class="o">=</span> <span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="c">### Main Function ###</span>
-            <span class="c">### elemental update step of SOR algorithm ###</span>
+            <span class="c1">### Main Function ###</span>
+            <span class="c1">### elemental update step of SOR algorithm ###</span>
 
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;matrix&quot;</span><span class="p">:</span>
-                <span class="c"># this step is kernel independent</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span>
-                                             <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> \
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+                <span class="c1"># this step is kernel independent</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">/</span> <span class="p">(</span>
+                    <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span> <span class="o">*</span> \
                     <span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">current_dual</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;samples&quot;</span><span class="p">:</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span><span class="p">:</span>
                 <span class="n">xi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">bi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> \
-                    <span class="p">(</span><span class="n">bi</span> <span class="o">*</span> <span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">xi</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="c"># map dual solution to the interval [0,C]</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> \
+                    <span class="p">(</span><span class="n">bi</span> <span class="o">*</span> <span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">xi</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">+</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">*</span> <span class="n">old_dual</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="c1"># map dual solution to the interval [0,C]</span>
             <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">irrelevant_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
                 <span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
@@ -554,13 +589,13 @@
                 <span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;matrix&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
                 <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">old_dual</span><span class="p">)</span>
-                <span class="c"># update w and b in samples case</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s">&quot;samples&quot;</span><span class="p">:</span>
+                <span class="c1"># update w and b in samples case</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span><span class="p">:</span>
                 <span class="n">delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">old_dual</span><span class="p">)</span> <span class="o">*</span> <span class="n">bi</span>
-                <span class="c"># update classification function parameter w and b</span>
-                <span class="c"># self.update_classification_function(delta=delta, index=i)</span>
+                <span class="c1"># update classification function parameter w and b</span>
+                <span class="c1"># self.update_classification_function(delta=delta, index=i)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">*</span> <span class="n">delta</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">xi</span>
             <span class="n">current_difference</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span>
@@ -568,6 +603,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">difference</span> <span class="o">=</span> <span class="n">current_difference</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">sub_iterations</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="mi">1</span>
+            
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_sub_iterations</span>
                     <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
                 <span class="k">break</span>
@@ -576,48 +612,377 @@
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">relevant_indices</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
                 <span class="k">except</span><span class="p">:</span>
-                    <span class="c"># special mapping for RMM case</span>
+                    <span class="c1"># special mapping for RMM case</span>
                     <span class="k">if</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">:</span>
                         <span class="n">relevant_indices</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">relevant_indices</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">:</span>
-            <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">relevant_indices</span><span class="p">)</span>
-</div>
+            <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">relevant_indices</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="SorSvmNode.update_classification_function"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.update_classification_function">[docs]</a>    <span class="k">def</span> <span class="nf">update_classification_function</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">delta</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; update classification function parameter w and b &quot;&quot;&quot;</span>
         <span class="n">bi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">*</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">bi</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">bi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.project"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.project">[docs]</a>    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">,</span><span class="n">index</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">delta</span> <span class="o">*</span> <span class="n">bi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">index</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.project"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.project">[docs]</a>    <span class="k">def</span> <span class="nf">project</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Projection method of *soft_relax* &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">value</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">irrelevant_indices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
             <span class="k">return</span> <span class="mi">0</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
-</div>
-<div class="viewcode-block" id="SorSvmNode.total_descent"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.total_descent">[docs]</a>    <span class="k">def</span> <span class="nf">total_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">current_dual</span><span class="p">,</span><span class="n">M</span><span class="p">,</span><span class="n">reduced_indices</span><span class="o">=</span><span class="p">[]):</span>
+            <span class="k">return</span> <span class="nb">min</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="n">index</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.total_descent"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.total_descent">[docs]</a>    <span class="k">def</span> <span class="nf">total_descent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_dual</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="o">=</span><span class="p">[]):</span>
         <span class="sd">&quot;&quot;&quot; Different sorting of indices and iteration over all indices</span>
 
 <span class="sd">        .. todo:: check, which parameters are necessary</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">random</span><span class="p">:</span>
             <span class="n">sort_dual</span> <span class="o">=</span> <span class="n">current_dual</span>
-            <span class="c"># sort the entries of the current dual</span>
-            <span class="c"># and get the corresponding indices</span>
+            <span class="c1"># sort the entries of the current dual</span>
+            <span class="c1"># and get the corresponding indices</span>
             <span class="n">sorted_indices</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="p">[</span><span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">sort_dual</span><span class="p">)])[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="c"># highest first</span>
+            <span class="c1"># highest first</span>
             <span class="n">sorted_indices</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">sorted_indices</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">)</span>
             <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">sorted_indices</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">reduced_indices</span><span class="p">:</span>
             <span class="n">sorted_indices</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">reduced_descent</span><span class="p">(</span><span class="n">current_dual</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span><span class="n">sorted_indices</span><span class="p">)</span>
-</div></div>
-<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;SOR&quot;</span><span class="p">:</span> <span class="n">SorSvmNode</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reduced_descent</span><span class="p">(</span><span class="n">current_dual</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">sorted_indices</span><span class="p">)</span></div>
+
+<span class="c1"># Code for forgetting strategies</span>
+<div class="viewcode-block" id="SorSvmNode.remove_no_border_points"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.remove_no_border_points">[docs]</a>    <span class="k">def</span> <span class="nf">remove_no_border_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">retraining_required</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Discard method to remove all samples from the training set that are</span>
+<span class="sd">            not in the border of their class.</span>
+<span class="sd">            </span>
+<span class="sd">            The border is determined by a minimum distance from the center of</span>
+<span class="sd">            the class and a maximum distance.</span>
+<span class="sd">        </span>
+<span class="sd">            :param retraining_required: flag if retraining is</span>
+<span class="sd">                    required (the new point is a potential sv or a removed</span>
+<span class="sd">                    one was a sv)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># get centers of each class</span>
+        <span class="n">targetSamples</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>\
+                         <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>  <span class="c1"># self.classes.index(&quot;Target&quot;)]</span>
+        <span class="n">standardSamples</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>\
+                           <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># self.classes.index(&quot;Standard&quot;)]</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_set_ratio</span> <span class="o">==</span> <span class="s2">&quot;KEEP_RATIO_AS_IT_IS&quot;</span><span class="p">:</span>
+            <span class="c1"># subtract one from the class for which a new sample was added</span>
+            <span class="n">num_target</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">targetSamples</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">num_standard</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">standardSamples</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+            
+            <span class="n">num_target</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">num_target</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_target</span> <span class="o">+</span> <span class="n">num_standard</span><span class="p">)</span> <span class="o">*</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span>
+            <span class="n">num_standard</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span> <span class="o">-</span> <span class="n">num_target</span>
+         
+        <span class="c1"># mean vector of each class (its center)</span>
+        <span class="n">mTarget</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">targetSamples</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">mStandard</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">standardSamples</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+         
+        <span class="c1"># euclidean distance between the class centers</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">mTarget</span><span class="p">,</span> <span class="n">mStandard</span><span class="p">)</span>
+         
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_plot</span><span class="p">:</span>
+            <span class="n">dim</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">plot_class_borders</span><span class="p">(</span>
+                    <span class="n">mStandard</span><span class="p">,</span> <span class="n">mTarget</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_small</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_tall</span><span class="p">)</span>
+         
+        <span class="c1"># get distance of each point to its class center</span>
+        <span class="n">distances</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">):</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="mf">1.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">&quot;Target&quot;</span><span class="p">):</span>
+                <span class="n">r_1</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mTarget</span><span class="p">)</span>
+                <span class="n">r_2</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mStandard</span><span class="p">)</span>
+                <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">r_2</span><span class="o">/</span><span class="p">(</span><span class="n">r_1</span><span class="o">+</span><span class="n">r_2</span><span class="p">)])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">r_1</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mStandard</span><span class="p">)</span>
+                <span class="n">r_2</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">mTarget</span><span class="p">)</span>
+                <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">ds</span><span class="p">,</span> <span class="n">r_2</span><span class="o">/</span><span class="p">(</span><span class="n">r_1</span><span class="o">+</span><span class="n">r_2</span><span class="p">)])</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_handling</span> <span class="o">==</span> <span class="s2">&quot;USE_ONLY_BORDER_POINTS&quot;</span><span class="p">:</span>
+            <span class="c1"># remove all points that are not in the border (in a specific</span>
+            <span class="c1"># radius) around the center</span>
+            <span class="c1"># does not guarantee that demanded number of samples are</span>
+            <span class="c1"># contained in the new training set</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_small</span><span class="o">*</span><span class="n">R</span> <span class="o">&lt;</span> <span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_tall</span><span class="o">*</span><span class="n">R</span><span class="p">)</span> <span class="ow">or</span>
+                <span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="n">distances</span><span class="p">)</span>
+            <span class="c1"># sort according to weight</span>
+            <span class="n">distances</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+            <span class="c1"># pay attention to the basket size</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_handling</span> <span class="o">==</span> <span class="s2">&quot;USE_DIFFERENCE&quot;</span><span class="p">:</span>
+            <span class="c1"># take that point that differ most</span>
+            <span class="c1"># first sort by distance,</span>
+            <span class="c1"># support vectors are prioritized by (x[4]==0), then sort by weight</span>
+            <span class="n">distances</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span>\
+                           <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> \
+                               <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_tall</span> <span class="o">-</span> \
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_small</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">R</span><span class="p">)</span>\
+                           <span class="o">*</span> <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span>\
+                              <span class="ow">and</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)),</span>\
+                              <span class="n">x</span><span class="p">[</span><span class="mi">5</span><span class="p">]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># use only support vectors and new data point</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> \
+                               <span class="ow">or</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">),</span> <span class="n">distances</span><span class="p">)</span>
+         
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_handling</span> <span class="o">==</span> <span class="s2">&quot;USE_ONLY_BORDER_POINTS&quot;</span><span class="p">:</span>
+            <span class="c1"># pay attention to the basket size</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_set_ratio</span> <span class="o">==</span> <span class="s2">&quot;KEEP_RATIO_AS_IT_IS&quot;</span><span class="p">:</span>
+            <span class="n">distances_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">distances</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">num_target</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">num_target</span> <span class="o">-=</span> <span class="mi">1</span>
+                    <span class="n">distances_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">num_standard</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">num_standard</span> <span class="o">-=</span> <span class="mi">1</span>
+                    <span class="n">distances_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">distances_tmp</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_set_ratio</span> <span class="o">==</span> <span class="s2">&quot;BALANCED_RATIO&quot;</span><span class="p">:</span>
+            <span class="n">distances_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">num_target</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">num_standard</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">distances</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">num_target</span> <span class="o">&lt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="o">/</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">num_target</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">distances_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">num_standard</span> <span class="o">&lt;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="o">/</span><span class="mi">2</span><span class="p">):</span>
+                    <span class="n">num_standard</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">distances_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">distances_tmp</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># pay attention to the basket size</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">]</span>
+         
+        <span class="p">[</span><span class="n">idxs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">]</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">distances</span><span class="p">)</span>
+        <span class="n">retraining_required</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_samples</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">idxs</span><span class="p">)))</span> \
+            <span class="ow">or</span> <span class="n">retraining_required</span>
+        <span class="k">return</span> <span class="n">retraining_required</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.add_new_sample"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.add_new_sample">[docs]</a>    <span class="k">def</span> <span class="nf">add_new_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add a new sample to the training set.</span>
+<span class="sd">        </span>
+<span class="sd">            :param data:  A new sample for the training set.</span>
+<span class="sd">            :type  data:  list of float</span>
+<span class="sd">            :param class_label:    The label of the new sample.</span>
+<span class="sd">            :type  class_label:    str</span>
+<span class="sd">            :param default:  Specifies if the sample is added to the current</span>
+<span class="sd">                             training set or to a future training set</span>
+<span class="sd">            :param default:  bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># use a separate knowledge base when old samples will be totally removed</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discard_type</span> <span class="o">==</span> <span class="s2">&quot;CDT&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">discard_type</span> <span class="o">==</span> <span class="s2">&quot;INC_BATCH&quot;</span><span class="p">)</span>\
+                <span class="ow">and</span> <span class="n">default</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">future_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
+            
+            <span class="c1"># the sample size for the new knowledge base is limited</span>
+            <span class="c1"># to basket size, so pop oldest</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">future_labels</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># (copy from *incremental_training*)</span>
+            <span class="c1"># add new data</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_train_sample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span>
+            <span class="c1"># here it is important to use the mapped label</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">append_weights_and_class_factors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span>
+
+            <span class="c1"># The new example is at first assumed to be irrelevant (zero weight)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+            <span class="c1"># update of the relevant matrix</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+                <span class="c1"># very inefficient!!!</span>
+                <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span>
+                <span class="k">del</span> <span class="n">M</span>
+                <span class="n">bj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="c1"># calculation of missing entries of matrix M by hand</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">bj</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">kernel_func</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span><span class="p">:</span>
+                <span class="c1"># very efficient :)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">+</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">+</span>
+                              <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.remove_samples"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.remove_samples">[docs]</a>    <span class="k">def</span> <span class="nf">remove_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idxs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Remove the samples at the given indices from the training set.</span>
+<span class="sd">        </span>
+<span class="sd">            :param: idxs: Indices of the samples to remove.</span>
+<span class="sd">            :type:  idxs: list of int</span>
+<span class="sd">            :rtype: bool - True if a support vector was removed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># reverse sort of indices</span>
+        <span class="c1"># this enables removing first the higher indices such that the low</span>
+        <span class="c1"># indices are still valid and do not need to be shifted</span>
+        <span class="c1"># according to the removed index</span>
+        <span class="n">idxs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">idxs</span><span class="p">:</span>
+            <span class="c1"># TODO: reduce efficiently the training size (tests)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">ret</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reduce_dual_weight</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_type</span> <span class="o">==</span> <span class="s2">&quot;UNSUPERVISED_PROB&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">decisions</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="c1"># update of the relevant matrix</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+                <span class="c1"># very inefficient!!!</span>
+                <span class="n">M_temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+                <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">M_temp</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span><span class="p">:</span>
+                <span class="c1"># very efficient :)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+    
+<div class="viewcode-block" id="SorSvmNode.remove_non_support_vectors"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.remove_non_support_vectors">[docs]</a>    <span class="k">def</span> <span class="nf">remove_non_support_vectors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Remove all samples that are no support vectors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">idxs</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_samples</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">idxs</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span></div>
+    
+<div class="viewcode-block" id="SorSvmNode.incremental_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.incremental_training">[docs]</a>    <span class="k">def</span> <span class="nf">incremental_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Warm Start Implementation by Mario Michael Krell</span>
+
+<span class="sd">        The saved status of the algorithm, including the Matrix M, is used</span>
+<span class="sd">        as a starting point for the iteration.</span>
+<span class="sd">        Only the problem has to be lifted up one dimension.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_sample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span>
+        <span class="c1"># here it is important to use the mapped label</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">append_weights_and_class_factors</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># The new example is at first assumed to be irrelevant (zero weight).</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="c1"># update of the relevant matrix</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+            <span class="c1"># very inefficient!!!</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span>
+            <span class="k">del</span> <span class="n">M</span>
+            <span class="n">bj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># calculation of missing entries of matrix M by hand</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">bj</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">*</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">kernel_func</span><span class="p">(</span><span class="n">d</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span><span class="p">:</span>
+            <span class="c1"># very efficient :)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span><span class="o">**</span><span class="mf">2.0</span> <span class="o">+</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">offset_factor</span> <span class="o">+</span>
+                          <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ci</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])))</span>
+
+        <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">prediction</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="n">class_label</span> <span class="ow">or</span> \
+                <span class="nb">abs</span><span class="p">(</span><span class="n">prediction</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+                <span class="c1"># relevant parameters for getting w and b</span>
+                <span class="c1"># updates should be done using old variables</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">)</span>
+            <span class="n">temp_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="n">temp_iter</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.retrain_SVM"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.retrain_SVM">[docs]</a>    <span class="k">def</span> <span class="nf">retrain_SVM</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Retrain the svm with the current training set &quot;&quot;&quot;</span>
+        <span class="c1"># reset all parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">old_difference</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
+
+        <span class="c1"># start retraining process (copy from *incremental_training*)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
+            <span class="c1"># relevant parameters for getting w and b</span>
+            <span class="c1"># updates should be done using old variables</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">)</span>
+
+        <span class="n">temp_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="n">temp_iter</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">future_labels</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">discard_type</span> <span class="o">==</span> <span class="s2">&quot;CDT&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">learn_CDT</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="SorSvmNode.visualize"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.SOR.html#pySPACE.missions.nodes.classification.svm_variants.SOR.SorSvmNode.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Show the training samples, the support vectors if possible and the</span>
+<span class="sd">            current decision function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">r&#39;$x_0$&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;$x_1$&#39;</span><span class="p">)</span>
+            
+            <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">plot_samples</span><span class="p">()</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">plot_hyperplane</span><span class="p">()</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">plot_support_vectors</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">(</span><span class="n">projection</span><span class="o">=</span><span class="s1">&#39;3d&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">r&#39;$x_0$&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;$x_1$&#39;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_zlabel</span><span class="p">(</span><span class="s1">r&#39;$x_2$&#39;</span><span class="p">)</span>
+            
+            <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">plot_samples_3D</span><span class="p">()</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">SorSvmNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">plot_hyperplane_3D</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_plot</span> <span class="ow">is</span> <span class="bp">True</span><span class="p">:</span>
+                <span class="n">imagename</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">/tmp</span><span class="si">%010d</span><span class="s2">.png&quot;</span>\
+                            <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_counter_i</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">m_counter_i</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">imagename</span><span class="p">)</span></div></div>
+
+
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;SOR&quot;</span><span class="p">:</span> <span class="n">SorSvmNode</span><span class="p">}</span>
 </pre></div>
 
           </div>
@@ -625,7 +990,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -634,14 +999,14 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

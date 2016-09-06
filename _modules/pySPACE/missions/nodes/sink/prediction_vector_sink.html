@@ -1,0 +1,198 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.sink.prediction_vector_sink &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '1.3 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../../index.html">
+              <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pySPACE.missions.nodes.sink.prediction_vector_sink</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Collect prediction vectors &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVectorDataset</span>
+
+
+<div class="viewcode-block" id="PredictionVectorSinkNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode">[docs]</a><span class="k">class</span> <span class="nc">PredictionVectorSinkNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Collect all :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVectorDataset` elements</span>
+<span class="sd">    that are passed through it in a collection of type</span>
+<span class="sd">    :mod:`~pySPACE.resources.dataset_defs.prediction_vector`.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The code is heavily based on its counterpart for</span>
+<span class="sd">        :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector`</span>
+<span class="sd">        elements that can be found in :mod:`~pySPACE.missions.nodes.sink.feature_vector_sink.FeatureVectorSinkNode`</span>
+
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -</span>
+<span class="sd">            node: PredictionVectorSink</span>
+
+<span class="sd">    :input:  PredictionVector</span>
+<span class="sd">    :output: PredictionVectorDataset</span>
+<span class="sd">    :Author: Andrei Ignat (andrei_cristian.ignat@dfki.de)</span>
+<span class="sd">    :Created: 2014/10/15</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;PredictionVector&quot;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PredictionVectorSinkNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">prediction_vector_collection</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Reset the state of the object to the clean state it had after its</span>
+<span class="sd">        initialization</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span>
+        <span class="c1"># TODO: just a hack to get it working quickly...</span>
+        <span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;prediction_vector_collection&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">permanent_state</span> <span class="o">=</span> <span class="n">tmp</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable.</span>
+
+<span class="sd">        Since we want to sink the training examples as well, this</span>
+<span class="sd">        function wil return True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="c1"># We do nothing</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode._create_result_sets"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode._create_result_sets">[docs]</a>    <span class="k">def</span> <span class="nf">_create_result_sets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Instantiate the :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVectorDataset`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span> <span class="o">=</span> <span class="n">PredictionVectorDataset</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.process_current_split"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.process_current_split">[docs]</a>    <span class="k">def</span> <span class="nf">process_current_split</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Compute the results of this sink node for the current split</span>
+<span class="sd">        of the data into train and test data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Compute the prediction vectors for the data used for training</span>
+        <span class="k">for</span> <span class="n">prediction_vector</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="bp">False</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">prediction_vector</span><span class="o">.</span><span class="n">tag</span> <span class="o">!=</span> <span class="s2">&quot;Discard&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="c1"># create the dataset if it does not already exist</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_create_result_sets</span><span class="p">()</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">prediction_vector</span><span class="p">,</span>
+                                                             <span class="n">label</span><span class="p">,</span>
+                                                             <span class="n">train</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                                             <span class="n">split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span>
+                                                             <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span>
+
+        <span class="c1"># Compute the prediction vectors for the data used for testing</span>
+        <span class="k">for</span> <span class="n">prediction_vector</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">():</span>
+            <span class="c1"># If Prediction Vectors need to be discarded, that is done here</span>
+            <span class="k">if</span> <span class="n">prediction_vector</span><span class="o">.</span><span class="n">tag</span> <span class="o">!=</span> <span class="s2">&quot;Discard&quot;</span><span class="p">:</span>
+                <span class="c1"># Do lazy initialization of the class</span>
+                <span class="c1"># (maybe there were no training examples)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_create_result_sets</span><span class="p">()</span>
+                <span class="c1"># Add sample</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">prediction_vector</span><span class="p">,</span>
+                                                             <span class="n">label</span><span class="p">,</span>
+                                                             <span class="n">train</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                                             <span class="n">split</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">,</span>
+                                                             <span class="n">run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">run_number</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictionVectorSinkNode.get_result_dataset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.sink.prediction_vector_sink.html#pySPACE.missions.nodes.sink.prediction_vector_sink.PredictionVectorSinkNode.get_result_dataset">[docs]</a>    <span class="k">def</span> <span class="nf">get_result_dataset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the result dataset &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prediction_vector_collection</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+    </div>
+  </body>
+</html>

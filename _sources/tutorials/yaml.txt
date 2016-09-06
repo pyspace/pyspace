@@ -161,7 +161,7 @@ For further processing, the resulting dataset can be immediately used.
 From the programming perspective, the dictionary is loaded and forwarded
 as *dataset_md* to the respective datasets.
 It is even possible to access this data with the
-:func:`~pySPACE.missions.nodes.base_node.BaseNode.getMetadata` method in a node.
+:func:`~pySPACE.missions.nodes.base_node.BaseNode.get_metadata` method in a node.
 
 If you want to define your own metadata.yaml,
 to enable pySPACE to read your data, there are three categories of parameters

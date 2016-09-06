@@ -37,11 +37,13 @@ algorithm. This is done by applying an *operation*:
     :language: yaml
 
 
-You can start it in the command line by changing your current directory
-to ``pySPACE/run`` and invoking::
+You can start it in the command line directly in the pySPACE center by
+invoking::
 
     python launch.py --operation examples/classification.yaml
 
+Alternatively, you could change your current directory to ``pySPACE/run``
+beforehand if you did not use the setup.py to create the required links.
 Now you should get some information on your setup and finally a progress bar.
 The result can now be found at
 ``~/pySPACEcenter/storage/operation_results/CURRENT_DATE_TIME``,

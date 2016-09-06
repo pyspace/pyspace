@@ -1,0 +1,367 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>A regression tutorial in pySPACE &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.3 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../index.html" />
+    <link rel="up" title="Tutorials" href="tutorials.html" />
+    <link rel="next" title="Unit testing" href="tutorial_unittesting.html" />
+    <link rel="prev" title="HOWTO: Data Handling" href="data_handling.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_unittesting.html" title="Unit testing"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="data_handling.html" title="HOWTO: Data Handling"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="tutorials.html" accesskey="U">Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">A regression tutorial in pySPACE</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#preparing-the-data">Preparing the data</a></li>
+<li><a class="reference internal" href="#building-the-node-chain">Building the node chain</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="data_handling.html"
+                        title="previous chapter">HOWTO: Data Handling</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tutorial_unittesting.html"
+                        title="next chapter">Unit testing</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/tutorials/tutorial_regression.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="a-regression-tutorial-in-pyspace">
+<h1>A regression tutorial in pySPACE<a class="headerlink" href="#a-regression-tutorial-in-pyspace" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>As with any machine learning software, pySPACE is also capable of performing regression on
+selected data sets. In this introductory tutorial, we will be looking at exactly how some
+simple regression tasks can be run through the pySPACE suite.</p>
+<p>Contents of the tutorial</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><a class="reference internal" href="#preparing-the-data">Preparing the data</a></li>
+<li><a class="reference internal" href="#building-the-node-chain">Building the node chain</a></li>
+</ol>
+</div></blockquote>
+</div>
+<div class="section" id="preparing-the-data">
+<h2>Preparing the data<a class="headerlink" href="#preparing-the-data" title="Permalink to this headline">¶</a></h2>
+<p>For the pupose of this tutorial, we will use a dataset downloaded from the
+<a class="reference external" href="https://archive.ics.uci.edu/ml/datasets.html">UCI repository</a> and namely the
+<a class="reference external" href="https://archive.ics.uci.edu/ml/datasets/Wine+Quality">Wine Quality Dataset</a>.
+For this dataset, the taks is rather simple: based on the 11 physicochemical input
+features and on the accopamnying quality score, train a regression algorithm that
+will be able to predict the quality of a new wine sample.</p>
+<p>Before we can perform the regression, we must prepare the dataset that we just
+downloaded such that it can be processed by pySPACE. We thus go to the
+<cite>pySPACEcenter</cite> directory(which was initialized when the software was first
+installed) and make a new folder inside the <cite>storage</cite> folder. Let&#8217;s call our
+new folder <cite>winedata</cite> and make two subfolders inside this folder namely <cite>red</cite>
+and <cite>white</cite>. Your directory structure should now look like this:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pySPACEcenter<span class="se">\</span>
+        ...<span class="se">\</span>
+        storage<span class="se">\</span>
+                ...<span class="se">\</span>
+                winedata<span class="se">\</span>
+                        red<span class="se">\</span>
+                        white<span class="se">\</span>
+</pre></div>
+</div>
+<p>At this point, you are ready tow download the datasets. Go to the
+<a class="reference external" href="https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/">Wine Quality data directory</a>
+and save the two <cite>*.csv</cite> files each as <cite>data.csv</cite> in the corresponding directory.
+Thus, the original <cite>winequality-red.csv</cite> is now <cite>reddata.csv</cite> and likewise
+for the white wine. Youe directory structure should now look like:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pySPACEcenter<span class="se">\</span>
+        ...<span class="se">\</span>
+        storage<span class="se">\</span>
+                ...<span class="se">\</span>
+                winedata<span class="se">\</span>
+                        red<span class="se">\</span>
+                                data.csv
+                        white<span class="se">\</span>
+                                data.csv
+</pre></div>
+</div>
+<p>The final step in preparing the data-set is to generate the <cite>metadata.yaml</cite>
+files. This can be done either by hand or through the use of an automatic script
+namely <a class="reference internal" href="../api/generated/pySPACE.run.scripts.md_creator.html#module-pySPACE.run.scripts.md_creator" title="pySPACE.run.scripts.md_creator"><code class="xref py py-mod docutils literal"><span class="pre">md_creator</span></code></a>. If you want to use the automatic
+script, first go to you data directory(either the <cite>red</cite> or the <cite>white</cite> one) and
+then type:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ python &lt;PATH_TO_PYSPACE&gt;/pySPACE/run/scripts/md_creator.py
+</pre></div>
+</div>
+<p>The script will then ask you to a couple of questions regarding the format of your data and namely</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>Running meta data creator ...
+
+Please enter the name of the file. --&gt; data.csv
+Please enter the storage_format of the data.
+ one of arff, csv <span class="o">(</span>csv with header<span class="o">)</span>, csvUnnamed <span class="o">(</span>csv without header<span class="o">)</span>--&gt; csv
+Please enter csv delimiter/separator.
+<span class="o">(</span>e.g. <span class="s1">&#39;,&#39;</span>  , <span class="s1">&#39; &#39;</span> , <span class="s1">&#39;;&#39;</span> or <span class="s1">&#39;     &#39;</span> <span class="k">for</span> a tab, default:<span class="s1">&#39;,&#39;</span><span class="o">)</span>--&gt;<span class="p">;</span>
+Please enter all rows that can be ignored, separated by comma or range.
+ eg. <span class="o">[</span>1, 2, 3<span class="o">]</span> or <span class="o">[</span>1-3<span class="o">]</span> --&gt;
+Please enter all columns that can be ignored, separated by comma or range.
+The first row gets number 1.eg. <span class="o">[</span>1, 2, 3<span class="o">]</span> or <span class="o">[</span>1-3<span class="o">]</span> --&gt;
+Please enter the column that contains the label. -1 <span class="k">for</span> last column
+ --&gt; -1
+
+Meta data file metadata.yaml written.
+</pre></div>
+</div>
+<p>At this point, there is a new metadata file in your <cite>red</cite>/<cite>white</cite> directory
+which should read</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">author</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;YOUR_NAME&gt;</span>
+<span class="l l-Scalar l-Scalar-Plain">date</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">&lt;TODAY&gt;</span>
+<span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">feature_vector</span>
+<span class="l l-Scalar l-Scalar-Plain">ignored_rows</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[]</span>
+<span class="l l-Scalar l-Scalar-Plain">storage_format</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[</span><span class="nv">csv</span><span class="p p-Indicator">,</span> <span class="nv">real</span><span class="p p-Indicator">]</span>
+<span class="l l-Scalar l-Scalar-Plain">file_name</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">data.csv</span>
+<span class="l l-Scalar l-Scalar-Plain">label_column</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">-1</span>
+<span class="l l-Scalar l-Scalar-Plain">ignored_columns</span><span class="p p-Indicator">:</span> <span class="p p-Indicator">[]</span>
+</pre></div>
+</div>
+<p>The final version of your directory structure(for the purposes of this tutorial)
+should therefore be:</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>pySPACEcenter<span class="se">\</span>
+        ...<span class="se">\</span>
+        storage<span class="se">\</span>
+                ...<span class="se">\</span>
+                winedata<span class="se">\</span>
+                        red<span class="se">\</span>
+                                data.csv
+                                metadata.yaml
+                        white<span class="se">\</span>
+                                data.csv
+                                metadata.yaml
+</pre></div>
+</div>
+</div>
+<div class="section" id="building-the-node-chain">
+<h2>Building the node chain<a class="headerlink" href="#building-the-node-chain" title="Permalink to this headline">¶</a></h2>
+<p>Now that we have nicely organized data, we can start doing something with it.
+The following example is based on nodes that are direct implementations of
+<a class="reference external" href="http://scikit-learn.org/stable/">scikit-learn</a>. Therefore, in order to run
+the following node chain, you need to
+<a class="reference external" href="http://scikit-learn.org/stable/install.html">install scikit-learn</a>.</p>
+<p>We plan to do the following to our dataset:</p>
+<ol class="arabic">
+<li><dl class="first docutils">
+<dt>Preprocessing(so that the data is nicely formatted,</dt>
+<dd><p class="first last">not too high-dimensional and normalized)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Ridge Regression(extending this to another regression model</dt>
+<dd><p class="first last">is a matter of changing a couple of lines in the definition of the node chain)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Analyze the results(and implicitly see how well our</dt>
+<dd><p class="first last">algorithms have performed)</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>In order to do all of the above, we need to define a <cite>node_chain</cite> under
+a <cite>YAML</cite> format. For that, go to the <cite>pySPACEcenter/specs/operations/</cite>
+directory and open your favorite text editor. If you already want to give
+the file a name, save this new file under <cite>winedata.yaml</cite>. The first lines
+of the file should say what the file represents i.e. a <cite>node_chain</cite> and where
+to look for the input data(relative to the <cite>pySPACEcenter/storage/</cite> directory).
+If you have followed the above steps for saving your input, the first lines of
+your <cite>winedata.yaml</cite> file should read:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">node_chain</span>
+<span class="l l-Scalar l-Scalar-Plain">runs</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="l l-Scalar l-Scalar-Plain">input_path</span><span class="p p-Indicator">:</span> <span class="s">&quot;winedata&quot;</span>
+</pre></div>
+</div>
+<p>Next up is the content of the node chain itself. Whenever a node chain is
+defined, it must start with a <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.source.html#module-pySPACE.missions.nodes.source" title="pySPACE.missions.nodes.source"><code class="xref py py-mod docutils literal"><span class="pre">SourceNode</span></code></a>.
+In our case, we will be using the <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.source.feature_vector_source.html#module-pySPACE.missions.nodes.source.feature_vector_source" title="pySPACE.missions.nodes.source.feature_vector_source"><code class="xref py py-class docutils literal"><span class="pre">feature_vector_source</span></code></a>,
+since we want to cast our data into <cite>~pySPACE.resources.data_types.feature_vector</cite>.
+Your <cite>winedata.yaml</cite> file should now look like:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">node_chain</span>
+<span class="l l-Scalar l-Scalar-Plain">runs</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="l l-Scalar l-Scalar-Plain">input_path</span><span class="p p-Indicator">:</span> <span class="s">&quot;winedata&quot;</span>
+<span class="l l-Scalar l-Scalar-Plain">node_chain</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">FeatureVectorSourceNode</span>
+</pre></div>
+</div>
+<p>Now that the node chain has a source node, we can start the preprocessing.
+Since for the purpose of this tutorial we want to keep things simple, we
+will just implement two failsafe methods(in case the initial data contains
+<cite>int</cite> or <cite>NaN</cite> values) through
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.type_manipulation.float_conversion.html#pySPACE.missions.nodes.type_manipulation.float_conversion.Int2FloatNode" title="pySPACE.missions.nodes.type_manipulation.float_conversion.Int2FloatNode"><code class="xref py py-class docutils literal"><span class="pre">Int2FloatNode</span></code></a>
+and <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.type_manipulation.float_conversion.html#pySPACE.missions.nodes.type_manipulation.float_conversion.NaN2NumberNode" title="pySPACE.missions.nodes.type_manipulation.float_conversion.NaN2NumberNode"><code class="xref py py-class docutils literal"><span class="pre">NaN2NumberNode</span></code></a>.
+We will then split our data set into test and training data using
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.splitter.traintest_splitter.html#pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode" title="pySPACE.missions.nodes.splitter.traintest_splitter.TrainTestSplitterNode"><code class="xref py py-class docutils literal"><span class="pre">TrainTestSplitterNode</span></code></a>
+and normalize the values using
+<a class="reference internal" href="../api/generated/pySPACE.missions.nodes.postprocessing.feature_normalization.html#pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode" title="pySPACE.missions.nodes.postprocessing.feature_normalization.OutlierFeatureNormalizationNode"><code class="xref py py-class docutils literal"><span class="pre">OutlierFeatureNormalizationNode</span></code></a>.
+Translating this into <cite>YAML</cite> directives yields:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">node_chain</span>
+<span class="l l-Scalar l-Scalar-Plain">runs</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="l l-Scalar l-Scalar-Plain">input_path</span><span class="p p-Indicator">:</span> <span class="s">&quot;winedata&quot;</span>
+<span class="l l-Scalar l-Scalar-Plain">node_chain</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">FeatureVectorSourceNode</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NaN2Number</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Int2Float</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">TrainTestSplitter</span>
+        <span class="l l-Scalar l-Scalar-Plain">parameters</span> <span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">train_ratio</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.7</span>
+            <span class="l l-Scalar l-Scalar-Plain">random</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">OutlierFeatureNormalization</span>
+</pre></div>
+</div>
+<p>Good. Now our data is well behaved and we can perform regression on it. For this
+purpose, we will pick a regressor node from the <cite>sklearn</cite> suite and namely
+<a class="reference external" href="http://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsRegressor.html#sklearn.neighbors.KNeighborsRegressor">KNeighborsRegressor</a>.
+While this node might not be the optimal choice, it is definitely a well
+behaved and well understood choice and therefore suitable for the purposes
+of this tutorial.</p>
+<p>Now that is done, we just have to add a sink node at the end of our node chain.
+Since we want this sink node to check the performance of our node, we will be
+using <a class="reference internal" href="../api/generated/pySPACE.missions.nodes.sink.classification_performance_sink.html#pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode" title="pySPACE.missions.nodes.sink.classification_performance_sink.PerformanceSinkNode"><code class="xref py py-class docutils literal"><span class="pre">PerformanceSinkNode</span></code></a>.
+The final version of your <cite>winedata.yaml</cite> file should look like:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">type</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">node_chain</span>
+<span class="l l-Scalar l-Scalar-Plain">runs</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+<span class="l l-Scalar l-Scalar-Plain">input_path</span><span class="p p-Indicator">:</span>
+<span class="l l-Scalar l-Scalar-Plain">node_chain</span><span class="p p-Indicator">:</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">FeatureVectorSourceNode</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">NaN2Number</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">Int2Float</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">TrainTestSplitter</span>
+        <span class="l l-Scalar l-Scalar-Plain">parameters</span> <span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">train_ratio</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">0.7</span>
+            <span class="l l-Scalar l-Scalar-Plain">random</span> <span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">OutlierFeatureNormalization</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">KNeighborsRegressorSklearnNode</span>
+    <span class="p p-Indicator">-</span>
+        <span class="l l-Scalar l-Scalar-Plain">node</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">PerformanceSinkNode</span>
+        <span class="l l-Scalar l-Scalar-Plain">parameters</span><span class="p p-Indicator">:</span>
+            <span class="l l-Scalar l-Scalar-Plain">evaluation_type</span><span class="p p-Indicator">:</span> <span class="s">&quot;regression&quot;</span>
+</pre></div>
+</div>
+<p>Congratulations! You have just finished writing your first regression node-chain
+in pySPACE! In order to run the code, go to your <cite>pySPACEcenter</cite> and type the
+following command in the terminal</p>
+<div class="highlight-bash"><div class="highlight"><pre><span></span>$ python launch.py --operation winedata.yaml
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tutorial_unittesting.html" title="Unit testing"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="data_handling.html" title="HOWTO: Data Handling"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../content.html" >Table of Contents</a> &raquo;</li>
+          <li class="nav-item nav-item-2"><a href="tutorials.html" >Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+    </div>
+  </body>
+</html>

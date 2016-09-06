@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../../index.html">
               <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,19 +62,26 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.nodes.visualization.feature_vector_vis</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Visualize :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` elements&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot; Visualize :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` elements&quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">pylab</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
+
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">mdp.nodes</span>
 <span class="k">except</span><span class="p">:</span>
     <span class="k">pass</span>
 
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+
 
 <div class="viewcode-block" id="LLEVisNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode">[docs]</a><span class="k">class</span> <span class="nc">LLEVisNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Show a 2d scatter plot of all :class:`~pySPACE.resources.data_types.feature_vector.FeatureVector` based on Locally Linear Embedding (LLE) from MDP</span>
@@ -123,20 +127,20 @@
 <span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
 <span class="sd">    :Created: 2009/07/07</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;FeatureVector&quot;</span><span class="p">]</span>
+    <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FeatureVector&quot;</span><span class="p">]</span>
 
 <div class="viewcode-block" id="LLEVisNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">neighbors</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">LLEVisNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
                 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
                   <span class="n">neighbors</span> <span class="o">=</span> <span class="n">neighbors</span><span class="p">,</span> 
-                  <span class="c"># A set of colors that can be used to distinguish different classes</span>
-                  <span class="n">colors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&quot;r&quot;</span><span class="p">,</span> <span class="s">&quot;b&quot;</span><span class="p">]),</span>
-                  <span class="c"># A mapping from class label to its color in the plot</span>
+                  <span class="c1"># A set of colors that can be used to distinguish different classes</span>
+                  <span class="n">colors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">]),</span>
+                  <span class="c1"># A mapping from class label to its color in the plot</span>
                   <span class="n">class_colors</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
-                  <span class="c"># Remembers the classes (colors) of the instances seen</span>
+                  <span class="c1"># Remembers the classes (colors) of the instances seen</span>
                   <span class="n">instance_colors</span> <span class="o">=</span> <span class="p">[],</span> 
-                  <span class="c">#</span>
+                  <span class="c1">#</span>
                   <span class="n">instances</span> <span class="o">=</span> <span class="p">[]</span>
                   <span class="p">)</span>  
         
@@ -144,49 +148,49 @@
         <span class="n">figure</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">21</span><span class="p">,</span> <span class="mi">11</span><span class="p">))</span>
         <span class="n">figure</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span><span class="n">left</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mf">0.99</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span> <span class="mf">0.99</span><span class="p">,</span>
                                <span class="n">wspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span>
-        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
-</div>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span></div>
+
 <div class="viewcode-block" id="LLEVisNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
-        <span class="c"># Though this node is not really trainable, it returns true in order</span>
-        <span class="c"># to get trained. The reason is that during this training phase, </span>
-        <span class="c"># it visualizes all samChannel_Visples that are passed as arguments</span>
-        <span class="k">return</span> <span class="bp">True</span>
-    </div>
+        <span class="c1"># Though this node is not really trainable, it returns true in order</span>
+        <span class="c1"># to get trained. The reason is that during this training phase, </span>
+        <span class="c1"># it visualizes all samChannel_Visples that are passed as arguments</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+    
 <div class="viewcode-block" id="LLEVisNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">True</span>
-</div>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
 <div class="viewcode-block" id="LLEVisNode._get_train_set"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._get_train_set">[docs]</a>    <span class="k">def</span> <span class="nf">_get_train_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">use_test_data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns the data that can be used for training &quot;&quot;&quot;</span>
-        <span class="c"># We take data that is provided by the input node for training</span>
-        <span class="c"># NOTE: This might involve training of the preceding nodes</span>
+        <span class="c1"># We take data that is provided by the input node for training</span>
+        <span class="c1"># NOTE: This might involve training of the preceding nodes</span>
         <span class="n">train_set</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_training</span><span class="p">(</span><span class="n">use_test_data</span><span class="p">)</span>
         
-        <span class="c"># Add the data provided by the input node for testing to the</span>
-        <span class="c"># training set</span>
-        <span class="c"># NOTE: This node is not really learning but just collecting all</span>
-        <span class="c">#       examples. Because of that it must take</span>
-        <span class="c">#       all data for training (even when use_test_data is False) </span>
+        <span class="c1"># Add the data provided by the input node for testing to the</span>
+        <span class="c1"># training set</span>
+        <span class="c1"># NOTE: This node is not really learning but just collecting all</span>
+        <span class="c1">#       examples. Because of that it must take</span>
+        <span class="c1">#       all data for training (even when use_test_data is False) </span>
         <span class="n">train_set</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">train_set</span><span class="p">,</span>
                                     <span class="bp">self</span><span class="o">.</span><span class="n">input_node</span><span class="o">.</span><span class="n">request_data_for_testing</span><span class="p">())</span>
-        <span class="k">return</span> <span class="n">train_set</span>
+        <span class="k">return</span> <span class="n">train_set</span></div>
     
-    </div>
+    
 <div class="viewcode-block" id="LLEVisNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        This node is not really trained but uses the labeled examples  to</span>
 <span class="sd">        generate a scatter plot.</span>
 <span class="sd">        &quot;&quot;&quot;</span>        
-        <span class="c"># Determine color of this class if not yet done</span>
+        <span class="c1"># Determine color of this class if not yet done</span>
         <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">colors</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span> 
         
-        <span class="c"># Stor the given example along with its class (encoded in the color)</span>
+        <span class="c1"># Stor the given example along with its class (encoded in the color)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">instance_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">instance_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">class_colors</span><span class="p">[</span><span class="n">label</span><span class="p">])</span></div>
         
-        </div>
+        
 <div class="viewcode-block" id="LLEVisNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Stops the training, i.e. create the 2d representation</span>
 <span class="sd">        </span>
@@ -195,21 +199,308 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">instances</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="p">)</span>
         
-        <span class="c"># Compute LLE and project the data</span>
+        <span class="c1"># Compute LLE and project the data</span>
         <span class="n">lle_projected_data</span> <span class="o">=</span> <span class="n">mdp</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">LLENode</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">neighbors</span><span class="p">,</span>
                                                <span class="n">output_dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)(</span><span class="n">instances</span><span class="p">)</span>
 
-        <span class="c"># Create scatter plot of the projected data</span>
+        <span class="c1"># Create scatter plot of the projected data</span>
         <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">lle_projected_data</span><span class="p">[:,</span><span class="mi">0</span><span class="p">],</span> <span class="n">lle_projected_data</span><span class="p">[:,</span><span class="mi">1</span><span class="p">],</span>
                       <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">instance_colors</span><span class="p">)</span>
-        <span class="n">pylab</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-        </div>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">show</span><span class="p">()</span></div>
+        
 <div class="viewcode-block" id="LLEVisNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.LLEVisNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
-        <span class="c"># We simply pass the given data on to the next node</span>
-        <span class="k">return</span> <span class="n">data</span>
+        <span class="c1"># We simply pass the given data on to the next node</span>
+        <span class="k">return</span> <span class="n">data</span></div></div>
 
-</div></div>
-<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;LLE_Vis&quot;</span><span class="p">:</span> <span class="n">LLEVisNode</span><span class="p">}</span>
+
+<div class="viewcode-block" id="MnistVizNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode">[docs]</a><span class="k">class</span> <span class="nc">MnistVizNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Node for plotting MNIST Data</span>
+
+<span class="sd">    **Parameters**</span>
+<span class="sd">        :mode:</span>
+<span class="sd">            One of *FeatureVector*, *PredictionVector*, and *nonlinear*.</span>
+
+<span class="sd">            If *FeatureVector* is taken, the data is assumed to be in the</span>
+<span class="sd">            28x28 format and can be visualized like the original data.</span>
+
+<span class="sd">            If *PredictionVector* is chosen, the affine</span>
+<span class="sd">            backtransformation approach is used. If possible,</span>
+<span class="sd">            the visualization is enhanced by the average data found in</span>
+<span class="sd">            the data history at the *history_index*.</span>
+
+<span class="sd">            If *nonlinear* os used, a  nonlinear processing chain is assumed</span>
+<span class="sd">            for calculating the backtransformation with derivatives</span>
+<span class="sd">            with the sample at the</span>
+
+<span class="sd">            If not specified, the input data type is used.</span>
+
+<span class="sd">            (*recommended, default: input type*)</span>
+
+<span class="sd">        :history_index:</span>
+<span class="sd">            Index for determining the averaging data or the data for</span>
+<span class="sd">            calculating the derivative from prediction vectors.</span>
+<span class="sd">            To save the respective data, the *keep_in_history* parameter</span>
+<span class="sd">            has to be used, in the node, which produces the needed data.</span>
+<span class="sd">            This can be a Noop node at the beginning.</span>
+
+<span class="sd">            By default the last stored sample is used.</span>
+
+<span class="sd">            (*recommended, default: last sample*)</span>
+
+<span class="sd">        :max_samples:</span>
+<span class="sd">            In case of the *nonlinear* mode, a backtransformation</span>
+<span class="sd">            graphic must be generated for every data sample.</span>
+<span class="sd">            To reduce memory usage, only the first *max_*samples* training</span>
+<span class="sd">            samples are used.</span>
+
+<span class="sd">            (*optional, default: 10*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - node : MnistViz</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="MnistVizNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">history_index</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_samples</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MnistVizNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
+            <span class="n">averages</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">counter</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">history_index</span><span class="o">=</span><span class="n">history_index</span><span class="p">,</span>
+            <span class="n">inputs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+            <span class="n">max_samples</span><span class="o">=</span><span class="n">max_samples</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="MnistVizNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Average data with labels (no real training)&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;PredictionVector&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">data</span><span class="o">.</span><span class="n">has_history</span><span class="p">():</span>
+            <span class="n">new_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">history_index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">new_data</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;nonlinear&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="ow">in</span> <span class="s2">&quot;FeatureVector&quot;</span> <span class="ow">or</span> <span class="p">(</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;PredictionVector&quot;</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">PredictionVector</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">counter</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">averages</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span> <span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">counter</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+            <span class="c1"># Average the given example along with its class</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="n">number_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">number_array</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_samples</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">number_array</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MnistVizNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Main method which generates and stores the graphics &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
+            <span class="c1">#set the specific directory for this particular node</span>
+            <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+            <span class="c1">#do we have an index-number?</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c1">#add the index-number...</span>
+                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s2">&quot;_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
+            <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="s2">&quot;black&quot;</span><span class="p">,</span> <span class="s2">&quot;blue&quot;</span><span class="p">,</span> <span class="s2">&quot;red&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;FeatureVector&quot;</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">1.0</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                    <span class="c1">#http://wiki.scipy.org/Cookbook/Matplotlib/Show_colormaps</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">],</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;jet&quot;</span><span class="p">,</span>
+                                   <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                    <span class="c1">#pylab.colorbar()</span>
+                    <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;average&quot;</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="nb">input</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">):</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;binary&quot;</span><span class="p">,</span>
+                                   <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                    <span class="c1">#pylab.colorbar()</span>
+                    <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;sample&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                    <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;PredictionVector&quot;</span><span class="p">:</span>
+                <span class="n">trafos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">trafo</span> <span class="o">=</span> <span class="n">trafos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">trafo</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+                <span class="n">covariance</span> <span class="o">=</span> <span class="n">trafos</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">trafo_covariance</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">covariance</span><span class="p">,</span> <span class="n">trafo</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+
+                <span class="c1"># covariance free picture</span>
+                <span class="n">number_array</span> <span class="o">=</span> <span class="n">trafo</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+                <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">number_array</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;jet&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+                               <span class="n">vmax</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">number_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                               <span class="n">vmin</span><span class="o">=-</span><span class="nb">abs</span><span class="p">(</span><span class="n">number_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                <span class="c1">#pylab.colorbar()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">*=</span> <span class="mf">1.0</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">counter</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">],</span>
+                            <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">],</span>
+                            <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">)],</span>
+                            <span class="n">linewidths</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                            <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+                <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;classifier&quot;</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+
+                <span class="c1"># covariance picture (similar code as before)</span>
+                <span class="n">number_array</span> <span class="o">=</span> <span class="n">trafo_covariance</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+                <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">number_array</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;jet&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+                               <span class="n">vmax</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">number_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                               <span class="n">vmin</span><span class="o">=-</span><span class="nb">abs</span><span class="p">(</span><span class="n">number_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                <span class="c1">#pylab.colorbar()</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">:</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="p">[</span><span class="n">label</span><span class="p">],</span>
+                            <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">],</span>
+                            <span class="n">linewidths</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                            <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">averages</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">label</span><span class="p">)],</span>
+                            <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+                <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;classifier_cov&quot;</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+                <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;nonlinear&quot;</span><span class="p">:</span>
+                <span class="kn">from</span> <span class="nn">matplotlib.backends.backend_pdf</span> <span class="kn">import</span> <span class="n">PdfPages</span>
+                <span class="kn">import</span> <span class="nn">datetime</span>
+                <span class="k">with</span> <span class="n">PdfPages</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;sample_vis.pdf&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">pdf</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+                    <span class="k">for</span> <span class="n">sample</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">inputs</span><span class="p">:</span>
+                        <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+                        <span class="n">base_vector</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">history_index</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">trafos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">(</span><span class="n">base_vector</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">trafo</span> <span class="o">=</span> <span class="n">trafos</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">trafo</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+                        <span class="n">covariance</span> <span class="o">=</span> <span class="n">trafos</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                        <span class="n">trafo_covariance</span> <span class="o">=</span> \
+                            <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">covariance</span><span class="p">,</span> <span class="n">trafo</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+                        <span class="n">covariance_array</span> <span class="o">=</span> <span class="n">trafo_covariance</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+
+                        <span class="n">base_array</span> <span class="o">=</span> <span class="n">base_vector</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+                        <span class="n">trafo_array</span> <span class="o">=</span> <span class="n">trafo</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">))</span>
+
+                        <span class="c1">#fig = pylab.figure(figsize=(5, 5), dpi=300)</span>
+
+                        <span class="c1">#pylab.suptitle(sample.label)</span>
+
+                        <span class="c1"># SUBPLOT 1: plot of the derivative</span>
+                        <span class="c1">#pylab.subplot(2, 2, 1)</span>
+                        <span class="c1">#pylab.title(&quot;Backtransformation&quot;)</span>
+                        <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">trafo_array</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;jet&quot;</span><span class="p">,</span>
+                                       <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+                                       <span class="n">vmax</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">trafo_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                                       <span class="n">vmin</span><span class="o">=-</span><span class="nb">abs</span><span class="p">(</span><span class="n">trafo_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                        <span class="c1"># pylab.colorbar()</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span>
+                            <span class="n">base_array</span><span class="p">,</span>
+                            <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">],</span>
+                            <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+
+                        <span class="c1"># store and clean</span>
+                        <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;classifier_&quot;</span> \
+                            <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+                        <span class="n">fig</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+                        <span class="c1"># SUBPLOT 2: plot of the derivative multiplied with covariance</span>
+                        <span class="c1"># pylab.subplot(2,2,2)</span>
+                        <span class="c1"># pylab.title(&quot;Backtransformation times Covariance&quot;)</span>
+
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">covariance_array</span><span class="p">,</span> <span class="mi">50</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;jet&quot;</span><span class="p">,</span>
+                                       <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">,</span>
+                                       <span class="n">vmax</span><span class="o">=</span><span class="nb">abs</span><span class="p">(</span><span class="n">covariance_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+                                       <span class="n">vmin</span><span class="o">=-</span><span class="nb">abs</span><span class="p">(</span><span class="n">covariance_array</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">xticks</span><span class="p">(())</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">yticks</span><span class="p">(())</span>
+                        <span class="c1"># pylab.colorbar()</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span>
+                            <span class="n">base_array</span><span class="p">,</span>
+                            <span class="n">levels</span><span class="o">=</span><span class="p">[</span><span class="mi">50</span><span class="p">],</span>
+                            <span class="n">colors</span><span class="o">=</span><span class="n">colors</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                            <span class="n">origin</span><span class="o">=</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+
+                        <span class="c1"># # SUBPLOT 2: plot of the original feature vector</span>
+                        <span class="c1"># pylab.subplot(2,2,2)</span>
+                        <span class="c1"># pylab.title(&quot;Original data&quot;)</span>
+                        <span class="c1">#</span>
+                        <span class="c1"># pylab.contourf(base_array, 50, cmap=&quot;binary&quot;, origin=&quot;image&quot;)</span>
+                        <span class="c1"># pylab.xticks(())</span>
+                        <span class="c1"># pylab.yticks(())</span>
+                        <span class="c1"># pylab.colorbar()</span>
+
+                        <span class="c1"># # SUBPLOT 3: plot of the difference between vectors</span>
+                        <span class="c1"># pylab.subplot(2,2,3)</span>
+                        <span class="c1"># pylab.title(&quot;Addition&quot;)</span>
+                        <span class="c1">#</span>
+                        <span class="c1"># pylab.contourf(trafo_array+base_array, 50, cmap=&quot;spectral&quot;, origin=&quot;image&quot;)</span>
+                        <span class="c1"># pylab.xticks(())</span>
+                        <span class="c1"># pylab.yticks(())</span>
+                        <span class="c1"># pylab.colorbar()</span>
+                        <span class="c1">#</span>
+                        <span class="c1"># # SUBPLOT 4: plot of the difference between vectors</span>
+                        <span class="c1"># pylab.subplot(2,2,4)</span>
+                        <span class="c1"># pylab.title(&quot;Subtraction&quot;)</span>
+                        <span class="c1">#</span>
+                        <span class="c1"># pylab.contourf(base_array-trafo_array, 50, cmap=&quot;spectral&quot;, origin=&quot;image&quot;)</span>
+                        <span class="c1"># pylab.xticks(())</span>
+                        <span class="c1"># pylab.yticks(())</span>
+                        <span class="c1"># pylab.colorbar()</span>
+
+                        <span class="c1"># pdf.savefig(fig, bbox_inches=&#39;tight&#39;)</span>
+                                                <span class="c1"># store and clean</span>
+                        <span class="n">f_name</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span> <span class="o">+</span> \
+                            <span class="s2">&quot;classifier_cov_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">f_name</span> <span class="o">+</span> <span class="s2">&quot;.png&quot;</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+                        <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_samples</span><span class="p">:</span>
+                            <span class="k">break</span>
+
+                    <span class="c1"># d = pdf.infodict()</span>
+                    <span class="c1"># d[&#39;Title&#39;] = &#39;Sample visualization&#39;</span>
+                    <span class="c1"># # d[&#39;Author&#39;] = &#39;&#39;</span>
+                    <span class="c1"># # d[&#39;Subject&#39;] = &#39;&#39;</span>
+                    <span class="c1"># # d[&#39;Keywords&#39;] = &#39;&#39;</span>
+                    <span class="c1"># d[&#39;CreationDate&#39;] = datetime.datetime.today()</span>
+                    <span class="c1"># d[&#39;ModDate&#39;] = datetime.datetime.today()</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="MnistVizNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Labels are required for visualization &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span></div>
+
+<div class="viewcode-block" id="MnistVizNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.feature_vector_vis.html#pySPACE.missions.nodes.visualization.feature_vector_vis.MnistVizNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Labels are required for visualization &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">True</span></div></div>
+
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;LLE_Vis&quot;</span><span class="p">:</span> <span class="n">LLEVisNode</span><span class="p">}</span>
 </pre></div>
 
           </div>
@@ -217,7 +508,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -226,14 +517,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

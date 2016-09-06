@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../index.html">
               <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.operations.weka_filter</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Use Weka&#39;s Filter that transform one arff file into another.</span>
+<span></span><span class="sd">&quot;&quot;&quot; Use Weka&#39;s Filter that transform one arff file into another.</span>
 
 <span class="sd">A WEKA filter process consists of applying a filter to all arff-files contained </span>
 <span class="sd">in the input path. Filters may be using (un-)supervised training</span>
@@ -99,8 +96,9 @@
 <span class="kn">from</span> <span class="nn">pySPACE.missions.operations.base</span> <span class="kn">import</span> <span class="n">Operation</span><span class="p">,</span> <span class="n">Process</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">create_directory</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">get_author</span>
 
-    
+
 <div class="viewcode-block" id="WekaFilterOperation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WekaFilterOperation">[docs]</a><span class="k">class</span> <span class="nc">WekaFilterOperation</span><span class="p">(</span><span class="n">Operation</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Operation for feature selection using Weka</span>
 <span class="sd">    </span>
@@ -116,93 +114,93 @@
                                                   <span class="n">operation_spec</span><span class="p">,</span>
                                                   <span class="n">result_directory</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">number_processes</span> <span class="o">=</span> <span class="n">number_processes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="n">create_process</span>
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="n">create_process</span></div>
+        
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="WekaFilterOperation.create"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WekaFilterOperation.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_paths</span><span class="o">=</span><span class="p">[]):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        A factory method that creates an WEKA operation based on the </span>
 <span class="sd">        information given in the operation specification operation_spec</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;weka_filter&quot;</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;weka_filter&quot;</span><span class="p">)</span>
         
-        <span class="c"># Determine all parameter combinations that should be tested</span>
+        <span class="c1"># Determine all parameter combinations that should be tested</span>
         <span class="n">parameter_settings</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_parameter_space</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="s">&quot;hide_parameters&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
-            <span class="n">hide_parameters</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;hide_parameters&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;hide_parameters&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+            <span class="n">hide_parameters</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;hide_parameters&quot;</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">hide_parameters</span> <span class="o">=</span> <span class="p">[]</span>
         
-        <span class="c"># Read the command template from a file</span>
+        <span class="c1"># Read the command template from a file</span>
         <span class="n">template_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span>
-                                          <span class="s">&quot;operation&quot;</span><span class="p">,</span>
-                                          <span class="s">&quot;weka_templates&quot;</span><span class="p">,</span>
-                                          <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;template&quot;</span><span class="p">]),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                                          <span class="s2">&quot;operation&quot;</span><span class="p">,</span>
+                                          <span class="s2">&quot;weka_templates&quot;</span><span class="p">,</span>
+                                          <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;template&quot;</span><span class="p">]),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
         <span class="n">command_template</span> <span class="o">=</span> <span class="n">template_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
         <span class="n">template_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         
-        <span class="c"># number of processes</span>
-        <span class="k">if</span> <span class="s">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+        <span class="c1"># number of processes</span>
+        <span class="k">if</span> <span class="s2">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
             <span class="n">number_processes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_paths</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">)</span> <span class="o">*</span> \
-                           <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span> <span class="c"># approximate the number of processes </span>
+                           <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span> <span class="c1"># approximate the number of processes </span>
             <span class="n">runs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">dataset_dir</span> <span class="ow">in</span> <span class="n">input_paths</span><span class="p">:</span>
                 <span class="n">collection</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
-                <span class="n">runs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">])</span>
+                <span class="n">runs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">])</span>
             <span class="n">runs</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">runs</span><span class="p">)</span>
             <span class="n">number_processes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_paths</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">)</span> <span class="o">*</span> \
                                <span class="n">runs</span>
         
         <span class="k">if</span> <span class="n">debug</span> <span class="o">==</span> <span class="bp">True</span><span class="p">:</span>
-            <span class="c"># To better debug creation of processes we don&#39;t limit the queue </span>
-            <span class="c"># and create all processes before executing them</span>
+            <span class="c1"># To better debug creation of processes we don&#39;t limit the queue </span>
+            <span class="c1"># and create all processes before executing them</span>
             <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
             <span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> 
                                  <span class="n">parameter_settings</span><span class="p">,</span> <span class="n">input_paths</span><span class="p">,</span>
                                  <span class="n">command_template</span><span class="p">,</span> <span class="n">hide_parameters</span><span class="p">)</span>
-            <span class="c"># create and return the weka operation object</span>
+            <span class="c1"># create and return the weka operation object</span>
             <span class="n">operation</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> 
                        <span class="n">number_processes</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c"># Create all processes by calling a recursive helper method in </span>
-            <span class="c"># another thread so that already created processes can be executed in </span>
-            <span class="c"># parallel. Therefor a queue is used which size is maximized to </span>
-            <span class="c"># guarantee that not to much objects are created (because this costs</span>
-            <span class="c"># memory). However, the actual number of 100 is arbitrary and might</span>
-            <span class="c"># be reviewed.</span>
+            <span class="c1"># Create all processes by calling a recursive helper method in </span>
+            <span class="c1"># another thread so that already created processes can be executed in </span>
+            <span class="c1"># parallel. Therefor a queue is used which size is maximized to </span>
+            <span class="c1"># guarantee that not to much objects are created (because this costs</span>
+            <span class="c1"># memory). However, the actual number of 100 is arbitrary and might</span>
+            <span class="c1"># be reviewed.</span>
             <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
             <span class="n">create_process</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">,</span>
                              <span class="n">args</span><span class="o">=</span><span class="p">(</span> <span class="n">processes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> 
                                     <span class="n">parameter_settings</span><span class="p">,</span> <span class="n">input_paths</span><span class="p">,</span>
                                     <span class="n">command_template</span><span class="p">,</span> <span class="n">hide_parameters</span><span class="p">))</span>
             <span class="n">create_process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>            
-            <span class="c"># create and return the weka operation object</span>
+            <span class="c1"># create and return the weka operation object</span>
             <span class="n">operation</span> <span class="o">=</span> <span class="n">cls</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> 
                        <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="p">)</span>
-        <span class="c"># We remember the command_template and how many parameters are passed </span>
-        <span class="c"># for consolidation    </span>
-        <span class="n">operation</span><span class="o">.</span><span class="n">num_parameters</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;parameter_ranges&quot;</span><span class="p">])</span> \
+        <span class="c1"># We remember the command_template and how many parameters are passed </span>
+        <span class="c1"># for consolidation    </span>
+        <span class="n">operation</span><span class="o">.</span><span class="n">num_parameters</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;parameter_ranges&quot;</span><span class="p">])</span> \
                                     <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">hide_parameters</span><span class="p">)</span>
         <span class="n">operation</span><span class="o">.</span><span class="n">command_template</span> <span class="o">=</span> <span class="n">command_template</span>
         
-        <span class="k">return</span> <span class="n">operation</span>
-            </div>
+        <span class="k">return</span> <span class="n">operation</span></div>
+            
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="WekaFilterOperation._createProcesses"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WekaFilterOperation._createProcesses">[docs]</a>    <span class="k">def</span> <span class="nf">_createProcesses</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> 
                 <span class="n">parameter_settings</span><span class="p">,</span> <span class="n">input_collections</span><span class="p">,</span> <span class="n">command_template</span><span class="p">,</span>
                 <span class="n">hide_parameters</span><span class="p">):</span>                           
-        <span class="c"># For each combination of filter, input-collection and</span>
-        <span class="c"># run number, create one WEKA_process</span>
+        <span class="c1"># For each combination of filter, input-collection and</span>
+        <span class="c1"># run number, create one WEKA_process</span>
         <span class="k">for</span> <span class="n">dataset_dir</span> <span class="ow">in</span> <span class="n">input_collections</span><span class="p">:</span>
             <span class="n">collection</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
-            <span class="c"># Determine the number of iterations and splits to be used</span>
-            <span class="n">iterations</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span>
-            <span class="n">splits</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;splits&quot;</span><span class="p">]</span>
-            <span class="k">if</span> <span class="s">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
-                <span class="k">assert</span><span class="p">(</span><span class="n">iterations</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]])</span>
-                <span class="n">iterations</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span>
+            <span class="c1"># Determine the number of iterations and splits to be used</span>
+            <span class="n">iterations</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span>
+            <span class="n">splits</span> <span class="o">=</span> <span class="n">collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;splits&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="s2">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+                <span class="k">assert</span><span class="p">(</span><span class="n">iterations</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]])</span>
+                <span class="n">iterations</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">parametrization</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span> 
                 <span class="k">for</span> <span class="n">run_number</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">iterations</span><span class="p">):</span>
                     <span class="k">for</span> <span class="n">split_number</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">splits</span><span class="p">):</span>
@@ -214,9 +212,9 @@
                                                     <span class="n">result_directory</span><span class="p">,</span>
                                                     <span class="n">hide_parameters</span> <span class="o">=</span> <span class="n">hide_parameters</span><span class="p">)</span>
                         <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
-        <span class="c"># give executing process the sign that creation is now finished  </span>
-        <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>            
-    </div>
+        <span class="c1"># give executing process the sign that creation is now finished  </span>
+        <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>            </div>
+    
 <div class="viewcode-block" id="WekaFilterOperation.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WekaFilterOperation.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Consolidates the results obtained by the single WEKA filter</span>
@@ -227,101 +225,88 @@
 <span class="sd">                  :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c"># Iterate over all collections and store the collection meta data etc.</span>
+        <span class="c1"># Iterate over all collections and store the collection meta data etc.</span>
         <span class="k">for</span> <span class="n">entries</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">):</span>
             <span class="n">fullpath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span> <span class="n">entries</span><span class="p">)</span>
-            <span class="c"># For each collection        </span>
+            <span class="c1"># For each collection        </span>
             <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">fullpath</span><span class="p">):</span>
-                <span class="k">if</span> <span class="n">entries</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;{&quot;</span><span class="p">):</span>
-                    <span class="c"># Extract the parameters from the collection name in order to</span>
-                    <span class="c"># adjust the relation name</span>
+                <span class="k">if</span> <span class="n">entries</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">):</span>
+                    <span class="c1"># Extract the parameters from the collection name in order to</span>
+                    <span class="c1"># adjust the relation name</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="n">parameter_strings</span> <span class="o">=</span> <span class="n">entries</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span><span class="p">:]</span>
-                        <span class="n">parameter_postfix</span> <span class="o">=</span> <span class="s">&quot;{&quot;</span> <span class="o">+</span> <span class="s">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parameter_strings</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;}&quot;</span>
+                        <span class="n">parameter_strings</span> <span class="o">=</span> <span class="n">entries</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span><span class="p">:]</span>
+                        <span class="n">parameter_postfix</span> <span class="o">=</span> <span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="s2">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">parameter_strings</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">parameter_strings</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
-                        <span class="n">parameter_postfix</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
-                    <span class="c"># Postprocessing of the arff files of this collection</span>
-                    <span class="k">for</span> <span class="n">train_arff_file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">fullpath</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;data_run*&quot;</span> 
-                                           <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;*train.arff&quot;</span><span class="p">):</span>
-                        <span class="c"># Adjust the relation name of the train file</span>
-                        <span class="n">content</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">train_arff_file</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>             
-                        <span class="c"># We strip everything after the last &quot;}&quot;</span>
-                        <span class="n">endindex</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s">&quot;}&quot;</span><span class="p">)</span>
+                        <span class="n">parameter_strings</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                        <span class="n">parameter_postfix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                    <span class="c1"># Postprocessing of the arff files of this collection</span>
+                    <span class="k">for</span> <span class="n">train_arff_file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">fullpath</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;data_run*&quot;</span> 
+                                           <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;*train.arff&quot;</span><span class="p">):</span>
+                        <span class="c1"># Adjust the relation name of the train file</span>
+                        <span class="n">content</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">train_arff_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>             
+                        <span class="c1"># We strip everything after the last &quot;}&quot;</span>
+                        <span class="n">endindex</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s2">&quot;}&quot;</span><span class="p">)</span>
                         <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="n">endindex</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
-                        <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">parameter_postfix</span> <span class="o">+</span> <span class="s">&quot;&#39;&quot;</span>
-                        <span class="nb">open</span><span class="p">(</span><span class="n">train_arff_file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
-                        <span class="c"># Use relation name of train data for test data</span>
-                        <span class="n">test_arff_file</span> <span class="o">=</span> <span class="n">train_arff_file</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;train.arff&quot;</span><span class="p">,</span> <span class="s">&quot;test.arff&quot;</span><span class="p">)</span> 
-                        <span class="n">test_content</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">test_arff_file</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
-                        <span class="n">test_content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span>
-                        <span class="nb">open</span><span class="p">(</span><span class="n">test_arff_file</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">test_content</span><span class="p">)</span>
+                        <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">parameter_postfix</span> <span class="o">+</span> <span class="s2">&quot;&#39;&quot;</span>
+                        <span class="nb">open</span><span class="p">(</span><span class="n">train_arff_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">content</span><span class="p">)</span>
+                        <span class="c1"># Use relation name of train data for test data</span>
+                        <span class="n">test_arff_file</span> <span class="o">=</span> <span class="n">train_arff_file</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;train.arff&quot;</span><span class="p">,</span> <span class="s2">&quot;test.arff&quot;</span><span class="p">)</span> 
+                        <span class="n">test_content</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">test_arff_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                        <span class="n">test_content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">content</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="nb">open</span><span class="p">(</span><span class="n">test_arff_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">writelines</span><span class="p">(</span><span class="n">test_content</span><span class="p">)</span>
                     
-                        <span class="c"># Check which features are contained in the arff file</span>
+                        <span class="c1"># Check which features are contained in the arff file</span>
                         <span class="n">feature_names</span> <span class="o">=</span> <span class="p">[]</span>
                         <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">content</span><span class="p">:</span>
-                            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;@attribute&quot;</span><span class="p">):</span>
+                            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;@attribute&quot;</span><span class="p">):</span>
                                 <span class="n">attribute</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
-                                <span class="k">if</span> <span class="n">attribute</span> <span class="ow">is</span> <span class="ow">not</span> <span class="s">&quot;class&quot;</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">attribute</span> <span class="ow">is</span> <span class="ow">not</span> <span class="s2">&quot;class&quot;</span><span class="p">:</span>
                                     <span class="n">feature_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">attribute</span><span class="p">)</span>
-                    <span class="c"># Store the collection meta data etc.</span>
+                    <span class="c1"># Store the collection meta data etc.</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                         <span class="n">input_collection_name</span> <span class="o">=</span> \
-                            <span class="s">&quot;{&quot;</span> <span class="o">+</span> <span class="s">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">entries</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span><span class="p">])</span> <span class="o">+</span> <span class="s">&quot;}&quot;</span>
+                            <span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="s2">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">entries</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">num_parameters</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">input_collection_name</span> <span class="o">=</span> <span class="n">entries</span>
                         
-                    <span class="n">input_collection_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;input_path&quot;</span><span class="p">],</span>
+                    <span class="n">input_collection_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;input_path&quot;</span><span class="p">],</span>
                                                      <span class="n">input_collection_name</span><span class="p">)</span>
 
                     <span class="n">input_collection_meta</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span>
                                             <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span>
                                             <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span>
                                             <span class="o">+</span> <span class="n">input_collection_path</span><span class="p">)</span>
-                    <span class="c"># Store the input collection</span>
+                    <span class="c1"># Store the input collection</span>
                     <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">fullpath</span><span class="p">,</span> <span class="n">input_collection_meta</span><span class="p">,</span>
-                                                <span class="n">file_name</span><span class="o">=</span><span class="s">&quot;input_metadata.yaml&quot;</span><span class="p">)</span>
-                    <span class="c"># Adjust collection metadata for the new collection</span>
-                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;feature_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feature_names</span>
-                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;num_features&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span>
-                    <span class="k">try</span><span class="p">:</span>
-                        <span class="kn">import</span> <span class="nn">platform</span>
-                        <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
-                        <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
-                            <span class="kn">import</span> <span class="nn">getpass</span>
-                            <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
-                        <span class="k">else</span><span class="p">:</span>
-                            <span class="kn">import</span> <span class="nn">pwd</span>
-                            <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
-
-                        <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;author&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">author</span>
-                    <span class="k">except</span> <span class="p">:</span>
-                        <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;author&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y%m</span><span class="si">%d</span><span class="s">&quot;</span><span class="p">)</span>
-                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s">&quot;input_collection_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_collection_name</span>
-                    <span class="c"># Write the collection meta information into the folder</span>
+                                                <span class="n">file_name</span><span class="o">=</span><span class="s2">&quot;input_metadata.yaml&quot;</span><span class="p">)</span>
+                    <span class="c1"># Adjust collection metadata for the new collection</span>
+                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s2">&quot;feature_names&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">feature_names</span>
+                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s2">&quot;num_features&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">feature_names</span><span class="p">)</span>
+                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_author</span><span class="p">()</span>
+                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">input_collection_meta</span><span class="p">[</span><span class="s2">&quot;input_collection_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_collection_name</span>
+                    <span class="c1"># Write the collection meta information into the folder</span>
                     <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">fullpath</span><span class="p">,</span><span class="n">input_collection_meta</span><span class="p">)</span>
-                    <span class="c"># Store the command_template</span>
+                    <span class="c1"># Store the command_template</span>
                     <span class="n">command_template_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fullpath</span><span class="p">,</span>
-                                                          <span class="s">&quot;command_template&quot;</span><span class="p">),</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+                                                          <span class="s2">&quot;command_template&quot;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
                     <span class="n">command_template_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">command_template</span><span class="p">)</span>
                     <span class="n">command_template_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="c"># training and test arff need the same relation name</span>
-                    <span class="c"># otherwise Weka can&#39;t relate it to each other; the collection</span>
-                    <span class="c"># name and the parameters in {}{}-optic must be the relation </span>
-                    <span class="c"># name for further processing    </span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;WARNING: Collection name doesn&#39;t begin with &#39;{&#39;. Further processing may be collapse!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-        <span class="c"># Write the specification of this operation</span>
-        <span class="c"># to the result directory in order to make later </span>
-        <span class="c"># analysis of results more easy</span>
+                    <span class="c1"># training and test arff need the same relation name</span>
+                    <span class="c1"># otherwise Weka can&#39;t relate it to each other; the collection</span>
+                    <span class="c1"># name and the parameters in {}{}-optic must be the relation </span>
+                    <span class="c1"># name for further processing    </span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;WARNING: Collection name doesn&#39;t begin with &#39;{&#39;. Further processing may be collapse!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+        <span class="c1"># Write the specification of this operation</span>
+        <span class="c1"># to the result directory in order to make later </span>
+        <span class="c1"># analysis of results more easy</span>
         <span class="n">source_operation_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
-                                                  <span class="s">&quot;source_operation.yaml&quot;</span><span class="p">),</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+                                                  <span class="s2">&quot;source_operation.yaml&quot;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
         <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span><span class="p">,</span> <span class="n">source_operation_file</span><span class="p">)</span>
-        <span class="n">source_operation_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">source_operation_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div></div>
     
-    </div></div>
+    
 <div class="viewcode-block" id="WEKAFilterProcess"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WEKAFilterProcess">[docs]</a><span class="k">class</span> <span class="nc">WEKAFilterProcess</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Process for using Weka&#39;s filters</span>
 <span class="sd">    </span>
@@ -341,77 +326,77 @@
         
         <span class="nb">super</span><span class="p">(</span><span class="n">WEKAFilterProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         
-        <span class="c"># Determine the directory in which the of the process&#39; results</span>
-        <span class="c"># are stored</span>
+        <span class="c1"># Determine the directory in which the of the process&#39; results</span>
+        <span class="c1"># are stored</span>
         <span class="n">result_collection_name</span> <span class="o">=</span> <span class="n">dataset_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">parameter_value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="c"># If this is a parameter that should not be hidden, then we have to</span>
-            <span class="c"># encode it in the result collection name </span>
+            <span class="c1"># If this is a parameter that should not be hidden, then we have to</span>
+            <span class="c1"># encode it in the result collection name </span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">parameter_name</span> <span class="ow">in</span> <span class="n">hide_parameters</span><span class="p">:</span>
-                <span class="n">result_collection_name</span> <span class="o">+=</span> <span class="s">&quot;{__</span><span class="si">%s</span><span class="s">__:</span><span class="si">%s</span><span class="s">}&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter_name</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
+                <span class="n">result_collection_name</span> <span class="o">+=</span> <span class="s2">&quot;{__</span><span class="si">%s</span><span class="s2">__:</span><span class="si">%s</span><span class="s2">}&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter_name</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
                                                            <span class="n">parameter_value</span><span class="p">)</span>
                                                                      
         <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">operation_result_dir</span><span class="p">,</span>
                                              <span class="n">result_collection_name</span><span class="p">)</span>
         
-        <span class="c"># Create directory for intermediate results if it does not exist yet</span>
+        <span class="c1"># Create directory for intermediate results if it does not exist yet</span>
         <span class="n">create_directory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span> 
-                              <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;data_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">run_number</span><span class="p">)</span>
+                              <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;data_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">run_number</span><span class="p">)</span>
                 
-        <span class="c"># Create collection</span>
+        <span class="c1"># Create collection</span>
         <span class="n">collection</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
         
-        <span class="c"># The parametrization that is independent of the collection type </span>
-        <span class="c"># and the specific weka command template that is executed</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;dataset_name&quot;</span><span class="p">:</span> <span class="n">dataset_dir</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">,</span><span class="s">&#39;_&#39;</span><span class="p">),</span>
-                       <span class="s">&quot;dataset_dir&quot;</span><span class="p">:</span> <span class="n">dataset_dir</span><span class="p">,</span>
-                       <span class="s">&quot;run_number&quot;</span><span class="p">:</span> <span class="n">run_number</span><span class="p">,</span>
-                       <span class="s">&quot;split_number&quot;</span><span class="p">:</span> <span class="n">split_number</span><span class="p">,</span>
-                       <span class="s">&quot;weka_class_path&quot;</span><span class="p">:</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">weka_class_path</span><span class="p">,</span>
-                       <span class="s">&quot;temp_results&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">}</span>
+        <span class="c1"># The parametrization that is independent of the collection type </span>
+        <span class="c1"># and the specific weka command template that is executed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;dataset_name&quot;</span><span class="p">:</span> <span class="n">dataset_dir</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">),</span>
+                       <span class="s2">&quot;dataset_dir&quot;</span><span class="p">:</span> <span class="n">dataset_dir</span><span class="p">,</span>
+                       <span class="s2">&quot;run_number&quot;</span><span class="p">:</span> <span class="n">run_number</span><span class="p">,</span>
+                       <span class="s2">&quot;split_number&quot;</span><span class="p">:</span> <span class="n">split_number</span><span class="p">,</span>
+                       <span class="s2">&quot;weka_class_path&quot;</span><span class="p">:</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">weka_class_path</span><span class="p">,</span>
+                       <span class="s2">&quot;temp_results&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">}</span>
 
-        <span class="c"># Load the abbreviations</span>
+        <span class="c1"># Load the abbreviations</span>
         <span class="n">abbreviations_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span>
-                                               <span class="s">&#39;operations/weka_templates&#39;</span><span class="p">,</span>
-                                               <span class="s">&#39;abbreviations.yaml&#39;</span><span class="p">),</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                                               <span class="s1">&#39;operations/weka_templates&#39;</span><span class="p">,</span>
+                                               <span class="s1">&#39;abbreviations.yaml&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">abbreviations</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">abbreviations_file</span><span class="p">)</span>
-        <span class="c"># Add custom parameters for the weka command template</span>
+        <span class="c1"># Add custom parameters for the weka command template</span>
         <span class="k">for</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">parameter_value</span> <span class="ow">in</span> <span class="n">parametrization</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="c"># Auto-expand abbreviations</span>
+            <span class="c1"># Auto-expand abbreviations</span>
             <span class="k">if</span> <span class="n">parameter_value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">abbreviations</span><span class="p">:</span>
                 <span class="n">parameter_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">abbreviations</span><span class="p">[</span><span class="n">parameter_value</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="n">parameter_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameter_value</span>
             
-        <span class="c"># Build the WEKA command by repeatedly replacing all placeholders in </span>
-        <span class="c"># the template </span>
+        <span class="c1"># Build the WEKA command by repeatedly replacing all placeholders in </span>
+        <span class="c1"># the template </span>
         <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
             <span class="n">instantiated_template</span> <span class="o">=</span> <span class="n">command_template</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
             <span class="k">if</span> <span class="n">instantiated_template</span> <span class="o">==</span> <span class="n">command_template</span><span class="p">:</span>
-                <span class="c"># All placeholders replace </span>
+                <span class="c1"># All placeholders replace </span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">weka_command</span> <span class="o">=</span> <span class="n">instantiated_template</span>
                 <span class="k">break</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="c"># We have to continue since we are not converged</span>
+                <span class="c1"># We have to continue since we are not converged</span>
                 <span class="n">command_template</span> <span class="o">=</span> <span class="n">instantiated_template</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">handler_class</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handler_class</span> <span class="o">=</span> <span class="bp">None</span></div>
         
-    </div>
+    
 <div class="viewcode-block" id="WEKAFilterProcess.__call__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.weka_filter.html#pySPACE.missions.operations.weka_filter.WEKAFilterProcess.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Executes this process on the respective modality &quot;&quot;&quot;</span>
-        <span class="c"># Restore configuration</span>
+        <span class="c1"># Restore configuration</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>    
         
-        <span class="c">############## Prepare benchmarking ##############</span>
+        <span class="c1">############## Prepare benchmarking ##############</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">WEKAFilterProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">pre_benchmarking</span><span class="p">()</span>
         
-        <span class="c"># Execute the java command in this OS process</span>
+        <span class="c1"># Execute the java command in this OS process</span>
         <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weka_command</span><span class="p">)</span>
         
-        <span class="c">############## Clean up after benchmarking ##############</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">WEKAFilterProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span> 
+        <span class="c1">############## Clean up after benchmarking ##############</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">WEKAFilterProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span> </div></div>
         
-        </div></div>
+        
 </pre></div>
 
           </div>
@@ -419,7 +404,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -428,14 +413,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

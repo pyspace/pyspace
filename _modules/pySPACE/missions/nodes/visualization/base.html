@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../../index.html">
               <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.nodes.visualization.base</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Base class for visualization nodes</span>
+<span></span><span class="sd">&quot;&quot;&quot; Base class for visualization nodes</span>
 
 <span class="sd">**Classes**</span>
 <span class="sd"> </span>
@@ -113,6 +110,7 @@
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
 
+
 <div class="viewcode-block" id="VisualizationBase"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase">[docs]</a><span class="k">class</span> <span class="nc">VisualizationBase</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Base node for visualization</span>
 <span class="sd">    </span>
@@ -121,13 +119,16 @@
 <span class="sd">    </span>
 <span class="sd">    This base class provides the following functionality:</span>
 
-<span class="sd">        - you can insert this node at any place in your node chain where the input data is a TimeSeries or a FeatureVector</span>
+<span class="sd">        - you can insert this node at any place in your node chain</span>
 <span class="sd">        - you can optionally plot single trials and/or averages (the latter also accumulating over time)</span>
 <span class="sd">        - you can either plot in online or in offline mode (see below)</span>
 <span class="sd">        - data is sorted according to labels</span>
 <span class="sd">        - optionally training and test data are distinguished</span>
 <span class="sd">        - feature vectors are automatically transferred to time series</span>
+<span class="sd">        - prediction vectors are evaluated according to the transformation they were generated from</span>
+<span class="sd">        - optionally you can add backward computing of previous transformations (e.g. spatial filters) to get better visualizations</span>
 <span class="sd">        - electrodes come with defined positions</span>
+<span class="sd">        - history values can be taken into account for plot</span>
 <span class="sd">       </span>
 <span class="sd">    The node has a number of parameters to define what should be plotted, e.g.</span>
 <span class="sd">    whether to plot single trials, accumulated average and/or average, or </span>
@@ -184,9 +185,8 @@
 <span class="sd">    :Limit the amount of data:</span>
 <span class="sd">    </span>
 <span class="sd">        :limit2class:</span>
-<span class="sd">            The string you specify here has to match the actual class label. </span>
-<span class="sd">            Then, only the data belonging to this class is</span>
-<span class="sd">            plotted. </span>
+<span class="sd">            List of strings. Only the data belonging to class labels in the</span>
+<span class="sd">            list are plotted.</span>
 <span class="sd">        </span>
 <span class="sd">            .. note:: If there is no match, no plot will be generated!</span>
 <span class="sd">    </span>
@@ -262,6 +262,51 @@
 <span class="sd">            </span>
 <span class="sd">            (*optional, default: True*)</span>
 <span class="sd">        </span>
+<span class="sd">        :history_index:</span>
+<span class="sd">            This parameter only has effects if the node is used with a</span>
+<span class="sd">            prediction vector (i.e. after a classification). Then the predictor</span>
+<span class="sd">            property of the prediction vector is always scanned for a</span>
+<span class="sd">            FeatureVector for plotting (if it is not found, then the history is</span>
+<span class="sd">            scanned for another prediction vector). The parameter history_index</span>
+<span class="sd">            now introduces a further switch:</span>
+<span class="sd">            When set (between 1 and infinity), it specifies the depth in the</span>
+<span class="sd">            history where the history is additionally used for the plot output</span>
+<span class="sd">            (i.e. the corresponding node used keep_in_history=True). When the</span>
+<span class="sd">            history is not used for something else, this depth is usually 1. The</span>
+<span class="sd">            values usually correspond to the original feature values and are of</span>
+<span class="sd">            type TimeSeries or FeatureVector. Then, the product of feature value</span>
+<span class="sd">            and weight (i.e. the feature vector from the predictor) is computed</span>
+<span class="sd">            for each data point. The result is finally plotted </span>
+<span class="sd">            as topography.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: None*)</span>
+<span class="sd">            </span>
+<span class="sd">        :use_SF:</span>
+<span class="sd">            When the node gets a FeatureVector or PredictionVector this option</span>
+<span class="sd">            controls whether the transformation of a preceding spatial filter</span>
+<span class="sd">            (SF) is taken into account. If True, all *artificial* channels of</span>
+<span class="sd">            the filter are transformed back to their original electrode</span>
+<span class="sd">            counterparts. For full flexibility in what should be plotted, this</span>
+<span class="sd">            option can be combined with *history_index*, *use_FN*, *SF_channels*</span>
+<span class="sd">            and *use_transformation*.</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: True*)</span>
+<span class="sd">        </span>
+<span class="sd">        :use_FN:</span>
+<span class="sd">            documentation in progress</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: True*)</span>
+<span class="sd">        </span>
+<span class="sd">        :SF_channels:</span>
+<span class="sd">            documentation in progress</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: All*)</span>
+
+<span class="sd">        :use_transformation:</span>
+<span class="sd">            documentation in progress</span>
+<span class="sd">            </span>
+<span class="sd">            (*optional, default: False*)</span>
+<span class="sd">        </span>
 <span class="sd">    :Saving Options:</span>
 <span class="sd">    </span>
 <span class="sd">        :store:</span>
@@ -310,10 +355,16 @@
                  <span class="n">create_movie</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                  <span class="n">timeshift</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                  <span class="n">online</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-                 <span class="n">user_dir</span><span class="o">=</span><span class="s">&#39;./&#39;</span><span class="p">,</span>
+                 <span class="n">user_dir</span><span class="o">=</span><span class="s1">&#39;./&#39;</span><span class="p">,</span>
                  <span class="n">limit2class</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                  <span class="n">physiological_arrangement</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">history_index</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">use_FN</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">use_SF</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">SF_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                 <span class="n">use_transformation</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                  <span class="n">rand_initial_fig</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                 <span class="n">covariancing</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Used to initialize the environment.</span>
 <span class="sd">           Called by VisualizationBase child-node.</span>
@@ -322,13 +373,13 @@
 <span class="sd">           Returns:       Nothing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         
-        <span class="c">#should training and test data be handled separately</span>
+        <span class="c1">#should training and test data be handled separately</span>
         <span class="k">if</span> <span class="n">separate_training_and_test</span><span class="p">:</span>
-            <span class="c">#if yes: all data has to be requested</span>
+            <span class="c1">#if yes: all data has to be requested</span>
             <span class="n">request_training</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="n">request_test</span> <span class="o">=</span> <span class="bp">True</span>
             
-        <span class="c">#modify request_training accordingly</span>
+        <span class="c1">#modify request_training accordingly</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span> <span class="o">=</span> <span class="n">request_training</span>
 
         <span class="nb">super</span><span class="p">(</span><span class="n">VisualizationBase</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -339,82 +390,90 @@
             <span class="n">initial_fig_num</span><span class="o">=</span><span class="mi">0</span>
 
         <span class="k">if</span> <span class="n">create_movie</span><span class="p">:</span>
-            <span class="c">#store the graphics to the persistency directory used in store_state</span>
+            <span class="c1">#store the graphics to the persistency directory used in store_state</span>
             <span class="n">store</span> <span class="o">=</span> <span class="bp">True</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">store</span><span class="p">:</span>
             <span class="n">store_data</span> <span class="o">=</span> <span class="bp">False</span>
 
-        <span class="c">#if plots are stored in online mode a directory is either specified or</span>
-        <span class="c">#data is stored in execution path</span>
+        <span class="c1">#if plots are stored in online mode a directory is either specified or</span>
+        <span class="c1">#data is stored in execution path</span>
         <span class="k">if</span> <span class="n">online</span> <span class="ow">and</span> <span class="n">store</span><span class="p">:</span>
-            <span class="c">#is user_dir not set explicitly? </span>
-            <span class="k">if</span> <span class="n">user_dir</span> <span class="o">==</span> <span class="s">&#39;./&#39;</span><span class="p">:</span>
-                <span class="c">#set the user directory to the execution-path</span>
-                <span class="n">user_dir</span> <span class="o">=</span> <span class="s">&#39;</span><span class="si">%s</span><span class="s">/&#39;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+            <span class="c1">#is user_dir not set explicitly? </span>
+            <span class="k">if</span> <span class="n">user_dir</span> <span class="o">==</span> <span class="s1">&#39;./&#39;</span><span class="p">:</span>
+                <span class="c1">#set the user directory to the execution-path</span>
+                <span class="n">user_dir</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">/&#39;</span> <span class="o">%</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
 
-            <span class="c">#add a folder with a timestamp</span>
-            <span class="n">user_dir</span> <span class="o">=</span> <span class="n">user_dir</span> <span class="o">+</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y%m</span><span class="si">%d</span><span class="s">_%H_%M_%S&quot;</span><span class="p">)</span> <span class="o">+</span> \
-                        <span class="s">&#39;_Visualization_Plot/&#39;</span>
+            <span class="c1">#add a folder with a timestamp</span>
+            <span class="n">user_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">user_dir</span><span class="p">,</span><span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H_%M_%S&quot;</span><span class="p">)</span> <span class="o">+</span> \
+                        <span class="s1">&#39;_Visualization_Plot/&#39;</span><span class="p">)</span>
             
             <span class="n">create_directory</span><span class="p">(</span><span class="n">user_dir</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">user_dir</span> <span class="o">=</span> <span class="bp">None</span> <span class="c">#either offline plotting or store=False</span>
-        
+            <span class="n">user_dir</span> <span class="o">=</span> <span class="bp">None</span> <span class="c1">#either offline plotting or store=False</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
             <span class="n">request_training</span><span class="o">=</span><span class="n">request_training</span><span class="p">,</span>
-            <span class="n">request_test</span><span class="o">=</span><span class="n">request_test</span><span class="p">,</span>
-            <span class="n">separate_training_and_test</span><span class="o">=</span><span class="n">separate_training_and_test</span><span class="p">,</span>
-            <span class="n">averaging</span><span class="o">=</span><span class="n">averaging</span><span class="p">,</span>
-            <span class="n">accum_avg</span><span class="o">=</span><span class="n">accum_avg</span><span class="p">,</span>
-            <span class="n">single_trial</span><span class="o">=</span><span class="n">single_trial</span><span class="p">,</span>
-            <span class="n">time_stamps</span><span class="o">=</span><span class="n">time_stamps</span><span class="p">,</span>
-            <span class="n">create_movie</span><span class="o">=</span><span class="n">create_movie</span><span class="p">,</span>
-            <span class="n">timeshift</span><span class="o">=</span><span class="n">timeshift</span><span class="p">,</span>
-            <span class="n">online</span><span class="o">=</span><span class="n">online</span><span class="p">,</span>
-            <span class="n">limit2class</span><span class="o">=</span><span class="n">limit2class</span><span class="p">,</span>
-            <span class="n">user_dir</span><span class="o">=</span><span class="n">user_dir</span><span class="p">,</span>
-            <span class="n">store_data</span><span class="o">=</span><span class="n">store_data</span><span class="p">,</span>
-            <span class="n">store</span><span class="o">=</span><span class="n">store</span><span class="p">,</span>
-            <span class="n">trial_counter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-            <span class="n">avg_values</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
-            <span class="n">accum_list</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>
-            <span class="n">st_list</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>
-            <span class="n">label_counter</span><span class="o">=</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
-            <span class="n">skipped_trials</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>  <span class="c"># list of not evaluated trials whenever</span>
-                                    <span class="c"># _execute was called</span>
-            <span class="n">physiological_arrangement</span><span class="o">=</span><span class="n">physiological_arrangement</span><span class="p">,</span>
-            <span class="n">initial_fig_num</span><span class="o">=</span><span class="n">initial_fig_num</span><span class="p">)</span>
-    </div>
+                <span class="n">request_test</span><span class="o">=</span><span class="n">request_test</span><span class="p">,</span>
+                <span class="n">separate_training_and_test</span><span class="o">=</span><span class="n">separate_training_and_test</span><span class="p">,</span>
+                <span class="n">averaging</span><span class="o">=</span><span class="n">averaging</span><span class="p">,</span>
+                <span class="n">accum_avg</span><span class="o">=</span><span class="n">accum_avg</span><span class="p">,</span>
+                <span class="n">single_trial</span><span class="o">=</span><span class="n">single_trial</span><span class="p">,</span>
+                <span class="n">time_stamps</span><span class="o">=</span><span class="n">time_stamps</span><span class="p">,</span>
+                <span class="n">create_movie</span><span class="o">=</span><span class="n">create_movie</span><span class="p">,</span>
+                <span class="n">timeshift</span><span class="o">=</span><span class="n">timeshift</span><span class="p">,</span>
+                <span class="n">online</span><span class="o">=</span><span class="n">online</span><span class="p">,</span>
+                <span class="n">limit2class</span><span class="o">=</span><span class="n">limit2class</span><span class="p">,</span>
+                <span class="n">user_dir</span><span class="o">=</span><span class="n">user_dir</span><span class="p">,</span>
+                <span class="n">store_data</span><span class="o">=</span><span class="n">store_data</span><span class="p">,</span>
+                <span class="n">store</span> <span class="o">=</span> <span class="n">store</span><span class="p">,</span>
+                <span class="n">trial_counter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">avg_values</span><span class="o">=</span><span class="nb">dict</span><span class="p">(),</span>
+                <span class="n">accum_list</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>
+                <span class="n">st_list</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>
+                <span class="n">label_counter</span><span class="o">=</span><span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+                <span class="n">skipped_trials</span><span class="o">=</span><span class="nb">list</span><span class="p">(),</span>  <span class="c1">#list of not evaluated trials</span>
+                <span class="c1"># whenever _execute was called</span>
+                <span class="n">current_trafo_TS</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                <span class="n">physiological_arrangement</span><span class="o">=</span><span class="n">physiological_arrangement</span><span class="p">,</span>
+                <span class="n">history_index</span><span class="o">=</span><span class="n">history_index</span><span class="p">,</span>
+                <span class="n">use_FN</span><span class="o">=</span><span class="n">use_FN</span><span class="p">,</span>
+                <span class="n">use_SF</span><span class="o">=</span><span class="n">use_SF</span><span class="p">,</span>
+                <span class="n">SF_channels</span><span class="o">=</span><span class="n">SF_channels</span><span class="p">,</span>
+                <span class="n">use_transformation</span><span class="o">=</span><span class="n">use_transformation</span><span class="p">,</span>
+                <span class="n">initial_fig_num</span><span class="o">=</span><span class="n">initial_fig_num</span><span class="p">,</span>
+                <span class="n">covariancing</span><span class="o">=</span><span class="n">covariancing</span><span class="p">,</span>
+                <span class="p">)</span></div>
+    
 <div class="viewcode-block" id="VisualizationBase.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable.</span>
 <span class="sd">            Method of base_node overwritten.</span>
 <span class="sd">            </span>
 <span class="sd">            Returns:       bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span>
-    </div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span></div>
+    
 <div class="viewcode-block" id="VisualizationBase.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training.</span>
 <span class="sd">            Method of base_node overwritten.</span>
 <span class="sd">            </span>
 <span class="sd">            Returns:       bool</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span>
-     </div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span></div>
+     
 <div class="viewcode-block" id="VisualizationBase._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-               <span class="n">data</span><span class="p">,</span>    <span class="c">#TimeSeries, FeatureVector or PredictionVector</span>
-                        <span class="c">#      Data to work with.</span>
-               <span class="n">label</span><span class="p">):</span>  <span class="c">#str   class label</span>
+               <span class="n">data</span><span class="p">,</span>    <span class="c1">#TimeSeries, FeatureVector or PredictionVector</span>
+                        <span class="c1">#      Data to work with.</span>
+               <span class="n">label</span><span class="p">):</span>  <span class="c1">#str   class label</span>
         <span class="sd">&quot;&quot;&quot; Every data instance that is passing this function </span>
 <span class="sd">            gets a flag.</span>
 <span class="sd">            </span>
 <span class="sd">            Returns:       nothing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c">#notice that instance is training data</span>
-        <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;Training&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-     </div>
-<div class="viewcode-block" id="VisualizationBase._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>  <span class="c"># data = pySPACE data instance</span>
+        <span class="c1">#notice that instance is training data</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s1">&#39;Training&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span></div>
+     
+<div class="viewcode-block" id="VisualizationBase._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>  <span class="c1"># data = pySPACE data instance</span>
         <span class="sd">&quot;&quot;&quot; This function performs a couple of operations:</span>
 <span class="sd">            No matter what kind of data is arriving,</span>
 <span class="sd">            the data is transformed into TimeSeries (for more information see below).  </span>
@@ -449,79 +508,94 @@
 <span class="sd">            Called by base_node.</span>
 <span class="sd">            </span>
 <span class="sd">            .. note::</span>
-<span class="sd">                Currently the label is based on the tag. This should be fixed in the near future!</span>
+<span class="sd">                Currently the label is based on the tag.</span>
+<span class="sd">                This should be fixed in the near future!</span>
 <span class="sd">                </span>
 <span class="sd">            Returns:       unmodified data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        
-        <span class="k">if</span> <span class="n">pylab_import_error</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase::Pylab could not be imported. Plotting not supported.&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">pylab_import_error</span> <span class="ow">and</span> <span class="ow">not</span> \
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">online</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_plotValues&quot;</span><span class="p">)):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase::Pylab could not be imported. &quot;</span>
+                          <span class="s2">&quot;Plotting not supported.&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span>
 
-        <span class="c">#convert any datatype internally into TimeSeries</span>
-        <span class="c">#evaluate the datatype and prepare data accordingly</span>
+        <span class="c1">#convert any datatype internally into TimeSeries</span>
+        <span class="c1">#evaluate the datatype and prepare data accordingly</span>
         <span class="n">dattype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dattype</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
-            <span class="c"># TimeSeries are used as they are</span>
-            <span class="n">prepared_data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_transformation</span><span class="p">:</span>
+                <span class="c1"># TimeSeries are used as they are</span>
+                <span class="n">prepared_data</span> <span class="o">=</span> <span class="n">data</span>
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># TODO: back-transform data!</span>
+                <span class="n">prepared_data</span> <span class="o">=</span> <span class="n">data</span>
         <span class="k">elif</span> <span class="n">dattype</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
-            <span class="c"># Feature Vectors are transformed into TimeSeries</span>
+            <span class="c1"># Feature Vectors are transformed into TimeSeries</span>
             <span class="n">prepared_data</span> <span class="o">=</span> \
                 <span class="n">type_conversion</span><span class="o">.</span><span class="n">FeatureVector2TimeSeriesNode</span><span class="p">()</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="c1">#if previous data transformations should be included</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_transformation</span><span class="p">:</span>
+                <span class="n">prepared_data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_prepare_FV</span><span class="p">(</span><span class="n">prepared_data</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">dattype</span> <span class="o">==</span> <span class="n">PredictionVector</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: Unsupported data type &quot;</span> <span class="o">+</span> \
-                              <span class="nb">str</span><span class="p">(</span><span class="n">dattype</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;! Plotting ignored!&quot;</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">data</span>
-        <span class="k">else</span><span class="p">:</span>  <span class="c"># should never occur</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: Unsupported data type &quot;</span> <span class="o">+</span> \
-                          <span class="nb">str</span><span class="p">(</span><span class="n">dattype</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;! Plotting ignored!&quot;</span><span class="p">)</span>
+            <span class="c1"># Prediction Vectors are checked for a FeatureVector as predictor</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">prepared_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_prediction</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+                <span class="n">prepared_data</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="k">if</span> <span class="n">prepared_data</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: Unsupported data type &quot;</span> <span class="o">+</span> \
+                              <span class="nb">str</span><span class="p">(</span><span class="n">dattype</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;! Plotting ignored!&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">data</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1">#should never occur</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: Unsupported data type &quot;</span> <span class="o">+</span> \
+                          <span class="nb">str</span><span class="p">(</span><span class="n">dattype</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;! Plotting ignored!&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span>
 
-        <span class="c">#start...</span>
+        <span class="c1">#start...</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span> <span class="o">+=</span> <span class="mi">1</span>
         
-        <span class="c">#get the label from the tag</span>
+        <span class="c1">#get the label from the tag</span>
         <span class="n">curr_label</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">tag</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         
-        <span class="c">#training-data? </span>
-        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;Training&#39;</span><span class="p">):</span>
-            <span class="n">training_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;Training&#39;</span><span class="p">]</span>
-            <span class="c">#in case splits are used, this information has to be deleted</span>
-            <span class="k">del</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s">&#39;Training&#39;</span><span class="p">]</span>
+        <span class="c1">#training-data? </span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s1">&#39;Training&#39;</span><span class="p">):</span>
+            <span class="n">training_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s1">&#39;Training&#39;</span><span class="p">]</span>
+            <span class="c1">#in case splits are used, this information has to be deleted</span>
+            <span class="k">del</span> <span class="n">data</span><span class="o">.</span><span class="n">specs</span><span class="p">[</span><span class="s1">&#39;Training&#39;</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c">#we are dealing with test data</span>
+            <span class="c1">#we are dealing with test data</span>
             <span class="n">training_data</span> <span class="o">=</span> <span class="bp">False</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit2class</span><span class="p">:</span>
-            <span class="c"># is the current label not the one the user is interested in?</span>
-            <span class="k">if</span> <span class="n">curr_label</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit2class</span><span class="p">:</span>
-                <span class="c">#skip it</span>
+            <span class="c1"># is the current label not the one the user is interested in?</span>
+            <span class="k">if</span> <span class="n">curr_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">limit2class</span><span class="p">:</span>
+                <span class="c1">#skip it</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">skipped_trials</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">)</span>
                 <span class="k">return</span> <span class="n">data</span>
 
-        <span class="c">#distinguish between training and test data?</span>
+        <span class="c1">#distinguish between training and test data?</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">separate_training_and_test</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">training_data</span><span class="p">:</span>
-                <span class="n">curr_label</span> <span class="o">+=</span> <span class="s">&#39;_Training&#39;</span>
+                <span class="n">curr_label</span> <span class="o">+=</span> <span class="s1">&#39;_Training&#39;</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">curr_label</span> <span class="o">+=</span> <span class="s">&#39;_Test&#39;</span>
+                <span class="n">curr_label</span> <span class="o">+=</span> <span class="s1">&#39;_Test&#39;</span>
                 
-        <span class="c">#do we have data that we not requested?</span>
-        <span class="k">elif</span> <span class="p">(</span><span class="n">training_data</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span><span class="p">)</span> \
+        <span class="c1">#do we have data that we not requested?</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_training_execution_phase</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_training</span><span class="p">)</span> \
                 <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">training_data</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">request_test</span><span class="p">):</span>
-            <span class="c">#skip it!</span>
+            <span class="c1">#skip it!</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">skipped_trials</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">data</span> 
         
-        <span class="c">#is averaging of the data intended?</span>
+        <span class="c1">#is averaging of the data intended?</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">averaging</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_avg</span><span class="p">:</span>
-            <span class="c">#first time...</span>
+            <span class="c1">#first time...</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">curr_label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">prepared_data</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">label_counter</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-            <span class="c">#all other times...</span>
+            <span class="c1">#all other times...</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="c"># collecting and updating list with respect to current label</span>
+                <span class="c1"># collecting and updating list with respect to current label</span>
                 <span class="n">accumulated_value</span> <span class="o">=</span> \
                     <span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> \
                     <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_counter</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> \
@@ -532,53 +606,53 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> <span class="o">=</span> \
                     <span class="n">accumulated_value</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_counter</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span>
                 
-            <span class="c">#plotting intended?</span>
+            <span class="c1">#plotting intended?</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_avg</span><span class="p">:</span>
-                <span class="c">#store the data</span>
+                <span class="c1">#store the data</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">accum_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">))</span>
-                <span class="c">#plots in online mode?</span>
+                <span class="c1">#plots in online mode?</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">online</span><span class="p">:</span>
-                    <span class="c">#only possible if child has implemented the plot function</span>
-                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;_plotValues&quot;</span><span class="p">):</span>
+                    <span class="c1">#only possible if child has implemented the plot function</span>
+                    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_plotValues&quot;</span><span class="p">):</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">_plotValues</span><span class="p">(</span>
                             <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">,</span>
-                            <span class="n">plot_label</span><span class="o">=</span><span class="s">&quot;accum_avg_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">),</span>
+                            <span class="n">plot_label</span><span class="o">=</span><span class="s2">&quot;accum_avg_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">),</span>
                             <span class="n">fig_num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_fig_num</span><span class="o">+</span><span class="mi">3</span><span class="p">,</span>
                             <span class="n">store_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user_dir</span><span class="p">,</span>
                             <span class="n">counter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
-                                      <span class="s">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
-                                      <span class="s">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
+                                      <span class="s2">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
+                                      <span class="s2">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
         
-        <span class="c">#single trials intended?</span>
+        <span class="c1">#single trials intended?</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_trial</span><span class="p">:</span>
-            <span class="c">#collect them...</span>
+            <span class="c1">#collect them...</span>
             <span class="n">values</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
             <span class="n">values</span><span class="p">[</span><span class="n">curr_label</span><span class="p">]</span> <span class="o">=</span> <span class="n">prepared_data</span>
             
             <span class="bp">self</span><span class="o">.</span><span class="n">st_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
             
-            <span class="c">#plots in online mode?</span>
+            <span class="c1">#plots in online mode?</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">online</span><span class="p">:</span>
-                <span class="c">#only possible if child has implemented the plot function</span>
-                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;_plotValues&quot;</span><span class="p">):</span>
+                <span class="c1">#only possible if child has implemented the plot function</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_plotValues&quot;</span><span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_plotValues</span><span class="p">(</span>
                         <span class="n">values</span><span class="o">=</span><span class="n">values</span><span class="p">,</span>
-                        <span class="n">plot_label</span><span class="o">=</span><span class="s">&quot;single_trial_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">),</span>
+                        <span class="n">plot_label</span><span class="o">=</span><span class="s2">&quot;single_trial_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">),</span>
                         <span class="n">fig_num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_fig_num</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span>
                         <span class="n">store_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">user_dir</span><span class="p">,</span>
                         <span class="n">counter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
-                                  <span class="s">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
-                                  <span class="s">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
+                                  <span class="s2">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
+                                  <span class="s2">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
         
-        <span class="k">return</span> <span class="n">data</span>
-    </div>
+        <span class="k">return</span> <span class="n">data</span></div>
+    
 <div class="viewcode-block" id="VisualizationBase.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                    <span class="n">result_dir</span><span class="p">,</span>     <span class="c">#string of results dir</span>
-                    <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>    <span class="c">#None or int: number in node chain        </span>
+                    <span class="n">result_dir</span><span class="p">,</span>     <span class="c1">#string of results dir</span>
+                    <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>    <span class="c1">#None or int: number in node chain        </span>
         <span class="sd">&quot;&quot;&quot; Stores the plots to the *result_dir* and is used for offline</span>
 <span class="sd">            plotting and for plotting of average values (online and offline).</span>
 <span class="sd">            Plots offline-data for every trial which has not been skipped.</span>
@@ -589,22 +663,22 @@
 <span class="sd">            Returns:       Nothing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
-            <span class="c">#set the specific directory for this particular node</span>
+            <span class="c1">#set the specific directory for this particular node</span>
             <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
-            <span class="c">#do we have an index-number?</span>
+            <span class="c1">#do we have an index-number?</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="c">#add the index-number...</span>
-                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s">&quot;_</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="c1">#add the index-number...</span>
+                <span class="n">node_dir</span> <span class="o">+=</span> <span class="s2">&quot;_</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">int</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
             <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c">#no specific directory</span>
+            <span class="c1">#no specific directory</span>
             <span class="n">node_dir</span><span class="o">=</span><span class="bp">None</span>
-        <span class="c">#offline mode?</span>
+        <span class="c1">#offline mode?</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">online</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">single_trial</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_avg</span><span class="p">):</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;_plotValues&quot;</span><span class="p">):</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
-                              <span class="s">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
-                              <span class="s">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_plotValues&quot;</span><span class="p">):</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
+                              <span class="s2">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
+                              <span class="s2">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
                 <span class="k">for</span> <span class="n">trial_num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
@@ -612,60 +686,60 @@
                         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_trial</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_plotValues</span><span class="p">(</span>
                                 <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">st_list</span><span class="p">[</span><span class="n">pos</span><span class="p">],</span>
-                                <span class="n">plot_label</span><span class="o">=</span><span class="s">&quot;single_trial_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial_num</span><span class="p">),</span>
+                                <span class="n">plot_label</span><span class="o">=</span><span class="s2">&quot;single_trial_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial_num</span><span class="p">),</span>
                                 <span class="n">fig_num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_fig_num</span><span class="o">+</span><span class="mi">2</span><span class="p">,</span>
                                 <span class="n">store_dir</span><span class="o">=</span><span class="n">node_dir</span><span class="p">,</span>
                                 <span class="n">counter</span><span class="o">=</span><span class="n">trial_num</span><span class="p">)</span>
                         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_avg</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_plotValues</span><span class="p">(</span>
                                 <span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">accum_list</span><span class="p">[</span><span class="n">pos</span><span class="p">],</span>
-                                <span class="n">plot_label</span><span class="o">=</span><span class="s">&quot;accum_avg_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">trial_num</span><span class="p">),</span>
+                                <span class="n">plot_label</span><span class="o">=</span><span class="s2">&quot;accum_avg_no_&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">trial_num</span><span class="p">),</span>
                                 <span class="n">fig_num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_fig_num</span><span class="o">+</span><span class="mi">3</span><span class="p">,</span>
                                 <span class="n">store_dir</span><span class="o">=</span><span class="n">node_dir</span><span class="p">,</span>
                                 <span class="n">counter</span><span class="o">=</span><span class="n">trial_num</span><span class="p">)</span>
                         <span class="n">pos</span> <span class="o">+=</span> <span class="mi">1</span>
             
-        <span class="c">#plotting of the whole average or storage of the movie may also be possible in online mode</span>
+        <span class="c1">#plotting of the whole average or storage of the movie may also be possible in online mode</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">online</span><span class="p">:</span>
-            <span class="c">#set or change the the specific directory for the node to the</span>
-            <span class="c">#execution-path with a timestamp (see __init__)</span>
+            <span class="c1">#set or change the the specific directory for the node to the</span>
+            <span class="c1">#execution-path with a timestamp (see __init__)</span>
             <span class="n">node_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_dir</span>
             
-        <span class="c">#is averaging intended?</span>
+        <span class="c1">#is averaging intended?</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">averaging</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">:</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: One of your averages has no &quot;</span> \
-                              <span class="s">&quot;instances! Plotting ignored!&quot;</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: One of your averages has no &quot;</span> \
+                              <span class="s2">&quot;instances! Plotting ignored!&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s">&quot;_plotValues&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;_plotValues&quot;</span><span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_plotValues</span><span class="p">(</span><span class="n">values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">avg_values</span><span class="p">,</span>
-                                     <span class="n">plot_label</span><span class="o">=</span><span class="s">&quot;average&quot;</span><span class="p">,</span>
+                                     <span class="n">plot_label</span><span class="o">=</span><span class="s2">&quot;average&quot;</span><span class="p">,</span>
                                      <span class="n">fig_num</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">initial_fig_num</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
                                      <span class="n">store_dir</span><span class="o">=</span><span class="n">node_dir</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
-                                  <span class="s">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
-                                  <span class="s">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: The node you are using for visualisation &quot;</span> \
+                                  <span class="s2">&quot;has no function _plotValues! This is most likely not what you intended!&quot;</span> \
+                                  <span class="s2">&quot;Plotting ignored!&quot;</span><span class="p">)</span>
         
-        <span class="c">#Finally create a movie if specified</span>
+        <span class="c1">#Finally create a movie if specified</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_movie</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_data</span><span class="p">:</span>
             <span class="n">prefixes</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">single_trial</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
-                    <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;single_trial_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
+                    <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;single_trial_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">accum_avg</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">trial</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">trial_counter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
-                    <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;accum_avg_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
+                    <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;accum_avg_no_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">trial</span><span class="p">))</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">averaging</span><span class="p">:</span>
-                <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&#39;average&#39;</span><span class="p">)</span>
+                <span class="n">prefixes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;average&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_create_movie</span><span class="p">(</span><span class="n">prefixes</span><span class="o">=</span><span class="n">prefixes</span><span class="p">,</span>
                                <span class="n">directory</span><span class="o">=</span><span class="n">node_dir</span><span class="p">)</span>
-        <span class="c">#close the figure windows</span>
-        <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s">&#39;all&#39;</span><span class="p">)</span>
-    </div>
+        <span class="c1">#close the figure windows</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="s1">&#39;all&#39;</span><span class="p">)</span></div>
+    
 <div class="viewcode-block" id="VisualizationBase._create_movie"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._create_movie">[docs]</a>    <span class="k">def</span> <span class="nf">_create_movie</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                      <span class="n">prefixes</span><span class="p">,</span>     <span class="c">#[str]  List of prefixes for the movies to create</span>
-                      <span class="n">directory</span><span class="p">):</span>   <span class="c">#str    Directory for the node</span>
+                      <span class="n">prefixes</span><span class="p">,</span>     <span class="c1">#[str]  List of prefixes for the movies to create</span>
+                      <span class="n">directory</span><span class="p">):</span>   <span class="c1">#str    Directory for the node</span>
         <span class="sd">&quot;&quot;&quot; Creates movies based on the stored plots.</span>
 
 <span class="sd">            Creates movies in the directory for the node. Movies will be created</span>
@@ -676,68 +750,204 @@
 <span class="sd">            Returns:       Nothing.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c">#store current path</span>
+        <span class="c1">#store current path</span>
         <span class="n">former_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
         
-        <span class="c">#go to node dir </span>
+        <span class="c1">#go to node dir </span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
         
         <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="n">prefixes</span><span class="p">:</span>
             <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
-            <span class="n">file_list</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s%s%s</span><span class="s">_*&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">prefix</span><span class="p">))</span>
+            <span class="n">file_list</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s%s%s</span><span class="s2">_*&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">prefix</span><span class="p">))</span>
             
             <span class="k">if</span> <span class="n">file_list</span> <span class="o">!=</span> <span class="p">[]:</span>
-                <span class="n">file_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">file_list</span><span class="p">)</span> <span class="c">#note: check list sorting - there may still be a bug &gt; leading zeros might still miss</span>
+                <span class="n">file_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">file_list</span><span class="p">)</span> <span class="c1">#note: check list sorting - there may still be a bug &gt; leading zeros might still miss</span>
                 <span class="k">for</span> <span class="n">file_str</span> <span class="ow">in</span> <span class="n">file_list</span><span class="p">:</span>
-                    <span class="c">#convert format to temporary JPG and scale the image with x=2048</span>
-                    <span class="c">#save it in four-digit format</span>
-                    <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&quot;convert </span><span class="si">%s</span><span class="s"> -resize 2048 </span><span class="si">%s%s%04d</span><span class="s">.jpg&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_str</span><span class="p">,</span>
+                    <span class="c1">#convert format to temporary JPG and scale the image with x=2048</span>
+                    <span class="c1">#save it in four-digit format</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;convert </span><span class="si">%s</span><span class="s2"> -resize 2048 </span><span class="si">%s%s%04d</span><span class="s2">.jpg&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">file_str</span><span class="p">,</span>
                                     <span class="n">directory</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">counter</span><span class="p">))</span>
                     <span class="n">counter</span> <span class="o">+=</span> <span class="mi">1</span>
-                    <span class="c">#create an mp4-video-file with FPS=10, Bitrate=1800 based on the</span>
-                    <span class="c">#files in four-digit format</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s">&quot;ffmpeg -r 10 -b 1800 -i </span><span class="si">%04d</span><span class="s">.jpg &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="o">+</span>
-                          <span class="s">&quot;.mp4&quot;</span><span class="p">)</span>
+                    <span class="c1">#create an mp4-video-file with FPS=10, Bitrate=1800 based on the</span>
+                    <span class="c1">#files in four-digit format</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;ffmpeg -r 10 -b 1800 -i </span><span class="si">%04d</span><span class="s2">.jpg &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="o">+</span>
+                          <span class="s2">&quot;.mp4&quot;</span><span class="p">)</span>
                 
-                <span class="c">#remove the temporary JPGs</span>
+                <span class="c1">#remove the temporary JPGs</span>
                 <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">counter</span><span class="p">):</span>
-                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%04d</span><span class="s">.jpg&quot;</span> <span class="o">%</span> <span class="n">c</span><span class="p">)</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%04d</span><span class="s2">.jpg&quot;</span> <span class="o">%</span> <span class="n">c</span><span class="p">)</span>
           
-        <span class="c">#change dir back to old one</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">former_dir</span><span class="p">)</span>
+        <span class="c1">#change dir back to old one</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">former_dir</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="VisualizationBase._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="c1"># todo: insert sparse_update switch</span>
+        <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">label</span> <span class="o">!=</span> <span class="n">class_label</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+<div class="viewcode-block" id="VisualizationBase._prepare_prediction"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._prepare_prediction">[docs]</a>    <span class="k">def</span> <span class="nf">_prepare_prediction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span> <span class="c1">#PredictionVector    Data to work with.</span>
+        <span class="sd">&quot;&quot;&quot; Convert prediction vector to time series object for visualization</span>
+
+<span class="sd">        Using the function *get_previous_transformations* the node history is</span>
+<span class="sd">        searched for the respective transformation parametrizations and then</span>
+<span class="sd">        the transformations are combined tog et a complete picture of the</span>
+<span class="sd">        data processing chain.</span>
+
+<span class="sd">        A special case is, when the</span>
+<span class="sd">        :class:`~pySPACE.missions.nodes.meta.flow_node.BacktransformationNode`</span>
 
 
-<span class="c">#    def _get_electrode_coordinates(self, coordinates):</span>
-<span class="c">#        &quot;&quot;&quot; </span>
-<span class="c">#        Convert the polar coordinates of the electrode positions</span>
-<span class="c">#        to cart of the physiologically</span>
-<span class="c">#        arranged plots. As the position specification also requires a height</span>
-<span class="c">#        and width, these values are also passed. Height and width are tuned</span>
-<span class="c">#        manually such that the resulting plots look nice. </span>
-<span class="c">#        &quot;&quot;&quot;</span>
-<span class="c">#        </span>
-<span class="c">#        # coordinate transformation</span>
-<span class="c">#        x = (coordinates[0] *</span>
-<span class="c">#             pylab.cos(coordinates[1] / 180 * pylab.pi) + 110) / 245</span>
-<span class="c">#        y = (coordinates[0] *</span>
-<span class="c">#             pylab.sin(coordinates[1] / 180 * pylab.pi) + 110) / 245</span>
-<span class="c">#        w = .07</span>
-<span class="c">#        h = .065</span>
-<span class="c">#    #        if self.shrink_plots:</span>
-<span class="c">#    #            w *= 1.2</span>
-<span class="c">#    #            h *= 0.9</span>
-<span class="c">#    #            x *= 4.0/3.0</span>
-<span class="c">#    #            y *= 4.0/3.0</span>
-<span class="c">#        </span>
-<span class="c">#        return [x, y, w, h]</span>
-</pre></div></div></div>
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :data: This is a Prediction Vector, which might contain data in its</span>
+<span class="sd">                   history component which is used for multiplication with</span>
+<span class="sd">                   the transformation or which is used as sample for</span>
+<span class="sd">                   calculating the derivative of the processing chain for the</span>
+<span class="sd">                   backtransformation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="c1">#needed only once</span>
+            <span class="n">transformation_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">classifier</span> <span class="o">=</span> <span class="n">transformation_list</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">classifier</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;generic_backtransformation&quot;</span><span class="p">:</span>
+                <span class="n">current_trafo</span> <span class="o">=</span> <span class="n">classifier</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">current_trafo</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+                    <span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">type_conversion</span><span class="o">.</span>\
+                        <span class="n">FeatureVector2TimeSeriesNode</span><span class="p">()</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">current_trafo</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">current_trafo</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+                    <span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">current_trafo</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariancing</span><span class="p">:</span>
+                    <span class="n">shape</span> <span class="o">=</span> <span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">shape</span>
+                    <span class="n">covariance</span> <span class="o">=</span> <span class="n">classifier</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                    <span class="n">new_TS_array</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span>
+                        <span class="n">covariance</span><span class="p">,</span> <span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+                    <span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">current_trafo_TS</span><span class="p">,</span> <span class="n">new_TS_array</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">classifier</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;linear classifier&quot;</span><span class="p">:</span>
+                <span class="n">classifier_FV</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">classifier</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                              <span class="n">feature_names</span><span class="o">=</span><span class="n">classifier</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">current_trafo</span> <span class="o">=</span> <span class="n">classifier_FV</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_FN</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">FN</span> <span class="o">=</span> <span class="n">transformation_list</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                        <span class="k">assert</span><span class="p">(</span><span class="n">FN</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;feature normalization&quot;</span><span class="p">)</span>
+                        <span class="k">assert</span><span class="p">(</span><span class="n">classifier</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">==</span><span class="n">FN</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span><span class="s2">&quot;VisualizationBase:: Feature names do not match!&quot;</span>
+                        <span class="n">FN_FV</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">FN</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                              <span class="n">feature_names</span> <span class="o">=</span> <span class="n">FN</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                        <span class="n">current_trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">current_trafo</span><span class="o">*</span><span class="n">FN_FV</span><span class="p">,</span>
+                                              <span class="n">feature_names</span> <span class="o">=</span> <span class="n">FN_FV</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: Did not get any feature normalization!&quot;</span><span class="p">)</span>
+                        <span class="k">pass</span> <span class="c1">#raise</span>
+                <span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">type_conversion</span><span class="o">.</span><span class="n">FeatureVector2TimeSeriesNode</span><span class="p">()</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">current_trafo</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_SF</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># TODO CHECK fitting of channel names</span>
+                        <span class="n">SF</span> <span class="o">=</span> <span class="n">transformation_list</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">SF</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;spatial filter&quot;</span><span class="p">:</span>
+                            <span class="n">SF</span> <span class="o">=</span> <span class="n">transformation_list</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]</span>
+                        <span class="k">assert</span><span class="p">(</span><span class="n">SF</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;spatial filter&quot;</span><span class="p">)</span>
+                        <span class="n">new_channel_names</span> <span class="o">=</span> <span class="n">SF</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                        <span class="n">SF_trafo</span> <span class="o">=</span> <span class="n">SF</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                        <span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">current_trafo_TS</span><span class="p">,</span><span class="n">SF_trafo</span><span class="o">.</span><span class="n">T</span><span class="p">),</span>
+                                            <span class="n">channel_names</span> <span class="o">=</span> <span class="n">new_channel_names</span><span class="p">,</span>
+                                            <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">)</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: Did not get any spatial filter!&quot;</span><span class="p">)</span>
+                        <span class="k">pass</span> <span class="c1">#raise</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: &quot;</span><span class="o">+</span>
+                              <span class="s2">&quot;Did not get any classifier transformation!&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span>
+            <span class="c1"># the reordering should have been done in the type conversion</span>
+            <span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">channel_names</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">=</span><span class="n">current_trafo_TS</span>
+        <span class="n">prepared_prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">history_index</span><span class="p">:</span>
+            <span class="n">found_in_history</span><span class="o">=</span><span class="bp">False</span>
+            <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">has_history</span><span class="p">():</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">prepared_history</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">history_index</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">prepared_history</span><span class="p">)</span><span class="o">==</span><span class="n">FeatureVector</span><span class="p">:</span>
+                        <span class="n">prepared_history</span><span class="o">=</span><span class="n">type_conversion</span><span class="o">.</span><span class="n">FeatureVector2TimeSeriesNode</span><span class="p">()</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">prepared_history</span><span class="p">)</span>
+                    <span class="n">found_in_history</span><span class="o">=</span><span class="bp">True</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            <span class="k">if</span> <span class="n">found_in_history</span><span class="p">:</span>
+                <span class="n">prepared_history</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
+                <span class="n">prepared_prediction</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">prepared_prediction</span><span class="p">)</span><span class="o">*</span><span class="n">prepared_history</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;VisualizationBase:: No FeatureVector or TimeSeries found in history. Parameter history_index ignored!&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">prepared_prediction</span></div>
+
+<div class="viewcode-block" id="VisualizationBase._prepare_FV"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.visualization.base.html#pySPACE.missions.nodes.visualization.base.VisualizationBase._prepare_FV">[docs]</a>    <span class="k">def</span> <span class="nf">_prepare_FV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Convert FeatureVector into TimeSeries and use it for plotting.</span>
+
+<span class="sd">        .. note:: This function is not yet working as it should be.</span>
+<span class="sd">                  Work in progress.</span>
+<span class="sd">                  Commit due to LRP-Demo (DLR Review)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># visualization of transformation or history data times visualization</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">transformation_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_previous_transformations</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">transformation_list</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span> <span class="c1">#first element is previous node</span>
+
+            <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">transformation_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_FN</span> <span class="ow">and</span> <span class="n">elem</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;feature normalization&quot;</span><span class="p">:</span>
+                    <span class="c1"># visualize Feature normalization scaling as feature vector</span>
+                    <span class="n">FN_FV</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">elem</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                                      <span class="n">feature_names</span> <span class="o">=</span> <span class="n">elem</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">type_conversion</span><span class="o">.</span><span class="n">FeatureVector2TimeSeriesNode</span><span class="p">()</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">FN_FV</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">channel_names</span><span class="p">))</span>
+                    <span class="k">break</span>
+
+
+                <span class="c1"># visualize spatial filter as times series,</span>
+                <span class="c1"># where the time axis is the number of channel or virtual</span>
+                <span class="c1"># channel name</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_SF</span> <span class="ow">and</span> <span class="n">elem</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="o">==</span><span class="s2">&quot;spatial filter&quot;</span><span class="p">:</span>
+                    <span class="n">new_channel_names</span> <span class="o">=</span> <span class="n">elem</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                    <span class="n">SF_trafo</span> <span class="o">=</span> <span class="n">elem</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">SF_trafo</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
+                                <span class="n">channel_names</span> <span class="o">=</span> <span class="n">new_channel_names</span><span class="p">,</span>
+                                <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span><span class="o">.</span><span class="n">channel_names</span><span class="p">))</span>
+                    <span class="k">break</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_trafo_TS</span></div></div>
+
+<span class="c1">#    def _get_electrode_coordinates(self, coordinates):</span>
+<span class="c1">#        &quot;&quot;&quot; </span>
+<span class="c1">#        Convert the polar coordinates of the electrode positions</span>
+<span class="c1">#        to cart of the physiologically</span>
+<span class="c1">#        arranged plots. As the position specification also requires a height</span>
+<span class="c1">#        and width, these values are also passed. Height and width are tuned</span>
+<span class="c1">#        manually such that the resulting plots look nice. </span>
+<span class="c1">#        &quot;&quot;&quot;</span>
+<span class="c1">#        </span>
+<span class="c1">#        # coordinate transformation</span>
+<span class="c1">#        x = (coordinates[0] *</span>
+<span class="c1">#             pylab.cos(coordinates[1] / 180 * pylab.pi) + 110) / 245</span>
+<span class="c1">#        y = (coordinates[0] *</span>
+<span class="c1">#             pylab.sin(coordinates[1] / 180 * pylab.pi) + 110) / 245</span>
+<span class="c1">#        w = .07</span>
+<span class="c1">#        h = .065</span>
+<span class="c1">#    #        if self.shrink_plots:</span>
+<span class="c1">#    #            w *= 1.2</span>
+<span class="c1">#    #            h *= 0.9</span>
+<span class="c1">#    #            x *= 4.0/3.0</span>
+<span class="c1">#    #            y *= 4.0/3.0</span>
+<span class="c1">#        </span>
+<span class="c1">#        return [x, y, w, h]</span>
+</pre></div>
 
           </div>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -746,14 +956,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

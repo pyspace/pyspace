@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../../index.html">
               <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.nodes.spatial_filtering.csp</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Original and variants of the Common Spatial Pattern algorithm</span>
+<span></span><span class="sd">&quot;&quot;&quot; Original and variants of the Common Spatial Pattern algorithm</span>
 
 <span class="sd">The Common Spatial Pattern algorithm is a supervised method for</span>
 <span class="sd">spatial filtering. It is summarized e.g. in</span>
@@ -82,6 +79,7 @@
 <span class="kn">import</span> <span class="nn">numpy</span>
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.spatial_filtering.spatial_filtering</span> <span class="kn">import</span> <span class="n">SpatialFilteringNode</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
@@ -157,78 +155,78 @@
 <div class="viewcode-block" id="CSPNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">retained_channels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">relevant_indices</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> 
                  <span class="n">spatio_temporal</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">load_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                  <span class="n">visualize_pattern</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c"># Must be set before constructor of superclass is set</span>
+        <span class="c1"># Must be set before constructor of superclass is set</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="p">(</span><span class="n">load_path</span> <span class="o">==</span> <span class="bp">None</span><span class="p">)</span>
         
         <span class="nb">super</span><span class="p">(</span><span class="n">CSPNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         
-        <span class="c"># Make sure number of channels is even</span>
-        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">retained_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s">&#39;None&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">retained_channels</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span> <span class="o">-=</span> <span class="mi">1</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;CSP node should only retain an even number of channels!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+        <span class="c1"># Make sure number of channels is even</span>
+        <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">retained_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">])</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">retained_channels</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="n">retained_channels</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;CSP node should only retain an even number of channels!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
 
         <span class="n">filters</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="c"># Load patterns from file if requested</span>
+        <span class="c1"># Load patterns from file if requested</span>
         <span class="k">if</span> <span class="n">load_path</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">filters_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">load_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+            <span class="n">filters_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">load_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">filters</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filters_file</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">spatio_temporal</span> <span class="ow">and</span> <span class="n">relevant_indices</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="kn">import</span> <span class="nn">warnings</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Relevant indices are ignored in spatio-temporal&quot;</span>
-                          <span class="s">&quot;filtering.&quot;</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Relevant indices are ignored in spatio-temporal&quot;</span>
+                          <span class="s2">&quot;filtering.&quot;</span><span class="p">)</span>
             <span class="n">relevant_indices</span> <span class="o">=</span> <span class="bp">None</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span>
-            <span class="c"># The number of channels is only known after</span>
-            <span class="c"># observing the first data point</span>
+            <span class="c1"># The number of channels is only known after</span>
+            <span class="c1"># observing the first data point</span>
             <span class="n">number_of_channels</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
 
-            <span class="c"># A mapping from class label to empirical covariance under this</span>
-            <span class="c"># condition</span>
-            <span class="c"># The covariance matrices cannot be created until the size of</span>
-            <span class="c"># the data (i.e. the number of channels is known</span>
+            <span class="c1"># A mapping from class label to empirical covariance under this</span>
+            <span class="c1"># condition</span>
+            <span class="c1"># The covariance matrices cannot be created until the size of</span>
+            <span class="c1"># the data (i.e. the number of channels is known</span>
             <span class="n">covariances</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span>
             
-            <span class="c"># Count the number of samples for each condition to</span>
-            <span class="c"># normalize the covariance matrices later on</span>
+            <span class="c1"># Count the number of samples for each condition to</span>
+            <span class="c1"># normalize the covariance matrices later on</span>
             <span class="n">samples_per_condition</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(),</span> 
             
-            <span class="c"># The relevant indices that are used during CSP training</span>
+            <span class="c1"># The relevant indices that are used during CSP training</span>
             <span class="n">relevant_indices</span> <span class="o">=</span> <span class="n">relevant_indices</span><span class="p">,</span>
             
-            <span class="c"># Should we do spatio-temporal filtering?</span>
+            <span class="c1"># Should we do spatio-temporal filtering?</span>
             <span class="n">spatio_temporal</span> <span class="o">=</span> <span class="n">spatio_temporal</span><span class="p">,</span> 
             
-            <span class="c"># After training is finished, this attribute will contain</span>
-            <span class="c"># the common spatial patterns that are used to project</span>
-            <span class="c"># the data onto a lower dimensional subspace</span>
+            <span class="c1"># After training is finished, this attribute will contain</span>
+            <span class="c1"># the common spatial patterns that are used to project</span>
+            <span class="c1"># the data onto a lower dimensional subspace</span>
             <span class="n">filters</span> <span class="o">=</span> <span class="n">filters</span><span class="p">,</span>
             
-            <span class="c"># The number of channels that will be retained</span>
+            <span class="c1"># The number of channels that will be retained</span>
             <span class="n">retained_channels</span> <span class="o">=</span> <span class="n">retained_channels</span><span class="p">,</span>
             
-            <span class="c"># Remember the new order of CSP-pseudo channels</span>
+            <span class="c1"># Remember the new order of CSP-pseudo channels</span>
             <span class="n">new_order</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
             
             <span class="n">trainable</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span><span class="p">,</span>
             
-            <span class="c"># Determines whether the CSP filters are shown after training</span>
+            <span class="c1"># Determines whether the CSP filters are shown after training</span>
             <span class="n">visualize_pattern</span> <span class="o">=</span> <span class="n">visualize_pattern</span><span class="p">,</span>
             
-            <span class="c"># Remember the data&#39;s channel names later on</span>
+            <span class="c1"># Remember the data&#39;s channel names later on</span>
             <span class="n">channel_names</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
             <span class="n">new_channel_names</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="p">)</span>
-    </div>
+        <span class="p">)</span></div>
+    
 <div class="viewcode-block" id="CSPNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
-    </div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span></div>
+    
 <div class="viewcode-block" id="CSPNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
-</div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span></div>
+
 <div class="viewcode-block" id="CSPNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add the given data point along with its class label </span>
@@ -237,34 +235,34 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatio_temporal</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
-        <span class="c"># If this is the first data sample we obtain</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s">&#39;None&#39;</span><span class="p">]:</span>
-            <span class="c"># Count the number of channels</span>
+        <span class="c1"># If this is the first data sample we obtain</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">]:</span>
+            <span class="c1"># Count the number of channels</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">channel_names</span>
 
-        <span class="c"># If we encounter this label for the first time</span>
+        <span class="c1"># If we encounter this label for the first time</span>
         <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="c"># Create the class covariance matrices lazily</span>
+            <span class="c1"># Create the class covariance matrices lazily</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">,</span>
                                                       <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">))</span> 
         
-        <span class="c"># Just use the relevant indices for CSP training</span>
-        <span class="c"># (for instance the last values of the time window are the</span>
-        <span class="c">#  most interesting ones for LRP prediction)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_indices</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span><span class="c"># For each time index</span>
+        <span class="c1"># Just use the relevant indices for CSP training</span>
+        <span class="c1"># (for instance the last values of the time window are the</span>
+        <span class="c1">#  most interesting ones for LRP prediction)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">relevant_indices</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span><span class="c1"># For each time index</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">relevant_indices</span><span class="p">,:]</span>
 
-        <span class="c"># Add the contribution of this data sample to the </span>
-        <span class="c"># respective covariance matrix:</span>
-        <span class="c"># cov = const * sum X_i*X_i^t</span>
+        <span class="c1"># Add the contribution of this data sample to the </span>
+        <span class="c1"># respective covariance matrix:</span>
+        <span class="c1"># cov = const * sum X_i*X_i^t</span>
         <span class="n">X</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">+=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">X</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span> 
         
-        <span class="c"># Count the number of samples per class</span>
+        <span class="c1"># Count the number of samples per class</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> \
-                     <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
-    </div>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span></div>
+    
 <div class="viewcode-block" id="CSPNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Finish the training, i.e. solve the generalized eigenvalue problem</span>
@@ -273,40 +271,40 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">sum_of_covariances</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">,</span>
                                              <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="p">))</span> 
-        <span class="c"># Normalize the empirical covariance matrices  (i.e. divide by the </span>
-        <span class="c"># number of samples per class) and compute the sum of all (two)</span>
-        <span class="c"># covariance matrices</span>
+        <span class="c1"># Normalize the empirical covariance matrices  (i.e. divide by the </span>
+        <span class="c1"># number of samples per class) and compute the sum of all (two)</span>
+        <span class="c1"># covariance matrices</span>
         <span class="n">class_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
         <span class="n">class_labels</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">class_labels</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">/=</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples_per_condition</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
             <span class="n">sum_of_covariances</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
         
-        <span class="c"># Solve the generalized eigenvalue problem to obtain the CSPs</span>
-        <span class="c"># NOTE:  It doesn&#39;t matter which of the two covariance matrix</span>
-        <span class="c">#        is passed as first argument, we simply pick the first...</span>
-        <span class="c"># numpy does not support generalized eigenvalue decomposition</span>
+        <span class="c1"># Solve the generalized eigenvalue problem to obtain the CSPs</span>
+        <span class="c1"># NOTE:  It doesn&#39;t matter which of the two covariance matrix</span>
+        <span class="c1">#        is passed as first argument, we simply pick the first...</span>
+        <span class="c1"># numpy does not support generalized eigenvalue decomposition</span>
         <span class="p">(</span><span class="n">eigenvalues</span><span class="p">,</span> <span class="n">unordered_filters</span><span class="p">)</span> <span class="o">=</span> \
              <span class="n">scipy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">covariances</span><span class="p">[</span><span class="n">class_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
                                  <span class="n">sum_of_covariances</span><span class="p">)</span>
 
-        <span class="c"># Sort filters according to eigenvalues</span>
+        <span class="c1"># Sort filters according to eigenvalues</span>
         <span class="n">preordered_filters</span> <span class="o">=</span> <span class="n">unordered_filters</span><span class="p">[:,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="o">-</span><span class="n">eigenvalues</span><span class="p">)]</span>
-        <span class="c"># We resort everything according to importance </span>
+        <span class="c1"># We resort everything according to importance </span>
         <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="o">=</span><span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="o">/</span><span class="mi">2</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="o">-</span><span class="mi">1</span><span class="o">-</span><span class="n">i</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">filters</span> <span class="o">=</span> <span class="n">preordered_filters</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="p">]</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">filters</span> <span class="o">=</span> <span class="n">preordered_filters</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="p">]</span></div>
+
 <div class="viewcode-block" id="CSPNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Apply the learned spatial filters to the given data point. &quot;&quot;&quot;</span>
-        <span class="c"># We must have computed the common spatial patterns, before</span>
-        <span class="c"># we can project the data onto the CSP subspace</span>
+        <span class="c1"># We must have computed the common spatial patterns, before</span>
+        <span class="c1"># we can project the data onto the CSP subspace</span>
         <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filters</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">)</span>
 
-        <span class="c"># If retained_channels not specified, retain all</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s">&#39;None&#39;</span><span class="p">]:</span>
+        <span class="c1"># If retained_channels not specified, retain all</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="s1">&#39;None&#39;</span><span class="p">]:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
@@ -314,10 +312,10 @@
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span><span class="o">&lt;</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;To many channels chosen for the retained channels! Replaced by maximum number.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;To many channels chosen for the retained channels! Replaced by maximum number.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="c"># We resort everything according to importance </span>
+            <span class="c1"># We resort everything according to importance </span>
             <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="o">=</span><span class="p">[]</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">number_of_channels</span><span class="o">/</span><span class="mi">2</span><span class="p">):</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
@@ -326,90 +324,96 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatio_temporal</span><span class="p">:</span>
             <span class="n">orig_shape</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
-        <span class="c"># Project the data using the learned CSP</span>
+        <span class="c1"># Project the data using the learned CSP</span>
         <span class="n">projected_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> 
                                       <span class="bp">self</span><span class="o">.</span><span class="n">filters</span><span class="p">[:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span><span class="p">])</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">spatio_temporal</span><span class="p">:</span>
             <span class="n">projected_data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">orig_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">orig_shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
         
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_channel_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">new_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;csp</span><span class="si">%03d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;csp</span><span class="si">%03d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_order</span><span class="p">]</span>
         
         <span class="k">return</span> <span class="n">TimeSeries</span><span class="p">(</span><span class="n">projected_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">new_channel_names</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">retained_channels</span><span class="p">],</span>
                           <span class="n">data</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">start_time</span><span class="p">,</span>
-                          <span class="n">data</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span>
-</div>
+                          <span class="n">data</span><span class="o">.</span><span class="n">end_time</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">marker_name</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="CSPNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
         <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">visualize_pattern</span><span class="p">:</span>
             <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
             <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store</span><span class="p">:</span>
-            <span class="c"># This node only stores the learned CSP patterns</span>
-            <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">_sp</span><span class="si">%s</span><span class="s">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;patterns&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
-            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s">&quot;wb&quot;</span><span class="p">)</span>
+            <span class="c1"># This node only stores the learned CSP patterns</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_sp</span><span class="si">%s</span><span class="s2">.pickle&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;patterns&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_split</span><span class="p">)</span>
+            <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">node_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span>
             <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filters</span><span class="p">,</span> 
                                             <span class="n">protocol</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">))</span>
             <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="c"># Store spatial filter plots if desired</span>
+            <span class="c1"># Store spatial filter plots if desired</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">visualize_pattern</span><span class="p">:</span>
             <span class="n">CSPNode</span><span class="o">.</span><span class="n">_store_spatial_filter_plots</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">filters</span><span class="p">,</span>
                                                 <span class="bp">self</span><span class="o">.</span><span class="n">channel_names</span><span class="p">,</span>
-                                                <span class="n">node_dir</span><span class="p">)</span>
-</div>
+                                                <span class="n">node_dir</span><span class="p">)</span></div>
+
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="CSPNode._store_spatial_filter_plots"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._store_spatial_filter_plots">[docs]</a>    <span class="k">def</span> <span class="nf">_store_spatial_filter_plots</span><span class="p">(</span><span class="n">filters</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Store spatial filter plots in the *result_dir*&quot;&quot;&quot;</span>
-        <span class="c"># TODO: Move to common spatial filter superclass </span>
+        <span class="c1"># TODO: Move to common spatial filter superclass </span>
         <span class="kn">import</span> <span class="nn">pylab</span>
-        <span class="c"># For all filters</span>
+        <span class="c1"># For all filters</span>
         <span class="k">for</span> <span class="n">filter_index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">filters</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
-            <span class="c"># Clear figure</span>
+            <span class="c1"># Clear figure</span>
             <span class="n">pylab</span><span class="o">.</span><span class="n">gcf</span><span class="p">()</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
-            <span class="c"># The i-th filter </span>
+            <span class="c1"># The i-th filter </span>
             <span class="n">z</span> <span class="o">=</span> <span class="n">filters</span><span class="p">[:,</span> <span class="n">filter_index</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1.0</span>
-            <span class="c"># Plot the filter</span>
+            <span class="c1"># Plot the filter</span>
             <span class="n">CSPNode</span><span class="o">.</span><span class="n">_plot_spatial_values</span><span class="p">(</span><span class="n">pylab</span><span class="o">.</span><span class="n">gca</span><span class="p">(),</span> <span class="n">z</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span>
-                                         <span class="n">title</span><span class="o">=</span><span class="s">&#39;Filter </span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="n">filter_index</span><span class="p">)</span>
-            <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s%s</span><span class="s">filter</span><span class="si">%02d</span><span class="s">.png&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">filter_index</span><span class="p">))</span>
-</div>
+                                         <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Filter </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">filter_index</span><span class="p">)</span>
+            <span class="n">pylab</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">filter</span><span class="si">%02d</span><span class="s2">.png&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="n">filter_index</span><span class="p">))</span></div>
+
     <span class="nd">@staticmethod</span>
-<div class="viewcode-block" id="CSPNode._plot_spatial_values"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._plot_spatial_values">[docs]</a>    <span class="k">def</span> <span class="nf">_plot_spatial_values</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">spatial_values</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">):</span>
-        <span class="c"># TODO: Move to common spatial filter superclass </span>
+<div class="viewcode-block" id="CSPNode._plot_spatial_values"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.spatial_filtering.csp.html#pySPACE.missions.nodes.spatial_filtering.csp.CSPNode._plot_spatial_values">[docs]</a>    <span class="k">def</span> <span class="nf">_plot_spatial_values</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">spatial_values</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="c1"># TODO: Move to common spatial filter superclass </span>
         <span class="kn">import</span> <span class="nn">pylab</span>
         
         <span class="n">ec_2d</span> <span class="o">=</span> <span class="n">StreamDataset</span><span class="o">.</span><span class="n">project2d</span><span class="p">(</span><span class="n">StreamDataset</span><span class="o">.</span><span class="n">ec</span><span class="p">)</span>
         
-        <span class="c"># Define x and y coordinates of electrodes in the order of the channels</span>
-        <span class="c"># of data</span>
+        <span class="c1"># Define x and y coordinates of electrodes in the order of the channels</span>
+        <span class="c1"># of data</span>
         <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ec_2d</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">])</span>
         <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">ec_2d</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">])</span>
         
-        <span class="c"># define grid.</span>
+        <span class="c1"># define grid.</span>
         <span class="n">xi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">150</span><span class="p">,</span> <span class="mi">150</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
         <span class="n">yi</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">125</span><span class="p">,</span> <span class="mi">125</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
         
-        <span class="c"># grid the data.</span>
-        <span class="n">zi</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">griddata</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">spatial_values</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">)</span>
+        <span class="c1"># grid the data.</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">zi</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">griddata</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">spatial_values</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Natbib packackage is not available for interpolating a&quot;</span>
+                <span class="s2">&quot; grid. Using linear interpolation instead.&quot;</span><span class="p">)</span>
+            <span class="n">zi</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">griddata</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">spatial_values</span><span class="p">,</span> <span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">,</span> <span class="n">interpl</span><span class="o">=</span><span class="s1">&#39;linear&#39;</span><span class="p">)</span>
         
-        <span class="c"># contour the gridded data, plotting dots at the nonuniform data points.</span>
-        <span class="n">ax</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">,</span> <span class="n">zi</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s">&#39;k&#39;</span><span class="p">)</span>
+        <span class="c1"># contour the gridded data, plotting dots at the nonuniform data points.</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">contour</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">,</span> <span class="n">zi</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">linewidths</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">colors</span><span class="o">=</span><span class="s1">&#39;k&#39;</span><span class="p">)</span>
         <span class="n">CS</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">contourf</span><span class="p">(</span><span class="n">xi</span><span class="p">,</span> <span class="n">yi</span><span class="p">,</span> <span class="n">zi</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">pylab</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">jet</span><span class="p">)</span>
         
         <span class="n">cb</span> <span class="o">=</span> <span class="n">pylab</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">CS</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
         
-        <span class="c"># plot data points.</span>
-        <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;o&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
-        <span class="c"># Add channel labels</span>
+        <span class="c1"># plot data points.</span>
+        <span class="n">pylab</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="c1"># Add channel labels</span>
         <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">ec_2d</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">channel_names</span><span class="p">:</span>
-                <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s">&#39;x-small&#39;</span><span class="p">)</span>
+                <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="s1">&#39;x-small&#39;</span><span class="p">)</span>
                             
         <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="o">-</span><span class="mi">125</span><span class="p">,</span> <span class="mi">125</span><span class="p">)</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
         
-        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s">&#39;bold&#39;</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">,</span> 
-                <span class="n">verticalalignment</span><span class="o">=</span><span class="s">&#39;center&#39;</span><span class="p">)</span></div></div>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="n">title</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">,</span> <span class="n">horizontalalignment</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> 
+                <span class="n">verticalalignment</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">)</span></div></div>
 </pre></div>
 
           </div>
@@ -417,7 +421,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -426,14 +430,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

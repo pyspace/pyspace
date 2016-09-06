@@ -1,0 +1,862 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.scikit_nodes &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.3 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pySPACE.missions.nodes.scikit_nodes</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- coding:utf-8; -*-</span>
+<span class="sd">&quot;&quot;&quot; Wrap the algorithms defined in `scikit.learn &lt;http://scikit-learn.org/&gt;`_ in pySPACE nodes</span>
+
+<span class="sd">For details on parameter usage look at the</span>
+<span class="sd">`scikit documentation &lt;http://scikit-learn.org/&gt;`_ or</span>
+<span class="sd">the wrapped documentation of pySPACE: :ref:`scikit_nodes`.</span>
+<span class="sd">The parameters given in the node specification are filtered, to check if they</span>
+<span class="sd">are available, and then directly forwarded to the scikit algorithm.</span>
+
+<span class="sd">This module is based heavily on the scikit.learn wrapper for the &quot;Modular</span>
+<span class="sd">toolkit for Data Processing&quot;</span>
+<span class="sd">(MDP, version 3.3, http://mdp-toolkit.sourceforge.net/).</span>
+<span class="sd">All credit goes to the MDP authors.</span>
+
+<span class="sd">MDP (version 3.3) is distributed under the following BSD license::</span>
+
+<span class="sd">    This file is part of Modular toolkit for Data Processing (MDP).</span>
+<span class="sd">    All the code in this package is distributed under the following conditions:</span>
+
+<span class="sd">    Copyright (c) 2003-2012, MDP Developers &lt;mdp-toolkit-devel@lists.sourceforge.net&gt;</span>
+
+<span class="sd">    All rights reserved.</span>
+
+<span class="sd">    Redistribution and use in source and binary forms, with or without</span>
+<span class="sd">    modification, are permitted provided that the following conditions are met:</span>
+
+<span class="sd">        * Redistributions of source code must retain the above copyright</span>
+<span class="sd">          notice, this list of conditions and the following disclaimer.</span>
+<span class="sd">        * Redistributions in binary form must reproduce the above copyright</span>
+<span class="sd">          notice, this list of conditions and the following disclaimer in the</span>
+<span class="sd">          documentation and/or other materials provided with the distribution.</span>
+<span class="sd">        * Neither the name of the Modular toolkit for Data Processing (MDP)</span>
+<span class="sd">          nor the names of its contributors may be used to endorse or promote</span>
+<span class="sd">          products derived from this software without specific prior written</span>
+<span class="sd">          permission.</span>
+
+<span class="sd">    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot; AND</span>
+<span class="sd">    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED</span>
+<span class="sd">    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span>
+<span class="sd">    DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE</span>
+<span class="sd">    FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</span>
+<span class="sd">    DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR</span>
+<span class="sd">    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER</span>
+<span class="sd">    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,</span>
+<span class="sd">    OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</span>
+<span class="sd">    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">__docformat__</span> <span class="o">=</span> <span class="s2">&quot;restructuredtext en&quot;</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">sklearn</span>
+    <span class="n">_sklearn_prefix</span> <span class="o">=</span> <span class="s1">&#39;sklearn&#39;</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">scikits.learn</span> <span class="kn">as</span> <span class="nn">sklearn</span>
+        <span class="n">_sklearn_prefix</span> <span class="o">=</span> <span class="s1">&#39;scikits.learn&#39;</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="n">_sklearn_prefix</span> <span class="o">=</span> <span class="bp">False</span>
+
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">re</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">DeprecationWarning</span><span class="p">)</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes</span> <span class="kn">import</span> <span class="n">NODE_MAPPING</span><span class="p">,</span> <span class="n">DEFAULT_NODE_MAPPING</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+
+
+<div class="viewcode-block" id="ScikitException"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.ScikitException">[docs]</a><span class="k">class</span> <span class="nc">ScikitException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for exceptions in nodes wrapping scikit algorithms.&quot;&quot;&quot;</span>
+    <span class="k">pass</span></div>
+
+
+<span class="c1"># import all submodules of sklearn (to work around lazy import)</span>
+<span class="k">def</span> <span class="nf">_version_too_old</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="n">known_good</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; version comparison &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">part</span><span class="p">,</span><span class="n">expected</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">version</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="n">known_good</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">part</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="n">expected</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">expected</span><span class="p">:</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+<span class="k">if</span> <span class="ow">not</span> <span class="n">_sklearn_prefix</span><span class="p">:</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">elif</span> <span class="n">_version_too_old</span><span class="p">(</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">8</span><span class="p">)):</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;ann&#39;</span><span class="p">,</span> <span class="s1">&#39;cluster&#39;</span><span class="p">,</span> <span class="s1">&#39;covariance&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_extraction&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_selection&#39;</span><span class="p">,</span> <span class="s1">&#39;features&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian_process&#39;</span><span class="p">,</span> <span class="s1">&#39;glm&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;linear_model&#39;</span><span class="p">,</span> <span class="s1">&#39;preprocessing&#39;</span><span class="p">,</span> <span class="s1">&#39;svm&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;pca&#39;</span><span class="p">,</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span> <span class="s1">&#39;hmm&#39;</span><span class="p">,</span> <span class="s1">&#39;fastica&#39;</span><span class="p">,</span> <span class="s1">&#39;grid_search&#39;</span><span class="p">,</span> <span class="s1">&#39;mixture&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;naive_bayes&#39;</span><span class="p">,</span> <span class="s1">&#39;neighbors&#39;</span><span class="p">,</span> <span class="s1">&#39;qda&#39;</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">_version_too_old</span><span class="p">(</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">9</span><span class="p">)):</span>
+    <span class="c1"># package structure has been changed in 0.8</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span> <span class="s1">&#39;linear_model&#39;</span><span class="p">,</span> <span class="s1">&#39;naive_bayes&#39;</span><span class="p">,</span> <span class="s1">&#39;neighbors&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;mixture&#39;</span><span class="p">,</span> <span class="s1">&#39;hmm&#39;</span><span class="p">,</span> <span class="s1">&#39;cluster&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;covariance&#39;</span><span class="p">,</span> <span class="s1">&#39;cross_val&#39;</span><span class="p">,</span> <span class="s1">&#39;grid_search&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_selection.rfe&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_extraction.image&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_extraction.text&#39;</span><span class="p">,</span> <span class="s1">&#39;pipelines&#39;</span><span class="p">,</span> <span class="s1">&#39;pls&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;gaussian_process&#39;</span><span class="p">,</span> <span class="s1">&#39;qda&#39;</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">_version_too_old</span><span class="p">(</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">11</span><span class="p">)):</span>
+    <span class="c1"># from release 0.9 cross_val becomes cross_validation and hmm is deprecated</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span> <span class="s1">&#39;linear_model&#39;</span><span class="p">,</span> <span class="s1">&#39;naive_bayes&#39;</span><span class="p">,</span> <span class="s1">&#39;neighbors&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;mixture&#39;</span><span class="p">,</span> <span class="s1">&#39;cluster&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;covariance&#39;</span><span class="p">,</span> <span class="s1">&#39;cross_validation&#39;</span><span class="p">,</span> <span class="s1">&#39;grid_search&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_selection.rfe&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_extraction.image&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_extraction.text&#39;</span><span class="p">,</span> <span class="s1">&#39;pipelines&#39;</span><span class="p">,</span> <span class="s1">&#39;pls&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;gaussian_process&#39;</span><span class="p">,</span> <span class="s1">&#39;qda&#39;</span><span class="p">,</span> <span class="s1">&#39;ensemble&#39;</span><span class="p">,</span> <span class="s1">&#39;manifold&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;metrics&#39;</span><span class="p">,</span> <span class="s1">&#39;preprocessing&#39;</span><span class="p">,</span> <span class="s1">&#39;tree&#39;</span><span class="p">]</span>
+<span class="k">elif</span> <span class="n">_version_too_old</span><span class="p">(</span><span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">17</span><span class="p">)):</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;svm&#39;</span><span class="p">,</span> <span class="s1">&#39;linear_model&#39;</span><span class="p">,</span> <span class="s1">&#39;naive_bayes&#39;</span><span class="p">,</span> <span class="s1">&#39;neighbors&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;mixture&#39;</span><span class="p">,</span> <span class="s1">&#39;cluster&#39;</span><span class="p">,</span> <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;lda&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;covariance&#39;</span><span class="p">,</span> <span class="s1">&#39;cross_validation&#39;</span><span class="p">,</span> <span class="s1">&#39;grid_search&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;feature_selection&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_extraction&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;pipeline&#39;</span><span class="p">,</span> <span class="s1">&#39;pls&#39;</span><span class="p">,</span> <span class="s1">&#39;gaussian_process&#39;</span><span class="p">,</span> <span class="s1">&#39;qda&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;ensemble&#39;</span><span class="p">,</span> <span class="s1">&#39;manifold&#39;</span><span class="p">,</span> <span class="s1">&#39;metrics&#39;</span><span class="p">,</span> <span class="s1">&#39;preprocessing&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;semi_supervised&#39;</span><span class="p">,</span> <span class="s1">&#39;tree&#39;</span><span class="p">,</span> <span class="s1">&#39;hmm&#39;</span><span class="p">]</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">scikit_modules</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;calibration&#39;</span><span class="p">,</span> <span class="s1">&#39;cluster&#39;</span><span class="p">,</span> <span class="s1">&#39;covariance&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;cross_decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;cross_validation&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;decomposition&#39;</span><span class="p">,</span> <span class="s1">&#39;discriminant_analysis&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;ensemble&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_extraction&#39;</span><span class="p">,</span> <span class="s1">&#39;feature_selection&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;gaussian_process&#39;</span><span class="p">,</span> <span class="s1">&#39;grid_search&#39;</span><span class="p">,</span> <span class="s1">&#39;isotonic&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;kernel_approximation&#39;</span><span class="p">,</span> <span class="s1">&#39;kernel_ridge&#39;</span><span class="p">,</span> <span class="s1">&#39;learning_curve&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;linear_model&#39;</span><span class="p">,</span> <span class="s1">&#39;manifold&#39;</span><span class="p">,</span> <span class="s1">&#39;metrics&#39;</span><span class="p">,</span> <span class="s1">&#39;mixture&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;multiclass&#39;</span><span class="p">,</span> <span class="s1">&#39;naive_bayes&#39;</span><span class="p">,</span> <span class="s1">&#39;neighbors&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;neural_network&#39;</span><span class="p">,</span> <span class="s1">&#39;preprocessing&#39;</span><span class="p">,</span> <span class="s1">&#39;random_projection&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;semi_supervised&#39;</span><span class="p">,</span> <span class="s1">&#39;svm&#39;</span><span class="p">,</span> <span class="s1">&#39;tree&#39;</span><span class="p">]</span>
+
+
+<span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">scikit_modules</span><span class="p">:</span>
+    <span class="c1"># not all modules may be available due to missing dependencies</span>
+    <span class="c1"># on the user system.</span>
+    <span class="c1"># we just ignore failing imports</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">__import__</span><span class="p">(</span><span class="n">_sklearn_prefix</span> <span class="o">+</span> <span class="s1">&#39;.&#39;</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+
+<span class="n">_WS_LINE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;^\s*$&#39;</span><span class="p">)</span>
+<span class="n">_WS_PREFIX_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;^(\s*)&#39;</span><span class="p">)</span>
+<span class="n">_HEADINGS_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;&#39;&#39;^(Parameters|Attributes|Methods|Examples|Notes)\n</span>
+<span class="s1">                           (----+|====+)&#39;&#39;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">M</span> <span class="o">+</span> <span class="n">re</span><span class="o">.</span><span class="n">X</span><span class="p">)</span>
+<span class="n">_UNDERLINE_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;----+|====+&#39;</span><span class="p">)</span>
+<span class="n">_VARWITHUNDER_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s1">r&#39;(\s|^)([a-zA-Z_][a-zA-Z0-9_]*_)(\s|$|[,.])&#39;</span><span class="p">)</span>
+
+<span class="n">_HEADINGS</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;Parameters&#39;</span><span class="p">,</span> <span class="s1">&#39;Attributes&#39;</span><span class="p">,</span> <span class="s1">&#39;Methods&#39;</span><span class="p">,</span> <span class="s1">&#39;Examples&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;Notes&#39;</span><span class="p">,</span> <span class="s1">&#39;References&#39;</span><span class="p">])</span>
+
+<span class="n">_DOC_TEMPLATE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="si">%s</span><span class="s2"></span>
+
+<span class="s2">This node has been automatically generated by wrapping the</span>
+<span class="s2">`</span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2"> &lt;http://scikit-learn.org/stable/modules/generated/</span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">.html&gt;`_ class</span>
+<span class="s2">from the ``sklearn`` library.  The wrapped instance can be accessed</span>
+<span class="s2">through the ``scikit_alg`` attribute.</span>
+
+<span class="si">%s</span><span class="s2"></span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_gen_docstring</span><span class="p">(</span><span class="nb">object</span><span class="p">,</span> <span class="n">docsource</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Generate and modify the docstring for each wrapped node &quot;&quot;&quot;</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="n">__module__</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="n">__name__</span>
+
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])),</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">link_module</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">module</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">link_module</span> <span class="o">=</span> <span class="n">module</span>
+
+    <span class="c1"># search for documentation string</span>
+    <span class="k">if</span> <span class="n">docsource</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">docsource</span> <span class="o">=</span> <span class="nb">object</span>
+    <span class="n">docstring</span> <span class="o">=</span> <span class="n">docsource</span><span class="o">.</span><span class="n">__doc__</span>
+    <span class="k">if</span> <span class="n">docstring</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">docstring</span> <span class="o">=</span> <span class="nb">object</span><span class="o">.</span><span class="n">__doc__</span>
+    <span class="k">if</span> <span class="n">docstring</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">docstring</span> <span class="o">=</span> <span class="s2">&quot;This algorithm contains no documentation.&quot;</span>
+        <span class="c1"># # error search for getting docstring</span>
+        <span class="c1"># print object</span>
+        <span class="c1"># print module</span>
+        <span class="c1"># print object.__dict__</span>
+        <span class="c1"># print docsource</span>
+        <span class="c1">#warnings.warn(&quot;No documentation found for %s.%s&quot; % (module, name))</span>
+        <span class="c1">#return None  # old case</span>
+        <span class="k">pass</span>
+
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">docstring</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">_WS_LINE_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+            <span class="k">break</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[:</span><span class="n">i</span><span class="p">]]</span>
+
+    <span class="n">therest</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">rstrip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]]</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">therest</span><span class="p">:</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">_WS_PREFIX_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">line</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+                     <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">therest</span> <span class="k">if</span> <span class="n">line</span><span class="p">)</span>
+        <span class="n">quoteind</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">therest</span><span class="p">):</span>
+            <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="n">prefix</span><span class="p">:]</span>
+            <span class="k">if</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">_HEADINGS</span><span class="p">:</span>
+                <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;**</span><span class="si">%s</span><span class="s1">**&#39;</span> <span class="o">%</span> <span class="n">line</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">_UNDERLINE_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">line</span><span class="p">):</span>
+                <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">_VARWITHUNDER_RE</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s1">r&#39;\1``\2``\3&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">quoteind</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">_WS_PREFIX_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">line</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="n">quoteind</span><span class="p">:</span>
+                        <span class="n">line</span> <span class="o">=</span> <span class="n">quoteind</span> <span class="o">*</span> <span class="s1">&#39; &#39;</span> <span class="o">+</span> <span class="s1">&#39;- &#39;</span> <span class="o">+</span> <span class="n">line</span><span class="p">[</span><span class="n">quoteind</span><span class="p">:]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">quoteind</span> <span class="o">=</span> <span class="bp">None</span>
+                        <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">):</span>
+                <span class="n">body</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">therest</span><span class="p">):</span>
+                    <span class="nb">next</span> <span class="o">=</span> <span class="n">therest</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">][</span><span class="n">prefix</span><span class="p">:]</span>
+                    <span class="n">quoteind</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">_WS_PREFIX_RE</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="nb">next</span><span class="p">)</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">_DOC_TEMPLATE</span> <span class="o">%</span> <span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">header</span><span class="p">),</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">link_module</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span>
+                            <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">body</span><span class="p">))</span>
+
+<span class="c1"># TODO: generalize dtype support</span>
+<span class="c1"># TODO: have a look at predict_proba for Classifier.prob</span>
+<span class="c1"># TODO: inverse &lt;-&gt; generate/rvs</span>
+<span class="c1"># TODO: deal with input_dim/output_dim</span>
+<span class="c1"># TODO: change signature of overwritten functions</span>
+<span class="c1"># TODO: wrap_scikit_instance</span>
+<span class="c1"># TODO: add sklearn availability to test info strings</span>
+<span class="c1"># TODO: which tests ? (test that particular algorithm are / are not trainable)</span>
+<span class="c1"># XXX: if class defines n_components, allow output_dim, otherwise throw exception</span>
+<span class="c1">#      also for classifiers (overwrite _set_output_dim)</span>
+<span class="c1">#      Problem: sometimes they call it &#39;k&#39; (e.g., algorithms in sklearn.cluster)</span>
+
+
+<div class="viewcode-block" id="apply_to_scikit_algorithms"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.apply_to_scikit_algorithms">[docs]</a><span class="k">def</span> <span class="nf">apply_to_scikit_algorithms</span><span class="p">(</span><span class="n">current_module</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span>
+                                <span class="n">processed_modules</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                <span class="n">processed_classes</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function that traverses a module to find scikit algorithms.</span>
+
+<span class="sd">    &#39;sklearn&#39; algorithms are identified by the &#39;fit&#39; &#39;predict&#39;,</span>
+<span class="sd">    or &#39;transform&#39; methods. The &#39;action&#39; function is applied to each found</span>
+<span class="sd">    algorithm.</span>
+
+<span class="sd">    action -- a function that is called with as ``action(class_)``, where</span>
+<span class="sd">              ``class_`` is a class that defines the &#39;fit&#39; or &#39;predict&#39; method</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># only consider modules and classes once</span>
+    <span class="k">if</span> <span class="n">processed_modules</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">processed_modules</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="n">processed_classes</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">processed_classes</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">if</span> <span class="n">current_module</span> <span class="ow">in</span> <span class="n">processed_modules</span><span class="p">:</span>
+        <span class="k">return</span>
+    <span class="n">processed_modules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_module</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">member_name</span><span class="p">,</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">current_module</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">member_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">):</span>
+            <span class="c1"># classes</span>
+            <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isclass</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="ow">and</span> <span class="n">member</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">processed_classes</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">((</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="s1">&#39;predict&#39;</span><span class="p">)</span>
+                        <span class="ow">or</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="s1">&#39;transform&#39;</span><span class="p">))</span>
+                        <span class="ow">and</span> <span class="ow">not</span> <span class="n">member</span><span class="o">.</span><span class="n">__module__</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)):</span>
+                    <span class="n">processed_classes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">action</span><span class="p">(</span><span class="n">member</span><span class="p">)</span>
+                    <span class="c1"># ignore failed imports</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Could not wrap sklearn nodes.&quot;</span><span class="p">)</span>
+
+            <span class="c1"># other modules</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">inspect</span><span class="o">.</span><span class="n">ismodule</span><span class="p">(</span><span class="n">member</span><span class="p">)</span> <span class="ow">and</span>
+                  <span class="n">member</span><span class="o">.</span><span class="n">__name__</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">_sklearn_prefix</span><span class="p">)):</span>
+                <span class="n">apply_to_scikit_algorithms</span><span class="p">(</span><span class="n">member</span><span class="p">,</span> <span class="n">action</span><span class="p">,</span> <span class="n">processed_modules</span><span class="p">,</span>
+                                            <span class="n">processed_classes</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">processed_classes</span></div>
+
+
+<span class="n">_OUTPUTDIM_ERROR</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;&#39;output_dim&#39; keyword not supported.</span>
+
+<span class="s2">Please set the output dimensionality using sklearn keyword</span>
+<span class="s2">arguments (e.g., &#39;n_components&#39;, or &#39;k&#39;). See the docstring of</span>
+<span class="s2">this class for details.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="wrap_scikit_classifier"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.wrap_scikit_classifier">[docs]</a><span class="k">def</span> <span class="nf">wrap_scikit_classifier</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrap a sklearn classifier as a BaseNode subclass.</span>
+
+<span class="sd">    The wrapper maps these node methods to their sklearn equivalents:</span>
+
+<span class="sd">    - _stop_training -&gt; fit</span>
+<span class="sd">    - _execute -&gt; predict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">newaxis</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">newaxis</span>
+
+    <span class="c1"># create a wrapper class for a sklearn classifier</span>
+    <span class="k">class</span> <span class="nc">ScikitClassifier</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+        <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FeatureVector&quot;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                     <span class="n">class_labels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="n">output_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="c1"># output_dim and n_components cannot be defined at the same time</span>
+                <span class="k">if</span> <span class="s1">&#39;n_components&#39;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+                    <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Dimensionality set both by &quot;</span>
+                           <span class="s2">&quot;output_dim=</span><span class="si">%d</span><span class="s2"> and n_components=</span><span class="si">%d</span><span class="s2">&quot;&quot;&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">ScikitException</span><span class="p">(</span><span class="n">msg</span> <span class="o">%</span> <span class="p">(</span><span class="n">output_dim</span><span class="p">,</span>
+                                                  <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;n_components&#39;</span><span class="p">]))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">accepted_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">base_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">accepted_args</span><span class="p">:</span>
+                        <span class="n">base_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">del</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+                <span class="k">del</span><span class="p">(</span><span class="n">accepted_args</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>  <span class="c1"># happens for GaussianNBSklearnNode</span>
+                <span class="n">base_kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+                <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+                <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">base_kwargs</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+                                          <span class="n">scikit_alg</span><span class="o">=</span><span class="n">scikit_class</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">),</span>
+                                          <span class="n">data</span><span class="o">=</span><span class="p">[],</span>
+                                          <span class="n">labels</span><span class="o">=</span><span class="p">[],</span>
+                                          <span class="n">class_labels</span><span class="o">=</span><span class="n">class_labels</span><span class="p">)</span>
+
+        <span class="c1"># ---- re-direct training and execution to the wrapped algorithm</span>
+
+        <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitClassifier</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)))</span>
+
+            <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">label_values</span> <span class="o">=</span> \
+                <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">s</span><span class="p">),</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label_values</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> \
+                <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)(</span><span class="s2">&quot;in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>\
+                <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> \
+                <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)(</span><span class="s2">&quot;in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> \
+                <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="p">,</span> <span class="s2">&quot;predict_proba&quot;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span>\
+                            <span class="o">%</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">score</span> <span class="o">=</span> <span class="n">prediction</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="p">,</span> <span class="s2">&quot;decision_function&quot;</span><span class="p">):</span>
+                <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">score</span> <span class="o">=</span> <span class="n">prediction</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">class_labels</span><span class="p">[</span><span class="n">prediction</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">prediction</span><span class="o">=</span><span class="n">score</span><span class="p">,</span>
+                                    <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">as_string</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;PredictionVector&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">PredictionVector</span>
+
+        <span class="c1"># ---- administrative details</span>
+
+        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Return True if the node can be trained, False otherwise.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">)</span>
+
+        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Return True if the node requires labels for training, False otherwise.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="bp">True</span>
+
+        <span class="c1"># NOTE: at this point scikit nodes can only support up to</span>
+        <span class="c1"># 64-bits floats because some call numpy.linalg.svd, which for</span>
+        <span class="c1"># some reason does not support higher precisions</span>
+        <span class="k">def</span> <span class="nf">_get_supported_dtypes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Return the list of dtypes supported by this node.</span>
+<span class="sd">            The types can be specified in any format allowed by numpy.dtype.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;float64&#39;</span><span class="p">]</span>
+
+    <span class="c1"># modify class name and docstring</span>
+    <span class="k">if</span> <span class="s2">&quot;Classifier&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+        <span class="n">ScikitClassifier</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> \
+            <span class="s1">&#39;ClassifierSklearnNode&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ScikitClassifier</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s1">&#39;SklearnNode&#39;</span>
+
+    <span class="n">ScikitClassifier</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+
+    <span class="c1"># Class must be permanently accessible from module level</span>
+    <span class="nb">globals</span><span class="p">()[</span><span class="n">ScikitClassifier</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ScikitClassifier</span>
+
+    <span class="c1"># change the docstring of the methods to match the ones in sklearn</span>
+
+    <span class="c1"># methods_dict maps ScikitNode method names to sklearn method names</span>
+    <span class="n">methods_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;__init__&#39;</span><span class="p">:</span> <span class="s1">&#39;__init__&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;stop_training&#39;</span><span class="p">:</span> <span class="s1">&#39;fit&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;execute&#39;</span><span class="p">:</span> <span class="s1">&#39;predict&#39;</span><span class="p">}</span>
+    <span class="c1">#if hasattr(scikit_class, &#39;predict_proba&#39;):</span>
+    <span class="c1">#    methods_dict[&#39;prob&#39;] = &#39;predict_proba&#39;</span>
+
+    <span class="k">for</span> <span class="n">pyspace_name</span><span class="p">,</span> <span class="n">scikit_name</span> <span class="ow">in</span> <span class="n">methods_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">pyspace_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ScikitClassifier</span><span class="p">,</span> <span class="n">pyspace_name</span><span class="p">)</span>
+        <span class="n">scikit_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="n">scikit_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_method</span><span class="p">,</span> <span class="s1">&#39;im_func&#39;</span><span class="p">):</span>
+            <span class="c1"># some scikit algorithms do not define an __init__ method</span>
+            <span class="c1"># the one inherited from &#39;object&#39; is a</span>
+            <span class="c1"># &quot;&lt;slot wrapper &#39;__init__&#39; of &#39;object&#39; objects&gt;&quot;</span>
+            <span class="c1"># which does not have a &#39;im_func&#39; attribute</span>
+            <span class="n">pyspace_method</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span>
+                                                           <span class="n">scikit_method</span><span class="o">.</span><span class="n">im_func</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">__doc__</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">ScikitClassifier</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ScikitClassifier</span></div>
+
+
+<div class="viewcode-block" id="wrap_scikit_transformer"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.wrap_scikit_transformer">[docs]</a><span class="k">def</span> <span class="nf">wrap_scikit_transformer</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Wrap a sklearn transformer as a pySPACE BaseNode subclass</span>
+
+<span class="sd">    The wrapper maps these pySPACE methods to their sklearn equivalents:</span>
+
+<span class="sd">    - _stop_training -&gt; fit</span>
+<span class="sd">    - _execute -&gt; transform</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># create a wrapper class for a sklearn transformer</span>
+    <span class="k">class</span> <span class="nc">ScikitTransformer</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+        <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FeatureVector&quot;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">output_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ScikitException</span><span class="p">(</span><span class="n">_OUTPUTDIM_ERROR</span><span class="p">)</span>
+            <span class="n">accepted_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">base_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">accepted_args</span><span class="p">:</span>
+                    <span class="n">base_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">accepted_args</span><span class="p">)</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitTransformer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+                <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">base_kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+                                          <span class="n">scikit_alg</span><span class="o">=</span><span class="n">scikit_class</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">),</span>
+                                          <span class="n">data</span><span class="o">=</span><span class="p">[],</span>
+                                          <span class="n">feature_names</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+
+        <span class="c1"># ---- re-direct training and execution to the wrapped algorithm</span>
+
+        <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">,</span> \
+                <span class="s2">&quot;Scikit-Learn Transformer nodes only support FeatureVector inputs.&quot;</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitTransformer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> \
+                    <span class="p">[</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="k">return</span> <span class="n">FeatureVector</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)</span>
+
+        <span class="c1"># ---- administrative details</span>
+
+        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Return True if the node can be trained, False otherwise.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">)</span>
+
+        <span class="nd">@staticmethod</span>
+        <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">():</span>
+            <span class="sd">&quot;&quot;&quot;Return True if the node requires labels for training, False otherwise.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+        <span class="c1"># NOTE: at this point scikit nodes can only support up to</span>
+        <span class="c1"># 64-bits floats because some call numpy.linalg.svd, which for</span>
+        <span class="c1"># some reason does not support higher precisions</span>
+        <span class="k">def</span> <span class="nf">_get_supported_dtypes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Return the list of dtypes supported by this node.</span>
+<span class="sd">            The types can be specified in any format allowed by numpy.dtype.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;float64&#39;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">as_string</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;FeatureVector&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">FeatureVector</span>
+
+    <span class="c1"># modify class name and docstring</span>
+    <span class="k">if</span> <span class="s2">&quot;Transformer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+        <span class="n">ScikitTransformer</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> \
+            <span class="s1">&#39;TransformerSklearnNode&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ScikitTransformer</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s1">&#39;SklearnNode&#39;</span>
+
+    <span class="n">ScikitTransformer</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+
+    <span class="c1"># Class must be permanently accessible from module level</span>
+    <span class="nb">globals</span><span class="p">()[</span><span class="n">ScikitTransformer</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ScikitTransformer</span>
+
+
+    <span class="c1"># change the docstring of the methods to match the ones in sklearn</span>
+
+    <span class="c1"># methods_dict maps ScikitNode method names to sklearn method names</span>
+    <span class="n">methods_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;__init__&#39;</span><span class="p">:</span> <span class="s1">&#39;__init__&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;stop_training&#39;</span><span class="p">:</span> <span class="s1">&#39;fit&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;execute&#39;</span><span class="p">:</span> <span class="s1">&#39;transform&#39;</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">pyspace_name</span><span class="p">,</span> <span class="n">scikit_name</span> <span class="ow">in</span> <span class="n">methods_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">pyspace_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ScikitTransformer</span><span class="p">,</span> <span class="n">pyspace_name</span><span class="p">)</span>
+        <span class="n">scikit_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="n">scikit_name</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_method</span><span class="p">,</span> <span class="s1">&#39;im_func&#39;</span><span class="p">):</span>
+            <span class="c1"># some scikit algorithms do not define an __init__ method</span>
+            <span class="c1"># the one inherited from &#39;object&#39; is a</span>
+            <span class="c1"># &quot;&lt;slot wrapper &#39;__init__&#39; of &#39;object&#39; objects&gt;&quot;</span>
+            <span class="c1"># which does not have a &#39;im_func&#39; attribute</span>
+            <span class="n">pyspace_method</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span>
+                                                            <span class="n">scikit_method</span><span class="o">.</span><span class="n">im_func</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">__doc__</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">ScikitTransformer</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ScikitTransformer</span></div>
+
+
+<div class="viewcode-block" id="wrap_scikit_predictor"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.wrap_scikit_predictor">[docs]</a><span class="k">def</span> <span class="nf">wrap_scikit_predictor</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Wrap a sklearn predictor as an pySPACE BaseNode subclass</span>
+
+<span class="sd">    The wrapper maps these pySPACE methods to their sklearn equivalents:</span>
+
+<span class="sd">    * _stop_training -&gt; fit</span>
+<span class="sd">    * _execute -&gt; predict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># create a wrapper class for a sklearn predictor</span>
+    <span class="k">class</span> <span class="nc">ScikitPredictor</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
+        <span class="n">input_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;FeatureVector&quot;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">output_dim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ScikitException</span><span class="p">(</span><span class="n">_OUTPUTDIM_ERROR</span><span class="p">)</span>
+            <span class="n">accepted_args</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getargspec</span><span class="p">(</span><span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">base_kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">accepted_args</span><span class="p">:</span>
+                    <span class="n">base_kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">del</span><span class="p">(</span><span class="n">accepted_args</span><span class="p">)</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitPredictor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+                <span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">base_kwargs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">kwargs</span><span class="o">=</span><span class="n">kwargs</span><span class="p">,</span>
+                                          <span class="n">data</span><span class="o">=</span><span class="p">[],</span>
+                                          <span class="n">labels</span><span class="o">=</span><span class="p">[],</span>
+                                          <span class="n">scikit_alg</span><span class="o">=</span><span class="n">scikit_class</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">))</span>
+
+        <span class="c1"># ---- re-direct training and execution to the wrapped algorithm</span>
+
+        <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+
+        <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">ScikitPredictor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">label_values</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label_values</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> \
+                    <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)(</span><span class="s2">&quot;in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> \
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">prediction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">),</span> \
+                    <span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)(</span><span class="s2">&quot;in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span><span class="o">%</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> \
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="p">,</span> <span class="s2">&quot;predict_proba&quot;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> in node </span><span class="si">%s</span><span class="s2">:</span><span class="se">\n\t</span><span class="s2">&quot;</span> \
+                                  <span class="o">%</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span><span class="o">+</span><span class="n">e</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">except</span><span class="p">:</span>
+                        <span class="n">score</span> <span class="o">=</span> <span class="n">prediction</span>
+            <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="p">,</span> <span class="s2">&quot;decision_function&quot;</span><span class="p">):</span>
+                <span class="n">score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">scikit_alg</span><span class="o">.</span><span class="n">decision_function</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># if nothing else works, we set the score of the</span>
+                <span class="c1"># prediction to be equal to the prediction itself.</span>
+                <span class="n">score</span> <span class="o">=</span> <span class="n">prediction</span>
+
+            <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">prediction</span><span class="p">,</span> <span class="n">prediction</span><span class="o">=</span><span class="n">score</span><span class="p">,</span>
+                                    <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+        <span class="c1"># ---- administrative details</span>
+
+        <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Return True if the node can be trained, False otherwise.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">)</span>
+
+        <span class="c1"># NOTE: at this point scikit nodes can only support up to 64-bits floats</span>
+        <span class="c1"># because some call numpy.linalg.svd, which for some reason does not</span>
+        <span class="c1"># support higher precisions</span>
+        <span class="k">def</span> <span class="nf">_get_supported_dtypes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;Return the list of dtypes supported by this node.</span>
+<span class="sd">            The types can be specified in any format allowed by numpy.dtype.&quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;float32&#39;</span><span class="p">,</span> <span class="s1">&#39;float64&#39;</span><span class="p">]</span>
+
+        <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">as_string</span><span class="p">:</span>
+                <span class="k">return</span> <span class="s2">&quot;PredictionVector&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">PredictionVector</span>
+
+    <span class="c1"># modify class name and docstring</span>
+    <span class="k">if</span> <span class="s2">&quot;Regression&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="ow">and</span> \
+            <span class="s2">&quot;Regressor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">:</span>
+        <span class="n">ScikitPredictor</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> \
+            <span class="s1">&#39;RegressorSklearnNode&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ScikitPredictor</span><span class="o">.</span><span class="n">__name__</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span> <span class="o">+</span> <span class="s1">&#39;SklearnNode&#39;</span>
+    <span class="n">ScikitPredictor</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+
+    <span class="c1"># Class must be permanently accessible from module level</span>
+    <span class="nb">globals</span><span class="p">()[</span><span class="n">ScikitPredictor</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">ScikitPredictor</span>
+
+    <span class="c1"># change the docstring of the methods to match the ones in sklearn</span>
+
+    <span class="c1"># methods_dict maps ScikitPredictor method names to sklearn method names</span>
+    <span class="n">methods_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;__init__&#39;</span><span class="p">:</span> <span class="s1">&#39;__init__&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;stop_training&#39;</span><span class="p">:</span> <span class="s1">&#39;fit&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;execute&#39;</span><span class="p">:</span> <span class="s1">&#39;predict&#39;</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">pyspace_name</span><span class="p">,</span> <span class="n">scikit_name</span> <span class="ow">in</span> <span class="n">methods_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">pyspace_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">ScikitPredictor</span><span class="p">,</span> <span class="n">pyspace_name</span><span class="p">)</span>
+        <span class="n">scikit_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="n">scikit_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_method</span><span class="p">,</span> <span class="s1">&#39;im_func&#39;</span><span class="p">):</span>
+            <span class="c1"># some scikit algorithms do not define an __init__ method</span>
+            <span class="c1"># the one inherited from &#39;object&#39; is a</span>
+            <span class="c1"># &quot;&lt;slot wrapper &#39;__init__&#39; of &#39;object&#39; objects&gt;&quot;</span>
+            <span class="c1"># which does not have a &#39;im_func&#39; attribute</span>
+            <span class="n">pyspace_method</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span>
+                                                        <span class="n">scikit_method</span><span class="o">.</span><span class="n">im_func</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">__doc__</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">ScikitPredictor</span><span class="o">.</span><span class="n">__init__</span><span class="o">.</span><span class="n">im_func</span><span class="o">.</span><span class="n">__doc__</span> <span class="o">=</span> <span class="n">_gen_docstring</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ScikitPredictor</span></div>
+
+
+<span class="c1">#list candidate nodes</span>
+<div class="viewcode-block" id="print_public_members"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.print_public_members">[docs]</a><span class="k">def</span> <span class="nf">print_public_members</span><span class="p">(</span><span class="n">class_</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Print methods of sklearn algorithm &quot;&quot;&quot;</span>
+    <span class="k">print</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span> <span class="o">*</span> <span class="mi">15</span>
+    <span class="k">print</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> (</span><span class="si">%s</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">class_</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">class_</span><span class="o">.</span><span class="n">__module__</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">attr_name</span> <span class="ow">in</span> <span class="nb">dir</span><span class="p">(</span><span class="n">class_</span><span class="p">):</span>
+        <span class="n">attr</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">attr_name</span><span class="p">)</span>
+        <span class="c1">#print attr_name, type(attr)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">attr_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">inspect</span><span class="o">.</span><span class="n">ismethod</span><span class="p">(</span><span class="n">attr</span><span class="p">):</span>
+            <span class="k">print</span> <span class="s1">&#39; -&#39;</span><span class="p">,</span> <span class="n">attr_name</span></div>
+
+<div class="viewcode-block" id="wrap_scikit_algorithms"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.scikit_nodes.html#pySPACE.missions.nodes.scikit_nodes.wrap_scikit_algorithms">[docs]</a><span class="k">def</span> <span class="nf">wrap_scikit_algorithms</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="n">nodes_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Check *scikit_class* and append new wrapped class to *nodes_list*</span>
+
+<span class="sd">    Currently only classifiers subclassing ``sklearn.base.ClassifierMixin``</span>
+<span class="sd">    and having a *fit* method were integrated and tested.</span>
+<span class="sd">    Algorithms with the *transform* function are also available.</span>
+<span class="sd">    *predict* nodes will be available soon but require more testing especially</span>
+<span class="sd">    of regression in pySPACE.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">class_name</span> <span class="o">=</span> <span class="n">scikit_class</span><span class="o">.</span><span class="n">__name__</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">class_name</span><span class="p">[:</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Base&#39;</span> <span class="ow">or</span> <span class="n">class_name</span> <span class="o">==</span> <span class="s1">&#39;LinearModel&#39;</span>
+            <span class="ow">or</span> <span class="n">class_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;EllipticEnvelop&#39;</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="n">class_name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;ForestClassifier&#39;</span><span class="p">)):</span>
+        <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">is_classifier</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span> \
+            <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">):</span>
+        <span class="n">nodes_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wrap_scikit_classifier</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">is_regressor</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">)</span> \
+            <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">):</span>
+        <span class="c1"># WARNING: Regression is not sufficiently tested in pySPACE</span>
+        <span class="n">nodes_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wrap_scikit_predictor</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">))</span>
+    <span class="c1"># Some (abstract) transformers do not implement fit.</span>
+    <span class="k">elif</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;transform&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">,</span> <span class="s1">&#39;fit&#39;</span><span class="p">):</span>
+        <span class="n">nodes_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">wrap_scikit_transformer</span><span class="p">(</span><span class="n">scikit_class</span><span class="p">))</span></div>
+
+<span class="k">if</span> <span class="n">_sklearn_prefix</span><span class="p">:</span>
+    <span class="n">scikit_nodes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">apply_to_scikit_algorithms</span><span class="p">(</span>
+        <span class="n">sklearn</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">wrap_scikit_algorithms</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">scikit_nodes</span><span class="p">))</span>
+    <span class="c1"># add scikit nodes to dictionary</span>
+    <span class="k">for</span> <span class="n">wrapped_c</span> <span class="ow">in</span> <span class="n">scikit_nodes</span><span class="p">:</span>
+        <span class="n">DEFAULT_NODE_MAPPING</span><span class="p">[</span><span class="n">wrapped_c</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">wrapped_c</span>
+        <span class="n">NODE_MAPPING</span><span class="p">[</span><span class="n">wrapped_c</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">wrapped_c</span>
+        <span class="n">NODE_MAPPING</span><span class="p">[</span><span class="n">wrapped_c</span><span class="o">.</span><span class="n">__name__</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]]</span> <span class="o">=</span> <span class="n">wrapped_c</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">scikit_nodes</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">del</span><span class="p">(</span><span class="n">wrapped_c</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+    </div>
+  </body>
+</html>

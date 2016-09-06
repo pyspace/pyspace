@@ -1,0 +1,433 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.resources.dataset_defs.prediction_vector &mdash; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.3 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pySPACE.resources.dataset_defs.prediction_vector</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Load and store data sets containing :mod:`Prediction Vectors&lt;pySPACE.resources.data_types.prediction_vector&gt;` &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">cPickle</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">get_author</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+
+<div class="viewcode-block" id="PredictionVectorDataset"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset">[docs]</a><span class="k">class</span> <span class="nc">PredictionVectorDataset</span><span class="p">(</span><span class="n">BaseDataset</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Prediction Vector dataset class</span>
+
+<span class="sd">    The class at hand contains the methods needed to work with the datasets</span>
+<span class="sd">    consisting of :class:`~pySPACE.resources.data_types.prediction_vector.PredictionVectorDataset`</span>
+
+<span class="sd">    The following data formats are currently supported:</span>
+<span class="sd">        - `*.csv` - with or without a header column</span>
+<span class="sd">        - `*.pickle`</span>
+
+<span class="sd">    TODO: Add functionality for the `*.arff` format.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The implementation of the current dataset is adapted from the</span>
+<span class="sd">        :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset` and</span>
+<span class="sd">        :class:`~pySPACE.resources.dataset_defs.time_series_vector.TimeSeriesDataset`.</span>
+<span class="sd">        For a more thorough documentation, we refer the reader to the 2 datasets</span>
+<span class="sd">        mentioned above.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        :dataset_md:</span>
+
+<span class="sd">            Dictionary containing meta data for the collection to be loaded.</span>
+<span class="sd">            Out of these parameters, the most important one is the number of</span>
+<span class="sd">            predictors since it how the Prediction Vectors will be generated.</span>
+
+<span class="sd">        :num_predictors:</span>
+
+<span class="sd">            The number of predictors that each PredictionVector contains.</span>
+<span class="sd">            This parameter is important for determining the dimensionality of</span>
+<span class="sd">            the PredictionVector.</span>
+
+
+
+<span class="sd">    **Special CSV Parameters**</span>
+
+<span class="sd">        :delimiter:</span>
+<span class="sd">            Needed only when dealing with `*.csv` files. The default is</span>
+<span class="sd">            `,` is used or the tabulator `\t`. When storing, `,` is used.</span>
+
+<span class="sd">            (*recommended, default: &#39;,&#39;*)</span>
+
+<span class="sd">        :label_column:</span>
+<span class="sd">            Column containing the true label of the data point</span>
+
+<span class="sd">            Normally this column looses its heading.</span>
+<span class="sd">            when saving the csv file, the default, -1, is used.</span>
+
+<span class="sd">            (*recommended, default: -1*)</span>
+
+<span class="sd">        :ignored_columns:</span>
+<span class="sd">            List of numbers containing the numbers of irrelevant columns,</span>
+<span class="sd">            e.g., `[1,2,8,42]`</span>
+
+<span class="sd">            After the data is loaded, this parameter becomes obsolete.</span>
+
+<span class="sd">            .. todo:: Enable and document eval syntax</span>
+
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">        :ignored_rows:</span>
+<span class="sd">            Replace row in description of &#39;ignored_columns&#39;</span>
+
+<span class="sd">            (*optional, default: []*)</span>
+
+<span class="sd">    :Author: Andrei Ignat (andrei_cristian.ignat@dfki.de)</span>
+<span class="sd">    :Created: 2014/10/15</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PredictionVectorDataset.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataset_md</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">num_predictors</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read out the data from the given collection &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PredictionVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span><span class="o">=</span><span class="n">dataset_md</span><span class="p">)</span>
+        <span class="c1"># we want to remember the number of predictions</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">dataset_md</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="c1">#data has to be loaded</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Loading prediction vectors from input collection.&quot;</span><span class="p">)</span>
+            <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;dataset_directory&quot;</span><span class="p">]</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;storage_format&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># code copied from TimeSeriesDataset defs</span>
+            <span class="k">if</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">)</span> \
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;train_test&quot;</span><span class="p">]</span> \
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;splits&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> \
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># The collection consists only of a single set of data, for</span>
+                <span class="c1"># one run, one splitting, and only test data</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_run&quot;</span><span class="p">,</span> <span class="s2">&quot;_run0&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_sp&quot;</span><span class="p">,</span> <span class="s2">&quot;_sp0&quot;</span><span class="p">)</span>\
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_tt&quot;</span><span class="p">,</span> <span class="s2">&quot;_test&quot;</span><span class="p">)</span>
+                <span class="c1"># File that contains the PredictionVector objects</span>
+                <span class="n">pv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
+
+                <span class="c1"># Actual data will be loaded lazily</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pv_file</span>
+            <span class="k">elif</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">run_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">split_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;splits&quot;</span><span class="p">]):</span>
+                        <span class="k">for</span> <span class="n">train_test</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+                            <span class="c1"># The collection consists only of a single set of</span>
+                            <span class="c1"># data, for one run, one splitting, and only test</span>
+                            <span class="c1"># data</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">]</span>\
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_run&quot;</span><span class="p">,</span> <span class="s2">&quot;_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">run_nr</span><span class="p">)</span>\
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_sp&quot;</span><span class="p">,</span><span class="s2">&quot;_sp</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">split_nr</span><span class="p">)</span>\
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_tt&quot;</span><span class="p">,</span><span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">train_test</span><span class="p">)</span>
+                            <span class="c1"># File that contains the PredictionVector objects</span>
+                            <span class="n">pv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+                            <span class="c1"># Actual data will be loaded lazily</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">pv_file</span>
+            <span class="k">elif</span> <span class="n">dataset_md</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;file_name&quot;</span><span class="p">):</span>
+                <span class="n">fv_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">fv_file</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="PredictionVectorDataset.add_sample"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset.add_sample">[docs]</a>    <span class="k">def</span> <span class="nf">add_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">train</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">run</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Add a prediction vector to this collection &quot;&quot;&quot;</span>
+        <span class="c1"># we count the total number of predictors in the dataset</span>
+        <span class="c1"># and update it whenever a new sample is added</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">:</span> <span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">prediction</span><span class="p">)})</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">]</span><span class="o">!=</span><span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">prediction</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Inconsistent number of predictors for sample.&quot;</span>
+                          <span class="s2">&quot;Expected </span><span class="si">%d</span><span class="s2"> and received </span><span class="si">%d</span><span class="s2"> predictors&quot;</span> <span class="o">%</span>
+                          <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">],</span>
+                           <span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">prediction</span><span class="p">)))</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Remember all class labels since these will be stored</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;classes_names&quot;</span><span class="p">]:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;classes_names&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;classes_names&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">label</span><span class="p">]})</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">PredictionVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span>
+                                                        <span class="n">train</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictionVectorDataset.dump"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset.dump">[docs]</a>    <span class="k">def</span> <span class="nf">dump</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_path</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Dumps this collection into a file &quot;&quot;&quot;</span>
+        <span class="c1"># Remove the predictor from the prediction vectors</span>
+        <span class="k">for</span> <span class="n">values</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+                <span class="n">sample</span><span class="o">.</span><span class="n">predictor</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c1"># Delegate to super class</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PredictionVectorDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictionVectorDataset.get_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Load the data from a prediction file &quot;&quot;&quot;</span>
+        <span class="n">classes_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;classes_names&quot;</span><span class="p">]</span>
+        <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;storage_format&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># todo: automatical loading of csv?</span>
+        <span class="n">delimiter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;delimiter&quot;</span><span class="p">,</span> <span class="s2">&quot;,&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Wrong delimiter (&#39;</span><span class="si">%s</span><span class="s2">&#39;) given. Using default &#39;,&#39;.&quot;</span> <span class="o">%</span>
+                      <span class="n">delimiter</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+            <span class="n">delimiter</span> <span class="o">=</span> <span class="s2">&quot;,&quot;</span>
+
+        <span class="c1"># Do lazy loading of the prediction vector objects.</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="nb">basestring</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Lazy loading of </span><span class="si">%s</span><span class="s2"> prediction vectors from input &quot;</span>
+                      <span class="s2">&quot;collection for run </span><span class="si">%s</span><span class="s2">, split </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_test</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span>
+                                                            <span class="n">split_nr</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s2">&quot;pickle&quot;</span><span class="p">:</span>
+                <span class="c1"># Load the data from a pickled file</span>
+                <span class="nb">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">:</span><span class="n">numpy</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">prediction</span><span class="p">)})</span>
+
+            <span class="k">elif</span> <span class="s2">&quot;csv&quot;</span> <span class="ow">in</span> <span class="n">s_format</span><span class="p">:</span>
+                <span class="c1"># load file</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)])</span>
+                <span class="n">data_set</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="c1"># getting rid of all unwanted rows</span>
+                <span class="k">if</span> <span class="s2">&quot;ignored_rows&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">:</span>
+                    <span class="n">ignored_rows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;ignored_rows&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">ignored_rows</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Wrong format: Ignored rows included!&quot;</span><span class="p">)</span>
+                        <span class="n">ignored_rows</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">ignored_rows</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+                    <span class="n">remove_list</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ignored_rows</span><span class="p">:</span>
+                        <span class="n">remove_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_set</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">remove_list</span><span class="p">:</span>
+                        <span class="n">data_set</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s2">&quot;csv&quot;</span><span class="p">:</span>
+                    <span class="n">names</span> <span class="o">=</span> <span class="n">data_set</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+                    <span class="n">data_set</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+                <span class="n">line</span> <span class="o">=</span> <span class="n">data_set</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+                <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\r</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                        <span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                <span class="n">len_line</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+
+                <span class="c1"># get and prepare label column numbers (len_line needed)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">true_label_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;true_label_column&quot;</span><span class="p">]</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="n">true_label_column</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">num_predictors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">]</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">num_predictors</span> <span class="o">=</span> <span class="mi">1</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;ignored_columns&quot;</span><span class="p">):</span>
+                    <span class="n">ignored_columns</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;ignored_columns&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">ignored_columns</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Wrong format: Ignored columns included!&quot;</span><span class="p">)</span>
+                        <span class="n">ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">new_ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">ignored_columns</span><span class="p">:</span>
+                        <span class="n">i</span> <span class="o">=</span>  <span class="nb">int</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">i</span> <span class="o">+=</span> <span class="n">len_line</span>
+                        <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">true_label_column</span><span class="p">:</span>
+                            <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+                        <span class="n">new_ignored_columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">new_ignored_columns</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">new_ignored_columns</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+
+                <span class="c1"># read the data line by line</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">data_set</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">delimiter</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Line without delimiter:</span><span class="se">\n</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">line</span><span class="p">))</span>
+                        <span class="k">continue</span>
+                    <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">delimiter</span><span class="p">)</span>
+                    <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n\r</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="n">true_label</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                    <span class="n">pred_labels</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">pred_scores</span> <span class="o">=</span> <span class="p">[]</span>
+
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_predictors</span><span class="p">):</span>
+                        <span class="n">pred_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">()))</span>
+                        <span class="n">pred_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">pop</span><span class="p">())</span>
+
+                    <span class="k">if</span> <span class="n">true_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">classes_names</span><span class="p">:</span>
+                        <span class="n">classes_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">true_label</span><span class="p">)</span>
+
+                    <span class="n">sample</span> <span class="o">=</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">pred_labels</span><span class="p">,</span>
+                                              <span class="n">prediction</span><span class="o">=</span><span class="n">pred_scores</span><span class="p">)</span>
+
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">add_sample</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">true_label</span><span class="p">,</span>
+                                    <span class="n">train</span><span class="o">=</span><span class="n">train_test</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split_nr</span><span class="p">,</span>
+                                    <span class="n">run</span><span class="o">=</span><span class="n">run_nr</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">prediction</span><span class="p">),</span>
+                       <span class="s2">&quot;classes_names&quot;</span><span class="p">:</span> <span class="n">classes_names</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="PredictionVectorDataset.store"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.prediction_vector.html#pySPACE.resources.dataset_defs.prediction_vector.PredictionVectorDataset.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">s_format</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;pickle&quot;</span><span class="p">,</span> <span class="s2">&quot;real&quot;</span><span class="p">]):</span>
+        <span class="sd">&quot;&quot;&quot; store the collection in *result_dir*&quot;&quot;&quot;</span>
+
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;predictions&quot;</span>
+        <span class="c1"># Update the meta data</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">get_author</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;prediction_vector&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;storage_format&quot;</span><span class="p">:</span> <span class="n">s_format</span><span class="p">,</span>
+                               <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+                               <span class="s2">&quot;data_pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;data_run&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span>
+                                                 <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_sp_tt.&quot;</span> <span class="o">+</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">s_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;csv&quot;</span><span class="p">,</span> <span class="s2">&quot;arff&quot;</span><span class="p">,</span> <span class="s2">&quot;pickle&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Storage format not supported! Using default.&quot;</span><span class="p">,</span>
+                      <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="s2">&quot;pickle&quot;</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">prediction_vectors</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="c1"># Construct result directory</span>
+            <span class="n">result_path</span> <span class="o">=</span> <span class="n">result_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;data&quot;</span> \
+                            <span class="o">+</span> <span class="s2">&quot;_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">result_path</span><span class="p">):</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">result_path</span><span class="p">)</span>
+
+            <span class="n">key_str</span> <span class="o">=</span> <span class="s2">&quot;_sp</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="c1"># Store data depending on the desired format</span>
+            <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s2">&quot;pickle&quot;</span><span class="p">:</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.pickle&quot;</span><span class="p">),</span>
+                                   <span class="s2">&quot;w&quot;</span><span class="p">)</span>
+                <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">prediction_vectors</span><span class="p">,</span> <span class="n">result_file</span><span class="p">,</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="c1"># Write as Comma Separated Value</span>
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.csv&quot;</span><span class="p">),</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Predicted Label, Prediction Score, True Label </span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">pv</span> <span class="ow">in</span> <span class="n">prediction_vectors</span><span class="p">:</span>
+                        <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="s2">, </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pv</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># we begin by dealing with the header of the csv file</span>
+                    <span class="n">base_header</span> <span class="o">=</span> <span class="s2">&quot;Predicted </span><span class="si">%(index)d</span><span class="s2"> Label, Prediction </span><span class="si">%(index)d</span><span class="s2"> Score, &quot;</span>
+                    <span class="n">base_result</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%(label)s</span><span class="s2">, </span><span class="si">%(score)s</span><span class="s2">,&quot;</span>
+                    <span class="n">header</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">]):</span>
+                        <span class="n">header</span><span class="o">+=</span> <span class="n">base_header</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">header</span> <span class="o">+=</span> <span class="s2">&quot;True Label</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+
+                    <span class="c1"># and now we can write each of the prediction vectors in turn</span>
+
+                    <span class="k">for</span> <span class="n">pv</span> <span class="ow">in</span> <span class="n">prediction_vectors</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;num_predictors&quot;</span><span class="p">]):</span>
+                            <span class="n">result</span> <span class="o">+=</span> <span class="n">base_result</span> <span class="o">%</span> <span class="nb">dict</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">pv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">label</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                                                         <span class="n">score</span><span class="o">=</span><span class="n">pv</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+                        <span class="n">result</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+        <span class="c1">#Store meta data</span>
+        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+    </div>
+  </body>
+</html>

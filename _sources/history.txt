@@ -70,22 +70,46 @@ main pySPACE paper:
 
   | Mario Michael Krell, Sirko Straube, Anett Seeland, Hendrik Wöhrle, Johannes Teiwes, Jan Hendrik Metzen, Elsa Andrea Kirchner, Frank Kirchner (2013)
   | `pySPACE — A Signal Processing and Classification Environment in Python <http://www.frontiersin.org/Neuroinformatics/10.3389/fninf.2013.00040/abstract>`_
-  | In Frontiers in Neuroinformatics 7(40), doi: 10.3389/fninf.2013.00040, in press
+  | In Frontiers in Neuroinformatics 7(40), doi: 10.3389/fninf.2013.00040
 
 Journal Publications
 --------------------
 
+PhD thesis with a lot of evaluations, implemented and published with pySPACE
+
+  | Mario Michael Krell (2015)
+  | `Generalizing, Decoding, and Optimizing Support Vector Machine Classification <http://nbn-resolving.de/urn:nbn:de:gbv:46-00104380-12>`_
+  | PhD Thesis, University of Bremen, Bremen
+
+introduction of new visualization approach for processing pipelines in pySPACE
+
+  | Sirko Straube, Mario Michael Krell (2015)
+  | `Backtransformation: a new representation of data processing chains with a scalar decision function <http://dx.doi.org/10.1007/s11634-015-0229-3>`_
+  | Advances in Data Analysis and Classification, doi: 10.1007/s11634-015-0229-3
+
+large comparison of online learning approaches and introduction of adaptive xDAWN
+
+  | Hendrik Wöhrle, Mario Michael Krell, Sirko Straube, Su Kyoung Kim, Elsa Andrea Kirchner, Frank Kirchner (2015)
+  | `An Adaptive Spatial Filter for User-Independent Single Trial Detection of Event-Related Potentials <http://dx.doi.org/10.1109/TBME.2015.2402252>`_
+  | IEEE Transactions on Biomedical Engineering 62(7), doi: 10.1109/TBME.2015.2402252
+
+evaluation of one class approaches including a variant of the BRMM classifier:
+
+  | Mario Michael Krell, Hendrik Wöhrle (2015)
+  | `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
+  | Pattern Recognition Letters, Elsevier, doi: 10.1016/j.patrec.2014.11.008
+
 comparison of evaluation metrics for classification on data with imbalanced class ratio:
 
-  | Sirko Straube, Mario Michael Krell (2014),
+  | Sirko Straube, Mario Michael Krell (2014)
   | `How to evaluate an agent's behaviour to infrequent events? — Reliable performance estimation insensitive to class distribution <http://dx.doi.org/10.3389/fncom.2014.00043>`_,
   | In Frontiers in Computational Neuroscience 8(43), doi:10.3389/fncom.2014.00043
 
-evaluations of Balanced Relative Margin Machine (BRMM) classifier:
+evaluation of Balanced Relative Margin Machine (BRMM) classifier:
 
   | Mario Michael Krell, David Feess, Sirko Straube (2014)
   | `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
-  | In Pattern Recognition Letters, Elsevier, doi: 10.1016/j.patrec.2013.09.018, in press
+  | In Pattern Recognition Letters 41, Elsevier, doi: 10.1016/j.patrec.2013.09.018
 
 comparison of eye artifact removal methods:
 
@@ -107,6 +131,18 @@ large scale evaluation and comparison of sensor selection algorithms:
 
 Conference Publications
 -----------------------
+
+evaluation of different online training dataset manipulations for online SVMs
+
+  | Mario Michael Krell, Nils Wilshusen, Andrei Cristian Ignat, Su Kyoung Kim (2015)
+  | `Comparison of Data Selection Strategies For Online Support Vector Machine Classification <http://dx.doi.org/10.5220/0005650700590067>`_
+  | Proceedings of the International Congress on Neurotechnology, Electronics and Informatics, SciTePress, doi: 10.5220/0005650700590067
+
+evaluation of the regularized version of the adaptive xDAWN spatial filter
+
+  | Mario Michael Krell, Anett Seeland, Hendrik Wöhrle
+  | `raxDAWN: Circumventing Overfitting of the Adaptive xDAWN <http://dx.plos.org/10.5220/0005657500680075>`_
+  | Proceedings of the International Congress on Neurotechnology, Electronics and Informatics, SciTePress, 2015
 
 application in movement prediction with :mod:`pySPACE live<pySPACE.run.launch_live>`:
 

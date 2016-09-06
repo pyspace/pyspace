@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../index.html">
               <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.operations.node_chain</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Interface to :mod:`~pySPACE.environments.chains.node_chain` using the :class:`~pySPACE.environments.chains.node_chain.BenchmarkNodeChain`</span>
+<span></span><span class="sd">&quot;&quot;&quot; Interface to :mod:`~pySPACE.environments.chains.node_chain` using the :class:`~pySPACE.environments.chains.node_chain.BenchmarkNodeChain`</span>
 
 <span class="sd">.. image:: ../../graphics/node_chain.png</span>
 <span class="sd">   :width: 500</span>
@@ -170,9 +167,17 @@
 <span class="sd">constraints</span>
 <span class="sd">-----------</span>
 
-<span class="sd">List of strings, where the parameters values are replaced and</span>
-<span class="sd">which is afterwards evaluated to check if is *True*.</span>
-<span class="sd">If it is not, the parameter is rejected.</span>
+<span class="sd">List of strings, where the place holders for the parameter values are replaced</span>
+<span class="sd">as in the node chain template.</span>
+<span class="sd">After creating all possible combinations of parameters, they are inserted</span>
+<span class="sd">into this string and the string is evaluated like a Python expression.</span>
+<span class="sd">If it is not evaluated to *True*, the parameter is rejected.</span>
+<span class="sd">The test is performed for each constraint (string). For being used later on,</span>
+<span class="sd">a parameter setting has to pass all tests. Example:</span>
+
+<span class="sd">.. code-block:: yaml</span>
+
+<span class="sd">    __alg__ in [&#39;A&#39;,&#39;B&#39;,&#39;C&#39;] and __par__ == 0.1 or __alg__ == &#39;D&#39;</span>
 
 <span class="sd">(*optional, default: []*)</span>
 
@@ -195,7 +200,7 @@
 <span class="sd">storage_format</span>
 <span class="sd">--------------</span>
 
-<span class="sd">Some datsets give the opportunity to choose between different</span>
+<span class="sd">Some datasets give the opportunity to choose between different</span>
 <span class="sd">formats for storing the result. The choice can be specified here.</span>
 <span class="sd">For details look at the :mod:`~pySPACE.resources.dataset_defs` documentation.</span>
 <span class="sd">If the format is not specified, the default of the</span>
@@ -278,6 +283,22 @@
 <span class="sd">.. code-block:: yaml</span>
 
 <span class="sd">    type: node_chain</span>
+
+<span class="sd">    input_path: &quot;example_data&quot;</span>
+<span class="sd">    templates : [&quot;example_flow.yaml&quot;]</span>
+<span class="sd">    backend: &quot;local&quot;</span>
+<span class="sd">    parameter_ranges :</span>
+<span class="sd">        __LOWER_CUTOFF__ : [0.1, 1.0, 2.0]</span>
+<span class="sd">        __UPPER_CUTOFF__ : [2.0, 4.0]</span>
+<span class="sd">    constraints:</span>
+<span class="sd">        - &quot;__LOWER_CUTOFF__ &lt; __UPPER_CUTOFF__&quot;</span>
+
+
+<span class="sd">    runs : 10</span>
+
+<span class="sd">.. code-block:: yaml</span>
+
+<span class="sd">    type: node_chain</span>
 <span class="sd">    input_path: &quot;my_data&quot;</span>
 <span class="sd">    runs : 2</span>
 <span class="sd">    templates : [&quot;example_node_chain.yaml&quot;]</span>
@@ -307,14 +328,15 @@
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">import</span> <span class="nn">gc</span>
+<span class="kn">import</span> <span class="nn">hashlib</span>
 
-<span class="c"># processing was renamed in Python 2.6 to multiprocessing</span>
+<span class="c1"># processing was renamed in Python 2.6 to multiprocessing</span>
 <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">6</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">processing</span>
 <span class="k">else</span><span class="p">:</span>
     <span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="kn">as</span> <span class="nn">processing</span>
 
-<span class="c"># import of all necessary pySPACE packages</span>
+<span class="c1"># import of all necessary pySPACE packages</span>
 <span class="kn">import</span> <span class="nn">pySPACE</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.operations.base</span> <span class="kn">import</span> <span class="n">Operation</span><span class="p">,</span> <span class="n">Process</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
@@ -325,6 +347,7 @@
 
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.performance_result</span> \
     <span class="kn">import</span> <span class="n">PerformanceResultSummary</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">get_author</span>
 
 
 <div class="viewcode-block" id="NodeChainOperation"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation">[docs]</a><span class="k">class</span> <span class="nc">NodeChainOperation</span><span class="p">(</span><span class="n">Operation</span><span class="p">):</span>
@@ -343,25 +366,24 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="NodeChainOperation.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
                  <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="c"># temporary replacement of template keyword for better layout when</span>
-        <span class="c"># source_operation.yaml file is saved to result folder</span>
-        <span class="n">templates</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;templates&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">templates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">str</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">templates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">basestring</span><span class="p">:</span>
-            <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">templates</span><span class="p">]</span>
+        <span class="c1"># temporary replacement of template keyword for better layout when</span>
+        <span class="c1"># source_operation.yaml file is saved to result folder</span>
+        <span class="n">templates</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;templates&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">templates</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">basestring</span><span class="p">:</span>
+            <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">templates</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">templates</span>
- 
+            <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">templates</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainOperation</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
                                                  <span class="n">result_directory</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">operation_spec</span> <span class="o">=</span> <span class="n">templates</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">create_process</span> <span class="o">=</span> <span class="n">create_process</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">number_processes</span> <span class="o">=</span> <span class="n">number_processes</span>
 
-        <span class="k">if</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;compression&quot;</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;compression&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;compression&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;compression&quot;</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="mi">8</span>
-</div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">=</span> <span class="mi">8</span></div>
+
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="NodeChainOperation.create"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation.create">[docs]</a>    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_paths</span><span class="o">=</span><span class="p">[]):</span>
         <span class="sd">&quot;&quot;&quot; A factory method that creates the processes which form an operation</span>
@@ -382,49 +404,49 @@
 <span class="sd">        .. todo:: Use :class:`~pySPACE.resources.dataset_defs.dummy.DummyDataset`</span>
 <span class="sd">                  for empty data, when no input_path is given.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&quot;node_chain&quot;</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;node_chain&quot;</span><span class="p">)</span>
 
-        <span class="c"># Determine all parameter combinations that should be tested</span>
+        <span class="c1"># Determine all parameter combinations that should be tested</span>
         <span class="n">parameter_settings</span> <span class="o">=</span> <span class="n">cls</span><span class="o">.</span><span class="n">_get_parameter_space</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">)</span>
 
-        <span class="c">## Use node_chain parameter if no templates are given ##</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;templates&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">):</span>
-                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
-                    <span class="n">extract_key_str</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;base_file&quot;</span><span class="p">],</span>
-                                    <span class="n">keyword</span><span class="o">=</span><span class="s">&quot;node_chain&quot;</span><span class="p">)]</span>
-                <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">)</span>
+        <span class="c1">## Use node_chain parameter if no templates are given ##</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;templates&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;node_chain&quot;</span><span class="p">):</span>
+                <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">extract_key_str</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;base_file&quot;</span><span class="p">],</span>
+                                    <span class="n">keyword</span><span class="o">=</span><span class="s2">&quot;node_chain&quot;</span><span class="p">)]</span>
+                <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;node_chain&quot;</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Specify parameter &#39;templates&#39; or &#39;node_chain&#39; in your operation spec!&quot;</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">):</span>
-            <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;node_chain&quot;</span><span class="p">)</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;node_chain parameter is ignored. Templates are used.&quot;</span><span class="p">)</span>
-        <span class="c"># load files in templates as dictionaries</span>
-        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
-            <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;template_files&quot;</span><span class="p">]</span> <span class="o">=</span> \
-                <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])</span>
-            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])):</span>
-                <span class="n">rel_node_chain_file</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Specify parameter &#39;templates&#39; or &#39;node_chain&#39; in your operation spec!&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;node_chain&quot;</span><span class="p">):</span>
+            <span class="n">operation_spec</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;node_chain&quot;</span><span class="p">)</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;node_chain parameter is ignored. Templates are used.&quot;</span><span class="p">)</span>
+        <span class="c1"># load files in templates as dictionaries</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;template_files&quot;</span><span class="p">]</span> <span class="o">=</span> \
+                <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">])):</span>
+                <span class="n">rel_node_chain_file</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
                 <span class="n">abs_node_chain_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span>
-                    <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span> <span class="s">&quot;node_chains&quot;</span><span class="p">,</span>
+                    <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">spec_dir</span><span class="p">,</span> <span class="s2">&quot;node_chains&quot;</span><span class="p">,</span>
                     <span class="n">rel_node_chain_file</span><span class="p">])</span>
-                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">abs_node_chain_file_name</span><span class="p">,</span> <span class="s">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">abs_node_chain_file_name</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
                     <span class="n">node_chain</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
-                    <span class="c">#node_chain = yaml.load(read_file)</span>
-                <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_chain</span>
+                    <span class="c1">#node_chain = yaml.load(read_file)</span>
+                <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_chain</span>
 
         <span class="n">storage</span> <span class="o">=</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">input_paths</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s">&quot;No input datasets found in input_path </span><span class="si">%s</span><span class="s"> in </span><span class="si">%s</span><span class="s">!&quot;</span>
-                            <span class="o">%</span> <span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;input_path&quot;</span><span class="p">],</span><span class="n">storage</span><span class="p">))</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No input datasets found in input_path </span><span class="si">%s</span><span class="s2"> in </span><span class="si">%s</span><span class="s2">!&quot;</span>
+                            <span class="o">%</span> <span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;input_path&quot;</span><span class="p">],</span><span class="n">storage</span><span class="p">))</span>
 
-        <span class="c"># Get relative path</span>
+        <span class="c1"># Get relative path</span>
         <span class="n">rel_input_paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">storage</span><span class="p">):]</span>
                            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span>  <span class="n">input_paths</span><span class="p">]</span>
 
-        <span class="c"># Determine approximate number of runs</span>
-        <span class="k">if</span> <span class="s">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
-            <span class="n">runs</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span>
+        <span class="c1"># Determine approximate number of runs</span>
+        <span class="k">if</span> <span class="s2">&quot;runs&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+            <span class="n">runs</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">runs</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">dataset_dir</span> <span class="ow">in</span> <span class="n">rel_input_paths</span><span class="p">:</span>
@@ -432,38 +454,38 @@
                         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> \
                             <span class="o">+</span> <span class="n">dataset_dir</span>
                 <span class="n">collection_runs</span> <span class="o">=</span> \
-                        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;runs&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+                        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;runs&#39;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
                 <span class="n">runs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">collection_runs</span><span class="p">)</span>
             <span class="n">runs</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">runs</span><span class="p">)</span>
 
-        <span class="c"># Determine splits</span>
+        <span class="c1"># Determine splits</span>
         <span class="n">dataset_dir</span> <span class="o">=</span> <span class="n">rel_input_paths</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="n">abs_collection_path</span> <span class="o">=</span> \
                 <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">dataset_dir</span>
 
-        <span class="n">splits</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;splits&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">splits</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;splits&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-        <span class="c"># Determine how many processes will be created</span>
-        <span class="n">number_processes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])</span> <span class="o">*</span> \
+        <span class="c1"># Determine how many processes will be created</span>
+        <span class="n">number_processes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">])</span> <span class="o">*</span> \
                            <span class="nb">len</span><span class="p">(</span><span class="n">parameter_settings</span><span class="p">)</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">rel_input_paths</span><span class="p">)</span> <span class="o">*</span> \
                            <span class="n">runs</span> <span class="o">*</span> <span class="n">splits</span>
 
         <span class="k">if</span> <span class="n">debug</span><span class="p">:</span>
-            <span class="c"># To better debug creation of processes we don&#39;t limit the queue</span>
-            <span class="c"># and create all processes before executing them</span>
+            <span class="c1"># To better debug creation of processes we don&#39;t limit the queue</span>
+            <span class="c1"># and create all processes before executing them</span>
             <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
             <span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
                                  <span class="n">parameter_settings</span><span class="p">,</span> <span class="n">rel_input_paths</span><span class="p">)</span>
-            <span class="c"># create and return the operation object</span>
+            <span class="c1"># create and return the operation object</span>
             <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
                        <span class="n">number_processes</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c"># Create all processes by calling a recursive helper method in</span>
-            <span class="c"># another thread so that already created processes can be executed in</span>
-            <span class="c"># parallel. Therefore a queue is used which size is maximized to</span>
-            <span class="c"># guarantee that not to much objects are created (because this costs</span>
-            <span class="c"># memory). However, the actual number of 4 is arbitrary and might</span>
-            <span class="c"># be changed according to the system at hand.</span>
+            <span class="c1"># Create all processes by calling a recursive helper method in</span>
+            <span class="c1"># another thread so that already created processes can be executed in</span>
+            <span class="c1"># parallel. Therefore a queue is used which size is maximized to</span>
+            <span class="c1"># guarantee that not to much objects are created (because this costs</span>
+            <span class="c1"># memory). However, the actual number of 4 is arbitrary and might</span>
+            <span class="c1"># be changed according to the system at hand.</span>
             <span class="n">processes</span> <span class="o">=</span> <span class="n">processing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
             <span class="n">create_process</span> <span class="o">=</span> \
                     <span class="n">processing</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">cls</span><span class="o">.</span><span class="n">_createProcesses</span><span class="p">,</span>
@@ -471,96 +493,96 @@
                                              <span class="n">operation_spec</span><span class="p">,</span> <span class="n">parameter_settings</span><span class="p">,</span>
                                              <span class="n">rel_input_paths</span><span class="p">))</span>
             <span class="n">create_process</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-            <span class="c"># create and return the operation object</span>
+            <span class="c1"># create and return the operation object</span>
             <span class="k">return</span> <span class="n">cls</span><span class="p">(</span><span class="n">processes</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span>
-                       <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="p">)</span>
-</div>
+                       <span class="n">number_processes</span><span class="p">,</span> <span class="n">create_process</span><span class="p">)</span></div>
+
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="NodeChainOperation._createProcesses"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation._createProcesses">[docs]</a>    <span class="k">def</span> <span class="nf">_createProcesses</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">processes</span><span class="p">,</span> <span class="n">result_directory</span><span class="p">,</span> <span class="n">operation_spec</span><span class="p">,</span>
                          <span class="n">parameter_settings</span><span class="p">,</span> <span class="n">input_collections</span><span class="p">):</span>
 
-        <span class="n">storage_format</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;storage_format&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s">&quot;storage_format&quot;</span> \
+        <span class="n">storage_format</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;storage_format&quot;</span><span class="p">]</span> <span class="k">if</span> <span class="s2">&quot;storage_format&quot;</span> \
             <span class="ow">in</span> <span class="n">operation_spec</span> <span class="k">else</span> <span class="bp">None</span>
 
-        <span class="c"># Determine whether the node_chain should be stored after data processing</span>
-        <span class="n">store_node_chain</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;store_node_chain&quot;</span><span class="p">]</span> \
-                         <span class="k">if</span> <span class="s">&quot;store_node_chain&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span> <span class="k">else</span> <span class="bp">False</span>
+        <span class="c1"># Determine whether the node_chain should be stored after data processing</span>
+        <span class="n">store_node_chain</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;store_node_chain&quot;</span><span class="p">]</span> \
+                         <span class="k">if</span> <span class="s2">&quot;store_node_chain&quot;</span> <span class="ow">in</span> <span class="n">operation_spec</span> <span class="k">else</span> <span class="bp">False</span>
 
-        <span class="c"># Determine whether certain parameters should not be remembered</span>
-        <span class="n">hide_parameters</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="s">&quot;hide_parameters&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">operation_spec</span> \
-                                <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;hide_parameters&quot;</span><span class="p">])</span>
-        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;__INPUT_COLLECTION__&quot;</span><span class="p">)</span>
-        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;__INPUT_DATASET__&quot;</span><span class="p">)</span>
-        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">)</span>
-        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;__OUTPUT_BUNDLE__&quot;</span><span class="p">)</span>
-        <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;hide_parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hide_parameters</span>
+        <span class="c1"># Determine whether certain parameters should not be remembered</span>
+        <span class="n">hide_parameters</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="s2">&quot;hide_parameters&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">operation_spec</span> \
+                                <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;hide_parameters&quot;</span><span class="p">])</span>
+        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;__INPUT_COLLECTION__&quot;</span><span class="p">)</span>
+        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;__INPUT_DATASET__&quot;</span><span class="p">)</span>
+        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">)</span>
+        <span class="n">hide_parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;__OUTPUT_BUNDLE__&quot;</span><span class="p">)</span>
+        <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;hide_parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hide_parameters</span>
 
-        <span class="c"># Create all combinations of collections, runs and splits</span>
+        <span class="c1"># Create all combinations of collections, runs and splits</span>
         <span class="n">collection_run_split_combinations</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">input_dataset_dir</span> <span class="ow">in</span> <span class="n">input_collections</span><span class="p">:</span>
-            <span class="c"># Determine number of runs to be conducted for this collection</span>
+            <span class="c1"># Determine number of runs to be conducted for this collection</span>
             <span class="n">abs_collection_path</span> <span class="o">=</span> \
                 <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> \
                     <span class="o">+</span> <span class="n">input_dataset_dir</span>
             <span class="n">collection_runs</span> <span class="o">=</span> \
-                <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;runs&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-                <span class="c"># D.get(k[,d]) -&gt; D[k] if k in D, else d.</span>
+                <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;runs&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="c1"># D.get(k[,d]) -&gt; D[k] if k in D, else d.</span>
 
-            <span class="k">if</span> <span class="s">&quot;runs&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;runs&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">:</span>
                 <span class="n">requested_runs</span> <span class="o">=</span> <span class="n">collection_runs</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="n">requested_runs</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span>
+                <span class="n">requested_runs</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span>
 
             <span class="k">assert</span> <span class="n">collection_runs</span> <span class="o">==</span> <span class="n">requested_runs</span> \
                 <span class="ow">or</span> <span class="n">collection_runs</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> \
-                <span class="s">&quot;Requested </span><span class="si">%s</span><span class="s"> runs but input collection </span><span class="si">%s</span><span class="s"> provides &quot;</span>\
-                <span class="s">&quot;data for </span><span class="si">%s</span><span class="s"> runs.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">requested_runs</span><span class="p">,</span> <span class="n">input_dataset_dir</span><span class="p">,</span>
+                <span class="s2">&quot;Requested </span><span class="si">%s</span><span class="s2"> runs but input collection </span><span class="si">%s</span><span class="s2"> provides &quot;</span>\
+                <span class="s2">&quot;data for </span><span class="si">%s</span><span class="s2"> runs.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">requested_runs</span><span class="p">,</span> <span class="n">input_dataset_dir</span><span class="p">,</span>
                                        <span class="n">collection_runs</span><span class="p">)</span>
 
             <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">requested_runs</span><span class="p">,</span> <span class="n">collection_runs</span><span class="p">)):</span>
                 <span class="n">collection_splits</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span>
-                    <span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;splits&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">abs_collection_path</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;splits&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">collection_splits</span><span class="p">):</span>
                     <span class="n">collection_run_split_combinations</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">input_dataset_dir</span><span class="p">,</span>
                                                               <span class="n">run</span><span class="p">,</span> <span class="n">split</span><span class="p">))</span>
 
-        <span class="c"># Shuffle order of dataset-run-split combinations. This should help to</span>
-        <span class="c"># avoid that all processes work on the same data which can cause</span>
-        <span class="c"># problems due to locking etc.</span>
+        <span class="c1"># Shuffle order of dataset-run-split combinations. This should help to</span>
+        <span class="c1"># avoid that all processes work on the same data which can cause</span>
+        <span class="c1"># problems due to locking etc.</span>
         <span class="n">random</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">collection_run_split_combinations</span><span class="p">)</span>
 
-        <span class="c"># For all templates</span>
-        <span class="k">for</span> <span class="n">node_chain_spec</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]:</span>
-            <span class="c"># For all possible parameter instantiations of this template</span>
+        <span class="c1"># For all templates</span>
+        <span class="k">for</span> <span class="n">node_chain_spec</span> <span class="ow">in</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">]:</span>
+            <span class="c1"># For all possible parameter instantiations of this template</span>
             <span class="k">for</span> <span class="n">parameter_setting</span> <span class="ow">in</span> <span class="n">parameter_settings</span><span class="p">:</span>
-                <span class="c"># For all input collections-run combinations</span>
+                <span class="c1"># For all input collections-run combinations</span>
                 <span class="k">for</span> <span class="n">input_dataset_dir</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">split</span> <span class="ow">in</span> \
                         <span class="n">collection_run_split_combinations</span><span class="p">:</span>
-                    <span class="c"># We are going to change the parameter_setting and don&#39;t</span>
-                    <span class="c"># want to interfere with later runs so we work on a copy</span>
+                    <span class="c1"># We are going to change the parameter_setting and don&#39;t</span>
+                    <span class="c1"># want to interfere with later runs so we work on a copy</span>
                     <span class="n">parameter_setting_cp</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">)</span>
 
-                    <span class="c"># Add input and output path to parameter</span>
-                    <span class="c"># setting</span>
-                    <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s">&quot;__INPUT_DATASET__&quot;</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="c1"># Add input and output path to parameter</span>
+                    <span class="c1"># setting</span>
+                    <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s2">&quot;__INPUT_DATASET__&quot;</span><span class="p">]</span> <span class="o">=</span> \
                             <span class="n">input_dataset_dir</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
-                    <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s2">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">]</span> <span class="o">=</span> \
                             <span class="n">result_directory</span>
-                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
-                        <span class="n">index</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;templates&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">)</span>
-                        <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s">&quot;__Template__&quot;</span><span class="p">]</span><span class="o">=</span>\
-                            <span class="n">operation_spec</span><span class="p">[</span><span class="s">&quot;template_files&quot;</span><span class="p">][</span><span class="n">index</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">])</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">index</span> <span class="o">=</span> <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;templates&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">node_chain_spec</span><span class="p">)</span>
+                        <span class="n">parameter_setting_cp</span><span class="p">[</span><span class="s2">&quot;__Template__&quot;</span><span class="p">]</span><span class="o">=</span>\
+                            <span class="n">operation_spec</span><span class="p">[</span><span class="s2">&quot;template_files&quot;</span><span class="p">][</span><span class="n">index</span><span class="p">]</span>
 
-                    <span class="c"># Load the input meta data</span>
+                    <span class="c1"># Load the input meta data</span>
                     <span class="n">dataset_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">,</span>
                                                <span class="n">input_dataset_dir</span><span class="p">])</span>
                     <span class="n">dataset_md</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
-                    <span class="c"># Add the input parameter&#39;s meta data</span>
-                    <span class="c"># to the given parameter setting</span>
-                    <span class="k">if</span> <span class="s">&quot;parameter_setting&quot;</span> <span class="ow">in</span> <span class="n">dataset_md</span><span class="p">:</span>
-                        <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;parameter_setting&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+                    <span class="c1"># Add the input parameter&#39;s meta data</span>
+                    <span class="c1"># to the given parameter setting</span>
+                    <span class="k">if</span> <span class="s2">&quot;parameter_setting&quot;</span> <span class="ow">in</span> <span class="n">dataset_md</span><span class="p">:</span>
+                        <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;parameter_setting&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
                             <span class="n">parameter_setting_cp</span><span class="p">)</span>
-                        <span class="n">all_parameters</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;parameter_setting&quot;</span><span class="p">]</span>
+                        <span class="n">all_parameters</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;parameter_setting&quot;</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">all_parameters</span> <span class="o">=</span> <span class="n">parameter_setting_cp</span>
 
@@ -571,12 +593,12 @@
 
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">check_constraint</span><span class="p">(</span>
                             <span class="n">constraint_def</span><span class="p">,</span> <span class="n">all_parameters</span><span class="p">)</span> <span class="k">for</span> <span class="n">constraint_def</span>
-                            <span class="ow">in</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&#39;old_parameter_constraints&#39;</span><span class="p">,</span>
+                            <span class="ow">in</span> <span class="n">operation_spec</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;old_parameter_constraints&#39;</span><span class="p">,</span>
                                                   <span class="p">[])):</span>
                         <span class="k">continue</span>
 
-                    <span class="c"># Determine directory in which the result of this</span>
-                    <span class="c"># process should be written</span>
+                    <span class="c1"># Determine directory in which the result of this</span>
+                    <span class="c1"># process should be written</span>
                     <span class="n">result_dataset_directory</span> <span class="o">=</span> \
                         <span class="n">NodeChainOperation</span><span class="o">.</span><span class="n">_get_result_dataset_dir</span><span class="p">(</span>
                             <span class="n">result_directory</span><span class="p">,</span>
@@ -585,8 +607,8 @@
                             <span class="n">hide_parameters</span><span class="p">)</span>
                     
                         
-                    <span class="c"># Create the respective process and put it to the</span>
-                    <span class="c"># executing-queue of processes</span>
+                    <span class="c1"># Create the respective process and put it to the</span>
+                    <span class="c1"># executing-queue of processes</span>
                     <span class="n">process</span> <span class="o">=</span> <span class="n">NodeChainProcess</span><span class="p">(</span>
                         <span class="n">node_chain_spec</span><span class="o">=</span><span class="n">node_chain_spec</span><span class="p">,</span>
                         <span class="n">parameter_setting</span><span class="o">=</span><span class="n">parameter_setting_cp</span><span class="p">,</span>
@@ -594,109 +616,99 @@
                         <span class="n">run</span><span class="o">=</span><span class="n">run</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="n">split</span><span class="p">,</span>
                         <span class="n">storage_format</span><span class="o">=</span><span class="n">storage_format</span><span class="p">,</span>
                         <span class="n">result_dataset_directory</span><span class="o">=</span><span class="n">result_dataset_directory</span><span class="p">,</span>
-                        <span class="n">store_node_chain</span><span class="o">=</span><span class="n">store_node_chain</span><span class="p">)</span>
+                        <span class="n">store_node_chain</span><span class="o">=</span><span class="n">store_node_chain</span><span class="p">,</span>
+                        <span class="n">hide_parameters</span><span class="o">=</span><span class="n">hide_parameters</span><span class="p">)</span>
 
                     <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">process</span><span class="p">)</span>
 
-        <span class="c"># give executing process the sign that creation is now finished</span>
-        <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span>
-</div>
+        <span class="c1"># give executing process the sign that creation is now finished</span>
+        <span class="n">processes</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="bp">False</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="NodeChainOperation.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Consolidates the results obtained by the single processes into a consistent structure</span>
 <span class="sd">        of collections that are stored on the file system.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c"># Consolidate the results</span>
-        <span class="n">directory_pattern</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span> <span class="s">&quot;{*&quot;</span><span class="p">,])</span>
+        <span class="c1"># Consolidate the results</span>
+        <span class="n">directory_pattern</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span> <span class="s2">&quot;{*&quot;</span><span class="p">,])</span>
         <span class="n">dataset_pathes</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">directory_pattern</span><span class="p">)</span>
 
-        <span class="c"># For all collections found</span>
+        <span class="c1"># For all collections found</span>
         <span class="k">for</span> <span class="n">dataset_path</span> <span class="ow">in</span> <span class="n">dataset_pathes</span><span class="p">:</span>
-            <span class="c"># Load their meta_data</span>
+            <span class="c1"># Load their meta_data</span>
             <span class="n">meta_data</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">)</span>
 
-            <span class="c"># Determine author and date</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="kn">import</span> <span class="nn">platform</span>
-                <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
-                <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
-                    <span class="kn">import</span> <span class="nn">getpass</span>
-                    <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="kn">import</span> <span class="nn">pwd</span>
-                    <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
-            <span class="k">except</span><span class="p">:</span>
-                <span class="n">author</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-            <span class="n">date</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s">&quot;%Y%m</span><span class="si">%d</span><span class="s">_%H_%M_%S&quot;</span><span class="p">)</span>
+            <span class="c1"># Determine author and date</span>
+            <span class="n">author</span> <span class="o">=</span> <span class="n">get_author</span><span class="p">()</span>
+            <span class="n">date</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">_%H_%M_%S&quot;</span><span class="p">)</span>
 
-            <span class="c"># Update meta data and store it</span>
-            <span class="n">meta_data</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span> <span class="s">&quot;date&quot;</span><span class="p">:</span> <span class="n">date</span><span class="p">})</span>
+            <span class="c1"># Update meta data and store it</span>
+            <span class="n">meta_data</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span> <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">date</span><span class="p">})</span>
             <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">meta_data</span><span class="p">)</span>
 
-            <span class="c"># Copy the input dataset specification file to the result</span>
-            <span class="c"># directory in order to make later analysis of</span>
-            <span class="c"># the results more easy</span>
+            <span class="c1"># Copy the input dataset specification file to the result</span>
+            <span class="c1"># directory in order to make later analysis of</span>
+            <span class="c1"># the results more easy</span>
             <span class="n">input_meta_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">,</span>
-                                          <span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;input_collection_name&quot;</span><span class="p">]])</span>
+                                          <span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;input_collection_name&quot;</span><span class="p">]])</span>
             <span class="n">input_meta</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">input_meta_path</span><span class="p">)</span>
             <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">dataset_path</span><span class="p">,</span> <span class="n">input_meta</span><span class="p">,</span>
-                                        <span class="n">file_name</span><span class="o">=</span><span class="s">&quot;input_metadata.yaml&quot;</span><span class="p">)</span>
-        <span class="c"># Check if some results consist of several runs</span>
-        <span class="c"># and update the meta data in this case</span>
-        <span class="c"># TODO: This is not a clean solution</span>
+                                        <span class="n">file_name</span><span class="o">=</span><span class="s2">&quot;input_metadata.yaml&quot;</span><span class="p">)</span>
+        <span class="c1"># Check if some results consist of several runs</span>
+        <span class="c1"># and update the meta data in this case</span>
+        <span class="c1"># TODO: This is not a clean solution</span>
         <span class="k">for</span> <span class="n">dataset_dir</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span>
-                                                  <span class="s">&quot;*&quot;</span><span class="p">])):</span>
+                                                  <span class="s2">&quot;*&quot;</span><span class="p">])):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">):</span>
                 <span class="k">continue</span>
-            <span class="c"># There can be either run dirs, persistency dirs, or both of them.</span>
-            <span class="c"># Check of whichever there are more. If both exist, their numbers</span>
-            <span class="c"># are supposed to be equal.</span>
+            <span class="c1"># There can be either run dirs, persistency dirs, or both of them.</span>
+            <span class="c1"># Check of whichever there are more. If both exist, their numbers</span>
+            <span class="c1"># are supposed to be equal.</span>
             <span class="n">nr_run_dirs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                     <span class="s">&quot;data_run*&quot;</span><span class="p">])))</span>
+                                                     <span class="s2">&quot;data_run*&quot;</span><span class="p">])))</span>
             <span class="n">nr_per_dirs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                     <span class="s">&quot;persistency_run*&quot;</span><span class="p">])))</span>
+                                                     <span class="s2">&quot;persistency_run*&quot;</span><span class="p">])))</span>
             <span class="n">nr_runs</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nr_run_dirs</span><span class="p">,</span> <span class="n">nr_per_dirs</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">nr_runs</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">collection_meta</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
-                <span class="n">collection_meta</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nr_runs</span>
+                <span class="n">collection_meta</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">nr_runs</span>
                 <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">collection_meta</span><span class="p">)</span>
-        <span class="c"># If we don&#39;t create a feature vector or time series collection,</span>
-        <span class="c"># we evaluated our classification using a classification performance sink.</span>
-        <span class="c"># The resulting files should be merged to one csv tabular.</span>
-        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s">&quot;results_*&quot;</span><span class="p">))</span>
+        <span class="c1"># If we don&#39;t create a feature vector or time series collection,</span>
+        <span class="c1"># we evaluated our classification using a classification performance sink.</span>
+        <span class="c1"># The resulting files should be merged to one csv tabular.</span>
+        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s2">&quot;results_*&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pathlist</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
-            <span class="c"># Do the consolidation the same way as for WekaClassificationOperation</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Consolidating results ...&quot;</span><span class="p">)</span>
-            <span class="c"># We load and store the results once into a PerformanceResultSummary</span>
-            <span class="c"># This does the necessary consolidation...</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Reading intermediate results...&quot;</span><span class="p">)</span>
+            <span class="c1"># Do the consolidation the same way as for WekaClassificationOperation</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Consolidating results ...&quot;</span><span class="p">)</span>
+            <span class="c1"># We load and store the results once into a PerformanceResultSummary</span>
+            <span class="c1"># This does the necessary consolidation...</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Reading intermediate results...&quot;</span><span class="p">)</span>
             <span class="n">result_collection</span> <span class="o">=</span> <span class="n">PerformanceResultSummary</span><span class="p">(</span><span class="n">dataset_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;done&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Storing result collection&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;done&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Storing result collection&quot;</span><span class="p">)</span>
             <span class="n">result_collection</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;done&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;done&quot;</span><span class="p">)</span>
             <span class="n">PerformanceResultSummary</span><span class="o">.</span><span class="n">merge_traces</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">:</span>
-                <span class="c"># Since we get one result summary,</span>
-                <span class="c"># we don&#39;t need the numerous folders.</span>
-                <span class="c"># So we zip them to make the whole folder more easy visible.</span>
+                <span class="c1"># Since we get one result summary,</span>
+                <span class="c1"># we don&#39;t need the numerous folders.</span>
+                <span class="c1"># So we zip them to make the whole folder more easy visible.</span>
                 <span class="kn">import</span> <span class="nn">zipfile</span>
                 <span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">)</span>
-                <span class="c"># If there are to many or to large folders, problems may occur.</span>
-                <span class="c"># This case we want to log, try 64 bit mode,</span>
-                <span class="c"># and then skip the zipping.</span>
+                <span class="c1"># If there are to many or to large folders, problems may occur.</span>
+                <span class="c1"># This case we want to log, try 64 bit mode,</span>
+                <span class="c1"># and then skip the zipping.</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s">&quot;{*}&quot;</span><span class="p">))</span>
+                    <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s2">&quot;{*}&quot;</span><span class="p">))</span>
 
-                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">==</span> <span class="s">&quot;delete&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">compression</span> <span class="o">==</span> <span class="s2">&quot;delete&quot;</span><span class="p">:</span>
                         <span class="n">save_file</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="o">+</span><span class="s">&#39;/result_folders.zip&#39;</span><span class="p">,</span>
-                            <span class="n">mode</span><span class="o">=</span><span class="s">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
-                        <span class="c"># we want to have the zipped file relative to the</span>
-                        <span class="c"># result directory</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="o">+</span><span class="s1">&#39;/result_folders.zip&#39;</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">)</span>
+                        <span class="c1"># we want to have the zipped file relative to the</span>
+                        <span class="c1"># result directory</span>
                         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">pathlist</span><span class="p">:</span>
                             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
                                 <span class="n">rel_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -706,24 +718,24 @@
                                     <span class="n">save_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rel_path</span><span class="p">,</span>
                                                                  <span class="n">data</span><span class="p">))</span>
                         <span class="n">save_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                    <span class="c"># To still have an easy access to the history of the</span>
-                    <span class="c"># processing, we keep one folder.</span>
+                    <span class="c1"># To still have an easy access to the history of the</span>
+                    <span class="c1"># processing, we keep one folder.</span>
                     <span class="n">pathlist</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
                     <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">pathlist</span><span class="p">:</span>
                         <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Result files could not be compressed with 32&quot;</span><span class="o">+</span>
-                              <span class="s">&quot; bit mode, switching to 64 bit mode&quot;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Result files could not be compressed with 32&quot;</span><span class="o">+</span>
+                              <span class="s2">&quot; bit mode, switching to 64 bit mode&quot;</span><span class="p">,</span>
                               <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-                    <span class="c"># nearly total code copy, only difference with 64 bit mode</span>
+                    <span class="c1"># nearly total code copy, only difference with 64 bit mode</span>
                     <span class="k">try</span><span class="p">:</span>
-                        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s">&quot;{*}&quot;</span><span class="p">))</span>
+                        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="p">,</span><span class="s2">&quot;{*}&quot;</span><span class="p">))</span>
                         <span class="n">save_file</span><span class="o">=</span><span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="o">+</span><span class="s">&#39;/result_folders.zip&#39;</span><span class="p">,</span>
-                            <span class="n">mode</span><span class="o">=</span><span class="s">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">,</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">result_directory</span><span class="o">+</span><span class="s1">&#39;/result_folders.zip&#39;</span><span class="p">,</span>
+                            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compression</span><span class="p">,</span>
                             <span class="n">allowZip64</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-                        <span class="c"># we want to have the zipped file relative to the</span>
-                        <span class="c"># result directory</span>
+                        <span class="c1"># we want to have the zipped file relative to the</span>
+                        <span class="c1"># result directory</span>
                         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">pathlist</span><span class="p">:</span>
                             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
                                 <span class="n">rel_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">relpath</span><span class="p">(</span><span class="n">node</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
@@ -732,15 +744,15 @@
                                 <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">node</span><span class="p">[</span><span class="mi">2</span><span class="p">]:</span>
                                     <span class="n">save_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">rel_path</span><span class="p">,</span><span class="n">data</span><span class="p">))</span>
                         <span class="n">save_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-                        <span class="c"># To still have an easy access to the history of the</span>
-                        <span class="c"># processing, we keep one folder.</span>
+                        <span class="c1"># To still have an easy access to the history of the</span>
+                        <span class="c1"># processing, we keep one folder.</span>
                         <span class="n">pathlist</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
                         <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">pathlist</span><span class="p">:</span>
                             <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
                     <span class="k">except</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;64 bit mode also failed. Please check your files and your code or contact your local programmer!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span>
-</div>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;64 bit mode also failed. Please check your files and your code or contact your local programmer!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">cwd</span><span class="p">)</span></div>
+
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="NodeChainOperation._get_result_dataset_dir"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainOperation._get_result_dataset_dir">[docs]</a>    <span class="k">def</span> <span class="nf">_get_result_dataset_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">input_dataset_dir</span><span class="p">,</span>
                                 <span class="n">parameter_setting</span><span class="p">,</span> <span class="n">hide_parameters</span><span class="p">):</span>
@@ -749,57 +761,97 @@
 <span class="sd">        Determines the name of the result directory based on the</span>
 <span class="sd">        input_dataset_dir, the node_chain_name and the parameter setting.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Determine the result_directory name</span>
+        <span class="c1"># String between Key and value changed from &quot;:&quot; to &quot;#&quot;,</span>
+        <span class="c1"># because ot problems in windows and with windows file servers</span>
+        <span class="k">def</span> <span class="nf">_get_result_dir_name</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">,</span> <span class="n">hide_parameters</span><span class="p">,</span> <span class="n">method</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot; internal function to create result dir name in different ways&quot;&quot;&quot;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">method</span><span class="p">:</span>
+                <span class="n">parameter_str</span> <span class="o">=</span> <span class="s2">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                  <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">#</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span>
+                  <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hide_parameters</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;hash&quot;</span><span class="p">:</span>
+                <span class="n">parameter_str</span> <span class="o">=</span> <span class="s2">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                  <span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">#</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span><span class="nb">hash</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">))))</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span>
+                  <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hide_parameters</span><span class="p">)</span>
+
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="n">parameter_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="n">parameter_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="n">parameter_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;[&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="n">parameter_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">parameter_str</span> <span class="o">=</span> <span class="n">parameter_str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">result_name</span> <span class="o">=</span> <span class="s2">&quot;{</span><span class="si">%s</span><span class="s2">}&quot;</span> <span class="o">%</span> <span class="n">input_name</span>
+
+            <span class="k">if</span> <span class="n">parameter_str</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="n">result_name</span> <span class="o">+=</span> <span class="s2">&quot;{</span><span class="si">%s</span><span class="s2">}&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter_str</span><span class="p">)</span>
+
+            <span class="c1"># Determine the path where this result will be stored</span>
+            <span class="c1"># and create the directory if necessary</span>
+            <span class="n">result_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+            <span class="n">result_dir</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">result_name</span>
+            <span class="c1"># filename is to long</span>
+            <span class="c1"># (longer than allowed including optional offsets for pyspace </span>
+            <span class="c1">#  result csv naming conventions)</span>
+            <span class="c1"># create a md5 hash of the result name and use that one</span>
+            <span class="kn">import</span> <span class="nn">platform</span>
+            <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
+                <span class="c1"># the maximum length for a filename on Windows is 255</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">255</span> <span class="o">-</span> <span class="mi">32</span><span class="p">:</span>
+                    <span class="n">result_name</span> <span class="o">=</span> <span class="s2">&quot;{&quot;</span><span class="o">+</span><span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">result_name</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span><span class="o">+</span><span class="s2">&quot;}&quot;</span>
+                    <span class="n">result_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+                    <span class="n">result_dir</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">result_name</span>
+                <span class="k">return</span> <span class="n">result_dir</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">os</span><span class="o">.</span><span class="n">pathconf</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">curdir</span><span class="p">,</span> <span class="s1">&#39;PC_NAME_MAX&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">32</span><span class="p">:</span>
+                    <span class="n">result_name</span> <span class="o">=</span> <span class="s2">&quot;{&quot;</span><span class="o">+</span><span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">result_name</span><span class="p">)</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span><span class="o">+</span><span class="s2">&quot;}&quot;</span>
+                    <span class="n">result_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+                    <span class="n">result_dir</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">result_name</span>
+                <span class="k">return</span> <span class="n">result_dir</span>
+
         <span class="n">input_name</span> <span class="o">=</span> <span class="n">input_dataset_dir</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">input_name</span> <span class="o">=</span> <span class="n">input_name</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s">&quot;{}&quot;</span><span class="p">)</span>
-        <span class="c"># If the input is already the result of an operation</span>
-        <span class="k">if</span> <span class="n">input_name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">input_name_parts</span> <span class="o">=</span> <span class="n">input_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot;}{&quot;</span><span class="p">)</span>
+        <span class="n">input_name</span> <span class="o">=</span> <span class="n">input_name</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;{}&quot;</span><span class="p">)</span>
+        <span class="c1"># If the input is already the result of an operation</span>
+        <span class="k">if</span> <span class="n">input_name</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">input_name_parts</span> <span class="o">=</span> <span class="n">input_name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;}{&quot;</span><span class="p">)</span>
             <span class="n">input_name</span> <span class="o">=</span> <span class="n">input_name_parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
-        <span class="c"># Load the input meta data</span>
+        <span class="c1"># Load the input meta data</span>
         <span class="n">dataset_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">storage</span><span class="p">,</span>
                                    <span class="n">input_dataset_dir</span><span class="p">])</span>
         <span class="n">dataset_md</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load_meta_data</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">)</span>
 
-        <span class="c"># We are going to change the parameter_setting and don&#39;t want to</span>
-        <span class="c"># interfere with later runs so we work on a copy</span>
+        <span class="c1"># We are going to change the parameter_setting and don&#39;t want to</span>
+        <span class="c1"># interfere with later runs so we work on a copy</span>
         <span class="n">parameter_setting</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">)</span>
 
-        <span class="c"># Ignore pseudo parameter &quot;__PREPARE_OPERATION__&quot;</span>
-        <span class="k">if</span> <span class="s">&quot;__PREPARE_OPERATION__&quot;</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="p">:</span>
-            <span class="n">parameter_setting</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;__PREPARE_OPERATION__&quot;</span><span class="p">)</span>
+        <span class="c1"># Ignore pseudo parameter &quot;__PREPARE_OPERATION__&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;__PREPARE_OPERATION__&quot;</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="p">:</span>
+            <span class="n">parameter_setting</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;__PREPARE_OPERATION__&quot;</span><span class="p">)</span>
 
-        <span class="c"># Add the input parameters meta data to the given parameter setting</span>
-        <span class="k">if</span> <span class="s">&quot;parameter_setting&quot;</span> <span class="ow">in</span> <span class="n">dataset_md</span><span class="p">:</span>
-            <span class="n">parameter_setting</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;parameter_setting&quot;</span><span class="p">])</span>
+        <span class="c1"># Add the input parameters meta data to the given parameter setting</span>
+        <span class="k">if</span> <span class="s2">&quot;parameter_setting&quot;</span> <span class="ow">in</span> <span class="n">dataset_md</span><span class="p">:</span>
+            <span class="n">parameter_setting</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;parameter_setting&quot;</span><span class="p">])</span>
 
-        <span class="c"># We have to remove &#39; characters from the parameter value since</span>
-        <span class="c"># Weka does ignore them</span>
+        <span class="c1"># We have to remove &#39; characters from the parameter value since</span>
+        <span class="c1"># Weka does ignore them</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">parameter_setting</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
-        <span class="c"># Determine the result_directory name</span>
-        <span class="c"># String between Key and value changed from &quot;:&quot; to &quot;#&quot;,</span>
-        <span class="c"># because ot problems in windows and with windows file servers</span>
-        <span class="n">parameter_str</span> <span class="o">=</span> <span class="s">&quot;}{&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">#</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span>
-                                        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_setting</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span>
-                                            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hide_parameters</span><span class="p">)</span>
+        <span class="n">result_dir</span> <span class="o">=</span> <span class="n">_get_result_dir_name</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">,</span> <span class="n">hide_parameters</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="mi">36</span><span class="p">:</span>
+                <span class="c1"># filename is too long</span>
+                <span class="n">result_dir</span> <span class="o">=</span> <span class="n">_get_result_dir_name</span><span class="p">(</span><span class="n">parameter_setting</span><span class="p">,</span>
+                                                  <span class="n">hide_parameters</span><span class="p">,</span> <span class="s2">&quot;hash&quot;</span><span class="p">)</span>
+            <span class="n">create_directory</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span>
 
-        <span class="n">result_name</span> <span class="o">=</span>  <span class="s">&quot;{</span><span class="si">%s</span><span class="s">}&quot;</span> <span class="o">%</span> <span class="n">input_name</span>
+        <span class="k">return</span> <span class="n">result_dir</span></div></div>
 
-        <span class="k">if</span> <span class="n">parameter_str</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
-            <span class="n">result_name</span> <span class="o">+=</span> <span class="s">&quot;{</span><span class="si">%s</span><span class="s">}&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">parameter_str</span><span class="p">)</span>
 
-        <span class="c"># Determine the path where this result will be stored</span>
-        <span class="c"># and create the directory if necessary</span>
-        <span class="n">result_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
-        <span class="n">result_dir</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">result_name</span>
-        <span class="n">create_directory</span><span class="p">(</span><span class="n">result_dir</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">result_dir</span>
-
-</div></div>
 <div class="viewcode-block" id="NodeChainProcess"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess">[docs]</a><span class="k">class</span> <span class="nc">NodeChainProcess</span><span class="p">(</span><span class="n">Process</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Run a specific signal processing chain with specific parameters and set and store results</span>
 
@@ -835,7 +887,8 @@
 
 <div class="viewcode-block" id="NodeChainProcess.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_chain_spec</span><span class="p">,</span> <span class="n">parameter_setting</span><span class="p">,</span>
                  <span class="n">rel_dataset_dir</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">split</span><span class="p">,</span> <span class="n">storage_format</span><span class="p">,</span>
-                 <span class="n">result_dataset_directory</span><span class="p">,</span> <span class="n">store_node_chain</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+                 <span class="n">result_dataset_directory</span><span class="p">,</span> <span class="n">store_node_chain</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">hide_parameters</span><span class="o">=</span><span class="p">[]):</span>
 
         <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
 
@@ -847,83 +900,84 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">storage_format</span> <span class="o">=</span> <span class="n">storage_format</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result_dataset_directory</span> <span class="o">=</span> <span class="n">result_dataset_directory</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">persistency_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">result_dataset_directory</span><span class="p">,</span>
-                                            <span class="s">&quot;persistency_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">run</span><span class="p">])</span>
+                                            <span class="s2">&quot;persistency_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">run</span><span class="p">])</span>
         <span class="n">create_directory</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">persistency_dir</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">store_node_chain</span> <span class="o">=</span> <span class="n">store_node_chain</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hide_parameters</span> <span class="o">=</span> <span class="n">hide_parameters</span>
 
-        <span class="c"># reduce_log_level for process creation</span>
+        <span class="c1"># reduce_log_level for process creation</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">console_log_level</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">console_log_level</span><span class="p">)</span> \
-                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="s">&quot;console_log_level&quot;</span><span class="p">)</span> \
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="s2">&quot;console_log_level&quot;</span><span class="p">)</span> \
                 <span class="k">else</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">NameError</span><span class="p">):</span>
             <span class="n">console_log_level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">file_log_level</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">file_log_level</span><span class="p">)</span> \
-                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="s">&quot;file_log_level&quot;</span><span class="p">)</span> \
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="s2">&quot;file_log_level&quot;</span><span class="p">)</span> \
                 <span class="k">else</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span>
         <span class="k">except</span> <span class="p">(</span><span class="ne">AttributeError</span><span class="p">,</span> <span class="ne">NameError</span><span class="p">):</span>
             <span class="n">file_log_level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">INFO</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">console_log_level</span><span class="p">,</span><span class="n">file_log_level</span><span class="p">)</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span>
-        <span class="c"># Replace parameters in spec file</span>
+        <span class="c1"># Replace parameters in spec file</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span> <span class="o">=</span> <span class="n">replace_parameters_and_convert</span><span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">)</span>
-        <span class="c"># Create node chain</span>
+        <span class="c1"># Create node chain</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span> <span class="o">=</span> <span class="n">NodeChainFactory</span><span class="o">.</span><span class="n">flow_from_yaml</span><span class="p">(</span>
             <span class="n">Flow_Class</span><span class="o">=</span><span class="n">BenchmarkNodeChain</span><span class="p">,</span> <span class="n">flow_spec</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">)</span>
 
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span><span class="p">:</span>
             <span class="n">node</span><span class="o">.</span><span class="n">current_split</span> <span class="o">=</span> <span class="n">split</span>
-        <span class="c"># Remove pseudo parameter &quot;__PREPARE_OPERATION__&quot;</span>
-        <span class="k">if</span> <span class="s">&quot;__PREPARE_OPERATION__&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">:</span>
+        <span class="c1"># Remove pseudo parameter &quot;__PREPARE_OPERATION__&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;__PREPARE_OPERATION__&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span> <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;__PREPARE_OPERATION__&quot;</span><span class="p">)</span>
-</div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;__PREPARE_OPERATION__&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="NodeChainProcess.__call__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Executes this process on the respective modality &quot;&quot;&quot;</span>
-        <span class="c"># Restore configuration</span>
+        <span class="c1"># Restore configuration</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configuration</span>
 
-        <span class="c"># reduce log_level for processing a second time and</span>
-        <span class="c"># set communication possibility for nodes to backend</span>
+        <span class="c1"># reduce log_level for processing a second time and</span>
+        <span class="c1"># set communication possibility for nodes to backend</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">min_log_level</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_log_level</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">logging_com</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">handler_args</span>
         <span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="o">.</span><span class="n">backend_com</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend_com</span>
 
-        <span class="c">############## Prepare benchmarking ##############</span>
+        <span class="c1">############## Prepare benchmarking ##############</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">pre_benchmarking</span><span class="p">()</span>
 
-        <span class="c"># Load the data and check that it can be processed</span>
-        <span class="c"># Note: This can not be done in the objects constructor since in</span>
-        <span class="c"># that case the whole input would need to be pickled</span>
-        <span class="c"># when doing the remote call</span>
+        <span class="c1"># Load the data and check that it can be processed</span>
+        <span class="c1"># Note: This can not be done in the objects constructor since in</span>
+        <span class="c1"># that case the whole input would need to be pickled</span>
+        <span class="c1"># when doing the remote call</span>
         <span class="n">abs_dataset_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">storage</span><span class="p">,</span>
                                        <span class="bp">self</span><span class="o">.</span><span class="n">rel_dataset_dir</span><span class="p">])</span>
 
         <span class="n">input_collection</span> <span class="o">=</span> <span class="n">BaseDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">abs_dataset_dir</span><span class="p">)</span>
 
-        <span class="c"># We have to remember parameters used for generating this specific</span>
-        <span class="c"># input dataset</span>
-        <span class="k">if</span> <span class="s">&#39;parameter_setting&#39;</span> <span class="ow">in</span> <span class="n">input_collection</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-            <span class="c"># but not __INPUT_DATASET__ and __RESULT_DIRECTORY__</span>
-            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">input_collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&#39;parameter_setting&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;__INPUT_DATASET__&quot;</span><span class="p">,</span> <span class="s">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">]:</span>
+        <span class="c1"># We have to remember parameters used for generating this specific</span>
+        <span class="c1"># input dataset</span>
+        <span class="k">if</span> <span class="s1">&#39;parameter_setting&#39;</span> <span class="ow">in</span> <span class="n">input_collection</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c1"># but not __INPUT_DATASET__ and __RESULT_DIRECTORY__</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">input_collection</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s1">&#39;parameter_setting&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;__INPUT_DATASET__&quot;</span><span class="p">,</span> <span class="s2">&quot;__RESULT_DIRECTORY__&quot;</span><span class="p">]:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
 
         <span class="n">NodeChainProcess</span><span class="o">.</span><span class="n">_check_node_chain_dataset_consistency</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span><span class="p">,</span>
                                                                <span class="n">input_collection</span><span class="p">)</span>
 
-        <span class="c">############## Do the actual benchmarking ##############</span>
+        <span class="c1">############## Do the actual benchmarking ##############</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Start benchmarking run </span><span class="si">%s</span><span class="s"> of node_chain </span><span class="si">%s</span><span class="s"> on dataset </span><span class="si">%s</span><span class="s">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Start benchmarking run </span><span class="si">%s</span><span class="s2"> of node_chain </span><span class="si">%s</span><span class="s2"> on dataset </span><span class="si">%s</span><span class="s2">&quot;</span>
                                 <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">,</span>
                                    <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span>
                                    <span class="bp">self</span><span class="o">.</span><span class="n">rel_dataset_dir</span><span class="p">))</span>
 
 
-        <span class="c"># Do the actual benchmarking for this collection/node_chain combination</span>
+        <span class="c1"># Do the actual benchmarking for this collection/node_chain combination</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">result_collection</span> <span class="o">=</span> \
                 <span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span><span class="o">.</span><span class="n">benchmark</span><span class="p">(</span>
@@ -932,25 +986,26 @@
                     <span class="n">persistency_directory</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">persistency_dir</span><span class="p">,</span>
                     <span class="n">store_node_chain</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">store_node_chain</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">exception</span><span class="p">:</span>
-            <span class="c"># Send Exception to Logger</span>
+            <span class="c1"># Send Exception to Logger</span>
             <span class="kn">import</span> <span class="nn">traceback</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
             <span class="k">raise</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Finished benchmarking run </span><span class="si">%s</span><span class="s"> of node_chain </span><span class="si">%s</span><span class="s"> on dataset </span><span class="si">%s</span><span class="s">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Finished benchmarking run </span><span class="si">%s</span><span class="s2"> of node_chain </span><span class="si">%s</span><span class="s2"> on dataset </span><span class="si">%s</span><span class="s2">&quot;</span>
                   <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span>
                      <span class="bp">self</span><span class="o">.</span><span class="n">rel_dataset_dir</span><span class="p">))</span>
 
-        <span class="c">############## Postprocessing ##############</span>
+        <span class="c1">############## Postprocessing ##############</span>
 
-        <span class="c"># Add input collection, node_chain file name, and run number</span>
-        <span class="c"># to the meta data</span>
-        <span class="n">meta_data</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;node_chain_spec&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span>
-                     <span class="s">&quot;parameter_setting&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">,</span>
-                     <span class="s">&quot;input_collection_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_dataset_dir</span><span class="p">}</span>
+        <span class="c1"># Add input collection, node_chain file name, and run number</span>
+        <span class="c1"># to the meta data</span>
+        <span class="n">meta_data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;node_chain_spec&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_chain_spec</span><span class="p">,</span>
+                     <span class="s2">&quot;parameter_setting&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_setting</span><span class="p">,</span>
+                     <span class="s2">&quot;input_collection_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">rel_dataset_dir</span><span class="p">,</span>
+                     <span class="s2">&quot;hide_parameters&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">hide_parameters</span><span class="p">}</span>
         <span class="n">result_collection</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">(</span><span class="n">meta_data</span><span class="p">)</span>
 
-        <span class="c"># Store the result collection to the hard disk</span>
+        <span class="c1"># Store the result collection to the hard disk</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">storage_format</span><span class="p">:</span>
             <span class="n">result_collection</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">result_dataset_directory</span><span class="p">,</span>
                                     <span class="n">s_format</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">storage_format</span><span class="p">)</span>
@@ -963,9 +1018,9 @@
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">node_chain</span>
         <span class="n">gc</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
 
-        <span class="c">############## Clean up after benchmarking ##############</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span>
-</div>
+        <span class="c1">############## Clean up after benchmarking ##############</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NodeChainProcess</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span></div>
+
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="NodeChainProcess._check_node_chain_dataset_consistency"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.operations.node_chain.html#pySPACE.missions.operations.node_chain.NodeChainProcess._check_node_chain_dataset_consistency">[docs]</a>    <span class="k">def</span> <span class="nf">_check_node_chain_dataset_consistency</span><span class="p">(</span><span class="n">node_chain</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Checks that the given node_chain can process the given dataset</span>
@@ -995,30 +1050,31 @@
             <span class="kn">import</span> <span class="n">FeatureVectorDataset</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">DataGenerationTimeSeriesSourceNode</span><span class="p">):</span>
-            <span class="c"># the test node does not care about the dataset type</span>
+            <span class="c1"># the test node does not care about the dataset type</span>
             <span class="k">pass</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Stream2TimeSeriesSourceNode</span><span class="p">):</span>
             <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">StreamDataset</span><span class="p">)</span> <span class="ow">or</span>
                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">TimeSeriesDataset</span><span class="p">)</span> <span class="ow">and</span>
                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">TimeSeries2TimeSeriesSourceNode</span><span class="p">)),</span> \
-              <span class="s">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s"> cannot process dataset of type </span><span class="si">%s</span><span class="s">&quot;</span> \
+              <span class="s2">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s2"> cannot process dataset of type </span><span class="si">%s</span><span class="s2">&quot;</span> \
                         <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">TimeSeriesSourceNode</span><span class="p">):</span>
             <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">TimeSeriesDataset</span><span class="p">)),</span> \
-                   <span class="s">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s"> cannot process dataset of type </span><span class="si">%s</span><span class="s">&quot;</span> \
+                   <span class="s2">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s2"> cannot process dataset of type </span><span class="si">%s</span><span class="s2">&quot;</span> \
                    <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">FeatureVectorSourceNode</span><span class="p">):</span>
             <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">FeatureVectorDataset</span><span class="p">)),</span> \
-                <span class="s">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s"> cannot process dataset of type </span><span class="si">%s</span><span class="s">&quot;</span> \
-                <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span>
-</pre></div></div></div>
+                <span class="s2">&quot;Node chain with input node of type </span><span class="si">%s</span><span class="s2"> cannot process dataset of type </span><span class="si">%s</span><span class="s2">&quot;</span> \
+                <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">node_chain</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">type</span><span class="p">(</span><span class="n">dataset</span><span class="p">))</span></div></div>
+
+</pre></div>
 
           </div>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -1027,14 +1083,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../index.html">
               <img class="logo" src="../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,18 +62,36 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.tools.filesystem</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; File handling helper functions &quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot; File handling helper functions &quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">fnmatch</span>
 <span class="kn">import</span> <span class="nn">tarfile</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+
+<div class="viewcode-block" id="get_author"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.get_author">[docs]</a><span class="k">def</span> <span class="nf">get_author</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">platform</span>
+        <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s2">&quot;Windows&quot;</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">getpass</span>
+            <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">pwd</span>
+            <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="s2">&quot;unknown&quot;</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Author could not be resolved.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">author</span></div>
 
 <div class="viewcode-block" id="create_directory"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.create_directory">[docs]</a><span class="k">def</span> <span class="nf">create_directory</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Create the given directory path recursively &quot;&quot;&quot;</span>
     <span class="n">parts</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">sep</span><span class="p">)</span>
-    <span class="n">subpath</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="n">subpath</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
         <span class="n">subpath</span> <span class="o">+=</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">part</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">subpath</span><span class="p">):</span>
@@ -84,10 +99,10 @@
                 <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">subpath</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="p">(</span><span class="n">err_no</span><span class="p">,</span> <span class="n">strerr</span><span class="p">):</span>
                 <span class="kn">import</span> <span class="nn">errno</span>
-                <span class="c"># os.path.exists isn&#39;t secure on gpfs!</span>
+                <span class="c1"># os.path.exists isn&#39;t secure on gpfs!</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">err_no</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span> 
-                   <span class="k">raise</span>
-</div>
+                   <span class="k">raise</span></div>
+
 <div class="viewcode-block" id="common_path"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.common_path">[docs]</a><span class="k">def</span> <span class="nf">common_path</span><span class="p">(</span><span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">,</span> <span class="n">common</span><span class="o">=</span><span class="p">[]):</span>
     <span class="sd">&quot;&quot;&quot; Compute the common part of two paths *path1* and *path2* &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">path1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span> 
@@ -96,8 +111,8 @@
         <span class="k">return</span> <span class="p">(</span><span class="n">common</span><span class="p">,</span> <span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">path1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">path2</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> 
         <span class="k">return</span> <span class="p">(</span><span class="n">common</span><span class="p">,</span> <span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">common_path</span><span class="p">(</span><span class="n">path1</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">path2</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">common</span> <span class="o">+</span> <span class="p">[</span><span class="n">path1</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span>
-</div>
+    <span class="k">return</span> <span class="n">common_path</span><span class="p">(</span><span class="n">path1</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">path2</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">common</span> <span class="o">+</span> <span class="p">[</span><span class="n">path1</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span></div>
+
 <div class="viewcode-block" id="get_relative_path"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.get_relative_path">[docs]</a><span class="k">def</span> <span class="nf">get_relative_path</span><span class="p">(</span><span class="n">path1</span><span class="p">,</span> <span class="n">path2</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Return the relative path of *path1* to *path2* &quot;&quot;&quot;</span>
     <span class="p">(</span><span class="n">common</span><span class="p">,</span><span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">)</span> <span class="o">=</span> <span class="n">common_path</span><span class="p">(</span><span class="n">path1</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">sep</span><span class="p">),</span> 
@@ -106,8 +121,8 @@
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">p</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">pardir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">l1</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span>
     <span class="n">p</span> <span class="o">=</span> <span class="n">p</span> <span class="o">+</span> <span class="n">l2</span>
-    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="o">*</span><span class="n">p</span> <span class="p">)</span>
-</div>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span> <span class="o">*</span><span class="n">p</span> <span class="p">)</span></div>
+
 <div class="viewcode-block" id="locate"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.locate">[docs]</a><span class="k">def</span> <span class="nf">locate</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">root</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">curdir</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Locate all files matching pattern in root directory.</span>
 
@@ -128,11 +143,11 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">root</span><span class="p">)):</span>
         <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">fnmatch</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">pattern</span><span class="p">):</span>
-            <span class="k">yield</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span></div>
 
-</div>
-<div class="viewcode-block" id="create_source_archive"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.create_source_archive">[docs]</a><span class="k">def</span> <span class="nf">create_source_archive</span><span class="p">(</span><span class="n">archive_path</span><span class="p">,</span> <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;pySPACE&quot;</span><span class="p">],</span>
-                          <span class="n">patterns</span><span class="o">=</span><span class="p">[</span><span class="s">&quot;*.py&quot;</span><span class="p">,</span> <span class="s">&quot;*.yaml&quot;</span><span class="p">]):</span>
+
+<div class="viewcode-block" id="create_source_archive"><a class="viewcode-back" href="../../../api/generated/pySPACE.tools.filesystem.html#pySPACE.tools.filesystem.create_source_archive">[docs]</a><span class="k">def</span> <span class="nf">create_source_archive</span><span class="p">(</span><span class="n">archive_path</span><span class="p">,</span> <span class="n">packages</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;pySPACE&quot;</span><span class="p">],</span>
+                          <span class="n">patterns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;*.py&quot;</span><span class="p">,</span> <span class="s2">&quot;*.yaml&quot;</span><span class="p">]):</span>
     <span class="sd">&quot;&quot;&quot; Store the source code of important packages</span>
 
 <span class="sd">    Locates all files in the directory structure of the given :packages:</span>
@@ -142,18 +157,18 @@
 <span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
 <span class="sd">    :Created: 2010/08/12</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c"># Create archive file</span>
-    <span class="n">archive_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">archive_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;source_code_archive.tbz&quot;</span><span class="p">,</span>
-                                <span class="s">&quot;w:bz2&quot;</span><span class="p">)</span>
-    <span class="c"># Find all packages the directories in which they are located</span>
+    <span class="c1"># Create archive file</span>
+    <span class="n">archive_file</span> <span class="o">=</span> <span class="n">tarfile</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">archive_path</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;source_code_archive.tbz&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;w:bz2&quot;</span><span class="p">)</span>
+    <span class="c1"># Find all packages the directories in which they are located</span>
     <span class="n">package_root_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">__import__</span><span class="p">(</span><span class="n">package</span><span class="p">)</span><span class="o">.</span><span class="n">__path__</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">pardir</span>
                             <span class="k">for</span> <span class="n">package</span> <span class="ow">in</span> <span class="n">packages</span><span class="p">]</span>
 
     <span class="n">orig_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">curdir</span>
     <span class="k">for</span> <span class="n">package</span><span class="p">,</span> <span class="n">package_root_dir</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">packages</span><span class="p">,</span> <span class="n">package_root_dirs</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">package_root_dir</span><span class="p">)</span>
-        <span class="c"># Find all files in the package that match one of the patterns and add</span>
-        <span class="c"># them to the archive.</span>
+        <span class="c1"># Find all files in the package that match one of the patterns and add</span>
+        <span class="c1"># them to the archive.</span>
         <span class="k">for</span> <span class="n">pattern</span> <span class="ow">in</span> <span class="n">patterns</span><span class="p">:</span>
             <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">locate</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">package</span><span class="p">):</span>
                 <span class="n">archive_file</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
@@ -167,7 +182,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -176,14 +191,14 @@
         <li class="right" >
           <a href="../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

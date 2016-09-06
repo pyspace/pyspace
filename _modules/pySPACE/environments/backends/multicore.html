@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../index.html">
               <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.environments.backends.multicore</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Execute as many processes in parallel as there are (logical) CPUs on the local machine</span>
+<span></span><span class="sd">&quot;&quot;&quot; Execute as many processes in parallel as there are (logical) CPUs on the local machine</span>
 
 <span class="sd">This backend is based on the multiprocessing package and should work on every</span>
 <span class="sd">multicore system without additional settings even on virtual machines.</span>
@@ -104,54 +101,54 @@
 <div class="viewcode-block" id="MulticoreBackend.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pool_size</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">MulticoreBackend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
         
-        <span class="c"># Set the number of processes in the pool</span>
-        <span class="c"># per default to the number of CPUs</span>
+        <span class="c1"># Set the number of processes in the pool</span>
+        <span class="c1"># per default to the number of CPUs</span>
         <span class="k">if</span> <span class="n">pool_size</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">pool_size</span> <span class="o">=</span> <span class="n">MulticoreBackend</span><span class="o">.</span><span class="n">detect_CPUs</span><span class="p">()</span>
             
         <span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span> <span class="o">=</span> <span class="n">pool_size</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;idling&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;idling&quot;</span>
         
-        <span class="c"># queue for execution</span>
+        <span class="c1"># queue for execution</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="n">pool_size</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>   
         
         <span class="bp">self</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">=</span> <span class="mi">0</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Created MulticoreBackend with pool size </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">pool_size</span><span class="p">)</span>
-    </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Created MulticoreBackend with pool size </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">pool_size</span><span class="p">)</span></div>
+    
 <div class="viewcode-block" id="MulticoreBackend.reset_queue"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.reset_queue">[docs]</a>    <span class="k">def</span> <span class="nf">reset_queue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Resets the execution queue&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span>
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Queue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span><span class="o">+</span><span class="mi">2</span><span class="p">)</span></div>
+        
 <div class="viewcode-block" id="MulticoreBackend.stage_in"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.stage_in">[docs]</a>    <span class="k">def</span> <span class="nf">stage_in</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operation</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Stage the current operation &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">MulticoreBackend</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">stage_in</span><span class="p">(</span><span class="n">operation</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pool_size</span><span class="p">)</span>
         
-        <span class="c"># Set up progress bar</span>
-        <span class="n">widgets</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;Operation progress: &#39;</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">(),</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">Bar</span><span class="p">(),</span> <span class="s">&#39; &#39;</span><span class="p">,</span> <span class="n">ETA</span><span class="p">()]</span>
+        <span class="c1"># Set up progress bar</span>
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Operation progress: &#39;</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">(),</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">Bar</span><span class="p">(),</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="n">ETA</span><span class="p">()]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span> <span class="o">=</span> <span class="n">ProgressBar</span><span class="p">(</span><span class="n">widgets</span> <span class="o">=</span> <span class="n">widgets</span><span class="p">,</span> 
                                <span class="n">maxval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">number_processes</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - staged&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;staged&quot;</span>
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - staged&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;staged&quot;</span></div>
+        
 <div class="viewcode-block" id="MulticoreBackend.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Execute all processes specified in the currently staged operation &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s">&quot;staged&quot;</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;staged&quot;</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - executing&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;executing&quot;</span> 
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - executing&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;executing&quot;</span> 
         
-        <span class="c"># The handler that is used remotely for logging</span>
+        <span class="c1"># The handler that is used remotely for logging</span>
         <span class="n">handler_class</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">SocketHandler</span>
-        <span class="n">handler_args</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;host&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s">&quot;port&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">}</span>
+        <span class="n">handler_args</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;host&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;port&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">}</span>
         <span class="n">backend_com</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">SERVER_IP</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">SERVER_PORT</span><span class="p">)</span>
         
-        <span class="c"># A socket communication thread to handle e.g. subflows</span>
+        <span class="c1"># A socket communication thread to handle e.g. subflows</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listener</span> <span class="o">=</span> <span class="n">LocalComHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listener</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
         
@@ -159,66 +156,66 @@
             <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
             <span class="n">process</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="c"># Until not all Processes have been created prepare all processes</span>
-        <span class="c"># from the queue for remote execution and execute them</span>
+        <span class="c1"># Until not all Processes have been created prepare all processes</span>
+        <span class="c1"># from the queue for remote execution and execute them</span>
         <span class="k">while</span> <span class="ow">not</span> <span class="n">process</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
             <span class="n">process</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="n">handler_class</span><span class="p">,</span> <span class="n">handler_args</span><span class="p">,</span>
                             <span class="n">backend_com</span><span class="p">)</span>
-            <span class="c"># since preparing the process might be quite faster than executing</span>
-            <span class="c"># it we need another queue where processes get out when they have</span>
-            <span class="c"># finished execution</span>
+            <span class="c1"># since preparing the process might be quite faster than executing</span>
+            <span class="c1"># it we need another queue where processes get out when they have</span>
+            <span class="c1"># finished execution</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="c"># Execute all functions in the process pool but return immediately</span>
+            <span class="c1"># Execute all functions in the process pool but return immediately</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">process</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dequeue_process</span><span class="p">)</span>
             <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span>
-</div>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.1</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="MulticoreBackend.dequeue_process"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.dequeue_process">[docs]</a>    <span class="k">def</span> <span class="nf">dequeue_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Callback function for finished processes &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">+=</span> <span class="mi">1</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span>
-    </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span></div>
+    
 <div class="viewcode-block" id="MulticoreBackend.check_status"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return a description of the current state of the operations execution</span>
 <span class="sd">        </span>
 <span class="sd">        .. todo:: do we really need this method???</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c"># Returns which percentage of processes of the current operation</span>
-        <span class="c"># is already finished</span>
-        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">number_processes</span>
-    </div>
+        <span class="c1"># Returns which percentage of processes of the current operation</span>
+        <span class="c1"># is already finished</span>
+        <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">number_processes</span></div>
+    
 <div class="viewcode-block" id="MulticoreBackend.retrieve"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.retrieve">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Wait for all results of the operation</span>
 <span class="sd">        </span>
 <span class="sd">        This call blocks until all processes are finished.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s">&quot;executing&quot;</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;executing&quot;</span><span class="p">)</span>
         
-        <span class="c"># Prevent any other processes from being submitted to the pool</span>
-        <span class="c"># (necessary for join)</span>
+        <span class="c1"># Prevent any other processes from being submitted to the pool</span>
+        <span class="c1"># (necessary for join)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span> 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Closing pool&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Closing pool&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
             
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - retrieved&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - retrieved&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="c"># if process creation has another thread</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="p">,</span> <span class="s">&quot;create_process&quot;</span><span class="p">)</span> \
+        <span class="c1"># if process creation has another thread</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="p">,</span> <span class="s2">&quot;create_process&quot;</span><span class="p">)</span> \
             <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span> <span class="c"># Wait for worker processes to exit</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Worker processes have exited gracefully&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span> <span class="c1"># Wait for worker processes to exit</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Worker processes have exited gracefully&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">result_handlers</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-        <span class="c"># inform listener that its time to die</span>
+        <span class="c1"># inform listener that its time to die</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listener</span><span class="o">.</span><span class="n">operation_finished</span> <span class="o">=</span> <span class="bp">True</span>   
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">listener</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>     
-        <span class="c"># Change the state to finished</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;retrieved&quot;</span>
-    </div>
+        <span class="c1"># Change the state to finished</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;retrieved&quot;</span></div>
+    
 <div class="viewcode-block" id="MulticoreBackend.consolidate"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.consolidate">[docs]</a>    <span class="k">def</span> <span class="nf">consolidate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Consolidate the single processes&#39; results into a consistent result of the whole operation &quot;&quot;&quot;</span>
-        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s">&quot;retrieved&quot;</span><span class="p">)</span>
+        <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;retrieved&quot;</span><span class="p">)</span>
         
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">consolidate</span><span class="p">()</span>
@@ -226,25 +223,25 @@
             <span class="kn">import</span> <span class="nn">traceback</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
             
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - consolidated&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - consolidated&quot;</span><span class="p">)</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;consolidated&quot;</span>
-    </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;consolidated&quot;</span></div>
+    
 <div class="viewcode-block" id="MulticoreBackend.cleanup"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.cleanup">[docs]</a>    <span class="k">def</span> <span class="nf">cleanup</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Remove the current operation and all potential results that have been stored in this object &quot;&quot;&quot;</span>        
-        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s">&quot;idling&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;idling&quot;</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Operation - cleaned up&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Idling...&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - cleaned up&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Idling...&quot;</span><span class="p">)</span>
         
-        <span class="c"># Remove the file logger for this operation</span>
-        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">removeHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_handler</span><span class="p">)</span>
-        <span class="c"># close listener socket</span>
+        <span class="c1"># Remove the file logger for this operation</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">removeHandler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_handler</span><span class="p">)</span>
+        <span class="c1"># close listener socket</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">=</span> <span class="mi">0</span>
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">=</span> <span class="mi">0</span></div>
+        
     <span class="nd">@classmethod</span>
 <div class="viewcode-block" id="MulticoreBackend.detect_CPUs"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.MulticoreBackend.detect_CPUs">[docs]</a>    <span class="k">def</span> <span class="nf">detect_CPUs</span><span class="p">(</span><span class="n">cls</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Detects the number of CPUs on a system. Cribbed from pp.</span>
@@ -252,22 +249,22 @@
 <span class="sd">        :from: http://codeliberates.blogspot.com/2008/05/detecting-cpuscores-in-python.html</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ncpus</span> <span class="o">=</span> <span class="bp">None</span>
-        <span class="c"># Linux, Unix and MacOS:</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">os</span><span class="p">,</span> <span class="s">&quot;sysconf&quot;</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">sysconf_names</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;SC_NPROCESSORS_ONLN&quot;</span><span class="p">):</span>
-                <span class="c"># Linux &amp; Unix:</span>
-                 <span class="n">ncpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sysconf</span><span class="p">(</span><span class="s">&quot;SC_NPROCESSORS_ONLN&quot;</span><span class="p">)</span>
+        <span class="c1"># Linux, Unix and MacOS:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">os</span><span class="p">,</span> <span class="s2">&quot;sysconf&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">sysconf_names</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;SC_NPROCESSORS_ONLN&quot;</span><span class="p">):</span>
+                <span class="c1"># Linux &amp; Unix:</span>
+                 <span class="n">ncpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">sysconf</span><span class="p">(</span><span class="s2">&quot;SC_NPROCESSORS_ONLN&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ncpus</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="n">ncpus</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">ncpus</span>
-            <span class="k">else</span><span class="p">:</span> <span class="c"># OSX:</span>
-                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">popen2</span><span class="p">(</span><span class="s">&quot;sysctl -n hw.ncpu&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
-        <span class="c"># Windows:</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;NUMBER_OF_PROCESSORS&quot;</span><span class="p">):</span>
-            <span class="n">ncpus</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&quot;NUMBER_OF_PROCESSORS&quot;</span><span class="p">]);</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># OSX:</span>
+                <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">popen2</span><span class="p">(</span><span class="s2">&quot;sysctl -n hw.ncpu&quot;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="c1"># Windows:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;NUMBER_OF_PROCESSORS&quot;</span><span class="p">):</span>
+            <span class="n">ncpus</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;NUMBER_OF_PROCESSORS&quot;</span><span class="p">]);</span>
             <span class="k">if</span> <span class="n">ncpus</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">ncpus</span>
-        <span class="k">return</span> <span class="mi">1</span> <span class="c"># Default        </span>
-</div></div>
+        <span class="k">return</span> <span class="mi">1</span> <span class="c1"># Default        </span></div></div>
+
 <div class="viewcode-block" id="LocalComHandler"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.LocalComHandler">[docs]</a><span class="k">class</span> <span class="nc">LocalComHandler</span><span class="p">(</span><span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Server socket thread for accepting connections and reacting on it</span>
 <span class="sd">    </span>
@@ -285,68 +282,68 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">sock</span> <span class="o">=</span> <span class="n">sock</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="c"># variables for monitoring</span>
+        <span class="c1"># variables for monitoring</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subflow_ids_running</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subflow_ids_finished</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
-        <span class="c"># flag from backend to stop run-method</span>
+        <span class="c1"># flag from backend to stop run-method</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">operation_finished</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="c"># initialize select concept (multiplexing of socket connections)</span>
+        <span class="c1"># initialize select concept (multiplexing of socket connections)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOMAXCONN</span><span class="p">)</span>
-        <span class="c"># define potentially readers and writers </span>
+        <span class="c1"># define potentially readers and writers </span>
         <span class="bp">self</span><span class="o">.</span><span class="n">readers</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">writers</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="c"># data structure to store all established connections and messages for</span>
-        <span class="c"># reading and writing: data[connection] = [message_read, message_to_write]</span>
+        <span class="c1"># data structure to store all established connections and messages for</span>
+        <span class="c1"># reading and writing: data[connection] = [message_read, message_to_write]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="c"># end flag of messages</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span> <span class="o">=</span> <span class="s">&quot;!END!&quot;</span>
-        </div>
+        <span class="c1"># end flag of messages</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span> <span class="o">=</span> <span class="s2">&quot;!END!&quot;</span></div>
+        
 <div class="viewcode-block" id="LocalComHandler.run"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.LocalComHandler.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Accept, read and write on connections until the operation is finished &quot;&quot;&quot;</span> 
         <span class="k">while</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">operation_finished</span><span class="p">):</span>
-            <span class="c"># multiplexing on potentially requests (in self.readers/writers)</span>
+            <span class="c1"># multiplexing on potentially requests (in self.readers/writers)</span>
             <span class="n">readable</span><span class="p">,</span> <span class="n">writable</span><span class="p">,</span> <span class="n">others</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">readers</span><span class="p">,</span> 
                                                           <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">,</span> <span class="p">[],</span> <span class="mf">1.0</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span> <span class="ow">in</span> <span class="n">readable</span><span class="p">:</span>
                 <span class="n">conn</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">readers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s">&quot;&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;&quot;</span><span class="p">,</span><span class="s2">&quot;&quot;</span><span class="p">]</span>
                 <span class="n">readable</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">reader</span> <span class="ow">in</span> <span class="n">readable</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">tmp</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">4096</span><span class="p">)</span>
                 <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span><span class="n">e</span><span class="p">:</span>
-                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;recv &#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;recv &#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">close_sock</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>                
                     <span class="k">if</span> <span class="n">tmp</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">reader</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">tmp</span>
-                        <span class="c"># Complete messages are processed</span>
+                        <span class="c1"># Complete messages are processed</span>
                         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">reader</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">parse_message</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
-                            <span class="c"># New data to send.  Make sure client is in the</span>
-                            <span class="c"># server&#39;s writer queue.</span>
-                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">reader</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="n">reader</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">:</span>
+                            <span class="c1"># New data to send.  Make sure client is in the</span>
+                            <span class="c1"># server&#39;s writer queue.</span>
+                            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">reader</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span> <span class="ow">and</span> <span class="n">reader</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">:</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">close_sock</span><span class="p">(</span><span class="n">reader</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">writer</span> <span class="ow">in</span> <span class="n">writable</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="c"># send data; tmp is #chars sent (may not be all in writbuf).</span>
+                    <span class="c1"># send data; tmp is #chars sent (may not be all in writbuf).</span>
                     <span class="n">tmp</span> <span class="o">=</span> <span class="n">writer</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">writer</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
                 <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span><span class="p">,</span><span class="n">e</span><span class="p">:</span>
-                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&#39;send: &#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+                    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;send: &#39;</span><span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">close_sock</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="c"># Removed sent characters from writbuf.</span>
+                    <span class="c1"># Removed sent characters from writbuf.</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">writer</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">writer</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="n">tmp</span><span class="p">:]</span>
-                    <span class="c"># If writbuf is empty, remove socket from potentially writers</span>
+                    <span class="c1"># If writbuf is empty, remove socket from potentially writers</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">writer</span><span class="p">][</span><span class="mi">1</span><span class="p">]:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
-    </div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span></div>
+    
 <div class="viewcode-block" id="LocalComHandler.close_sock"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.LocalComHandler.close_sock">[docs]</a>    <span class="k">def</span> <span class="nf">close_sock</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Close connection and remove it from lists of potentially readers/writers &quot;&quot;&quot;</span>
         <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -354,8 +351,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">readers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">conn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">writers</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">conn</span><span class="p">)</span>
-        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span>
-    </div>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">]</span></div>
+    
 <div class="viewcode-block" id="LocalComHandler.parse_message"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.LocalComHandler.parse_message">[docs]</a>    <span class="k">def</span> <span class="nf">parse_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Parse incoming message and react </span>
 <span class="sd">        </span>
@@ -389,59 +386,59 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">end_ind</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_token</span><span class="p">)</span>
         <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">][:</span><span class="n">end_ind</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s">&#39;name&#39;</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s">&#39;mcore&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span>
-        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;subflow_poolsize&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;name&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;mcore&#39;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span>
+        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;subflow_poolsize&#39;</span><span class="p">):</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;;&#39;</span><span class="p">)</span>
+                <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>  
-        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;execute_subflows&#39;</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;;&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span> <span class="c"># splitted within pickled object :-(</span>
-                <span class="n">subflow_str</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;execute_subflows&#39;</span><span class="p">):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">5</span><span class="p">:</span> <span class="c1"># splitted within pickled object :-(</span>
+                <span class="n">subflow_str</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">3</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">subflow_str</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
             <span class="n">path</span><span class="p">,</span> <span class="n">runs</span><span class="p">,</span> <span class="n">nr_subflows</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="nb">eval</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">eval</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
             <span class="n">subflows</span> <span class="o">=</span> <span class="p">[</span><span class="n">cPickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">subflow_str</span><span class="p">]</span>
             <span class="n">subflow_ids</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">subflows</span><span class="p">]</span>
-            <span class="k">assert</span><span class="p">(</span><span class="n">nr_subflows</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">subflows</span><span class="p">)),</span> <span class="s">&quot;incorrect number of subflows&quot;</span>
-            <span class="c"># load training data and submit calculation to the pool</span>
-            <span class="n">training_data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s">&#39;subflow_data.pickle&#39;</span><span class="p">)</span>
-            <span class="n">train_instances</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">training_data_path</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">))</span>            
+            <span class="k">assert</span><span class="p">(</span><span class="n">nr_subflows</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">subflows</span><span class="p">)),</span> <span class="s2">&quot;incorrect number of subflows&quot;</span>
+            <span class="c1"># load training data and submit calculation to the pool</span>
+            <span class="n">training_data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span><span class="s1">&#39;subflow_data.pickle&#39;</span><span class="p">)</span>
+            <span class="n">train_instances</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">training_data_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">))</span>            
             <span class="k">for</span> <span class="n">subflow</span> <span class="ow">in</span> <span class="n">subflows</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">subflow_pool</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">subflow</span><span class="p">,</span> 
-                                        <span class="n">kwds</span><span class="o">=</span><span class="p">{</span><span class="s">&quot;train_instances&quot;</span><span class="p">:</span><span class="n">train_instances</span><span class="p">,</span>
-                                              <span class="s">&quot;runs&quot;</span><span class="p">:</span> <span class="n">runs</span><span class="p">},</span> 
+                                        <span class="n">kwds</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;train_instances&quot;</span><span class="p">:</span><span class="n">train_instances</span><span class="p">,</span>
+                                              <span class="s2">&quot;runs&quot;</span><span class="p">:</span> <span class="n">runs</span><span class="p">},</span> 
                                         <span class="n">callback</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">subflow_finished</span><span class="p">)</span>
-            <span class="c"># minitor running jobs</span>
+            <span class="c1"># minitor running jobs</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">subflow_ids_running</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">subflow_ids</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;is_ready&#39;</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;;&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;is_ready&#39;</span><span class="p">):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
             <span class="n">nr_requested</span><span class="p">,</span> <span class="n">requested_subflows</span> <span class="o">=</span> <span class="p">[</span><span class="nb">eval</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
-            <span class="k">assert</span><span class="p">(</span><span class="n">nr_requested</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">requested_subflows</span><span class="p">)),</span> <span class="s">&quot;incorrect number&quot;</span>\
-                                                                  <span class="s">&quot; of subflows&quot;</span>
-            <span class="c"># check which subflows have already finished and tell to client</span>
+            <span class="k">assert</span><span class="p">(</span><span class="n">nr_requested</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">requested_subflows</span><span class="p">)),</span> <span class="s2">&quot;incorrect number&quot;</span>\
+                                                                  <span class="s2">&quot; of subflows&quot;</span>
+            <span class="c1"># check which subflows have already finished and tell to client</span>
             <span class="n">finished</span> <span class="o">=</span> <span class="n">requested_subflows</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="o">.</span><span class="n">subflow_ids_finished</span>
-            <span class="c"># .. todo: maybe reduced self.subflow_ids_finished since they are</span>
-            <span class="c"># unique and will never be requested again</span>
+            <span class="c1"># .. todo: maybe reduced self.subflow_ids_finished since they are</span>
+            <span class="c1"># unique and will never be requested again</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">finished</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span>
-        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&#39;send_results&#39;</span><span class="p">):</span>
-            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;;&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;send_results&#39;</span><span class="p">):</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;;&#39;</span><span class="p">)</span>
             <span class="n">subflow_ids</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">text</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
             <span class="n">requested_results</span> <span class="o">=</span> <span class="p">[</span><span class="n">cPickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> 
                                                <span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span> \
                                      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">subflow_ids</span><span class="p">]</span>
-            <span class="c"># delete requested results to free memory</span>
+            <span class="c1"># delete requested results to free memory</span>
             <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">subflow_ids</span><span class="p">:</span>
                 <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">requested_results</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_token</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Got unknown message: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">message</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">end_ind</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_token</span><span class="p">):]</span>
-        </div>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Got unknown message: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">message</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">conn</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="n">end_ind</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_token</span><span class="p">):]</span></div>
+        
 <div class="viewcode-block" id="LocalComHandler.subflow_finished"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.multicore.html#pySPACE.environments.backends.multicore.LocalComHandler.subflow_finished">[docs]</a>    <span class="k">def</span> <span class="nf">subflow_finished</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Callback method for pool execution of subflows &quot;&quot;&quot;</span>
-        <span class="c"># result is a tuple of flow_id and PerformanceResultSummary</span>
+        <span class="c1"># result is a tuple of flow_id and PerformanceResultSummary</span>
         <span class="n">flow_id</span><span class="p">,</span> <span class="n">result_collection</span> <span class="o">=</span> <span class="n">result</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="n">flow_id</span><span class="p">]</span><span class="o">=</span> <span class="n">result_collection</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">subflow_ids_running</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">flow_id</span><span class="p">)</span>
@@ -453,7 +450,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -462,14 +459,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

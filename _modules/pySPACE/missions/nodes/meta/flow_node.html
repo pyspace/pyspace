@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
     <link rel="up" title="Module code" href="../../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../../index.html">
               <img class="logo" src="../../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.missions.nodes.meta.flow_node</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Encapsulate complete :mod:`~pySPACE.environments.chains.node_chain` into a single node &quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot; Encapsulate complete :mod:`~pySPACE.environments.chains.node_chain` into a single node &quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">operator</span>
 <span class="kn">import</span> <span class="nn">cPickle</span>
@@ -76,6 +73,7 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
 
 <span class="kn">import</span> <span class="nn">pySPACE.missions.nodes</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
@@ -84,6 +82,11 @@
 <span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.splitter.all_train_splitter</span> <span class="kn">import</span> <span class="n">AllTrainSplitterNode</span>
 <span class="kn">from</span> <span class="nn">pySPACE.environments.chains.node_chain</span> <span class="kn">import</span> <span class="n">NodeChain</span>
 <span class="kn">from</span> <span class="nn">pySPACE.tools.memoize_generator</span> <span class="kn">import</span> <span class="n">MemoizeGenerator</span>
+
+<span class="c1"># BacktransformationNode imports</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.feature_generation.time_domain_features</span> <span class="kn">import</span> <span class="n">TimeDomainFeaturesNode</span>
 
 
 <div class="viewcode-block" id="FlowNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode">[docs]</a><span class="k">class</span> <span class="nc">FlowNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
@@ -166,7 +169,7 @@
 <span class="sd">                :number: optional number of occurrence in the node (default: 1).</span>
 
 <span class="sd">            By default we assume, that node parameters and program variables are</span>
-<span class="sd">            identical. This default is implemented in the BaseNOde and</span>
+<span class="sd">            identical. This default is implemented in the BaseNode and</span>
 <span class="sd">            can be overwritten by the relevant node with the function</span>
 <span class="sd">            *_change_parameters*.</span>
 
@@ -207,25 +210,26 @@
 <span class="sd">                                selected_channels: [&quot;EMG1&quot;,&quot;EMG2&quot;]</span>
 <span class="sd">              </span>
 <span class="sd">    :Author: Jan Hendrik Metzen (jhm@informatik.uni-bremen.de)</span>
+<span class="sd">    :Created: 2010/07/28</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
 <div class="viewcode-block" id="FlowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nodes</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">load_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">trainable</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                  <span class="n">supervised</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">input_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_dim</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                  <span class="n">change_parameters</span><span class="o">=</span><span class="p">[],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="c"># We need either a nodes or the path to one</span>
+        <span class="c1"># We need either a nodes or the path to one</span>
         <span class="k">assert</span> <span class="p">(</span><span class="n">nodes</span> <span class="ow">or</span> <span class="n">load_path</span><span class="p">)</span>
         
-        <span class="c"># set trainable permanently</span>
+        <span class="c1"># set trainable permanently</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">trainable</span>
         
         <span class="k">if</span> <span class="n">load_path</span><span class="p">:</span>
-            <span class="c"># assume that all splits have same relevant parameters</span>
-            <span class="n">check_nodes_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;__SPLIT__&quot;</span><span class="p">,</span><span class="s">&quot;0&quot;</span><span class="p">)</span>
-            <span class="c"># We load the flow only temporarily, since we might need to</span>
-            <span class="c"># pickle this object (depending on the backend), and storing the flow</span>
-            <span class="c"># object too early causes overhead</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">check_nodes_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">))</span>
-        <span class="c"># Determine some properties of the flow (input_dim, output_dim)</span>
+            <span class="c1"># assume that all splits have same relevant parameters</span>
+            <span class="n">check_nodes_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;__SPLIT__&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">)</span>
+            <span class="c1"># We load the flow only temporarily, since we might need to</span>
+            <span class="c1"># pickle this object (depending on the backend), and storing the flow</span>
+            <span class="c1"># object too early causes overhead</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">check_nodes_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">))</span>
+        <span class="c1"># Determine some properties of the flow (input_dim, output_dim)</span>
         <span class="k">if</span> <span class="n">input_dim</span><span class="o">==</span><span class="bp">None</span> <span class="ow">and</span> <span class="n">load_path</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">input_dim</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">flow</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">is_source_node</span><span class="p">():</span> 
@@ -240,22 +244,22 @@
         <span class="k">elif</span> <span class="n">input_dim</span><span class="o">==</span><span class="bp">None</span><span class="p">:</span>
             <span class="n">input_dim</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">input_dim</span>
             
-<span class="c">#            assert input_dim is not None, &quot;You must specify the input dim of &quot; \</span>
-<span class="c">#                                          &quot;node %s explicitly!&quot; % self.__class__.__name__</span>
+<span class="c1">#            assert input_dim is not None, &quot;You must specify the input dim of &quot; \</span>
+<span class="c1">#                                          &quot;node %s explicitly!&quot; % self.__class__.__name__</span>
             <span class="n">output_dim</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">output_dim</span>
         
         <span class="k">if</span> <span class="n">load_path</span><span class="p">:</span>
             <span class="n">trainable</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
                                     <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">flow</span><span class="p">])</span>
             <span class="n">supervised</span> <span class="o">=</span> <span class="n">trainable</span>
-        <span class="c"># flow is not made permanent but later on loaded</span>
+        <span class="c1"># flow is not made permanent but later on loaded</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">del</span><span class="p">(</span><span class="n">flow</span><span class="p">)</span>
         <span class="k">except</span><span class="p">:</span>
             <span class="k">pass</span>
-        <span class="c"># Now we can call the superclass constructor</span>
+        <span class="c1"># Now we can call the superclass constructor</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">input_dim</span><span class="o">=</span><span class="n">input_dim</span><span class="p">,</span> 
-                                        <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span>
+                                       <span class="n">output_dim</span><span class="o">=</span><span class="n">output_dim</span><span class="p">,</span>
                                        <span class="n">dtype</span><span class="o">=</span><span class="n">dtype</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">trainable</span> <span class="o">=</span> <span class="n">trainable</span><span class="p">,</span>
@@ -264,104 +268,103 @@
                                       <span class="n">change_parameters</span> <span class="o">=</span> <span class="n">change_parameters</span><span class="p">,</span>
                                       <span class="n">changed</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="n">nodes</span><span class="p">:</span> <span class="c"># if we got a flow object</span>
-            <span class="c"># Remove dtype of the  nodes</span>
+        <span class="k">if</span> <span class="n">nodes</span><span class="p">:</span> <span class="c1"># if we got a flow object</span>
+            <span class="c1"># Remove dtype of the  nodes</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="bp">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">flow</span> <span class="o">=</span> <span class="n">nodes</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="c"># Do not load now, but only store path to pickled object</span>
+            <span class="c1"># Do not load now, but only store path to pickled object</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">load_path</span> <span class="o">=</span> <span class="n">load_path</span><span class="p">,</span>
-                                          <span class="n">flow</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="c"># We will load the nodes lazily</span>
-</div>
+                                          <span class="n">flow</span> <span class="o">=</span> <span class="bp">None</span><span class="p">)</span> <span class="c1"># We will load the nodes lazily</span></div>
+
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="FlowNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
         <span class="n">node_obj</span> <span class="o">=</span> <span class="n">FlowNode</span><span class="p">(</span><span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
         
-        <span class="k">return</span> <span class="n">node_obj</span>
-            </div>
+        <span class="k">return</span> <span class="n">node_obj</span></div>
+            
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="FlowNode._prepare_node_chain"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._prepare_node_chain">[docs]</a>    <span class="k">def</span> <span class="nf">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
-        <span class="k">assert</span> <span class="s">&quot;parameters&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span>
-        <span class="k">if</span> <span class="s">&quot;load_path&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]:</span>
-            <span class="c"># Let node load pickled object</span>
-            <span class="k">return</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span>  
+        <span class="k">assert</span> <span class="s2">&quot;parameters&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span>
+        <span class="k">if</span> <span class="s2">&quot;load_path&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]:</span>
+            <span class="c1"># Let node load pickled object</span>
+            <span class="k">return</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>  
         <span class="k">else</span><span class="p">:</span>
-            <span class="c"># The node chain has to be specified in YAML syntax</span>
-            <span class="k">assert</span> <span class="s">&quot;nodes&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">],</span> \
-                       <span class="s">&quot;FlowNode requires specification of a list of nodes &quot;</span> \
-                       <span class="s">&quot;or of a load_path to a pickled node chain.&quot;</span>
+            <span class="c1"># The node chain has to be specified in YAML syntax</span>
+            <span class="k">assert</span> <span class="s2">&quot;nodes&quot;</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">],</span> \
+                       <span class="s2">&quot;FlowNode requires specification of a list of nodes &quot;</span> \
+                       <span class="s2">&quot;or of a load_path to a pickled node chain.&quot;</span>
     
             <span class="n">node_sequence</span> <span class="o">=</span> <span class="p">[</span><span class="n">ExternalGeneratorSourceNode</span><span class="p">(),</span>
                              <span class="n">AllTrainSplitterNode</span><span class="p">()]</span>
-            <span class="c"># For all nodes in the specs</span>
-            <span class="k">for</span> <span class="n">node_spec</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">][</span><span class="s">&quot;nodes&quot;</span><span class="p">]:</span>
-                <span class="c"># Use factory method to create node</span>
+            <span class="c1"># For all nodes in the specs</span>
+            <span class="k">for</span> <span class="n">node_spec</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">][</span><span class="s2">&quot;nodes&quot;</span><span class="p">]:</span>
+                <span class="c1"># Use factory method to create node</span>
                 <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BaseNode</span><span class="o">.</span><span class="n">node_from_yaml</span><span class="p">(</span><span class="n">node_spec</span><span class="p">)</span>
                     
-                <span class="c"># Append this node to the sequence of node</span>
+                <span class="c1"># Append this node to the sequence of node</span>
                 <span class="n">node_sequence</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">node_obj</span><span class="p">)</span> 
                 
-            <span class="c"># Check if the nodes have to cache their outputs</span>
+            <span class="c1"># Check if the nodes have to cache their outputs</span>
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">node</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">):</span>
-                <span class="c"># If a node is trainable, it uses the outputs of its input node</span>
-                <span class="c"># at least twice, so we have to cache.</span>
+                <span class="c1"># If a node is trainable, it uses the outputs of its input node</span>
+                <span class="c1"># at least twice, so we have to cache.</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">():</span>
                     <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-                <span class="c"># Split node might also request the data from their input nodes</span>
-                <span class="c"># (once for each split), depending on their implementation. We </span>
-                <span class="c"># assume the worst case and activate caching</span>
+                <span class="c1"># Split node might also request the data from their input nodes</span>
+                <span class="c1"># (once for each split), depending on their implementation. We </span>
+                <span class="c1"># assume the worst case and activate caching</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_split_node</span><span class="p">():</span>
                     <span class="n">node_sequence</span><span class="p">[</span><span class="n">index</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">caching</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
             
-            <span class="c"># Determine if any of the nodes is trainable</span>
+            <span class="c1"># Determine if any of the nodes is trainable</span>
             <span class="n">trainable</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
                                <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_sequence</span><span class="p">])</span>
             
-            <span class="c"># Determine if any of the nodes requires supervised training</span>
+            <span class="c1"># Determine if any of the nodes requires supervised training</span>
             <span class="n">supervised</span> <span class="o">=</span> <span class="nb">reduce</span><span class="p">(</span><span class="n">operator</span><span class="o">.</span><span class="n">or_</span><span class="p">,</span> 
                                 <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">is_trainable</span><span class="p">()</span> <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">node_sequence</span><span class="p">])</span>
             
-            <span class="c"># Create the nodes</span>
+            <span class="c1"># Create the nodes</span>
             <span class="n">flow</span> <span class="o">=</span> <span class="n">NodeChain</span><span class="p">(</span><span class="n">node_sequence</span><span class="p">)</span>
-            <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s">&quot;nodes&quot;</span><span class="p">)</span>
+            <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;nodes&quot;</span><span class="p">)</span>
             
-            <span class="c"># Evaluate all remaining parameters if they are eval statements</span>
-            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;eval(&quot;</span><span class="p">):</span>
-                    <span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+            <span class="c1"># Evaluate all remaining parameters if they are eval statements</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;eval(&quot;</span><span class="p">):</span>
+                    <span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">][</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">value</span><span class="p">[</span><span class="mi">5</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
             
-            <span class="c"># Create the node object</span>
-            <span class="n">member_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
-            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;nodes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">flow</span>
-            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;trainable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trainable</span>
-            <span class="n">member_dict</span><span class="p">[</span><span class="s">&quot;supervised&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">supervised</span>
-            
-            
-            <span class="k">return</span> <span class="n">member_dict</span>
+            <span class="c1"># Create the node object</span>
+            <span class="n">member_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s2">&quot;nodes&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">flow</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s2">&quot;trainable&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">trainable</span>
+            <span class="n">member_dict</span><span class="p">[</span><span class="s2">&quot;supervised&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">supervised</span>
+
+            <span class="k">return</span> <span class="n">member_dict</span></div>
         
-</div>
+
 <div class="viewcode-block" id="FlowNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable. &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span>
-    </div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">trainable</span></div>
+    
 <div class="viewcode-block" id="FlowNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">supervised</span>
-</div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">supervised</span></div>
+
 <div class="viewcode-block" id="FlowNode.set_run_number"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.set_run_number">[docs]</a>    <span class="k">def</span> <span class="nf">set_run_number</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_number</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Forward run number to flow &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span>
-</div>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_run_number</span><span class="p">(</span><span class="n">run_number</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="FlowNode.set_temp_dir"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.set_temp_dir">[docs]</a>    <span class="k">def</span> <span class="nf">set_temp_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp_dir</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Forward temp_dir to flow &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_temp_dir</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_semp_dir</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span>
-</div>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">set_semp_dir</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="FlowNode._get_flow"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._get_flow">[docs]</a>    <span class="k">def</span> <span class="nf">_get_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return flow (load flow lazily if not yet loaded).</span>
 <span class="sd">    </span>
@@ -369,51 +372,51 @@
 <span class="sd">        .. todo:: Add ExternalGeneratorSourceNode if self.trainable</span>
 <span class="sd">        .. todo:: Check if last node is sink node and remove </span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span> <span class="c"># Load nodes lazily</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span> <span class="c1"># Load nodes lazily</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">replace_keywords_in_load_path</span><span class="p">()</span>
-            <span class="n">nodes</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="p">,</span> <span class="s">&#39;r&#39;</span><span class="p">))</span>
+            <span class="n">nodes</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">load_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="n">nodes</span><span class="p">:</span>
                 <span class="n">node</span><span class="o">.</span><span class="n">_dtype</span> <span class="o">=</span> <span class="bp">None</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">nodes</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">change_flow</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">changed</span><span class="o">=</span><span class="bp">True</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span>
-</div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span></div>
+
 <div class="viewcode-block" id="FlowNode.change_flow"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.change_flow">[docs]</a>    <span class="k">def</span> <span class="nf">change_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">changeset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">change_parameters</span><span class="p">:</span>
-            <span class="n">number</span><span class="o">=</span><span class="n">changeset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;number&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;node&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&quot;parameters&quot;</span><span class="p">):</span>
+            <span class="n">number</span><span class="o">=</span><span class="n">changeset</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;number&quot;</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;node&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">changeset</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s2">&quot;parameters&quot;</span><span class="p">):</span>
                 <span class="kn">import</span> <span class="nn">warnings</span>
-                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Could not change change set: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">changeset</span><span class="p">)</span><span class="o">+</span><span class="s">&quot;!&quot;</span><span class="p">)</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Could not change change set: &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">changeset</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;!&quot;</span><span class="p">)</span>
                 <span class="k">continue</span>
             <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flow</span><span class="p">:</span>
-                <span class="k">if</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">missions</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">NODE_MAPPING</span><span class="p">[</span><span class="n">changeset</span><span class="p">[</span><span class="s">&quot;node&quot;</span><span class="p">]]</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">pySPACE</span><span class="o">.</span><span class="n">missions</span><span class="o">.</span><span class="n">nodes</span><span class="o">.</span><span class="n">NODE_MAPPING</span><span class="p">[</span><span class="n">changeset</span><span class="p">[</span><span class="s2">&quot;node&quot;</span><span class="p">]]</span><span class="o">==</span><span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">number</span><span class="p">:</span>
-                        <span class="n">node</span><span class="o">.</span><span class="n">_change_parameters</span><span class="p">(</span><span class="n">changeset</span><span class="p">[</span><span class="s">&quot;parameters&quot;</span><span class="p">])</span>
+                        <span class="n">node</span><span class="o">.</span><span class="n">_change_parameters</span><span class="p">(</span><span class="n">changeset</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">])</span>
                         <span class="k">break</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
-</div>
+                        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
 <div class="viewcode-block" id="FlowNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Executes the flow on the given data vector *data* &quot;&quot;&quot;</span>
-        <span class="c"># Delegate to internal flow object</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-</div>
+        <span class="c1"># Delegate to internal flow object</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="FlowNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Trains the flow on the given data vector *data* &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span>
-        </div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">))</span></div>
+        
 <div class="viewcode-block" id="FlowNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_generator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span> <span class="o">=</span> <span class="p">[]</span> <span class="c"># We do no longer need the training data</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_instances</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># We do no longer need the training data</span></div>
+
 <div class="viewcode-block" id="FlowNode._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterate through the nodes to train them &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="FlowNode._batch_retrain"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode._batch_retrain">[docs]</a>    <span class="k">def</span> <span class="nf">_batch_retrain</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">data_list</span><span class="p">,</span> <span class="n">label_list</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Batch retraining for node chains</span>
 <span class="sd">        </span>
@@ -423,25 +426,25 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">label_list</span><span class="p">)):</span>
-                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s">&quot;_inc_train&quot;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">buffering</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s2">&quot;_inc_train&quot;</span><span class="p">):</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="p">:</span>
                         <span class="n">node</span><span class="o">.</span><span class="n">retraining_phase</span><span class="o">=</span><span class="bp">True</span>
                         <span class="n">node</span><span class="o">.</span><span class="n">start_retraining</span><span class="p">()</span>
                     <span class="n">node</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="n">label_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
             <span class="n">data_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">node</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">data_list</span><span class="p">]</span>
         <span class="n">data_list</span>  <span class="o">=</span> <span class="bp">None</span>
-        <span class="n">label_list</span> <span class="o">=</span> <span class="bp">None</span>
-</div>
+        <span class="n">label_list</span> <span class="o">=</span> <span class="bp">None</span></div>
+
 <div class="viewcode-block" id="FlowNode.is_retrainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.is_retrainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_retrainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Retraining needed if one node is retrainable &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retrainable</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">True</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
                 <span class="k">if</span> <span class="n">node</span><span class="o">.</span><span class="n">is_retrainable</span><span class="p">():</span>
                     <span class="k">return</span> <span class="bp">True</span>
-        <span class="k">return</span> <span class="bp">False</span>
-</div>
+        <span class="k">return</span> <span class="bp">False</span></div>
+
 <div class="viewcode-block" id="FlowNode.present_label"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.present_label">[docs]</a>    <span class="k">def</span> <span class="nf">present_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Forward the label to the nodes</span>
 <span class="sd">        </span>
@@ -452,25 +455,25 @@
 <span class="sd">        .. todo::</span>
 <span class="sd">            Implement check on, if the inner nodes do not buffer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">present_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">present_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span></div>
 
-</div>
+
 <div class="viewcode-block" id="FlowNode.reset"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Reset the state to the clean state it had after its initialization &quot;&quot;&quot;</span>
-        <span class="c"># Reset not only the node but also all nodes of the encapsulated node chain.</span>
-        <span class="c"># Irrelevant, since the node chain is made permanent or later on loaded.</span>
-<span class="c">#        if self._get_flow():</span>
- <span class="c">#           for node in self._get_flow():</span>
-  <span class="c">#              node.reset()</span>
+        <span class="c1"># Reset not only the node but also all nodes of the encapsulated node chain.</span>
+        <span class="c1"># Irrelevant, since the node chain is made permanent or later on loaded.</span>
+<span class="c1">#        if self._get_flow():</span>
+ <span class="c1">#           for node in self._get_flow():</span>
+  <span class="c1">#              node.reset()</span>
 
-        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
-</div>
+        <span class="nb">super</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span></div>
+
 <div class="viewcode-block" id="FlowNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">node</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">():</span>
-                <span class="n">node</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
-</div>
+                <span class="n">node</span><span class="o">.</span><span class="n">store_state</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="FlowNode.get_output_type"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.FlowNode.get_output_type">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Get the output type of the flow</span>
 
@@ -479,9 +482,69 @@
 <span class="sd">        determined</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">flow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">flow</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">flow</span><span class="o">.</span><span class="n">get_output_type</span><span class="p">(</span><span class="n">input_type</span><span class="p">,</span> <span class="n">as_string</span><span class="p">)</span></div></div>
 
-</div></div>
+
+<div class="viewcode-block" id="UnsupervisedRetrainingFlowNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.UnsupervisedRetrainingFlowNode">[docs]</a><span class="k">class</span> <span class="nc">UnsupervisedRetrainingFlowNode</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Use classified label for retraining</span>
+
+<span class="sd">    All the other functionality is as described in :class:`FlowNode`.</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">      :confidence_boundary:</span>
+<span class="sd">        Minimum distance to decision boundary which is required for retraining.</span>
+<span class="sd">        By default every result is used.</span>
+<span class="sd">        For regression algorithms, this option cannot be used.</span>
+
+<span class="sd">        (*optional, default: 0*)</span>
+
+<span class="sd">      :decision_boundary:</span>
+<span class="sd">        Threshold for decision used for calculating classifier confidence.</span>
+
+<span class="sd">        (*optional, default: 0*)</span>
+
+<span class="sd">      .. seealso:: :class:`FlowNode`</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        - node : UnsupervisedRetrainingFlow</span>
+<span class="sd">          parameters :</span>
+<span class="sd">            retrain : True</span>
+<span class="sd">            nodes :</span>
+<span class="sd">              - node : 2SVM</span>
+<span class="sd">                parameters :</span>
+<span class="sd">                  retrain : True</span>
+
+<span class="sd">    :Author: Mario Michael Krell (mario.krell@dfki.de)</span>
+<span class="sd">    :Created: 2015/02/07</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="UnsupervisedRetrainingFlowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.UnsupervisedRetrainingFlowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">decision_boundary</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">confidence_boundary</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">UnsupervisedRetrainingFlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">decision_boundary</span><span class="o">=</span><span class="n">decision_boundary</span><span class="p">,</span>
+                                      <span class="n">confidence_boundary</span><span class="o">=</span><span class="n">confidence_boundary</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="UnsupervisedRetrainingFlowNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.UnsupervisedRetrainingFlowNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Create the FlowNode node and the contained chain &quot;&quot;&quot;</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">UnsupervisedRetrainingFlowNode</span><span class="p">(</span>
+            <span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">node_obj</span></div>
+
+<div class="viewcode-block" id="UnsupervisedRetrainingFlowNode._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.UnsupervisedRetrainingFlowNode._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Execute for label guess and retrain if appropriate &quot;&quot;&quot;</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">prediction</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span> <span class="ow">and</span>\
+                <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">prediction</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">decision_boundary</span><span class="p">)</span> <span class="o">&gt;=</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">confidence_boundary</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">UnsupervisedRetrainingFlowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">result</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># no adaptation because prediction is not confident</span>
+            <span class="k">pass</span></div></div>
+
+
 <div class="viewcode-block" id="BatchAdaptSubflowNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode">[docs]</a><span class="k">class</span> <span class="nc">BatchAdaptSubflowNode</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Load and retrain a pre-trained NodeChain for recalibration</span>
 <span class="sd">    </span>
@@ -518,38 +581,614 @@
 <span class="sd">    :Created: 2012/06/20</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-<div class="viewcode-block" id="BatchAdaptSubflowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_path</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">BatchAdaptSubflowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">load_path</span><span class="o">=</span><span class="n">load_path</span><span class="p">,</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">batch_labels</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
-    </div>
+<div class="viewcode-block" id="BatchAdaptSubflowNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BatchAdaptSubflowNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
+            <span class="n">load_path</span><span class="o">=</span><span class="n">load_path</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">batch_labels</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span></div>
+    
     <span class="nd">@staticmethod</span>
 <div class="viewcode-block" id="BatchAdaptSubflowNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot; Create the FlowNode node and the contained chain &quot;&quot;&quot;</span>
         <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BatchAdaptSubflowNode</span><span class="p">(</span><span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
         
-        <span class="k">return</span> <span class="n">node_obj</span>
-    </div>
+        <span class="k">return</span> <span class="n">node_obj</span></div>
+    
 <div class="viewcode-block" id="BatchAdaptSubflowNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Expects the nodes to buffer the training samples,</span>
 <span class="sd">        when they are executed on the data. &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="o">=</span><span class="p">[]</span>
-        <span class="c"># save labels</span>
+        <span class="c1"># save labels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
-        <span class="c"># save examples via the buffering parameter in the node</span>
-        <span class="c"># Only the relevant nodes will save there data</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
-        </div>
+        <span class="c1"># save examples via the buffering parameter in the node</span>
+        <span class="c1"># Only the relevant nodes will save there data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+        
 <div class="viewcode-block" id="BatchAdaptSubflowNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BatchAdaptSubflowNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c"># Present_label is a BaseNode method.</span>
-        <span class="c"># It recursively goes through all nodes.</span>
-        <span class="c"># There _batch_retrain is called with our label list and</span>
-        <span class="c"># the nodes are retrained with this labels on the previously buffered samples.</span>
+        <span class="c1"># Present_label is a BaseNode method.</span>
+        <span class="c1"># It recursively goes through all nodes.</span>
+        <span class="c1"># There _batch_retrain is called with our label list and</span>
+        <span class="c1"># the nodes are retrained with this labels on the previously buffered samples.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_get_flow</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">present_label</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span> <span class="o">=</span> <span class="bp">None</span>
-</div></div>
-<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;Flow_Node&quot;</span><span class="p">:</span> <span class="n">FlowNode</span><span class="p">,</span>
-                <span class="s">&quot;Batch_Adapt_Subflow&quot;</span> <span class="p">:</span> <span class="n">BatchAdaptSubflowNode</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">batch_labels</span> <span class="o">=</span> <span class="bp">None</span></div></div>
+
+<div class="viewcode-block" id="BacktransformationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode">[docs]</a><span class="k">class</span> <span class="nc">BacktransformationNode</span><span class="p">(</span><span class="n">FlowNode</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Determine underlying linear transformation of classifier or regression algorithm</span>
+
+<span class="sd">    The resulting linear transformation can be accessed with the method:</span>
+<span class="sd">    *get_previous_transformations* of the following node, e.g., for</span>
+<span class="sd">    visualization and sensor ranking.</span>
+<span class="sd">    It is stored in the same format as the input data.</span>
+
+<span class="sd">    .. warning:: This node makes sense if and only if the underlying</span>
+<span class="sd">        transformations are linear. For nonlinear transformations a</span>
+<span class="sd">        more generic approach needs to be implemented.</span>
+<span class="sd">        This implementation is not using direct access to the internal</span>
+<span class="sd">        algorithms but determining the transformation by testing a large</span>
+<span class="sd">        number of samples, which is not efficient but most generic.</span>
+
+<span class="sd">    .. warning:: Currently this node requires stationary processing and does</span>
+<span class="sd">        not catch the changing transformation from incremental learning.</span>
+
+<span class="sd">    **References**</span>
+
+<span class="sd">        ========= ==========================================================================================</span>
+<span class="sd">        main      source: Backtransformation</span>
+<span class="sd">        ========= ==========================================================================================</span>
+<span class="sd">        author    Krell, M. M. and Straube, S.</span>
+<span class="sd">        journal   Advances in Data Analysis and Classification</span>
+<span class="sd">        title     `Backtransformation: a new representation of data processing chains with a scalar decision function &lt;http://dx.doi.org/10.1007/s11634-015-0229-3&gt;`_</span>
+<span class="sd">        year      2015</span>
+<span class="sd">        doi       10.1007/s11634-015-0229-3</span>
+<span class="sd">        pages     1-25</span>
+<span class="sd">        ========= ==========================================================================================</span>
+
+<span class="sd">    **Parameters**</span>
+
+<span class="sd">        .. seealso:: :class:`FlowNode`</span>
+
+<span class="sd">        :eps:</span>
+<span class="sd">            the step of the difference method :math:`\\varepsilon`. Should be set manually for each</span>
+<span class="sd">            differentiation</span>
+
+<span class="sd">            (*default: 2.2e-16*)</span>
+
+<span class="sd">        :method:</span>
+<span class="sd">            the method that should be used for the derivation. The available</span>
+<span class="sd">            methods are encoded as strings</span>
+
+<span class="sd">            * Forward difference method -&gt; ``method=&quot;forward_difference&quot;``</span>
+<span class="sd">            * Central difference method -&gt; ``method=&quot;central_difference&quot;``</span>
+<span class="sd">            * Central difference method using a half step -&gt; ``method=&quot;central_difference_with_halfstep&quot;``</span>
+
+<span class="sd">        :mode:</span>
+<span class="sd">            the method used to obtain the backtransformation. The choice of</span>
+<span class="sd">            method depends to the current dataset and hence</span>
+
+<span class="sd">            * Linear, affine datasets -&gt; ``mode=&quot;linear&quot;``</span>
+<span class="sd">            * Non-linear datasets -&gt; ``mode=&quot;nonlinear&quot;``</span>
+
+<span class="sd">        :store_format:</span>
+<span class="sd">            specify the format in which the data is to be stored. The options</span>
+<span class="sd">            here are:</span>
+
+<span class="sd">                * `txt` file - this file is generated automatically</span>
+<span class="sd">                    using `numpy.savetxt`</span>
+<span class="sd">                * `pickle` file - this file is generated using `pickle.dump`</span>
+<span class="sd">                * `mat` file - saved using the scipy matlab interface</span>
+
+<span class="sd">            If no format is specified, no file will be stored.</span>
+
+<span class="sd">            (*optional, default: None*)</span>
+
+<span class="sd">    **Exemplary Call**</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        -   </span>
+<span class="sd">            node : Backtransformation</span>
+<span class="sd">            parameters :</span>
+<span class="sd">                nodes :</span>
+<span class="sd">                    -   </span>
+<span class="sd">                        node : FFTBandPassFilter</span>
+<span class="sd">                        parameters :</span>
+<span class="sd">                            pass_band : [0.0, 4.0]</span>
+<span class="sd">                    -   </span>
+<span class="sd">                        node : TimeDomainFeatures</span>
+<span class="sd">                    -</span>
+<span class="sd">                        node : LinearDiscriminantAnalysisClassifier</span>
+
+<span class="sd">    :Author: Mario Michael Krell</span>
+<span class="sd">    :Created: 2013/12/24</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">input_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;TimeSeries&quot;</span><span class="p">,</span> <span class="s2">&quot;FeatureVector&quot;</span><span class="p">]</span>
+<div class="viewcode-block" id="BacktransformationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;linear&quot;</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s2">&quot;central_difference&quot;</span><span class="p">,</span>
+                 <span class="n">eps</span><span class="o">=</span><span class="mf">2.2</span><span class="o">*</span><span class="mf">1e-16</span><span class="p">,</span> <span class="n">store_format</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">trafo</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">example</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">eps</span><span class="p">,</span>
+                                      <span class="n">num_samples</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">covariance</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">store_format</span><span class="o">=</span><span class="n">store_format</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode._execute"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode._execute">[docs]</a>    <span class="k">def</span> <span class="nf">_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Determine example at first call, forward normal processing &quot;&quot;&quot;</span>
+        <span class="c1"># generate example at first call</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Update covariance matrix and forward training &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+        <span class="n">flattened_data</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">=</span> <span class="n">flattened_data</span> <span class="o">*</span> <span class="n">flattened_data</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">+=</span> <span class="n">flattened_data</span> <span class="o">*</span> <span class="n">flattened_data</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Update covariance matrix and forward training &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_stop_training</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.get_own_transformation"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.get_own_transformation">[docs]</a>    <span class="k">def</span> <span class="nf">get_own_transformation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the transformation parameters &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sample</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;No transformation generated!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">None</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">generate_affine_backtransformation</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">==</span> <span class="s2">&quot;nonlinear&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">get_derivative</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">channel_names</span><span class="p">,</span> <span class="s2">&quot;generic_backtransformation&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">covariance</span><span class="p">),</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">feature_names</span><span class="p">,</span> <span class="s2">&quot;generic_backtransformation&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.generate_affine_backtransformation"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.generate_affine_backtransformation">[docs]</a>    <span class="k">def</span> <span class="nf">generate_affine_backtransformation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate synthetic examples and test them to determine transformation</span>
+
+<span class="sd">        This is the key method!</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="n">testsample</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">testsample</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)):</span>
+                <span class="n">testsample</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span>
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+                <span class="n">testsample</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">testsample</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="n">testsample</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">offset</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">testsample</span><span class="p">)))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">testsample</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">))</span>
+                    <span class="n">testsample</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">testsample</span><span class="p">))</span>
+                                       <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">offset</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.normalization"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.normalization">[docs]</a>    <span class="k">def</span> <span class="nf">normalization</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; normalizes the results of the transformation to the same norm as the input</span>
+
+<span class="sd">        **Principle**</span>
+
+<span class="sd">        The function first computes the norm of the input and then applies the same norm to</span>
+<span class="sd">        the self.trafo variable such that the results will be on the same scale</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">            If either the input or the derivative have not been computed already</span>
+<span class="sd">            the node will will raise an IOError.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;The derivative has not be computed. Cannot perform normalization.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sample</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">IOError</span><span class="p">(</span><span class="s2">&quot;The initial sample has not been given. Cannot perform normalization.&quot;</span><span class="p">)</span>
+        <span class="n">initial</span> <span class="o">=</span> <span class="n">sample</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">initial</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
+        <span class="n">norm_a</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">norm_a</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">norm_a</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="n">initial</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">initial</span><span class="p">[</span><span class="mi">0</span><span class="p">,:]</span>
+        <span class="n">norm_b</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">norm_b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">norm_b</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">,</span> <span class="n">b</span><span class="o">*</span><span class="n">norm_a</span><span class="o">/</span><span class="n">norm_b</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.get_derivative"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.get_derivative">[docs]</a>    <span class="k">def</span> <span class="nf">get_derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; obtain the derivative of the entire transformation</span>
+
+<span class="sd">        The method is just a wrapper for different methods of derivation</span>
+<span class="sd">        that are called by the method. The first order derivative is saved</span>
+<span class="sd">        to a variable called ``self.trafo`` and can be visualised using</span>
+<span class="sd">        specific methods</span>
+
+<span class="sd">        The methods used in the following pieces of code are described in</span>
+<span class="sd">        `Numerical Methods in Engineering with Python &lt;http://books.google.de/books?id=WiDie-hev1kC&gt;`_</span>
+<span class="sd">        by Jaan Kiusalaas. Namely, the three methods implemented here are:</span>
+
+<span class="sd">        * Forward difference method</span>
+<span class="sd">        * Central difference method</span>
+<span class="sd">        * Central difference method using a half step</span>
+
+<span class="sd">        More details about the implementations can be found in the descriptions</span>
+<span class="sd">        of the functions</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :sample:</span>
+<span class="sd">                the initial values on which the derivative is to be computed. If no</span>
+<span class="sd">                sample is provided, the default ``self.example`` variable is used.</span>
+
+<span class="sd">            (*default: None*)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sample</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;No new sample was given. Using the default example.&quot;</span><span class="p">)</span>
+            <span class="n">sample</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;forward_difference&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward_difference_method</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;central_difference&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">central_difference_method</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;central_difference_with_halfstep&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">central_difference_with_halfstep_method</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Method &quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">method</span> <span class="o">+</span> <span class="s2">&quot; is not know. &quot;</span>
+                                               <span class="s2">&quot;Using the forward difference approach&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">forward_difference_method</span><span class="p">(</span><span class="n">sample</span><span class="o">=</span><span class="n">sample</span><span class="p">)</span></div>
+
+        <span class="c1">#self.normalization(sample)</span>
+
+<div class="viewcode-block" id="BacktransformationNode.forward_difference_method"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.forward_difference_method">[docs]</a>    <span class="k">def</span> <span class="nf">forward_difference_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; implementation of the forward difference method</span>
+
+<span class="sd">        **Principle**</span>
+
+<span class="sd">        The principle applied by this method of numerical differentiation is</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            f&#39;(x)=\\frac{f(x+h)-f(x)}{h}</span>
+
+<span class="sd">        where :math:`h` is the step of the differentiation that is computed</span>
+<span class="sd">        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and</span>
+<span class="sd">        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.</span>
+
+<span class="sd">        The differentiation method distinguishes between ``FeatureVector`` and</span>
+<span class="sd">        ``TimeSeries`` inputs and applies the derivative according to the</span>
+<span class="sd">        input type.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :sample:</span>
+<span class="sd">                the initial value used for the derivation</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">            Out of the three numerical differentiation methods, this one has the</span>
+<span class="sd">            least overhead. Nonetheless, this method is less accurate than the</span>
+<span class="sd">            half step method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">initial_value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)):</span>
+                <span class="n">data_with_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">orig</span> <span class="o">=</span> <span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">orig</span>
+                <span class="n">new_feature_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">data_with_offset</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">new_feature_vector</span><span class="p">)</span> <span class="o">-</span>
+                                   <span class="n">initial_value</span><span class="p">)</span><span class="o">/</span><span class="n">diff</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">data_with_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">data_with_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">data_with_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                    <span class="n">data_with_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                    <span class="n">new_time_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">data_with_offset</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">new_time_series</span><span class="p">))</span>
+                                       <span class="o">-</span> <span class="n">numpy</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">initial_value</span><span class="p">))</span><span class="o">/</span><span class="n">diff</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.central_difference_method"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.central_difference_method">[docs]</a>    <span class="k">def</span> <span class="nf">central_difference_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; implementation of the central difference method</span>
+
+<span class="sd">        **Principle**</span>
+
+<span class="sd">        The principle applied by the central difference method is</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            f&#39;(x)=\\frac{f(x+h)-f(x-h)}{2h}</span>
+
+<span class="sd">        where :math:`h` is the step of the differentiation that is computed</span>
+<span class="sd">        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and</span>
+<span class="sd">        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :sample:</span>
+<span class="sd">                the initial value used for the derivation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)):</span>
+                <span class="n">positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="n">negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                <span class="n">negative_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="n">negative_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span>
+
+                <span class="n">positive_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">positive_offset</span>
+                <span class="p">)</span>
+                <span class="n">negative_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">negative_offset</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">positive_vector</span><span class="p">)</span> <span class="o">-</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">negative_vector</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">diff</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="n">negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+
+                    <span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                    <span class="n">negative_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="n">negative_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span>
+
+                    <span class="n">positive_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">positive_offset</span>
+                    <span class="p">)</span>
+                    <span class="n">negative_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">negative_offset</span>
+                    <span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">positive_series</span><span class="p">)</span> <span class="o">-</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">negative_series</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">2.</span><span class="o">*</span><span class="n">diff</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.central_difference_with_halfstep_method"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.central_difference_with_halfstep_method">[docs]</a>    <span class="k">def</span> <span class="nf">central_difference_with_halfstep_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; implementation of the central difference method with a half step</span>
+
+<span class="sd">        **Principle**</span>
+
+<span class="sd">        The principle applied by the central difference method with a half step is</span>
+
+<span class="sd">        .. math::</span>
+
+<span class="sd">            f&#39;(x)=\\frac{f(x-h)-8f(x-\\frac{h}{2})+8f(x+\\frac{h}{2})-f(x-h)}{6h}</span>
+
+<span class="sd">        where :math:`h` is the step of the differentiation that is computed</span>
+<span class="sd">        as :math:`h(x)=\sqrt{\\varepsilon} \\cdot x` for :math:`x \\neq 0` and</span>
+<span class="sd">        :math:`h(0)=\\sqrt{\\varepsilon}` for :math:`x=0`.</span>
+
+<span class="sd">        **Parameters**</span>
+
+<span class="sd">            :sample:</span>
+<span class="sd">                the initial value used for the derivation</span>
+
+<span class="sd">        .. note::</span>
+
+<span class="sd">            This method is the most accurate differentiation method but also</span>
+<span class="sd">            has the greatest overhead.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">feature_names</span><span class="p">)):</span>
+                <span class="n">positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="n">negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="n">half_positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                <span class="n">half_negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                <span class="n">negative_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span>
+                <span class="n">half_positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span><span class="o">/</span><span class="mf">2.</span>
+                <span class="n">half_negative_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span><span class="o">/</span><span class="mf">2.</span>
+                
+                <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">positive_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="n">negative_offset</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span>
+
+                <span class="n">positive_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">positive_offset</span>
+                <span class="p">)</span>
+                <span class="n">negative_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">negative_offset</span>
+                <span class="p">)</span>
+                <span class="n">half_positive_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">half_positive_offset</span>
+                <span class="p">)</span>
+                <span class="n">half_negative_vector</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                    <span class="n">sample</span><span class="p">,</span>
+                    <span class="n">half_negative_offset</span>
+                <span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                    <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">negative_vector</span><span class="p">)</span> <span class="o">-</span>
+                                    <span class="mi">8</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">half_negative_vector</span><span class="p">)</span> <span class="o">+</span>
+                                    <span class="mi">8</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">half_positive_vector</span><span class="p">)</span> <span class="o">-</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">positive_vector</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">6.</span><span class="o">*</span><span class="n">diff</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">example</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sample</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="n">negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="n">half_positive_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+                    <span class="n">half_negative_offset</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">sample</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">diff</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eps</span><span class="p">)</span><span class="o">*</span><span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span>
+                    <span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span>
+                    <span class="n">negative_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span>
+                    <span class="n">half_positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="n">diff</span><span class="o">/</span><span class="mf">2.</span>
+                    <span class="n">half_negative_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">-=</span> <span class="n">diff</span><span class="o">/</span><span class="mf">2.</span>
+                    
+                    <span class="n">diff</span> <span class="o">=</span> <span class="p">(</span><span class="n">positive_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">-</span><span class="n">negative_offset</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">])</span><span class="o">/</span><span class="mf">2.</span>
+
+                    <span class="n">positive_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">positive_offset</span>
+                    <span class="p">)</span>
+                    <span class="n">negative_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">negative_offset</span>
+                    <span class="p">)</span>
+                    <span class="n">half_positive_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">half_positive_offset</span>
+                    <span class="p">)</span>
+                    <span class="n">half_negative_series</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
+                        <span class="n">sample</span><span class="p">,</span>
+                        <span class="n">half_negative_offset</span>
+                    <span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> \
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">longdouble</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">negative_series</span><span class="p">)</span> <span class="o">-</span>
+                                        <span class="mi">8</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">half_negative_series</span><span class="p">)</span> <span class="o">+</span>
+                                        <span class="mi">8</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">half_positive_series</span><span class="p">)</span> <span class="o">-</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">positive_series</span><span class="p">))</span><span class="o">/</span><span class="p">(</span><span class="mf">6.</span><span class="o">*</span><span class="n">diff</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.get_sensor_ranking"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.get_sensor_ranking">[docs]</a>    <span class="k">def</span> <span class="nf">get_sensor_ranking</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Transform the transformation to a sensor ranking by adding the respective absolute values</span>
+
+<span class="sd">        This method is following the principles as implemented in</span>
+<span class="sd">        :class:`~pySPACE.missions.nodes.classification.base.RegularizedClassifierBase`.</span>
+<span class="sd">        There might be some similarities in the code.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generate_backtransformation</span><span class="p">()</span>
+        <span class="c1">## interfacing to code from RegularizedClassifierBase</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
+            <span class="n">trafo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">trafo</span>
+        <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">)</span> <span class="o">==</span> <span class="n">TimeSeries</span><span class="p">:</span>
+            <span class="c1"># canonic mapping of time series to feature vector for simplicity</span>
+            <span class="n">node</span> <span class="o">=</span> <span class="n">TimeDomainFeaturesNode</span><span class="p">()</span>
+            <span class="n">trafo</span> <span class="o">=</span> <span class="n">node</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trafo</span><span class="p">)</span>
+        <span class="c1">## code from RegularizedClassifierBase with ``trafo`` instead of</span>
+        <span class="c1">## ``self.features``</span>
+        <span class="c1"># channel name is what comes after the first underscore</span>
+        <span class="n">feat_channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">chnames</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+                              <span class="k">for</span> <span class="n">chnames</span> <span class="ow">in</span> <span class="n">trafo</span><span class="o">.</span><span class="n">feature_names</span><span class="p">]</span>
+        <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+        <span class="n">ranking_dict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
+            <span class="n">ranking_dict</span><span class="p">[</span><span class="n">feat_channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">trafo</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">ranking</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">ranking_dict</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">ranking</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode._inc_train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode._inc_train">[docs]</a>    <span class="k">def</span> <span class="nf">_inc_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; This method is not yet implemented &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Incremental backtransformation is not yet available!&quot;</span><span class="p">,</span>
+                  <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BacktransformationNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_inc_train</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="BacktransformationNode.node_from_yaml"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.node_from_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">node_from_yaml</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Creates the FlowNode node and the contained chain based on the node_spec &quot;&quot;&quot;</span>
+        <span class="n">node_obj</span> <span class="o">=</span> <span class="n">BacktransformationNode</span><span class="p">(</span><span class="o">**</span><span class="n">FlowNode</span><span class="o">.</span><span class="n">_prepare_node_chain</span><span class="p">(</span><span class="n">nodes_spec</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">node_obj</span></div>
+
+<div class="viewcode-block" id="BacktransformationNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.meta.flow_node.html#pySPACE.missions.nodes.meta.flow_node.BacktransformationNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Store the results</span>
+
+<span class="sd">        This method stores the transformation matrix, the offset, the</span>
+<span class="sd">        covariance matrix and the channel names. The `store_format` variable</span>
+<span class="sd">        must be set to either of the 3 corresponding formats: `txt`, `pickle`</span>
+<span class="sd">        or `mat`. If the `store_format` variable is `None`, the output will</span>
+<span class="sd">        not be stored.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span> <span class="nn">os</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_format</span> <span class="o">==</span> <span class="s2">&quot;txt&quot;</span> <span class="p">:</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">threshold</span><span class="o">=</span><span class="s1">&#39;nan&#39;</span><span class="p">)</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="s2">&quot;backtransformation.txt&quot;</span><span class="p">)</span>
+            <span class="n">numpy</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_own_transformation</span><span class="p">(),</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_format</span> <span class="o">==</span> <span class="s2">&quot;pickle&quot;</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">pickle</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="s2">&quot;backtransformation.pickle&quot;</span><span class="p">)</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_own_transformation</span><span class="p">(),</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_format</span> <span class="o">==</span> <span class="s2">&quot;mat&quot;</span><span class="p">:</span>
+            <span class="kn">import</span> <span class="nn">scipy.io</span>
+            <span class="n">file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="s2">&quot;backtransformation.mat&quot;</span><span class="p">)</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_own_transformation</span><span class="p">()</span>
+            <span class="n">result_dict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;Transformation matrix&quot;</span><span class="p">:</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s2">&quot;Offset&quot;</span><span class="p">:</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s2">&quot;Covariance matrix&quot;</span><span class="p">:</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                <span class="s2">&quot;Feature/Channel names&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="s2">&quot;Transformation name&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+            <span class="p">}</span>
+            <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">savemat</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">),</span> <span class="n">result_dict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;Storage format </span><span class="se">\&quot;</span><span class="si">%s</span><span class="se">\&quot;</span><span class="s2"> unrecognized. &quot;</span> <span class="o">+</span>
+                       <span class="s2">&quot;Please choose between </span><span class="se">\&quot;</span><span class="s2">mat</span><span class="se">\&quot;</span><span class="s2">,</span><span class="se">\&quot;</span><span class="s2">txt</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="o">+</span>
+                       <span class="s2">&quot; and </span><span class="se">\&quot;</span><span class="s2">pickle</span><span class="se">\&quot;</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">store_format</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div></div>
+
+
+<span class="n">_NODE_MAPPING</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;Flow_Node&quot;</span><span class="p">:</span> <span class="n">FlowNode</span><span class="p">,</span>
+                <span class="s2">&quot;Batch_Adapt_Subflow&quot;</span> <span class="p">:</span> <span class="n">BatchAdaptSubflowNode</span><span class="p">}</span>
 </pre></div>
 
           </div>
@@ -557,7 +1196,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -566,14 +1205,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

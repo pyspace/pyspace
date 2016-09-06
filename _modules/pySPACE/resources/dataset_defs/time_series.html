@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../../',
-        VERSION:     '1.2 release',
+        VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -27,8 +27,8 @@
     <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
     <link rel="up" title="Module code" href="../../../index.html" /> 
   </head>
-  <body>
-    <div class="related">
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -37,26 +37,23 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
       </ul>
     </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
             <p class="logo"><a href="../../../../index.html">
               <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
             </a></p>
-<div id="searchbox" style="display: none">
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -65,10 +62,10 @@
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <h1>Source code for pySPACE.resources.dataset_defs.time_series</h1><div class="highlight"><pre>
-<span class="sd">&quot;&quot;&quot; Load and store data of the type :mod:`pySPACE.resources.data_types.time_series` &quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot; Load and store data of the type :mod:`pySPACE.resources.data_types.time_series` &quot;&quot;&quot;</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 
 <span class="kn">import</span> <span class="nn">copy</span>
@@ -84,7 +81,7 @@
 <span class="kn">import</span> <span class="nn">glob</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.support.WindowerInterface</span> <span class="kn">import</span> <span class="n">AbstractStreamReader</span>
 <span class="kn">from</span> <span class="nn">pySPACE.missions.support.windower</span> <span class="kn">import</span> <span class="n">MarkerWindower</span>
-
+<span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span> <span class="n">get_author</span>
 <span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.base</span> <span class="kn">import</span> <span class="n">BaseDataset</span>
 
 
@@ -102,7 +99,7 @@
 <span class="sd">    in a :class:`~pySPACE.missions.operations.node_chain.NodeChainOperation`.</span>
 <span class="sd">    </span>
 <span class="sd">    The standard *storage_format* is &#39;pickle&#39;,</span>
-<span class="sd">    but it is also possible to load, e.g.,</span>
+<span class="sd">    but it is also possible to load Matlab format (&#39;mat&#39;) or</span>
 <span class="sd">    BrainComputerInterface-competition data. For that, ``storage_format`` has</span>
 <span class="sd">    to be set in the format **bci_comp_[competition number]_[dataset number]**</span>
 <span class="sd">    in the metadata.yaml file. For example, **bci_comp_2_4** means loading of </span>
@@ -145,143 +142,146 @@
         <span class="nb">super</span><span class="p">(</span><span class="n">TimeSeriesDataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">dataset_md</span><span class="o">=</span><span class="n">dataset_md</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">stream_mode</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="n">dataset_md</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;dataset_directory&quot;</span><span class="p">]</span>
-            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;storage_format&quot;</span><span class="p">]</span>
+            <span class="n">dataset_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;dataset_directory&quot;</span><span class="p">]</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;storage_format&quot;</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
-                <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="c"># Loading depends on whether data is split into</span>
-            <span class="c"># training and test data, whether different splits exist and whether</span>
-            <span class="c"># several runs have been conducted.</span>
-            <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;train_test&quot;</span><span class="p">]</span> \
-                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;splits&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> \
-                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="c"># The dataset consists only of a single set of data, for</span>
-                <span class="c"># one run, one splitting, and only test data</span>
-                <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_run&quot;</span><span class="p">,</span> <span class="s">&quot;_run0&quot;</span><span class="p">)</span> \
-                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_sp&quot;</span><span class="p">,</span> <span class="s">&quot;_sp0&quot;</span><span class="p">)</span> \
-                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_tt&quot;</span><span class="p">,</span> <span class="s">&quot;_test&quot;</span><span class="p">)</span>
-                <span class="c"># File that contains the time series objects</span>
+                <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span>
+            <span class="c1"># Loading depends on whether data is split into</span>
+            <span class="c1"># training and test data, whether different splits exist and whether</span>
+            <span class="c1"># several runs have been conducted.</span>
+            <span class="k">if</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pickle&quot;</span><span class="p">,</span> <span class="s2">&quot;mat&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;train_test&quot;</span><span class="p">]</span> \
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;splits&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span> \
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># The dataset consists only of a single set of data, for</span>
+                <span class="c1"># one run, one splitting, and only test data</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_run&quot;</span><span class="p">,</span> <span class="s2">&quot;_run0&quot;</span><span class="p">)</span> \
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_sp&quot;</span><span class="p">,</span> <span class="s2">&quot;_sp0&quot;</span><span class="p">)</span> \
+                    <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_tt&quot;</span><span class="p">,</span> <span class="s2">&quot;_test&quot;</span><span class="p">)</span>
+                <span class="c1"># File that contains the time series objects</span>
                 <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
-                <span class="c"># Current data will be loaded lazily</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
-            <span class="k">elif</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">run_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;runs&quot;</span><span class="p">]):</span>
-                    <span class="k">for</span> <span class="n">split_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;splits&quot;</span><span class="p">]):</span>
-                        <span class="k">for</span> <span class="n">train_test</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;train&quot;</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">]:</span>
-                            <span class="c"># The collection consists only of a single set of</span>
-                            <span class="c"># data, for one run, one splitting,</span>
-                            <span class="c"># and only test data</span>
-                            <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;data_pattern&quot;</span><span class="p">]</span>\
-                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_run&quot;</span><span class="p">,</span> <span class="s">&quot;_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">run_nr</span><span class="p">)</span> \
-                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_sp&quot;</span><span class="p">,</span> <span class="s">&quot;_sp</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">split_nr</span><span class="p">)</span> \
-                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_tt&quot;</span><span class="p">,</span> <span class="s">&quot;_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">train_test</span><span class="p">)</span>
-                            <span class="c"># File that contains the time series objects</span>
+                <span class="c1"># Current data will be loaded lazily</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+            <span class="k">elif</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pickle&quot;</span><span class="p">,</span> <span class="s2">&quot;mat&quot;</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">run_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;runs&quot;</span><span class="p">]):</span>
+                    <span class="k">for</span> <span class="n">split_nr</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;splits&quot;</span><span class="p">]):</span>
+                        <span class="k">for</span> <span class="n">train_test</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">]:</span>
+                            <span class="c1"># The collection consists only of a single set of</span>
+                            <span class="c1"># data, for one run, one splitting,</span>
+                            <span class="c1"># and only test data</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">]</span>\
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_run&quot;</span><span class="p">,</span> <span class="s2">&quot;_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">run_nr</span><span class="p">)</span> \
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_sp&quot;</span><span class="p">,</span> <span class="s2">&quot;_sp</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">split_nr</span><span class="p">)</span> \
+                                <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_tt&quot;</span><span class="p">,</span> <span class="s2">&quot;_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">train_test</span><span class="p">)</span>
+                            <span class="c1"># File that contains the time series objects</span>
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
-                            <span class="c"># Actual data will be loaded lazily</span>
+                            <span class="c1"># Actual data will be loaded lazily</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
-            <span class="k">elif</span> <span class="n">s_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;bci_comp&quot;</span><span class="p">):</span>
-                <span class="c"># get bci competion and dataset number</span>
+            <span class="k">elif</span> <span class="n">f_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;bci_comp&quot;</span><span class="p">):</span>
+                <span class="c1"># get bci competion and dataset number</span>
                 <span class="k">try</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">=</span> <span class="n">s_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;_&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">=</span> <span class="n">f_format</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span>
                 <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> --- Could not extract BCI competition&quot;</span>\
-                                     <span class="s">&quot; and dataset number!&quot;</span> <span class="o">%</span> <span class="n">s_format</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;4&quot;</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> --- Could not extract BCI competition&quot;</span>\
+                                     <span class="s2">&quot; and dataset number!&quot;</span> <span class="o">%</span> <span class="n">f_format</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s2">&quot;2&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s2">&quot;4&quot;</span><span class="p">:</span>
                         
                         <span class="k">def</span> <span class="nf">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
-                            <span class="k">if</span> <span class="s">&#39;1000&#39;</span> <span class="ow">in</span> <span class="n">file_name</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="s1">&#39;1000&#39;</span> <span class="ow">in</span> <span class="n">file_name</span><span class="p">:</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="mi">1000</span>
                             <span class="k">else</span><span class="p">:</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="mi">100</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sf</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;sampling_frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sf</span>
                             
-                        <span class="c"># structure: 2 mat file with data in different sampling</span>
-                        <span class="c"># frequencies; txt file for test labels</span>
-                        <span class="k">if</span> <span class="s">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> \
-                                <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                            <span class="c"># are they inconsistent?</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span>
-                            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">100</span> <span class="ow">and</span> <span class="s">&#39;1000&#39;</span> <span class="ow">in</span> \
-                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span> <span class="ow">or</span> \
-                                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">1000</span> <span class="ow">and</span> <span class="s">&#39;1000&#39;</span> <span class="ow">not</span> <span class="ow">in</span> \
-                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">]):</span>
-                                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;File name does not match &quot;</span>
-                                        <span class="s">&quot;sampling frequency or vice versa. </span><span class="si">%s</span><span class="s"> &quot;</span>
-                                        <span class="s">&quot;is loaded.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
-                                <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                        <span class="c1"># structure: 2 mat file with data in different sampling</span>
+                        <span class="c1"># frequencies; txt file for test labels</span>
+                        <span class="k">if</span> <span class="s2">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> \
+                                <span class="s2">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="c1"># are they inconsistent?</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;sampling_frequency&quot;</span><span class="p">]</span>
+                            <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">100</span> <span class="ow">and</span> <span class="s1">&#39;1000&#39;</span> <span class="ow">in</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span> <span class="ow">or</span> \
+                                    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">1000</span> <span class="ow">and</span> <span class="s1">&#39;1000&#39;</span> <span class="ow">not</span> <span class="ow">in</span> \
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">]):</span>
+                                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;File name does not match &quot;</span>
+                                        <span class="s2">&quot;sampling frequency or vice versa. </span><span class="si">%s</span><span class="s2"> &quot;</span>
+                                        <span class="s2">&quot;is loaded.&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
-                        <span class="k">elif</span> <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="s2">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
-                        <span class="k">elif</span> <span class="s">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;sampling_frequency&quot;</span><span class="p">]</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+                        <span class="k">elif</span> <span class="s2">&quot;sampling_frequency&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;sampling_frequency&quot;</span><span class="p">]</span>
                             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sf</span> <span class="o">==</span> <span class="mi">1000</span><span class="p">:</span>
                                 <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                           <span class="s">&quot;sp1s_aa_1000Hz.mat&quot;</span><span class="p">)</span>
+                                                           <span class="s2">&quot;sp1s_aa_1000Hz.mat&quot;</span><span class="p">)</span>
                             <span class="k">else</span><span class="p">:</span>
                                 <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> 
-                                                                  <span class="s">&quot;sp1s_aa.mat&quot;</span><span class="p">)</span>
+                                                                  <span class="s2">&quot;sp1s_aa.mat&quot;</span><span class="p">)</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                                                    <span class="s">&quot;*.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Either file name nor sampling &quot;</span>
-                                  <span class="s">&quot;frequency is given. </span><span class="si">%s</span><span class="s"> is loaded.&quot;</span> <span class="o">%</span> <span class="n">ts_file</span><span class="p">)</span>
+                                                                    <span class="s2">&quot;*.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Either file name nor sampling &quot;</span>
+                                  <span class="s2">&quot;frequency is given. </span><span class="si">%s</span><span class="s2"> is loaded.&quot;</span> <span class="o">%</span> <span class="n">ts_file</span><span class="p">)</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">_update_sf</span><span class="p">(</span><span class="n">ts_file</span><span class="p">)</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;train&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition&quot;</span> \
-                                              <span class="s">&quot; </span><span class="si">%s</span><span class="s">, dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Loading of BCI competition&quot;</span> \
+                                              <span class="s2">&quot; </span><span class="si">%s</span><span class="s2">, dataset </span><span class="si">%s</span><span class="s2"> not supported &quot;</span> \
                                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;3&quot;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
-                        <span class="c"># structure: mat file for train and test data</span>
-                        <span class="c"># TODO: loading test labels is not possible at the moment!</span>
-                        <span class="c">#     glob.glob(os.path.join(dataset_dir,&quot;*Test.mat&quot;))[0]</span>
-                        <span class="c">#self.data[(0, 0, &quot;train&quot;)] = \</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> \
-                            <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s">&quot;*Train.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s2">&quot;3&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s2">&quot;2&quot;</span><span class="p">:</span>
+                        <span class="c1"># structure: mat file for train and test data</span>
+                        <span class="c1"># TODO: loading test labels is not possible at the moment!</span>
+                        <span class="c1">#     glob.glob(os.path.join(dataset_dir,&quot;*Test.mat&quot;))[0]</span>
+                        <span class="c1">#self.data[(0, 0, &quot;train&quot;)] = \</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> \
+                            <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s2">&quot;*Train.mat&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
                     <span class="k">else</span><span class="p">:</span>
-                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition&quot;</span> \
-                                              <span class="s">&quot; </span><span class="si">%s</span><span class="s">, dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Loading of BCI competition&quot;</span> \
+                                              <span class="s2">&quot; </span><span class="si">%s</span><span class="s2">, dataset </span><span class="si">%s</span><span class="s2"> not supported &quot;</span> \
                                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Loading of BCI competition </span><span class="si">%s</span><span class="s">,&quot;</span> \
-                                              <span class="s">&quot; dataset </span><span class="si">%s</span><span class="s"> not supported &quot;</span> \
+                    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Loading of BCI competition </span><span class="si">%s</span><span class="s2">,&quot;</span> \
+                                              <span class="s2">&quot; dataset </span><span class="si">%s</span><span class="s2"> not supported &quot;</span> \
                                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span><span class="p">))</span>
                         
-            <span class="k">else</span><span class="p">:</span>  <span class="c"># s_format==&quot;csv&quot;:</span>
-                <span class="k">if</span> <span class="s">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">else</span><span class="p">:</span> <span class="c1"># s_format == &quot;csv&quot;:</span>
+                <span class="k">if</span> <span class="s2">&quot;file_name&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
                     <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span>
-                                           <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;file_name&quot;</span><span class="p">])</span>
-                <span class="k">elif</span> <span class="s">&quot;data_pattern&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-                    <span class="c"># The collection consists only of a single set of data, for</span>
-                    <span class="c"># one run, one splitting, and only test data</span>
-                    <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_run&quot;</span><span class="p">,</span> <span class="s">&quot;_run0&quot;</span><span class="p">)</span> \
-                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_sp&quot;</span><span class="p">,</span><span class="s">&quot;_sp0&quot;</span><span class="p">)</span> \
-                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;_tt&quot;</span><span class="p">,</span><span class="s">&quot;_test&quot;</span><span class="p">)</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;file_name&quot;</span><span class="p">])</span>
+                <span class="k">elif</span> <span class="s2">&quot;data_pattern&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="c1"># The collection consists only of a single set of data, for</span>
+                    <span class="c1"># one run, one splitting, and only test data</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">dataset_md</span><span class="p">[</span><span class="s2">&quot;data_pattern&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_run&quot;</span><span class="p">,</span> <span class="s2">&quot;_run0&quot;</span><span class="p">)</span> \
+                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_sp&quot;</span><span class="p">,</span><span class="s2">&quot;_sp0&quot;</span><span class="p">)</span> \
+                        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;_tt&quot;</span><span class="p">,</span><span class="s2">&quot;_test&quot;</span><span class="p">)</span>
                     <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="n">data</span><span class="p">)</span>
-                <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s">&quot;data.csv&quot;</span><span class="p">)):</span>
-                    <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s">&quot;data.csv&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)):</span>
+                    <span class="n">ts_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s2">&quot;data.csv&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s">&quot;*.csv&quot;</span><span class="p">))</span>
+                    <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span><span class="s2">&quot;*.csv&quot;</span><span class="p">))</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pathlist</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">1</span><span class="p">:</span>
                         <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
-                            <span class="s">&quot;To many given data sets:</span><span class="si">%s</span><span class="s">. Taking first entry.&quot;</span>
+                            <span class="s2">&quot;To many given data sets:</span><span class="si">%s</span><span class="s2">. Taking first entry.&quot;</span>
                             <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">pathlist</span><span class="p">))</span>
                         <span class="n">ts_file</span> <span class="o">=</span> <span class="n">pathlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
                     <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">pathlist</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;No csv file found. Trying any file.&quot;</span><span class="p">)</span>
-                        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s">&quot;*&quot;</span><span class="p">))</span>
+                        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;No csv file found. Trying any file.&quot;</span><span class="p">)</span>
+                        <span class="n">pathlist</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dataset_dir</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">))</span>
                         <span class="n">ts_file</span> <span class="o">=</span> <span class="n">pathlist</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                        <span class="k">if</span> <span class="s">&quot;metadata.yaml&quot;</span> <span class="ow">in</span> <span class="n">ts_file</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="s2">&quot;metadata.yaml&quot;</span> <span class="ow">in</span> <span class="n">ts_file</span><span class="p">:</span>
                             <span class="n">ts_file</span> <span class="o">=</span> <span class="n">pathlist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span> <span class="o">=</span> <span class="n">sort_string</span> <span class="k">if</span> <span class="n">sort_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="bp">None</span>
-</div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;test&quot;</span><span class="p">)]</span> <span class="o">=</span> <span class="n">ts_file</span>
+               
+        <span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span> <span class="o">=</span> <span class="n">sort_string</span> <span class="k">if</span> <span class="n">sort_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="k">else</span> <span class="bp">None</span></div>
+
 <div class="viewcode-block" id="TimeSeriesDataset.get_data"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset.get_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Return the train or test data for the given split in the given run.</span>
 <span class="sd">        </span>
@@ -295,54 +295,75 @@
 <span class="sd">                       &quot;test&quot; if the test data should be loaded.</span>
 <span class="sd">    </span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="c"># Do lazy loading of the time series objects.</span>
+        <span class="c1"># Do lazy loading of the time series objects.</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="nb">basestring</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Lazy loading of </span><span class="si">%s</span><span class="s"> time series windows from input &quot;</span>
-                      <span class="s">&quot;collection for run </span><span class="si">%s</span><span class="s">, split </span><span class="si">%s</span><span class="s">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_test</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> 
+            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Lazy loading of </span><span class="si">%s</span><span class="s2"> time series windows from input &quot;</span>
+                      <span class="s2">&quot;collection for run </span><span class="si">%s</span><span class="s2">, split </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_test</span><span class="p">,</span> <span class="n">run_nr</span><span class="p">,</span> 
                                                             <span class="n">split_nr</span><span class="p">))</span>
-            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s">&quot;storage_format&quot;</span><span class="p">]</span>
+            <span class="n">s_format</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">[</span><span class="s2">&quot;storage_format&quot;</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
-                <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;pickle&quot;</span><span class="p">:</span>
-                <span class="c"># Load the time series from a pickled file</span>
-                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="s">&#39;r&#39;</span><span class="p">)</span>
+                <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span>
+            <span class="k">if</span> <span class="n">f_format</span> <span class="o">==</span> <span class="s2">&quot;pickle&quot;</span><span class="p">:</span>
+                <span class="c1"># Load the time series from a pickled file</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
                 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-                    <span class="c"># code for backward compatibility</span>
-                    <span class="c"># redirection of old path</span>
+                    <span class="c1"># code for backward compatibility</span>
+                    <span class="c1"># redirection of old path</span>
                     <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Loading deprecated data. Please transfer it &quot;</span> <span class="o">+</span>
-                              <span class="s">&quot;to new format.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Loading deprecated data. Please transfer it &quot;</span> <span class="o">+</span>
+                              <span class="s2">&quot;to new format.&quot;</span><span class="p">,</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
                     <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types</span> <span class="kn">import</span> <span class="n">time_series</span>
-                    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s">&#39;abri_dp.types.time_series&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_series</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;abri_dp.types.time_series&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">time_series</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-                    <span class="k">del</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s">&#39;abri_dp.types.time_series&#39;</span><span class="p">]</span>
+                    <span class="k">del</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="s1">&#39;abri_dp.types.time_series&#39;</span><span class="p">]</span>
                 <span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-            <span class="k">elif</span> <span class="n">s_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s">&quot;bci_comp&quot;</span><span class="p">):</span>
+            <span class="k">elif</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;mat&quot;</span><span class="p">,</span> <span class="s2">&quot;matlab&quot;</span><span class="p">,</span> <span class="s2">&quot;MATLAB&quot;</span><span class="p">]:</span>
                 <span class="kn">from</span> <span class="nn">scipy.io</span> <span class="kn">import</span> <span class="n">loadmat</span>
                 <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;4&quot;</span><span class="p">:</span>
+                <span class="n">ts_fname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
+                <span class="n">dataset</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">)</span>
+                <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;channel_names&#39;</span><span class="p">]]</span>
+                <span class="n">sf</span> <span class="o">=</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;sampling_frequency&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="c1"># assume third axis to be trial axis</span>
+                <span class="k">if</span> <span class="s2">&quot;channelXtime&quot;</span> <span class="ow">in</span> <span class="n">s_format</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
+                            <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][:,:,</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">channel_names</span><span class="p">,</span>
+                                        <span class="n">sf</span><span class="p">),</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
+                            <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][:,:,</span><span class="n">i</span><span class="p">],</span> <span class="n">channel_names</span><span class="p">,</span>
+                                        <span class="n">sf</span><span class="p">),</span> <span class="n">dataset</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()))</span>                    
+            <span class="k">elif</span> <span class="n">f_format</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;bci_comp&quot;</span><span class="p">):</span>
+                <span class="kn">from</span> <span class="nn">scipy.io</span> <span class="kn">import</span> <span class="n">loadmat</span>
+                <span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s2">&quot;2&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s2">&quot;4&quot;</span><span class="p">:</span>
                         <span class="n">ts_fname</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
                         <span class="n">d</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">)</span>
-                        <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">&#39;|S3&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> \
-                                                                   <span class="n">d</span><span class="p">[</span><span class="s">&quot;clab&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
-                        <span class="k">if</span> <span class="n">train_test</span> <span class="o">==</span> <span class="s">&quot;train&quot;</span><span class="p">:</span>
+                        <span class="n">channel_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;|S3&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> \
+                                                                   <span class="n">d</span><span class="p">[</span><span class="s2">&quot;clab&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span>
+                        <span class="k">if</span> <span class="n">train_test</span> <span class="o">==</span> <span class="s2">&quot;train&quot;</span><span class="p">:</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
-                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;x_train&quot;</span><span class="p">]</span>
-                            <span class="n">input_l</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;y_train&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;x_train&quot;</span><span class="p">]</span>
+                            <span class="n">input_l</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;y_train&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
                             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">input_d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
                                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> 
                                            <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
                                             <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_d</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">],</span>
                                                  <span class="n">channel_names</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span><span class="p">)),</span> 
-                                        <span class="s">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">input_l</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;Right&quot;</span><span class="p">))</span>
+                                        <span class="s2">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">input_l</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;Right&quot;</span><span class="p">))</span>
                         <span class="k">else</span><span class="p">:</span>
                             <span class="n">label_fname</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-                                          <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">),</span><span class="s">&quot;*.txt&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
-                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s">&quot;x_test&quot;</span><span class="p">]</span>
-                            <span class="n">input_l</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">label_fname</span><span class="p">,</span><span class="s">&#39;r&#39;</span><span class="p">)</span>
+                                          <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">ts_fname</span><span class="p">),</span><span class="s2">&quot;*.txt&quot;</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                            <span class="n">input_d</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">&quot;x_test&quot;</span><span class="p">]</span>
+                            <span class="n">input_l</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">label_fname</span><span class="p">,</span><span class="s1">&#39;r&#39;</span><span class="p">)</span>
                             <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[]</span>
                             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">input_d</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]):</span>
                                 <span class="n">label</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">input_l</span><span class="o">.</span><span class="n">readline</span><span class="p">())</span>
@@ -350,14 +371,14 @@
                                            <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>\
                                             <span class="p">(</span><span class="n">TimeSeries</span><span class="p">(</span><span class="n">input_d</span><span class="p">[:,:,</span><span class="n">i</span><span class="p">],</span>
                                                  <span class="n">channel_names</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sf</span><span class="p">)),</span> 
-                                             <span class="s">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;Right&quot;</span><span class="p">))</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s">&quot;3&quot;</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s">&quot;2&quot;</span><span class="p">:</span>
+                                             <span class="s2">&quot;Left&quot;</span> <span class="k">if</span> <span class="n">label</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s2">&quot;Right&quot;</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_number</span> <span class="o">==</span> <span class="s2">&quot;3&quot;</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_set</span> <span class="o">==</span> <span class="s2">&quot;2&quot;</span><span class="p">:</span>
                         <span class="n">data</span> <span class="o">=</span> <span class="n">loadmat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)])</span>
-                        <span class="n">signal</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Signal&#39;</span><span class="p">]</span>
-                        <span class="n">flashing</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;Flashing&#39;</span><span class="p">]</span>
-                        <span class="n">stimulus_code</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusCode&#39;</span><span class="p">]</span>
-                        <span class="n">stimulus_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">&#39;StimulusType&#39;</span><span class="p">]</span>
+                        <span class="n">signal</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Signal&#39;</span><span class="p">]</span>
+                        <span class="n">flashing</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;Flashing&#39;</span><span class="p">]</span>
+                        <span class="n">stimulus_code</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;StimulusCode&#39;</span><span class="p">]</span>
+                        <span class="n">stimulus_type</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;StimulusType&#39;</span><span class="p">]</span>
                 
                         <span class="n">window</span> <span class="o">=</span> <span class="mi">240</span>
                         <span class="n">Fs</span> <span class="o">=</span> <span class="mi">240</span>
@@ -368,7 +389,6 @@
                         <span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span> <span class="o">=</span> <span class="mf">1000.0</span>
                         
                         <span class="n">whole_len</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="p">)</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span> <span class="o">+</span> <span class="n">window</span>
-                <span class="c">#        responses = numpy.zeros((12, 15, window, channels))</span>
                         <span class="n">responses</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">12</span><span class="p">,</span> <span class="mi">15</span><span class="p">,</span> <span class="n">whole_len</span><span class="p">,</span> <span class="n">channels</span><span class="p">))</span>
                         <span class="k">for</span> <span class="n">epoch</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
                             <span class="n">rowcolcnt</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
@@ -378,15 +398,11 @@
                                     <span class="k">if</span> <span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
                                         <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="mi">0</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="p">,:]</span>
                                         <span class="n">temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">whole_len</span> <span class="o">-</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span> <span class="n">temp</span><span class="p">))</span>
-                <span class="c">#                        print &#39;1&#39;, temp.shape</span>
                                     <span class="k">elif</span> <span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="o">&gt;</span> <span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
                                         <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span><span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">:</span><span class="n">signal</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],:]</span>
                                         <span class="n">temp</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">temp</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">whole_len</span><span class="o">-</span><span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">temp</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))))</span>
-                <span class="c">#                        print &#39;2&#39;, temp.shape</span>
                                     <span class="k">else</span><span class="p">:</span>
                                         <span class="n">temp</span> <span class="o">=</span> <span class="n">signal</span><span class="p">[</span><span class="n">epoch</span><span class="p">,</span> <span class="n">n</span><span class="o">-</span><span class="mi">24</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">:</span><span class="n">n</span><span class="o">+</span><span class="n">window</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">end_offset_ms</span><span class="o">*</span><span class="n">Fs</span><span class="o">/</span><span class="mf">1000.0</span><span class="o">-</span><span class="mi">24</span><span class="p">,</span> <span class="p">:]</span>
-                <span class="c">#                        print &#39;3&#39;, temp.shape</span>
-                <span class="c">#                    responses[rowcol-1,rowcolcnt[rowcol-1]-1,:,:]=signal[epoch,n-24:n+window-24,:]</span>
                                     <span class="n">responses</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">,:,:]</span><span class="o">=</span><span class="n">temp</span>
                                     <span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">=</span><span class="n">rowcolcnt</span><span class="p">[</span><span class="n">rowcol</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">+</span><span class="mi">1</span>
                 
@@ -406,17 +422,17 @@
                                                   <span class="n">channel_names</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">64</span><span class="p">),</span> 
                                                   <span class="n">sampling_frequency</span> <span class="o">=</span> <span class="n">window</span><span class="p">)</span>
                                 <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">i</span> <span class="o">==</span> <span class="n">target_rowcol</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
-                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Target&quot;</span><span class="p">))</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s2">&quot;Target&quot;</span><span class="p">))</span>
                                 <span class="k">else</span><span class="p">:</span>
-                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s">&quot;Standard&quot;</span><span class="p">))</span>                 
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">data</span><span class="p">,</span><span class="s2">&quot;Standard&quot;</span><span class="p">))</span>                 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">stream_mode</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span> <span class="o">==</span> <span class="p">[]:</span>
-            <span class="c"># Create a connection to the TimeSeriesClient and return an iterator</span>
-            <span class="c"># that passes all received data through the windower.</span>
+            <span class="c1"># Create a connection to the TimeSeriesClient and return an iterator</span>
+            <span class="c1"># that passes all received data through the windower.</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reader</span> <span class="o">=</span> <span class="n">TimeSeriesClient</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)],</span> <span class="n">blocksize</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
 
-            <span class="c"># Creates a windower that splits the training data into windows</span>
-            <span class="c"># based in the window definitions provided</span>
-            <span class="c"># and assigns correct labels to these windows</span>
+            <span class="c1"># Creates a windower that splits the training data into windows</span>
+            <span class="c1"># based in the window definitions provided</span>
+            <span class="c1"># and assigns correct labels to these windows</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">set_window_defs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_definition</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">reader</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span> <span class="o">=</span> <span class="n">MarkerWindower</span><span class="p">(</span>
@@ -426,9 +442,9 @@
                 <span class="n">data_consistency_check</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data_consistency_check</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">marker_windower</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span>
-</div>
-<div class="viewcode-block" id="TimeSeriesDataset.store"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">s_format</span><span class="o">=</span><span class="s">&quot;pickle&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="n">run_nr</span><span class="p">,</span> <span class="n">split_nr</span><span class="p">,</span> <span class="n">train_test</span><span class="p">)]</span></div>
+
+<div class="viewcode-block" id="TimeSeriesDataset.store"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset.store">[docs]</a>    <span class="k">def</span> <span class="nf">store</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">s_format</span><span class="o">=</span><span class="s2">&quot;pickle&quot;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Stores this collection in the directory *result_dir*.</span>
 <span class="sd">        </span>
 <span class="sd">        In contrast to *dump* this method stores the collection</span>
@@ -448,20 +464,30 @@
 <span class="sd">              </span>
 <span class="sd">              (*optional, default: &quot;time_series&quot;*)</span>
 <span class="sd">              </span>
-<span class="sd">          :format:</span>
+<span class="sd">          :s_format:</span>
 <span class="sd">              The format in which the actual data sets should be stored.</span>
 <span class="sd">              </span>
-<span class="sd">              Possible formats are *pickle*, *text*, *csv* and *MATLAB* (.mat)</span>
-<span class="sd">              format.</span>
-
-<span class="sd">              In the MATLAB and text format, all time series objects are</span>
-<span class="sd">              concatenated to a single large table containing only integer</span>
-<span class="sd">              values.</span>
-<span class="sd">              For the csv format comma separated values are taken as default</span>
-<span class="sd">              or a specified Python format string.</span>
+<span class="sd">              Possible formats are &#39;pickle&#39;, &#39;text&#39;, &#39;csv&#39; and &#39;mat&#39; (matlab)</span>
+<span class="sd">              format. If s_format is a list, the second element further </span>
+<span class="sd">              specifies additional options for storing.</span>
 <span class="sd">              </span>
-<span class="sd">              The MATLAB format is a struct that contains the data, the</span>
-<span class="sd">              sampling frequency and the channel names.</span>
+<span class="sd">              - pickle  :</span>
+<span class="sd">                  Standard python format.</span>
+<span class="sd">                  </span>
+<span class="sd">              - text    :</span>
+<span class="sd">                  In the text format, all time series objects are concatenated </span>
+<span class="sd">                  to a single large table containing only integer values.</span>
+<span class="sd">                  </span>
+<span class="sd">              - csv     :</span>
+<span class="sd">                  For the csv format comma separated values are taken as default</span>
+<span class="sd">                  or a specified Python format string.</span>
+<span class="sd">                  </span>
+<span class="sd">              - mat  :</span>
+<span class="sd">                  Scipy&#39;s savemat function is used for storing. Thereby the data</span>
+<span class="sd">                  is stored as 3 dimensional array. Also meta data information,</span>
+<span class="sd">                  like sampling frequency and channel names are saved.</span>
+<span class="sd">                  As an additional parameter the orientation of the data arrays </span>
+<span class="sd">                  can be given as &#39;channelXtime&#39; or &#39;timeXchannel&#39;</span>
 <span class="sd">              </span>
 <span class="sd">              .. note:: For the text and MATLAB format, markers could be added </span>
 <span class="sd">                        by using a Marker_To_Mux node before</span>
@@ -469,69 +495,66 @@
 <span class="sd">              (*optional, default: &quot;pickle&quot;*)</span>
 
 <span class="sd">        .. todo:: Put marker to the right time point and also write marker channel.</span>
+<span class="sd">        </span>
+<span class="sd">        .. todo:: Shouldn&#39;t be &#39;text&#39; and &#39;csv&#39; format part of the stream data</span>
+<span class="sd">                  set?!</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;time_series&quot;</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;time_series&quot;</span>
+        <span class="c1"># for some storage procedures we need further specifications</span>
+        <span class="n">s_type</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
-            <span class="n">s_type</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="n">s_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># file format is first position</span>
+            <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">s_format</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">s_type</span> <span class="o">=</span> <span class="n">s_format</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">s_type</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%.18e</span><span class="s">&quot;</span>
-        <span class="k">if</span> <span class="n">s_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;text&quot;</span><span class="p">,</span> <span class="s">&quot;matlab&quot;</span><span class="p">]:</span>
-            <span class="n">s_type</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%i</span><span class="s">&quot;</span>
-        <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;csv&quot;</span> <span class="ow">and</span> <span class="n">s_type</span> <span class="o">==</span> <span class="s">&quot;real&quot;</span><span class="p">:</span>
-            <span class="n">s_type</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%.18e</span><span class="s">&quot;</span>
-        <span class="c"># Update the meta data</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="kn">import</span> <span class="nn">platform</span>
-            <span class="n">CURRENTOS</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">system</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">CURRENTOS</span> <span class="o">==</span> <span class="s">&quot;Windows&quot;</span><span class="p">:</span>
-                <span class="kn">import</span> <span class="nn">getpass</span>
-                <span class="n">author</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="kn">import</span> <span class="nn">pwd</span>
-                <span class="n">author</span> <span class="o">=</span> <span class="n">pwd</span><span class="o">.</span><span class="n">getpwuid</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getuid</span><span class="p">())[</span><span class="mi">4</span><span class="p">]</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-            <span class="n">author</span> <span class="o">=</span> <span class="s">&quot;unknown&quot;</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s">&quot;Author could not be resolved.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s">&quot;type&quot;</span><span class="p">:</span> <span class="s">&quot;time_series&quot;</span><span class="p">,</span>
-                               <span class="s">&quot;storage_format&quot;</span><span class="p">:</span> <span class="n">s_format</span><span class="p">,</span>
-                               <span class="s">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
-                               <span class="s">&quot;data_pattern&quot;</span><span class="p">:</span> <span class="s">&quot;data_run&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> 
-                                               <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s">&quot;_sp_tt.&quot;</span> <span class="o">+</span> <span class="n">s_format</span><span class="p">})</span>
+            <span class="n">f_format</span> <span class="o">=</span> <span class="n">s_format</span>
+        <span class="k">if</span> <span class="n">f_format</span> <span class="o">==</span> <span class="s2">&quot;text&quot;</span> <span class="ow">and</span> <span class="n">s_type</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">s_type</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%i</span><span class="s2">&quot;</span>
+        <span class="k">elif</span> <span class="n">f_format</span> <span class="o">==</span> <span class="s2">&quot;csv&quot;</span> <span class="ow">and</span> <span class="n">s_type</span> <span class="o">==</span> <span class="s2">&quot;real&quot;</span><span class="p">:</span>
+            <span class="n">s_type</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%.18e</span><span class="s2">&quot;</span>
+        <span class="c1"># Update the meta data</span>
+        <span class="n">author</span> <span class="o">=</span> <span class="n">get_author</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;time_series&quot;</span><span class="p">,</span>
+                               <span class="s2">&quot;storage_format&quot;</span><span class="p">:</span> <span class="n">s_format</span><span class="p">,</span>
+                               <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="n">author</span><span class="p">,</span>
+                               <span class="s2">&quot;data_pattern&quot;</span><span class="p">:</span> <span class="s2">&quot;data_run&quot;</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> 
+                                               <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_sp_tt.&quot;</span> <span class="o">+</span> <span class="n">f_format</span><span class="p">})</span>
 
-        <span class="c"># Iterate through splits and runs in this dataset</span>
+        <span class="c1"># Iterate through splits and runs in this dataset</span>
         <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">time_series</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-            <span class="c"># load data, if necessary </span>
-            <span class="c"># (due to the  lazy loading, the data might be not loaded already)</span>
+            <span class="c1"># load data, if necessary </span>
+            <span class="c1"># (due to the lazy loading, the data might be not loaded already)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time_series</span><span class="p">,</span> <span class="nb">basestring</span><span class="p">):</span>
                 <span class="n">time_series</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_data</span><span class="p">(</span><span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">key</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                 <span class="n">time_series</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sort_string</span><span class="p">))</span>
-            <span class="c"># Construct result directory</span>
-            <span class="n">result_path</span> <span class="o">=</span> <span class="n">result_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s">&quot;data&quot;</span> <span class="o">+</span> <span class="s">&quot;_run</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="c1"># Construct result directory</span>
+            <span class="n">result_path</span> <span class="o">=</span> <span class="n">result_dir</span> <span class="o">+</span> <span class="n">os</span><span class="o">.</span><span class="n">sep</span> <span class="o">+</span> <span class="s2">&quot;data&quot;</span> <span class="o">+</span> <span class="s2">&quot;_run</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">result_path</span><span class="p">):</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">result_path</span><span class="p">)</span>
             
-            <span class="n">key_str</span> <span class="o">=</span> <span class="s">&quot;_sp</span><span class="si">%s</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-            <span class="c"># Store data depending on the desired format</span>
-            <span class="k">if</span> <span class="n">s_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;pickle&quot;</span><span class="p">,</span> <span class="s">&quot;cpickle&quot;</span><span class="p">,</span> <span class="s">&quot;cPickle&quot;</span><span class="p">]:</span>
+            <span class="n">key_str</span> <span class="o">=</span> <span class="s2">&quot;_sp</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="c1"># Store data depending on the desired format</span>
+            <span class="k">if</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;pickle&quot;</span><span class="p">,</span> <span class="s2">&quot;cpickle&quot;</span><span class="p">,</span> <span class="s2">&quot;cPickle&quot;</span><span class="p">]:</span>
                 <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
-                                                <span class="n">name</span><span class="o">+</span><span class="n">key_str</span><span class="o">+</span><span class="s">&quot;.pickle&quot;</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+                                                <span class="n">name</span><span class="o">+</span><span class="n">key_str</span><span class="o">+</span><span class="s2">&quot;.pickle&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
                 <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">time_series</span><span class="p">,</span> <span class="n">result_file</span><span class="p">,</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">s_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;text&quot;</span><span class="p">,</span><span class="s">&quot;csv&quot;</span><span class="p">]:</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">,</span><span class="s2">&quot;csv&quot;</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span>
-                    <span class="s">&quot;type&quot;</span><span class="p">:</span> <span class="s">&quot;stream&quot;</span><span class="p">,</span>
-                    <span class="s">&quot;marker_column&quot;</span><span class="p">:</span> <span class="s">&quot;marker&quot;</span><span class="p">})</span>
+                    <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;stream&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;marker_column&quot;</span><span class="p">:</span> <span class="s2">&quot;marker&quot;</span><span class="p">})</span>
                 <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
-                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&quot;.csv&quot;</span><span class="p">),</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.csv&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
                 <span class="n">csvwriter</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="n">result_file</span><span class="p">)</span>
                 <span class="n">channel_names</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">)</span>
-                <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;csv&quot;</span><span class="p">:</span>
-                    <span class="n">channel_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;marker&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">f_format</span> <span class="o">==</span> <span class="s2">&quot;csv&quot;</span><span class="p">:</span>
+                    <span class="n">channel_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;marker&quot;</span><span class="p">)</span>
                 <span class="n">csvwriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)</span>
                 <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">:</span>
-                    <span class="k">if</span> <span class="n">s_format</span> <span class="o">==</span> <span class="s">&quot;text&quot;</span><span class="p">:</span>
-                        <span class="n">numpy</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">result_file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s">&quot;,&quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="n">s_type</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">f_format</span> <span class="o">==</span> <span class="s2">&quot;text&quot;</span><span class="p">:</span>
+                        <span class="n">numpy</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="n">result_file</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="n">s_type</span><span class="p">)</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                             <span class="n">result_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
                             <span class="n">result_file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
@@ -541,7 +564,7 @@
                             <span class="n">result_file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="n">first_line</span> <span class="o">=</span> <span class="bp">True</span>
-                        <span class="n">marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+                        <span class="n">marker</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
                             <span class="n">marker</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
                         <span class="k">elif</span> <span class="n">data</span><span class="o">.</span><span class="n">marker_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> \
@@ -553,38 +576,112 @@
                             <span class="n">csvwriter</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
                             <span class="k">if</span> <span class="n">first_line</span><span class="p">:</span>
                                 <span class="n">first_line</span> <span class="o">=</span> <span class="bp">False</span>
-                                <span class="n">marker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+                                <span class="n">marker</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
                         <span class="n">result_file</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
-            <span class="k">elif</span> <span class="n">s_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;mat&quot;</span><span class="p">]:</span>
-                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
-                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s">&quot;.mat&quot;</span><span class="p">),</span><span class="s">&quot;w&quot;</span><span class="p">)</span>
-                <span class="c"># extract a first time series object to get meta data </span>
-                <span class="n">merged_time_series</span> <span class="o">=</span> <span class="n">time_series</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="c"># collect all important information in the collection_object</span>
-                <span class="n">collection_object</span> <span class="o">=</span> <span class="p">{</span>
-                    <span class="s">&quot;sampling_frequency&quot;</span><span class="p">:</span> <span class="n">merged_time_series</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
-                    <span class="s">&quot;channel_names&quot;</span><span class="p">:</span> <span class="n">merged_time_series</span><span class="o">.</span><span class="n">channel_names</span><span class="p">}</span>
-
-                <span class="c"># merge all data </span>
-                <span class="k">for</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="n">key</span><span class="p">)</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">:</span>
-                    <span class="n">merged_time_series</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">merged_time_series</span><span class="p">,</span>
-                                                       <span class="n">data</span><span class="p">))</span>
-                <span class="n">collection_object</span><span class="p">[</span><span class="s">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">merged_time_series</span> 
-                <span class="n">mdict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-                <span class="n">mdict</span><span class="p">[</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span><span class="p">]</span> <span class="o">=</span> <span class="n">collection_object</span> 
+                <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;matlab&quot;</span><span class="p">,</span> <span class="s2">&quot;mat&quot;</span><span class="p">,</span> <span class="s2">&quot;MATLAB&quot;</span><span class="p">]:</span>
+                <span class="c1"># todo: handle all the other attributes of ts objects!</span>
                 <span class="kn">import</span> <span class="nn">scipy.io</span>
-                <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">savemat</span><span class="p">(</span><span class="n">result_file</span><span class="p">,</span> <span class="n">mdict</span><span class="o">=</span><span class="n">mdict</span><span class="p">)</span>
+                <span class="n">result_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span> 
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.mat&quot;</span><span class="p">)</span>
+                <span class="c1"># extract a first time series object to get meta data </span>
+                <span class="n">ts1</span> <span class="o">=</span> <span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                
+                <span class="c1"># collect all important information in the collection_object</span>
+                <span class="n">dataset_dict</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;sampling_frequency&quot;</span><span class="p">:</span> <span class="n">ts1</span><span class="o">.</span><span class="n">sampling_frequency</span><span class="p">,</span>
+                    <span class="s2">&quot;channel_names&quot;</span><span class="p">:</span> <span class="n">ts1</span><span class="o">.</span><span class="n">channel_names</span><span class="p">}</span>
+                
+                <span class="c1"># we have to extract the data and labels separatly</span>
+                <span class="k">if</span> <span class="s1">&#39;channelXtime&#39;</span> <span class="ow">in</span> <span class="n">s_format</span><span class="p">:</span>
+                    <span class="n">dataset_dict</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">T</span> <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">]</span> 
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">dataset_dict</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span> <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">]</span>
+                <span class="n">dataset_dict</span><span class="p">[</span><span class="s2">&quot;labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">]</span>
+                <span class="c1"># construct numpy 3d array (e.g., channelXtimeXtrials)</span>
+                <span class="n">dataset_dict</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">rollaxis</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                    <span class="n">dataset_dict</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+                
+                <span class="n">scipy</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">savemat</span><span class="p">(</span><span class="n">result_file_name</span><span class="p">,</span> <span class="n">mdict</span><span class="o">=</span><span class="n">dataset_dict</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">f_format</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;bp_eeg&quot;</span><span class="p">]:</span>
+
+                <span class="n">result_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.eeg&quot;</span><span class="p">),</span><span class="s2">&quot;a+&quot;</span><span class="p">)</span>
+                <span class="n">result_file_mrk</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.vmrk&quot;</span><span class="p">),</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Brain Vision Data Exchange Marker File, &quot;</span>
+                                      <span class="s2">&quot;Version 1.0</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;; Data stored by pySPACE</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;[Common Infos]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Codepage=UTF-8</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;DataFile=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                      <span class="nb">str</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.eeg&quot;</span><span class="p">))</span>
+                <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">[Marker Infos]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">markerno</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">datapoint</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">sf</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">channel_names</span> <span class="o">=</span> <span class="bp">None</span>
+
+                <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">time_series</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">sf</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">sf</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sampling_frequency</span>
+                    <span class="k">if</span> <span class="n">channel_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">channel_names</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_channel_names</span><span class="p">()</span>
+                    <span class="k">for</span> <span class="n">mrk</span> <span class="ow">in</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">for</span> <span class="n">tm</span> <span class="ow">in</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">marker_name</span><span class="p">[</span><span class="n">mrk</span><span class="p">]:</span>
+                            <span class="n">result_file_mrk</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="s2">&quot;Mk</span><span class="si">%d</span><span class="s2">=Stimulus,</span><span class="si">%s</span><span class="s2">,</span><span class="si">%d</span><span class="s2">,1,0</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">markerno</span><span class="p">,</span> <span class="n">mrk</span><span class="p">,</span> <span class="n">datapoint</span><span class="o">+</span><span class="p">(</span><span class="n">tm</span><span class="o">*</span><span class="n">sf</span><span class="o">/</span><span class="mf">1000.0</span><span class="p">))))</span>
+                            <span class="n">markerno</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">data_</span> <span class="o">=</span> <span class="n">t</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">int16</span><span class="p">)</span>
+                    <span class="n">data_</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="n">result_file</span><span class="p">)</span>
+                    <span class="n">datapoint</span> <span class="o">+=</span> <span class="n">data_</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+                <span class="n">result_hdr</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_path</span><span class="p">,</span>
+                                                <span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.vhdr&quot;</span><span class="p">),</span><span class="s2">&quot;w&quot;</span><span class="p">)</span>
+
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Brain Vision Data Exchange Header &quot;</span>
+                                 <span class="s2">&quot;File Version 1.0</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;; Data stored by pySPACE</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;[Common Infos]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Codepage=UTF-8</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;DataFile=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                      <span class="nb">str</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.eeg&quot;</span><span class="p">))</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;MarkerFile=</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                      <span class="nb">str</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="n">key_str</span> <span class="o">+</span> <span class="s2">&quot;.vmrk&quot;</span><span class="p">))</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;DataFormat=BINARY</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;DataOrientation=MULTIPLEXED</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;NumberOfChannels=</span><span class="si">%d</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">))</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;SamplingInterval=</span><span class="si">%d</span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="mi">1000000</span><span class="o">/</span><span class="n">sf</span><span class="p">))</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;[Binary Infos]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;BinaryFormat=INT_16</span><span class="se">\n\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;[Channel Infos]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="c1"># TODO: Add Resolutions to time_series</span>
+                <span class="c1"># 0 = 0.1 [micro]V,</span>
+                <span class="c1"># 1 = 0.5 [micro]V,</span>
+                <span class="c1"># 2 = 10 [micro]V,</span>
+                <span class="c1"># 3 = 152.6 [micro]V (seems to be unused!)</span>
+                <span class="n">resolutions_str</span> <span class="o">=</span> <span class="p">[</span><span class="nb">unicode</span><span class="p">(</span><span class="s2">&quot;0.1,</span><span class="si">%s</span><span class="s2">V&quot;</span> <span class="o">%</span> <span class="nb">unicode</span><span class="p">(</span><span class="s2">u&quot;</span><span class="se">\u03BC</span><span class="s2">&quot;</span><span class="p">)),</span>
+                   <span class="nb">unicode</span><span class="p">(</span><span class="s2">&quot;0.5,</span><span class="si">%s</span><span class="s2">V&quot;</span> <span class="o">%</span> <span class="nb">unicode</span><span class="p">(</span><span class="s2">u&quot;</span><span class="se">\u03BC</span><span class="s2">&quot;</span><span class="p">)),</span>
+                   <span class="nb">unicode</span><span class="p">(</span><span class="s2">&quot;10,</span><span class="si">%s</span><span class="s2">V&quot;</span> <span class="o">%</span> <span class="nb">unicode</span><span class="p">(</span><span class="s2">u&quot;</span><span class="se">\u03BC</span><span class="s2">&quot;</span><span class="p">)),</span>
+                   <span class="nb">unicode</span><span class="p">(</span><span class="s2">&quot;152.6,</span><span class="si">%s</span><span class="s2">V&quot;</span> <span class="o">%</span> <span class="nb">unicode</span><span class="p">(</span><span class="s2">u&quot;</span><span class="se">\u03BC</span><span class="s2">&quot;</span><span class="p">))]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">channel_names</span><span class="p">)):</span>
+                    <span class="n">result_hdr</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="nb">unicode</span><span class="p">(</span><span class="s2">&quot;Ch</span><span class="si">%d</span><span class="s2">=</span><span class="si">%s</span><span class="s2">,,</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="n">channel_names</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>
+                        <span class="nb">unicode</span><span class="p">(</span><span class="n">resolutions_str</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
+                <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
-                <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s">&quot;Using unavailable storage format:</span><span class="si">%s</span><span class="s">!&quot;</span>
-                                    <span class="o">%</span> <span class="n">s_format</span><span class="p">)</span>
-            <span class="n">result_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Using unavailable storage format:</span><span class="si">%s</span><span class="s2">!&quot;</span>
+                                    <span class="o">%</span> <span class="n">f_format</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">update_meta_data</span><span class="p">({</span>
-            <span class="s">&quot;channel_names&quot;</span><span class="p">:</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">),</span>
-            <span class="s">&quot;sampling_frequency&quot;</span><span class="p">:</span> <span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sampling_frequency</span>
+            <span class="s2">&quot;channel_names&quot;</span><span class="p">:</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">channel_names</span><span class="p">),</span>
+            <span class="s2">&quot;sampling_frequency&quot;</span><span class="p">:</span> <span class="n">time_series</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">sampling_frequency</span>
         <span class="p">})</span>
-        <span class="c">#Store meta data</span>
-        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">)</span>
-</div>
+        <span class="c1">#Store meta data</span>
+        <span class="n">BaseDataset</span><span class="o">.</span><span class="n">store_meta_data</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">meta_data</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="TimeSeriesDataset.set_window_defs"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesDataset.set_window_defs">[docs]</a>    <span class="k">def</span> <span class="nf">set_window_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_definition</span><span class="p">,</span> <span class="n">nullmarker_stride_ms</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
                         <span class="n">no_overlap</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">data_consistency_check</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Code copied from StreamDataset for rewindowing data&quot;&quot;&quot;</span>
@@ -592,93 +689,103 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">nullmarker_stride_ms</span> <span class="o">=</span> <span class="n">nullmarker_stride_ms</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">no_overlap</span> <span class="o">=</span> <span class="n">no_overlap</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data_consistency_check</span> <span class="o">=</span> <span class="n">data_consistency_check</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">stream_mode</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stream_mode</span> <span class="o">=</span> <span class="bp">True</span></div></div>
 
-</div></div>
+
 <div class="viewcode-block" id="TimeSeriesClient"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient">[docs]</a><span class="k">class</span> <span class="nc">TimeSeriesClient</span><span class="p">(</span><span class="n">AbstractStreamReader</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;TimeSeries stream client for TimeSeries&quot;&quot;&quot;</span>
 <div class="viewcode-block" id="TimeSeriesClient.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ts_stream</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="o">=</span> <span class="p">{</span><span class="s">&quot;null&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>               <span class="c"># default marker</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span><span class="s">&quot;null&quot;</span><span class="p">}</span>            <span class="c"># dictionary with marker names</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">)</span>  <span class="c"># number of different markers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="o">=</span> <span class="p">{</span><span class="s2">&quot;null&quot;</span><span class="p">:</span><span class="mi">0</span><span class="p">}</span>               <span class="c1"># default marker</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span><span class="s2">&quot;null&quot;</span><span class="p">}</span>            <span class="c1"># dictionary with marker names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">)</span>  <span class="c1"># number of different markers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span> <span class="o">=</span> <span class="bp">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">ts_stream</span> <span class="o">=</span> <span class="n">ts_stream</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">blockcounter</span> <span class="o">=</span> <span class="mi">0</span>
 
-        <span class="c"># create two different iterators,</span>
-        <span class="c"># one for data reading, the other for</span>
-        <span class="c"># peeking etc</span>
-        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_stream_iter</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">backup_iter</span><span class="p">)</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">tee</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">ts_stream</span><span class="p">))</span>
-</div>
+        <span class="c1"># create two different iterators,</span>
+        <span class="c1"># one for data reading, the other for</span>
+        <span class="c1"># peeking etc</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ts_stream_iter</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">backup_iter</span><span class="p">)</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">tee</span><span class="p">(</span><span class="nb">iter</span><span class="p">(</span><span class="n">ts_stream</span><span class="p">))</span></div>
+
     <span class="nd">@property</span>
-<div class="viewcode-block" id="TimeSeriesClient.dSamplingInterval"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.dSamplingInterval">[docs]</a>    <span class="k">def</span> <span class="nf">dSamplingInterval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">dSamplingInterval</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span>
-</div>
+
     <span class="nd">@property</span>
-<div class="viewcode-block" id="TimeSeriesClient.stdblocksize"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.stdblocksize">[docs]</a>    <span class="k">def</span> <span class="nf">stdblocksize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">stdblocksize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span>
-</div>
+
     <span class="nd">@property</span>
-<div class="viewcode-block" id="TimeSeriesClient.markerids"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.markerids">[docs]</a>    <span class="k">def</span> <span class="nf">markerids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">markerids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span>
-</div>
+
     <span class="nd">@property</span>
-<div class="viewcode-block" id="TimeSeriesClient.channelNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.channelNames">[docs]</a>    <span class="k">def</span> <span class="nf">channelNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">channelNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span>
-</div>
+
     <span class="nd">@property</span>
-<div class="viewcode-block" id="TimeSeriesClient.markerNames"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.markerNames">[docs]</a>    <span class="k">def</span> <span class="nf">markerNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">markerNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span>
-</div>
+
 <div class="viewcode-block" id="TimeSeriesClient.regcallback"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.regcallback">[docs]</a>    <span class="k">def</span> <span class="nf">regcallback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Register callback function&quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="TimeSeriesClient.connect"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.connect">[docs]</a>    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;connect and initialize client&quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">backup_iter</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
-        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
-            <span class="c"># if a StopIteration is catched right here there</span>
-            <span class="c"># is no data contained for the current modality (train/test)</span>
-            <span class="c"># in this datastream.</span>
-            <span class="k">pass</span>
-</div>
+        <span class="k">except</span> <span class="ne">StopIteration</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s2">&quot;timeseriesclient got no data: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">e</span><span class="p">)</span>
+            <span class="c1"># if a StopIteration is catched right here there</span>
+            <span class="c1"># is no data contained for the current modality (train/test)</span>
+            <span class="c1"># in this datastream.</span>
+            <span class="k">pass</span></div>
+
 <div class="viewcode-block" id="TimeSeriesClient.set_window_defs"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.set_window_defs">[docs]</a>    <span class="k">def</span> <span class="nf">set_window_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_definitions</span><span class="p">):</span>
-        <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span>
-        <span class="c"># Marker at which the windows are cut</span>
+        <span class="sd">&quot;&quot;&quot; Set all markers at which the windows are cut&quot;&quot;&quot;</span>
+        <span class="c1"># extract start and endmarker</span>
+        <span class="n">marker_id_index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">marker_id_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">window_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">startmarker</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">window_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">startmarker</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_id_index</span>
+        <span class="n">marker_id_index</span> <span class="o">+=</span> <span class="mi">1</span>      
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">marker_id_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">window_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endmarker</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">window_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">endmarker</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_id_index</span>
+        <span class="n">marker_id_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        
+        <span class="c1"># extract all other markers</span>
         <span class="k">for</span> <span class="n">wdef</span> <span class="ow">in</span> <span class="n">window_definitions</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">wdef</span><span class="o">.</span><span class="n">markername</span><span class="p">):</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">wdef</span><span class="o">.</span><span class="n">markername</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">wdef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
-                <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="c"># Exclude definitions marker</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">marker_id_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">wdef</span><span class="o">.</span><span class="n">markername</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">wdef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_id_index</span>
+                <span class="n">marker_id_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># Exclude definitions marker</span>
             <span class="k">for</span> <span class="n">edef</span> <span class="ow">in</span> <span class="n">wdef</span><span class="o">.</span><span class="n">excludedefs</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">edef</span><span class="o">.</span><span class="n">markername</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">edef</span><span class="o">.</span><span class="n">markername</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">edef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
-            <span class="c"># Include definitions marker</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">marker_id_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">edef</span><span class="o">.</span><span class="n">markername</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">edef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_id_index</span>
+                    <span class="n">marker_id_index</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="c1"># Include definitions marker</span>
             <span class="k">for</span> <span class="n">idef</span> <span class="ow">in</span> <span class="n">wdef</span><span class="o">.</span><span class="n">includedefs</span><span class="p">:</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">idef</span><span class="o">.</span><span class="n">markername</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">idef</span><span class="o">.</span><span class="n">markername</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">idef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
-                    <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-</div>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_markerNames</span><span class="p">[</span><span class="n">marker_id_index</span><span class="p">]</span> <span class="o">=</span> <span class="n">idef</span><span class="o">.</span><span class="n">markername</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_markerids</span><span class="p">[</span><span class="n">idef</span><span class="o">.</span><span class="n">markername</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker_id_index</span>
+                    <span class="n">marker_id_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
 <div class="viewcode-block" id="TimeSeriesClient._initialize"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient._initialize">[docs]</a>    <span class="k">def</span> <span class="nf">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">item</span><span class="p">):</span>
-        <span class="c"># get data part from (data,label) combination</span>
+        <span class="c1"># get data part from (data,label) combination</span>
         <span class="n">block</span> <span class="o">=</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_stdblocksize</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dSamplingInterval</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">sampling_frequency</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">channel_names</span>
-</div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_channelNames</span> <span class="o">=</span> <span class="n">block</span><span class="o">.</span><span class="n">channel_names</span></div>
+
 <div class="viewcode-block" id="TimeSeriesClient.read"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient.read">[docs]</a>    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nblocks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Invoke registered callbacks for each incoming data block</span>
 
@@ -695,14 +802,14 @@
                     <span class="n">f</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ndsamples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ndmarkers</span><span class="p">)</span>
                 <span class="n">nread</span> <span class="o">+=</span> <span class="mi">1</span>
 
-        <span class="k">return</span> <span class="n">nread</span>
-</div>
-<div class="viewcode-block" id="TimeSeriesClient._readmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient._readmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_readmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="s">&#39;all&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">nread</span></div>
+
+<div class="viewcode-block" id="TimeSeriesClient._readmsg"><a class="viewcode-back" href="../../../../api/generated/pySPACE.resources.dataset_defs.time_series.html#pySPACE.resources.dataset_defs.time_series.TimeSeriesClient._readmsg">[docs]</a>    <span class="k">def</span> <span class="nf">_readmsg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_type</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Read time series object from given iterator</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="c"># the iter items are a combination of data and</span>
-        <span class="c"># dummy label -&gt; extract data</span>
+        <span class="c1"># the iter items are a combination of data and</span>
+        <span class="c1"># dummy label -&gt; extract data</span>
         <span class="n">block</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ts_stream_iter</span><span class="o">.</span><span class="n">next</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">blockcounter</span> <span class="o">+=</span> <span class="mi">1</span>
@@ -710,8 +817,8 @@
         <span class="k">if</span> <span class="n">block</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">None</span>
 
-        <span class="c"># no data message read until know</span>
-        <span class="c"># -&gt; initialize property values</span>
+        <span class="c1"># no data message read until know</span>
+        <span class="c1"># -&gt; initialize property values</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">nChannels</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
 
@@ -724,16 +831,18 @@
         <span class="k">for</span> <span class="p">(</span><span class="n">marker</span><span class="p">,</span> <span class="n">positions</span><span class="p">)</span> <span class="ow">in</span> <span class="n">block</span><span class="o">.</span><span class="n">marker_name</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
             <span class="k">for</span> <span class="n">position_as_ms</span> <span class="ow">in</span> <span class="n">positions</span><span class="p">:</span>
 
-                <span class="c"># position_as_samples = numpy.floor(position_as_ms / 1000.0 *</span>
-                <span class="c">#                                   self.dSamplingInterval)</span>
+                <span class="c1"># position_as_samples = numpy.floor(position_as_ms / 1000.0 *</span>
+                <span class="c1">#                                   self.dSamplingInterval)</span>
                 <span class="n">position_as_samples</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">int</span><span class="p">(</span><span class="n">position_as_ms</span> <span class="o">/</span> <span class="mf">1000.0</span> <span class="o">*</span>
                                                 <span class="bp">self</span><span class="o">.</span><span class="n">dSamplingInterval</span><span class="p">)</span>
 
-                <span class="c"># found a new marker, add it to marker name buffer</span>
+                <span class="c1"># found a new marker, add it to marker name buffer</span>
                 <span class="k">if</span> <span class="n">marker</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">marker</span><span class="p">):</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span> <span class="o">+=</span> <span class="mi">1</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">markerNames</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span><span class="p">]</span> <span class="o">=</span> <span class="n">marker</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nmarkertypes</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="n">marker</span><span class="p">):</span>
+                    <span class="k">continue</span>
 
                 <span class="n">markerid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">markerids</span><span class="p">[</span><span class="n">marker</span><span class="p">]</span>
 
@@ -759,7 +868,7 @@
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -768,14 +877,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2014, pySPACE Developer Team.
-      Last updated on Oct 28, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.3.
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, pySPACE Developer Team.
+      Last updated on Sep 04, 2016.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
     </div>
   </body>
 </html>

@@ -234,8 +234,8 @@ Writing new nodes
 +++++++++++++++++
 
 Should you want to develop new pySPACE nodes under Windows, please be aware
-that there are certain software packages that only run on DOS(Windows) systems
-while others run only on UNIX(Mac, Linux) systems. These OS-specific packages
+that there are certain software packages that only run on DOS (Windows) systems
+while others run only on UNIX (Mac, Linux) systems. These OS-specific packages
 should be avoided as much as possible. If such a package is absolutely
 necessary, please consider implementing it in a ``if`` clause that first
 establishes the OS under use and then chooses the appropriate method of
