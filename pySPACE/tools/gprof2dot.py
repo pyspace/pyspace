@@ -2206,7 +2206,7 @@ class AQtimeParser(XmlParser):
 
 
 class PstatsParser:
-    """Parser python profiling statistics saved with te pstats module."""
+    """Parse Python profiling statistics saved with te pstats module."""
 
     def __init__(self, *filename):
         import pstats

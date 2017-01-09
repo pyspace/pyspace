@@ -71,6 +71,7 @@ import numpy
 
 import pySPACE
 from pySPACE.tools.memoize_generator import MemoizeGenerator
+from pySPACE.missions.nodes.decorators import NoOptimizationParameter
 
 
 # Exceptions from MDP
@@ -114,6 +115,12 @@ class NodeMetaclass(type):
         return super(NodeMetaclass, cls).__new__(cls, classname, bases, members)
 
 
+@NoOptimizationParameter("store")
+@NoOptimizationParameter("retrain")
+@NoOptimizationParameter("input_dim")
+@NoOptimizationParameter("output_dim")
+@NoOptimizationParameter("dtype")
+@NoOptimizationParameter("kwargs_warning")
 class BaseNode(object):
     """ Main base class for nodes which forwards data without processing
 
@@ -509,7 +516,7 @@ class BaseNode(object):
                 cls.input_types = ["TimeSeries"]
             elif pack in ["feature_selection", "classification"] or \
                     module in ["feature_normalization", "compression",
-                               "scikits_nodes"]:
+                               "scikit_nodes"]:
                 if module == "ensemble":
                     cls.input_types=["PredictionVector"]
                 else:
@@ -529,7 +536,8 @@ class BaseNode(object):
                 types.append(cls.string_to_class(one_type))
             return types
 
-    def get_output_type(self, input_type, as_string=True):
+    @classmethod
+    def get_output_type(cls, input_type, as_string=True):
         """ Return output type depending on the *input_type*
 
         **Parameters**
@@ -556,7 +564,7 @@ class BaseNode(object):
         this method needs to be overwritten.
         Otherwise, a warning will occur.
         """
-        pack = self.__module__.split(".")[3:4]
+        pack = cls.__module__.split(".")[3:4]
         if "classification" in pack:
             result = "PredictionVector"
         elif "feature_generation" in pack:
@@ -570,7 +578,7 @@ class BaseNode(object):
         if as_string:
             return result
         else:
-            return self.string_to_class(result)
+            return cls.string_to_class(result)
 
     @staticmethod
     def string_to_class(string_encoding):
@@ -772,7 +780,7 @@ class BaseNode(object):
                 node_obj = node_class()
             else:
                 # All parameters which are eval() statements
-                # are considered to be python expressions and are evaluated
+                # are considered to be Python expressions and are evaluated
                 BaseNode.eval_dict(node_spec["parameters"])
                 # Create the node object
             #try:
@@ -792,7 +800,7 @@ class BaseNode(object):
         Dictionary entries are replaced with evaluation result.
 
         .. note:: No additional string mark up needed, contrary to normal
-                python evaluate syntax
+                Python evaluate syntax
         """
         for key, value in dictionary.iteritems():
             if isinstance(value, basestring) and value.startswith("eval("):

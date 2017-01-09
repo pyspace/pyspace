@@ -753,7 +753,7 @@ def check_op_libSVM(input_dir='.', delete_file=True):
       'echo find $f/persistency_run0/LibSVMClassifierNode/feature*.pickle ' + 
       '| wc -w; fi; done > temp_check_op.txt')
     
-    #transferring data to python list
+    #transferring data to Python list
     f=open('temp_check_op.txt')
     oplist=[]
     

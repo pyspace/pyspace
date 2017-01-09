@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """ Create pySPACE center (basic software configuration and data folder)
 
-This file must be run with python.
+This file must be run with Python.
 
 The basic idea behind this script is that it should produce the structure
 behind the pySPACEcenter which will then be used to run pySPACE in a user
@@ -52,7 +52,7 @@ classifiers = ["Development Status :: 1 - Production/Stable",
                "Topic :: Scientific/Engineering :: Mathematics"]
 
 def get_module_code():
-    # keep old python compatibility, so no context managers
+    # keep old Python compatibility -- so no context managers
     init_file = open(os.path.join(os.getcwd(), 'pySPACE', '__init__.py'))
     module_code = init_file.read()
     init_file.close()

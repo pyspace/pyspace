@@ -103,7 +103,8 @@ class STFTFeaturesNode(BaseNode):
          feature_names)
 
         return feature_vector
-        
+
+
 class FrequencyBandFeatureNode(BaseNode):
     """ Extract features based on the Frequency-band power
     

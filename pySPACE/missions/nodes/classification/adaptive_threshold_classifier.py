@@ -186,7 +186,7 @@ class AdaptiveThresholdClassifierNode(BaseNode):
 
     **Parameters**
     
-        :labels:
+        :class_labels:
             Specifies the names corresponding to the two classes separated
             by the threshold method. NOTICE first give the negative class 
             followed by the positive one
@@ -213,10 +213,10 @@ class AdaptiveThresholdClassifierNode(BaseNode):
 
     """
 
-    def __init__(self, labels = ['no_movement','movement'], num_channels_above_threshold=1, **kwargs):
+    def __init__(self, class_labels = ['no_movement', 'movement'], num_channels_above_threshold=1, **kwargs):
         super(AdaptiveThresholdClassifierNode, self).__init__(**kwargs)
-        self.set_permanent_attributes(labels = labels,               #Labels for the different classes
-                                      num_channels_above=num_channels_above_threshold,test=0)
+        self.set_permanent_attributes(labels = class_labels,  #Labels for the different classes
+                                      num_channels_above=num_channels_above_threshold, test=0)
 
     def is_trainable(self):
         """ Returns whether this node is trainable. """

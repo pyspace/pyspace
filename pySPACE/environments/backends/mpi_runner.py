@@ -1,12 +1,12 @@
 """ Simple helper script that unpickles and executes a processes using mpi
 
-If a process finishes successfully an empty file with filename 
-"processname_Finished" will be created, otherwise a file with filename 
+If a process finishes successfully an empty file with filename
+"processname_Finished" will be created, otherwise a file with filename
 "processname_Crashed" will be created. The file "processname_Crashed"
 will contain the reason why the process crashed.
 
 .. todo:: check import statement
- 
+
 :Author: Yohannes Kassahun (kassahun@informatik.uni-bremen.de)
 :Created: 2011/01/11
 """
@@ -42,30 +42,29 @@ def main():
     # TODO: Check comment!
     try: # process runs normally
         #logging.info("Unpickling process %s" % proc_file_name)
-        proc_file = open(proc_file_name, 'r')
-        # Openmpi does not like methods which use fork() or system(), so we should
-        # change the implementation of the mpi_runner.py to avoid the warning
-        # message. This happens in the method pickle.load().
-        proc = pickle.load(proc_file)
-        proc_file.close()
+        with open(proc_file_name, 'r') as proc_file:
+            # Openmpi does not like methods which use fork() or system(), so we should
+            # change the implementation of the mpi_runner.py to avoid the warning
+            # message. This happens in the method pickle.load().
+            proc = pickle.load(proc_file)
         #logging.info("Starting process on node %s" % socket.gethostname())
-        proc()
-        proc_file = open(proc_file_name+"_Finished", "w")
-        proc_file.close()
-        #sys.stdout.write(
-        #  "Finishing process %d of %d on %s.\n"
-        #  % (rank, size, name))
+        try:
+            proc()
+        finally:
+            open(proc_file_name+"_Finished", "w").close()
+            #sys.stdout.write(
+            #  "Finishing process %d of %d on %s.\n"
+            #  % (rank, size, name))
     except IOError as (errno, strerror): #process crashes
-        proc_file = open(proc_file_name+"_Crashed", "w")
-        proc_file.write("Process was running on : %s \n" % name)
-        proc_file.write("I/O error({0}): {1}".format(errno, strerror))
-        proc_file.close()
+        with open(proc_file_name+"_Crashed", "w") as proc_file:
+            proc_file.write("Process was running on : %s \n" % name)
+            proc_file.write("I/O error({0}): {1}".format(errno, strerror))
     except: #process crashes
-        proc_file = open(proc_file_name+"_Crashed", "w")
         e = sys.exc_info()[1]
-        proc_file.write("Process was running on : %s \n" % name)
-        proc_file.write("Reason for crash: %s " % e)
-        proc_file.close()
-    
+        with open(proc_file_name+"_Crashed", "w") as proc_file:
+            proc_file.write("Process was running on : %s \n" % name)
+            proc_file.write("Reason for crash: %s " % e)
+
+
 if __name__ == '__main__':
     main()

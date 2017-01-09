@@ -90,16 +90,18 @@ def consolidate(result_directory, config_template):
     This function is called once per operation.
     
     **Parameters**
-        :process_id:
-            Globally unique id of this process. Might be used e.g. for
-            creating a file into which the results of this function are stored.
-            
-            (*obligatory*)
         :result_directory:
             Directory into which the results of the computation of this
             function are stored.
             
             (*obligatory*)
+
+        :config_template:
+            Configuration parameters template which might include placeholders
+            instead of real parameters.
+
+            (*obligatory*)
+
     """
     # This function needs to be implemented! Replace the following lines 
     # by your own implementation!

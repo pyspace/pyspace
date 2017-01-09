@@ -331,8 +331,7 @@ class PerformanceSinkNode(BaseNode):
         self.training_time = 0
         if self.measure_times:
             start_time_stamp = timeit.default_timer()
-        for classification_vector, label in \
-                                   self.input_node.request_data_for_training(False):
+        for classification_vector, label in self.input_node.request_data_for_training(False):
             if self.calc_train:
                 self.set_helper_parameters(classification_vector,label)
                 self.train_classification_outcome.append((classification_vector, label))
@@ -342,8 +341,7 @@ class PerformanceSinkNode(BaseNode):
 
 
 
-        if self.calc_train and self.evaluation_type == "binary" \
-                            and not self.train_classification_outcome==[]:
+        if self.calc_train and self.evaluation_type == "binary" and not self.train_classification_outcome==[]:
             if self.decision_boundary is None and self.train_classification_outcome[0][0].predictor.node_name in \
                     ["PlattsSigmoidFitNode",
                      "LinearFitNode",
@@ -362,7 +360,7 @@ class PerformanceSinkNode(BaseNode):
                 weight=self.weight,save_roc_points=self.save_roc_points,
                 decision_boundary=self.decision_boundary)
             try:
-                train_metrics,self.train_R = train_result
+                train_metrics, self.train_R = train_result
             except:
                 train_metrics = train_result
         elif self.calc_train and self.evaluation_type == "multinomial":
@@ -404,7 +402,7 @@ class PerformanceSinkNode(BaseNode):
                 start_time_stamp = timeit.default_timer()
 
         if self.decision_boundary is None and \
-            len(self.classification_outcome)>0 and \
+            len(self.classification_outcome) > 0 and \
             self.classification_outcome[0][0].predictor.node_name in \
                 ["PlattsSigmoidFitNode",
                  "LinearFitNode",
@@ -412,7 +410,7 @@ class PerformanceSinkNode(BaseNode):
             self.decision_boundary=0.5
         elif self.decision_boundary is None:
             self.decision_boundary=0
-        if self.evaluation_type=="binary":
+        if self.evaluation_type == "binary":
             result = BinaryClassificationDataset.calculate_metrics(
                         classification_results=self.classification_outcome,
                         calc_soft_metrics=self.calc_soft_metrics,
@@ -424,7 +422,7 @@ class PerformanceSinkNode(BaseNode):
                         weight=self.weight,save_roc_points=self.save_roc_points,
                         decision_boundary=self.decision_boundary)
             try:
-                metrics,self.R = result
+                metrics, self.R = result
             except:
                 metrics = result
         elif self.evaluation_type=="multinomial":
@@ -451,9 +449,9 @@ class PerformanceSinkNode(BaseNode):
                 if not key in skip_keys:
                     metrics["train_"+key] = value
         self.classification_dataset.add_split(metrics,
-                                                 train=False,
-                                                 split=self.current_split,
-                                                 run=self.run_number)
+                                              train=False,
+                                              split=self.current_split,
+                                              run=self.run_number)
         if self.save_trace:
             self.trace, self.long_trace=self.calculate_classification_trace(
                         classification_results=self.classification_outcome,
@@ -783,12 +781,12 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
             unique time tags.
             
             (*optional, default: False*)
-
+        
         :unused_win_defs:
             List of window definition names which shall not be used for evaluation.
              
             (*optional, default: []*)
-
+            
     **Exemplary Call**
 
     .. code-block:: yaml
@@ -843,8 +841,7 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
         self.training_time = 0
         if self.measure_times:
             start_time_stamp = timeit.default_timer()
-        for classification_vector, label in \
-                self.input_node.request_data_for_training(False):
+        for classification_vector, label in self.input_node.request_data_for_training(False):
             if classification_vector.specs["wdef_name"] in self.unused_win_defs:
                 continue
             if self.calc_train:
@@ -857,12 +854,10 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
         
         # we assume that in the training case no sliding windows are used, i.e.,
         # the windows have a known true label
-        if self.calc_train and self.evaluation_type == "binary" \
-                                  and not self.train_classification_outcome==[]: 
+        if self.calc_train and self.evaluation_type == "binary" and not self.train_classification_outcome==[]:
             if self.decision_boundary is None and \
-               self.train_classification_outcome[0][0].predictor.node_name in \
-                                       ["PlattsSigmoidFitNode", "LinearFitNode",
-                                                   "SigmoidTransformationNode"]:
+                    self.train_classification_outcome[0][0].predictor.node_name in [
+                        "PlattsSigmoidFitNode", "LinearFitNode", "SigmoidTransformationNode"]:
                 self.decision_boundary = 0.5
             elif self.decision_boundary is None:
                 self.decision_boundary = 0
@@ -999,10 +994,10 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                     bound_indices = range(nr_sliding_windows)
                     uncertain_indices = []
                 label_change_point = self.from_right_count_negatives(
-                    self.data_time[k], self.determine_labels, bound_indices)
+                        self.data_time[k], self.determine_labels, bound_indices)
                 self.label_change_points.append(label_change_point)
                 for index, (classification_vector, label) \
-                        in enumerate(self.data_time[k]):
+                                                in enumerate(self.data_time[k]):
                     if index not in uncertain_indices:
                         if index < label_change_point: # assume neg class
                             self.classification_outcome.append(
@@ -1024,7 +1019,7 @@ class SlidingWindowSinkNode(PerformanceSinkNode):
                     uncertain_indices = []
 
                 for index, (classification_vector, label) \
-                        in enumerate(self.data_time[k]):
+                                              in enumerate(self.data_time[k]):
                     if index not in uncertain_indices:
                         if self.epoch_signal:
                             if index < uncertain_indices[0]: # negative class

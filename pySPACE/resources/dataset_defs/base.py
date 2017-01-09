@@ -172,13 +172,10 @@ class BaseDataset(object):
         """ Stores the meta data of a dataset """
         # Loading the dataset meta file
         try:
-            collection_meta_file = open(os.sep.join([dataset_dir, file_name]),
-                                        'w')
+            with open(os.sep.join([dataset_dir, file_name]), 'w') as collection_meta_file:
+                yaml.dump(meta_data, collection_meta_file)
         except IOError: 
-            raise Exception("No pySPACE dataset %s found. Continuing..."
-                                % dataset_dir)
-        yaml.dump(meta_data, collection_meta_file)
-        collection_meta_file.close()
+            raise Exception("No pySPACE dataset %s found. Continuing..." % dataset_dir)
 
     def add_sample(self, sample, label, train, split=0, run=0):
         """ Add a sample to this dataset

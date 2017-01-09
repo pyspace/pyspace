@@ -39,9 +39,6 @@ def existing_test(lst, dir, files):
 
     """
     for file in files:
-        # add python all files, if they start with test_
-        # if re.match(r"test_.*\.py$",file) and os.path.isfile(dir+'/'+file):
-
         # figure out module name
         moduleName = dir.strip("\.\/").replace("/", ".")
         if len(moduleName):

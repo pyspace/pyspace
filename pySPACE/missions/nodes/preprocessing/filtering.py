@@ -842,11 +842,19 @@ class VarianceFilterNode(BaseNode):
                 processing_index = int(self.index[channel_index])
                 if self.var_tools:
                     # Perform the standardization
-                    # The module vt (variance_tools) is implemented in c using boost to wrap the code in python
-                    # The module is located in trunk/library/variance_tools and have to be compiled
-                    self.index[channel_index] = vt.standardization(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
+                    # The module vt (variance_tools) is implemented in c using
+                    # boost to wrap the code in Python
+                    # The module is located in trunk/library/variance_tools
+                    # and have to be compiled
+                    self.index[channel_index] = vt.standardization(
+                        processing_filtered_data, numpy.array(
+                        x[:,channel_index],'d'), processing_ringbuffer,
+                        processing_variables, self.width, processing_index)
                 else:
-                    self.index[channel_index] = self.standardisation(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
+                    self.index[channel_index] = self.standardisation(
+                        processing_filtered_data, numpy.array(
+                        x[:,channel_index],'d'), processing_ringbuffer,
+                        processing_variables, self.width, processing_index)
                 # Copy the processing lists back to the local variables
                 filtered_data[:,channel_index] = processing_filtered_data
                 self.ringbuffer[:,channel_index] = processing_ringbuffer
@@ -854,22 +862,36 @@ class VarianceFilterNode(BaseNode):
         else:
             for channel_index in range(self.nChannels):
                 # Copy the different data to the processing listst
-                processing_filtered_data = numpy.array(filtered_data[:,channel_index],'d')
-                processing_ringbuffer = numpy.array(self.ringbuffer[:,channel_index],'d')
-                processing_variables = numpy.array(self.variables[:,channel_index],'d')
+                processing_filtered_data = numpy.array(
+                    filtered_data[:,channel_index],'d')
+                processing_ringbuffer = numpy.array(
+                    self.ringbuffer[:,channel_index],'d')
+                processing_variables = numpy.array(
+                    self.variables[:,channel_index],'d')
                 processing_index = int(self.index[channel_index])
                 if self.var_tools:
                     # Perform the filtering with the variance
-                    # The module vt (variance_tools) is implemented in c using boost to wrap the code in python
-                    # The module is located in trunk/library/variance_tools and have to be compiled
-                    self.index[channel_index] = vt.filter(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
+                    # The module vt (variance_tools) is implemented in c using
+                    # boost to wrap the code in Python
+                    # The module is located in trunk/library/variance_tools
+                    # and have to be compiled
+                    self.index[channel_index] = vt.filter(
+                        processing_filtered_data, numpy.array(
+                        x[:,channel_index],'d'), processing_ringbuffer,
+                        processing_variables, self.width, processing_index)
                     if self.normalize:
                         lenData = len(processing_filtered_data)
-                        self.ringbufferNormalize[0:-lenData,channel_index] = self.ringbufferNormalize[lenData:,channel_index]
-                        self.ringbufferNormalize[-lenData:,channel_index] = processing_filtered_data[:]
-                        processing_filtered_data /= numpy.max((50,numpy.max(self.ringbufferNormalize[:,channel_index])))
+                        self.ringbufferNormalize[0:-lenData,channel_index] = \
+                            self.ringbufferNormalize[lenData:,channel_index]
+                        self.ringbufferNormalize[-lenData:,channel_index] = \
+                            processing_filtered_data[:]
+                        processing_filtered_data /= numpy.max((50, numpy.max(
+                            self.ringbufferNormalize[:,channel_index])))
                 else:
-                    self.index[channel_index] = self.variance(processing_filtered_data, numpy.array(x[:,channel_index],'d'), processing_ringbuffer, processing_variables, self.width, processing_index)
+                    self.index[channel_index] = self.variance(
+                        processing_filtered_data, numpy.array(
+                        x[:,channel_index],'d'), processing_ringbuffer,
+                        processing_variables, self.width, processing_index)
                 # Copy the processing lists back to the local variables
                 filtered_data[:,channel_index] = processing_filtered_data
                 self.ringbuffer[:,channel_index] = processing_ringbuffer
@@ -878,57 +900,62 @@ class VarianceFilterNode(BaseNode):
         result_time_series = TimeSeries.replace_data(data, filtered_data)
         return result_time_series
 
-    #Fallback functions if the c implementation of the variance filter and the standardisation could not be loaded
+    # Fallback functions if the c implementation of the variance filter and the
+    # standardisation could not be loaded
     def variance(self, outData, inData, ringbuffer, variables, width, index):
         #Some local variables for speed up
-        ww = width*width
-        wm1 = width-1.0
-        wp1 = width+1.0
+        ww = width * width
+        wm1 = width - 1.0
+        wp1 = width + 1.0
 
-        ringbufferValue=0.0
+        ringbufferValue = 0.0
         variable1 = 0.0
 
         for i in range(len(inData)):
-            #Speedup for array entries which are needed several times
-            ringbufferValue = ringbuffer[index];
+            # Speedup for array entries which are needed several times
+            ringbufferValue = ringbuffer[index]
             inDataValue = inData[i]
-            variable1 = variables[1];
+            variable1 = variables[1]
 
-            #Calculating the new variance
-            variables[0] = variables[0] + (inDataValue - ringbufferValue) * ( ((wm1) * inDataValue) + ((wp1) * ringbufferValue) - (2.0*variable1));
+            # Calculating the new variance
+            variables[0] += (inDataValue - ringbufferValue) * (
+                (wm1 * inDataValue) + (wp1 * ringbufferValue) -
+                (2.0 * variable1))
 
-            #Calculating the new mean value
-            variables[1] = variable1 + (inDataValue-ringbufferValue);
+            # Calculating the new mean value
+            variables[1] = variable1 + (inDataValue-ringbufferValue)
 
-            #Store the actual sample in the ringbuffer
+            # Store the actual sample in the ringbuffer
             ringbuffer[index] = inDataValue;
 
-            #Increment the ringbuffer index
+            # Increment the ringbuffer index
             index = index + 1 if (index < wm1) else 0
 
-            #Calculate the standardization
-            outData[i] = variables[0]/(ww)
+            # Calculate the standardization
+            outData[i] = variables[0] / ww
         return index
 
     def standardisation(self, outData, inData, ringbuffer, variables, width, index):
-        #Some local variables for speed up
-        ww = width*width
-        wm1 = width-1.0
-        wp1 = width+1.0
+        # Some local variables for speed up
+        ww = width * width
+        wm1 = width - 1.0
+        wp1 = width + 1.0
 
-        ringbufferValue=0.0
+        ringbufferValue = 0.0
         variable1 = 0.0
         invalidValue = False
         invalidValueOccured = False
 
         for i in range(len(inData)):
-            #Speedup for array entries which are needed several times
+            # Speedup for array entries which are needed several times
             ringbufferValue = ringbuffer[index];
             inDataValue = inData[i]
             variable1 = variables[1]
 
-            #Calculating the new variance
-            variables[0] = variables[0] + (inDataValue - ringbufferValue) * ( ((wm1) * inDataValue) + ((wp1) * ringbufferValue) - (2.0*variable1));
+            # Calculating the new variance
+            variables[0] += (inDataValue - ringbufferValue) * (
+                (wm1 * inDataValue) + (wp1 * ringbufferValue) -
+                (2.0 * variable1))
 
             if variables[0] <= 0.0:
                 variablesInvalidValueBuffer = variables[0]
@@ -936,23 +963,27 @@ class VarianceFilterNode(BaseNode):
                 invalidValue = True
                 invalidValueOccured = True
 
-            #Calculating the new mean value
+            # Calculating the new mean value
             variables[1] = variable1 + (inDataValue-ringbufferValue);
 
-            #Store the actual sample in the ringbuffer
+            # Store the actual sample in the ringbuffer
             ringbuffer[index] = inDataValue;
 
-            #Increment the ringbuffer index
+            # Increment the ringbuffer index
             index = index + 1 if (index < wm1) else 0
-            #Calculate the standardization
-            outData[i] = (inDataValue-(variables[1]/(width))) / math.sqrt(variables[0]/(ww)) if (math.sqrt(variables[0]/(ww)) != 0.0) else 0.0
+            # Calculate the standardization
+            outData[i] = (inDataValue - (variables[1] / width)) / \
+                math.sqrt(variables[0] / ww) \
+                if (math.sqrt(variables[0] / ww) != 0.0) else 0.0
 
             if invalidValue == True:
                 variables[0] = variablesInvalidValueBuffer
                 invalidValue = False
 
         if invalidValueOccured:
-            self._log("OnlineStandardization:: Warning: Prevented division by zero during standardization!", level=logging.WARNING)
+            self._log(
+                "OnlineStandardization:: Warning: Prevented division" +
+                " by zero during standardization!", level=logging.WARNING)
 
         return index
 
@@ -1011,9 +1042,9 @@ class TkeoNode(BaseNode):
 
     def _execute(self, x):
         """ Compute the energy of the given signal x using the TKEO """
-        #Determine the indices of the channels which will be filtered
-        #Done only once...
-        if(self.selected_channel_indices == None):
+        # Determine the indices of the channels which will be filtered
+        # Done only once...
+        if self.selected_channel_indices is None:
             self.selected_channels = self.selected_channels \
             if self.selected_channels != None else x.channel_names
             self.selected_channel_indices = [x.channel_names.index(channel_name) \
@@ -1025,12 +1056,18 @@ class TkeoNode(BaseNode):
         for channel_index in self.selected_channel_indices:
             channel_counter += 1
             for i in range(len(x)):
-                if i==0:
-                    filtered_data[i][channel_index] = math.pow(self.old_data[1][channel_counter],2) - (self.old_data[0][channel_counter] * x[0][channel_index])
-                elif i==1:
-                    filtered_data[i][channel_index] = math.pow(x[0][channel_index],2) - (self.old_data[1][channel_counter] * x[1][channel_index])
+                if i == 0:
+                    filtered_data[i][channel_index] = \
+                        math.pow(self.old_data[1][channel_counter],2) - (
+                        self.old_data[0][channel_counter] * x[0][channel_index])
+                elif i == 1:
+                    filtered_data[i][channel_index] = \
+                        math.pow(x[0][channel_index],2) - (
+                        self.old_data[1][channel_counter] * x[1][channel_index])
                 else:
-                    filtered_data[i][channel_index] = math.pow(x[i-1][channel_index],2) - (x[i-2][channel_index] * x[i][channel_index])
+                    filtered_data[i][channel_index] = \
+                    math.pow(x[i-1][channel_index],2) - (
+                    x[i-2][channel_index] * x[i][channel_index])
             self.old_data[0][channel_counter] = x[-2][channel_index]
             self.old_data[1][channel_counter] = x[-1][channel_index]
         result_time_series = TimeSeries.replace_data(x, filtered_data)

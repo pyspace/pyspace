@@ -35,7 +35,7 @@ on your system:
     - add Python binary DIR to systems PATH (e.g. ``C:\Python27``)
 
     3. The yaml package is needed for the GUI as well: http://pyyaml.org/download/pyyaml/PyYAML-3.10.win32-py2.7.exe
-    That python is able to use the Qt-GUI elements also the pyQT bindings
+    That Python is able to use the Qt-GUI elements also the pyQT bindings
     have to be installed. You can find an installer here:
     http://sourceforge.net/projects/pyqt/files/PyQt4/PyQt-4.10/PyQt4-4.10-gpl-Py2.7-Qt4.8.4-x32.exe
     
@@ -60,9 +60,9 @@ on your system:
 
         sudo port install qt4-mac
      
-    2. If you not already done it, install python, py-yaml and the pyQt4
-    bindings. Make sure, all the packet use the same python version (e.g. 2.6),
-    the python-version is in your path and is the default version.
+    2. If you not already done it, install Python, py-yaml and the pyQt4
+    bindings. Make sure, all the packet use the same Python version (e.g. 2.7),
+    the Python-version is in your path and is the default version.
     
     3. Make sure that all executables are accessible by your current environment
     by modifying the path variable.
@@ -71,7 +71,7 @@ on your system:
 Building the eegmanager
 =======================
 
-    Navigate to the eegmanagers source directory.
+    Navigate to the eegmanager's source directory.
 
     .. code-block:: bash
     
@@ -109,7 +109,7 @@ Using the eegmanager
     with the eegmanager easily and shows you the current status of the running
     application.
 
-    To start the GUI navigate to the gui subfolder and launch it with python.
+    To start the GUI navigate to the gui subfolder and launch it with Python.
 
     .. code-block:: bash
     
@@ -130,7 +130,7 @@ Using the eegmanager
     Once you set up the GUI to your needs you can save the current setup by
     pressing *command+s* or via the menu to a ``.egm`` file. This file can later
     be opened to quickly return to where you left. Under the hood these files
-    are binary python-pickle dumps which contain data in the yaml format.
+    are binary Python pickle dumps which contain data in the yaml format.
 
     For debugging purposes another view can be enabled by clicking on
     ``Window->Console``. The Console-windows displays the stdout from the underlying 

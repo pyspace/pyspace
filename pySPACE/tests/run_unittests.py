@@ -49,7 +49,7 @@ class SpecificUnittestSuite(unittest.TestSuite):
             os.path.join(os.path.dirname(pySPACE.__file__), os.path.pardir))
         if not import_path == pyspace_path:
             import warnings
-            warnings.warn("Check your python path! " +
+            warnings.warn("Check your Python path! " +
                           "'%s' is the expected pySPACE path," % pyspace_path +
                           " but '%s' is used." % import_path)
 
@@ -70,8 +70,9 @@ class SpecificUnittestSuite(unittest.TestSuite):
 
         """
         for file in files:
-            # add python all files, if they start with test_
-            if re.match("test_.*\.py$", file) and os.path.isfile(dir + '/' + file):
+            # add all Python files, that start with test_
+            if re.match("test_.*\.py$", file) and os.path.isfile(
+                    dir + '/' + file):
                 # figure out module name
                 moduleName = os.path.join(dir, file)
                 # do the necessary conversions such that the path becomes

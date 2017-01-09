@@ -139,7 +139,7 @@ class XDAWNNode(SpatialFilteringNode):
             D=None,
             SNR=None,
             # The number of channels that will be retained
-            retained_channels=retained_channels,
+            retained_channels=int(retained_channels) if retained_channels is not None else None,
             # whether this node is trainable
             trainable=self.trainable,
             # After training is finished, this attribute will contain

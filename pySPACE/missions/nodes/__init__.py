@@ -67,7 +67,7 @@ import re
 import inspect
 import pySPACE
 
-# The pattern which python modules have to match
+# The pattern which Python modules have to match
 module_pattern = re.compile("[a-zA-Z0-9_][a-zA-Z0-9_]*.py$")
 
 # The root of the search (should be the nodes directory)

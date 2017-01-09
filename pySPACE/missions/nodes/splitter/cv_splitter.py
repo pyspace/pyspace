@@ -3,9 +3,14 @@
 import random
 
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import NoOptimizationParameter
 from pySPACE.tools.memoize_generator import MemoizeGenerator
 import logging
 
+
+@NoOptimizationParameter("stratified")
+@NoOptimizationParameter("random")
+@NoOptimizationParameter("time_dependent")
 class CrossValidationSplitterNode(BaseNode):
     """ Perform (stratified) cross-validation
     

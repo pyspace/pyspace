@@ -122,7 +122,7 @@ class MpiBackend(Backend):
         self._log("Operation - staged")
         self.state = "staged"        
         
-    def execute(self):
+    def execute(self, timeout=1e6):
         """
         Executes all processes specified in the currently staged
         operation.
@@ -143,7 +143,7 @@ class MpiBackend(Backend):
     def not_xor(self, a, b):
         return not((a or b) and not (a and b))
     
-    def retrieve(self):
+    def retrieve(self, timeout=1e10):
         """
         Returns the result of the operation.
         """

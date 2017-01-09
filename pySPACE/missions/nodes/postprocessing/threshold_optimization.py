@@ -10,10 +10,12 @@ import numpy
 import copy
 
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import BooleanParameter
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset as BinaryClassificationDataset
 
-
+@BooleanParameter("preserve_score")
+@BooleanParameter("recalibrate")
 class ThresholdOptimizationNode(BaseNode):
     """ Optimize the classification threshold for a specified metric
     

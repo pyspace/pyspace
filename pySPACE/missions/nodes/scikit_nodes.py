@@ -175,7 +175,7 @@ def _gen_docstring(object, docsource=None):
     module = object.__module__
     name = object.__name__
 
-    if hasattr(eval(".".join(module.split(".")[:-1])), name):
+    if hasattr(__import__(".".join(module.split(".")[:-1])), name):
         link_module = ".".join(module.split(".")[:-1])
     else:
         link_module = module
@@ -332,7 +332,7 @@ def wrap_scikit_classifier(scikit_class):
                 for key in kwargs.keys():
                     if key not in accepted_args:
                         base_kwargs[key] = kwargs.pop(key)
-                del(key)
+                    del(key)
                 del(accepted_args)
             except TypeError:  # happens for GaussianNBSklearnNode
                 base_kwargs = kwargs
@@ -398,6 +398,12 @@ def wrap_scikit_classifier(scikit_class):
             label = self.class_labels[prediction]
             return PredictionVector(label=label, prediction=score,
                                     predictor=self)
+        @classmethod
+        def get_output_type(cls, input_type, as_string=True):
+            if as_string:
+                return "PredictionVector"
+            else:
+                return PredictionVector
 
         def get_output_type(self, input_type, as_string=True):
             if as_string:
@@ -484,7 +490,7 @@ def wrap_scikit_transformer(scikit_class):
             for key in kwargs.keys():
                 if key not in accepted_args:
                     base_kwargs[key] = kwargs.pop(key)
-            del(key)
+                del(key)
             del(accepted_args)
             super(ScikitTransformer, self).__init__(
                 input_dim=input_dim, output_dim=output_dim, dtype=dtype,
@@ -538,7 +544,8 @@ def wrap_scikit_transformer(scikit_class):
             The types can be specified in any format allowed by numpy.dtype."""
             return ['float32', 'float64']
 
-        def get_output_type(self, input_type, as_string=True):
+        @classmethod
+        def get_output_type(cls, input_type, as_string=True):
             if as_string:
                 return "FeatureVector"
             else:
@@ -601,7 +608,7 @@ def wrap_scikit_predictor(scikit_class):
             for key in kwargs.keys():
                 if key not in accepted_args:
                     base_kwargs[key] = kwargs.pop(key)
-            del(key)
+                del(key)
             del(accepted_args)
             super(ScikitPredictor, self).__init__(
                 input_dim=input_dim, output_dim=output_dim, dtype=dtype,
@@ -676,7 +683,8 @@ def wrap_scikit_predictor(scikit_class):
         def is_supervised(self):
             return self.is_trainable()
 
-        def get_output_type(self, input_type, as_string=True):
+        @classmethod
+        def get_output_type(cls, input_type, as_string=True):
             if as_string:
                 return "PredictionVector"
             else:
@@ -709,8 +717,7 @@ def wrap_scikit_predictor(scikit_class):
             # the one inherited from 'object' is a
             # "<slot wrapper '__init__' of 'object' objects>"
             # which does not have a 'im_func' attribute
-            pyspace_method.im_func.__doc__ = _gen_docstring(scikit_class,
-                                                        scikit_method.im_func)
+            pyspace_method.im_func.__doc__ = _gen_docstring(scikit_class, scikit_method.im_func)
 
     if scikit_class.__init__.__doc__ is None:
         ScikitPredictor.__init__.im_func.__doc__ = _gen_docstring(scikit_class)

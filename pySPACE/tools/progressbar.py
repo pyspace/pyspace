@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: iso-8859-1 -*-
-"""Text progressbar library for python
+"""Text progressbar library for Python
 
 This library provides a text mode progressbar. This is typically used
 to display the progress of a long running operation, providing a
@@ -240,14 +240,13 @@ class ProgressBar(object):
         - seconds_elapsed: seconds elapsed since start_time
         - percentage(): percentage of the progress (this is a method)
     """
-    def __init__(self, maxval=100, widgets=default_widgets, term_width=None,
-                 fd=sys.stderr):
+    def __init__(self, maxval=100, widgets=default_widgets, term_width=None, fd=None):
         if maxval <= 0:
             maxval = 1
             
         self.maxval = maxval
         self.widgets = widgets
-        self.fd = fd
+        self.fd = fd if fd is not None else sys.stdout
         self.signal_set = False
         if term_width is None:
             try:
@@ -315,6 +314,8 @@ class ProgressBar(object):
         else:
             self.finished = True
             self.fd.write(self._format_line() + '\n')
+        # Make sure the results are written out
+        self.fd.flush()
 
     def start(self):
         """Start measuring time, and prints the bar at 0%.

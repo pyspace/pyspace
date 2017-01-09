@@ -2599,7 +2599,7 @@ if __name__ == '__main__':
                     _printf('flatsize() %s vs sys.getsizeof() %s for %s: %s, %s',
                              a, s, _nameof(type(o)), _repr(o), x)
             _getsizeof = g  # restore
-        n, p = len(t), 'python %s' % sys.version.split()[0]
+        n, p = len(t), 'Python %s' % sys.version.split()[0]
         if e:
             _printf('%s%d of %d tests failed or %s on %s', linesep, e, n, _p100(e, n), p)
         elif g:

@@ -4,24 +4,32 @@
 import logging
 import warnings
 import numpy
+
+from pySPACE.missions.nodes.decorators import NoOptimizationParameter, BooleanParameter, NormalParameter, \
+    ChoiceParameter, LogUniformParameter
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 
 from pySPACE.missions.nodes.classification.one_class \
     import OneClassClassifierBase
 from pySPACE.missions.nodes.classification.svm_variants.brmm import RMM2Node, RmmPerceptronNode
 
-
+@NoOptimizationParameter("offset_factor")
+@BooleanParameter("outer_boundary")
 class OcRmmNode(RMM2Node, OneClassClassifierBase):
     """ Take zero as opposite class
 
     **References**
 
-        :author:    Krell, M. M. and Woehrle, H.
-        :title:     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
-        :journal:   Pattern Recognition Letters
-        :publisher: Elsevier
-        :doi:       10.1016/j.patrec.2014.11.008
-        :year:      2015
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Krell, M. M. and Woehrle, H.
+        title     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
+        journal   Pattern Recognition Letters
+        publisher Elsevier
+        doi       10.1016/j.patrec.2014.11.008
+        year      2015
+        ========= ==================================================
 
     **Exemplary Call**
 
@@ -102,18 +110,23 @@ class OcRmmNode(RMM2Node, OneClassClassifierBase):
         super(OcRmmNode, self)._inc_train(data, label)
 
 
+@NoOptimizationParameter("offset_factor")
+@BooleanParameter("outer_boundary")
 class OcRmmPerceptronNode(RmmPerceptronNode):
     """ Take zero as opposite class for online learning update formula
 
     **References**
 
-        :author:    Krell, M. M. and Woehrle, H.
-        :title:     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
-        :journal:   Pattern Recognition Letters
-        :publisher: Elsevier
-        :doi:       10.1016/j.patrec.2014.11.008
-        :year:      2015
-
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Krell, M. M. and Woehrle, H.
+        title     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
+        journal   Pattern Recognition Letters
+        publisher Elsevier
+        doi       10.1016/j.patrec.2014.11.008
+        year      2015
+        ========= ==================================================
 
     **Exemplary Call**
 
@@ -206,17 +219,22 @@ class OcRmmPerceptronNode(RmmPerceptronNode):
                                 predictor=self)
 
 
+@NoOptimizationParameter("squared_loss")
 class L2OcRmmPerceptronNode(OcRmmPerceptronNode):
     """ Squared loss variant of the one-class RMM Perceptron
 
     **References**
 
-        :author:    Krell, M. M. and Woehrle, H.
-        :title:     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
-        :journal:   Pattern Recognition Letters
-        :publisher: Elsevier
-        :doi:       10.1016/j.patrec.2014.11.008
-        :year:      2015
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Krell, M. M. and Woehrle, H.
+        title     `New one-class classifiers based on the origin separation approach <http://dx.doi.org/10.1016/j.patrec.2014.11.008>`_
+        journal   Pattern Recognition Letters
+        publisher Elsevier
+        doi       10.1016/j.patrec.2014.11.008
+        year      2015
+        ========= ==================================================
 
     .. seealso::
         :class:`OcRmmPerceptronNode`
@@ -242,17 +260,25 @@ class L2OcRmmPerceptronNode(OcRmmPerceptronNode):
         OcRmmPerceptronNode.__init__(self, squared_loss=True, **kwargs)
 
 
+@LogUniformParameter("radius", min_value=0, max_value=10000)
+@BooleanParameter("radius_opt")
+@ChoiceParameter("version", choices=[0, 1, 2])
 class SvddPassiveAggressiveNode(OcRmmPerceptronNode):
     """ Support Vector Data Description like Perceptron's suggested by Crammer
 
     **References**
 
-        :author:    Crammer, K. and Dekel, O. and Keshet, J. and Shalev-Shwartz, S. and Singer, Y.
-        :title:     `Online Passive-Aggressive Algorithms <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
-        :journal:   Journal of Machine Learning Research
-        :volume:    7
-        :year:      2006
-        :pages:     551 - 585
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Crammer, K. and Dekel, O. and Keshet, J. and Shalev-Shwartz, S. and Singer, Y.
+        title     `Online Passive-Aggressive Algorithms <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
+        journal   Journal of Machine Learning Research
+        doi       10.1016/j.patrec.2013.09.018
+        volume    7
+        pages     551 - 585  
+        year      2006
+        ========= ==================================================
 
     **Parameters**
 
@@ -375,6 +401,7 @@ class SvddPassiveAggressiveNode(OcRmmPerceptronNode):
                                 predictor=self)
 
 
+@NoOptimizationParameter("version")
 class UnaryPA0Node(SvddPassiveAggressiveNode):
     """ PA0 Node for unary classification
 
@@ -402,6 +429,7 @@ class UnaryPA0Node(SvddPassiveAggressiveNode):
         SvddPassiveAggressiveNode.__init__(self, version=0, **kwargs)
 
 
+@NoOptimizationParameter("version")
 class UnaryPA1Node(SvddPassiveAggressiveNode):
     """ PA1 Node for unary classification
 
@@ -429,6 +457,7 @@ class UnaryPA1Node(SvddPassiveAggressiveNode):
         SvddPassiveAggressiveNode.__init__(self, version=1, **kwargs)
 
 
+@NoOptimizationParameter("version")
 class UnaryPA2Node(SvddPassiveAggressiveNode):
     """ PA2 Node for unary classification
 

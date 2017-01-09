@@ -9,6 +9,7 @@ Here different combinations with filters are possible.
 
 from scipy.interpolate import interp1d
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import ChoiceParameter, BooleanParameter
 from pySPACE.missions.nodes.preprocessing import filtering
 from pySPACE.resources.data_types.time_series import TimeSeries
 from pySPACE.tools import prime_factors
@@ -278,7 +279,8 @@ class DownsamplingNode(BaseNode):
                 
         return downsampled_time_series
 
-
+@BooleanParameter("Multi_step")
+@ChoiceParameter("comp_type", ["normal", "parallel", "gpu"])
 class DecimationBase(BaseNode):
     """ Decimate the signal to a given sampling frequency
     
@@ -505,6 +507,9 @@ class DecimationIIRNode(DecimationBase):
                                          comp_type = self.comp_type)
 
 
+@ChoiceParameter("comp_type", ["normal", "parallel"])
+@ChoiceParameter("time_shift", ["normal", "middle", "end", "stream"])
+@BooleanParameter("skipping")
 class DecimationFIRNode(DecimationBase):
     """ Downsampling with a preceding FIR filter
     

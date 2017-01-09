@@ -9,18 +9,37 @@ import matplotlib.pyplot as plt
 
 import os
 import cPickle
-
-import warnings
 import logging
+import math
+import numpy
+import os
 import timeit
+import warnings
+
 # base class
+
 from pySPACE.missions.nodes.base_node import BaseNode
 # representation of the linear classification vector
+from pySPACE.missions.nodes.decorators import BooleanParameter, QNormalParameter, ChoiceParameter, QUniformParameter, \
+    NormalParameter, NoOptimizationParameter, LogUniformParameter, LogNormalParameter, QLogUniformParameter, \
+    UniformParameter
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 # the output is a prediction vector
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 
 
+@BooleanParameter("regression")
+@LogUniformParameter("complexity", min_value=1e-6, max_value=1e3)
+@ChoiceParameter("kernel_type", choices=["LINEAR", "POLY", "RBF", "SIGMOID"])
+@QNormalParameter("offset", mu=0, sigma=1, q=1)
+@UniformParameter("nu", min_value=0.01, max_value=0.99)
+@LogNormalParameter("epsilon", shape=0.1 / 2, scale=0.1)
+@NoOptimizationParameter("debug")
+@QUniformParameter("max_time", min_value=0, max_value=3600, q=1)
+@LogNormalParameter("tolerance", shape=0.001 / 2, scale=0.001)
+@NoOptimizationParameter("keep_vectors")
+@NoOptimizationParameter("use_list")
+@NormalParameter("ratio", mu=0.5, sigma=0.5 / 2)
 class RegularizedClassifierBase(BaseNode):
     """ Basic class for regularized (kernel) classifiers with extra support in
     the linear case
@@ -185,27 +204,27 @@ class RegularizedClassifierBase(BaseNode):
             Accept more than two classes.
             
             (*optional, default: False*)
-        
+
         :add_type:
             In case the classifier should be retrained, this parameter
             specifies which incoming samples should be added to the training
             set.
             One of the following strings 'ADD_ALL', 'ONLY_MISSCLASSIFIED',
             'ONLY_WITHIN_MARGIN', 'UNSUPERVISED_PROB'.
-            
+
             - ADD_ALL
-            
+
                 Add all incoming samples.
-            
+
             - ONLY_MISSCLASSIFIED
 
                 Add only those samples that were misclassified by the current
                 decision function.
-                                
+
                 **References**
 
                     ========= ==================================================
-                    minor      
+                    minor
                     ========= ==================================================
                     author    Bordes, Antoine and Ertekin, Seyda and Weston,
                               Jason and Bottou, L{\'e}on
@@ -220,16 +239,16 @@ class RegularizedClassifierBase(BaseNode):
                     numpages  41
                     publisher JMLR.org
                     ========= ==================================================
-                                
+
             - ONLY_WITHIN_MARGIN
-            
+
                 Add only samples that lie within the margin of
                 the SVM.
-                
+
                 **References**
 
                     ========= ==================================================
-                    main      
+                    main
                     ========= ==================================================
                     author    Bordes, Antoine and Ertekin, Seyda and Weston,
                               Jason and Bottou, L{\'e}on
@@ -244,9 +263,9 @@ class RegularizedClassifierBase(BaseNode):
                     numpages  41
                     publisher JMLR.org
                     ========= ==================================================
-        
+
                     ========= ==================================================
-                    main      
+                    main
                     ========= ==================================================
                     author    Oskoei, M.A. and Gan, J.Q. and Huosheng Hu
                     booktitle Engineering in Medicine and Biology Society, 2009.
@@ -259,18 +278,18 @@ class RegularizedClassifierBase(BaseNode):
                     pages     2600-2603
                     ISSN      1557-170X
                     ========= ==================================================
-    
+
             - UNSUPERVISED_PROB
 
                 Classify the label with the current decision function and
                 determine how probable this decision is. If it is most likely
                 right, which means the probability exceeds a threshold, add the
                 sample to the training set.
-                
+
                 **References**
 
                     ========= ==================================================
-                    main      
+                    main
                     ========= ==================================================
                     author    Sp{\"u}ler, Martin and Rosenstiel, Wolfgang and
                               Bogdan, Martin
@@ -290,9 +309,9 @@ class RegularizedClassifierBase(BaseNode):
                     pages     669-676
                     language  English
                     ========= ==================================================
-            
+
             (*optional, default: "ADD_ALL"*)
-        
+
         :discard_type:
             In case the classifier should be retrained this parameter
             specifies which samples from the training set should be discarded
@@ -300,15 +319,15 @@ class RegularizedClassifierBase(BaseNode):
             One of the following strings 'REMOVE_OLDEST', 'REMOVE_FARTHEST',
             'REMOVE_NO_BORDER_POINTS', 'INC', 'INC_BATCH', 'CDT',
             'DONT_DISCARD'.
-            
+
             - REMOVE_OLDEST
-                                    
+
                 Remove the oldest sample from the training set.
-                                    
+
                 **References**
 
                     ========= ==================================================
-                    main      
+                    main
                     ========= ==================================================
                     title     Online weighted LS-SVM for hysteretic structural
                               system identification
@@ -321,9 +340,9 @@ class RegularizedClassifierBase(BaseNode):
                     author    He-Sheng Tang and Song-Tao Xue and Rong Chen and
                               Tadanobu Sato
                     ========= ==================================================
-            
+
                     ========= ==================================================
-                    minor     
+                    minor
                     ========= ==================================================
                     author    Van Vaerenbergh, S. and Via, J. and Santamaria, I.
                     booktitle Acoustics, Speech and Signal Processing, 2006.
@@ -336,9 +355,9 @@ class RegularizedClassifierBase(BaseNode):
                     volume    5
                     ISSN      1520-6149
                     ========= ==================================================
-            
+
                     ========= ==================================================
-                    minor     
+                    minor
                     ========= ==================================================
                     author    Funaya, Hiroyuki and Nomura, Yoshihiko
                               and Ikeda, Kazushi
@@ -356,9 +375,9 @@ class RegularizedClassifierBase(BaseNode):
                     volume    5506
                     year      2008
                     ========= ==================================================
-                    
+
                     ========= ==================================================
-                    minor     
+                    minor
                     ========= ==================================================
                     title     On-Line One-Class Support Vector Machines. An
                               Application to Signal Segmentation
@@ -368,16 +387,16 @@ class RegularizedClassifierBase(BaseNode):
                     journal   IEEE ICASSP Vol. 2
                     pages     709--712
                     ========= ==================================================
-        
+
             - INC
-                   
+
                 Don't remove any sample, but retrain the SVM/classifier
                 incrementally with each incoming sample.
-        
+
                 **References**
 
                     ========= ==================================================
-                    main     
+                    main
                     ========= ==================================================
                     year      2012
                     isbn      978-3-642-34155-7
@@ -393,17 +412,17 @@ class RegularizedClassifierBase(BaseNode):
                               Bernhard and Holmes, Geoff
                     pages     313-323
                     ========= ==================================================
-        
+
             - CDT
-                   
+
                 Detect changes in the distribution of the data and adapt the
                 classifier accordingly, by throwing old samples away and only
                 take the last few for retraining.
-        
+
                 **References**
 
                     ========= ==================================================
-                    main     
+                    main
                     ========= ==================================================
                     author    Alippi, C. and Derong Liu and Dongbin Zhao
                               and Li Bu
@@ -418,9 +437,9 @@ class RegularizedClassifierBase(BaseNode):
                     pages     353-362
                     ISSN      2168-2216
                     ========= ==================================================
-                    
+
                     ========= ==================================================
-                    minor     
+                    minor
                     ========= ==================================================
                     title     Intelligence for embedded systems: a
                               methodological approach
@@ -433,17 +452,17 @@ class RegularizedClassifierBase(BaseNode):
                     chapter   Learning in Nonstationary and Evolving
                               Environments
                     ========= ==================================================
-        
+
             - INC_BATCH
-             
+
                 Collect new samples until a basket size is reached. Then throw
                 all old samples away. And retrain the classifier with the
                 current training set.
-    
+
                 **References**
 
                     ========= ==================================================
-                    main     
+                    main
                     ========= ==================================================
                     year      2012
                     isbn      978-3-642-34155-7
@@ -459,23 +478,23 @@ class RegularizedClassifierBase(BaseNode):
                               and Pfahringer,Bernhard and Holmes, Geoff
                     pages     313-323
                     ========= ==================================================
-        
+
             - DONT_DISCARD
 
                 Don't remove any samples from the training set.
-                
+
             - REMOVE_FARTHEST
 
                 Remove that sample that is farthest away from the hyperplane.
-                
+
             - REMOVE_NO_BORDER_POINTS
 
                 Remove all points that are not in the border of their class.
-        
+
                 **References**
 
                     ========= ==================================================
-                    main     
+                    main
                     ========= ==================================================
                     title     Incremental SVM based on reserved set for network
                               intrusion detection
@@ -487,20 +506,20 @@ class RegularizedClassifierBase(BaseNode):
                     issn      0957-4174
                     author    Yang Yi and Jiansheng Wu and Wei Xu
                     ========= ==================================================
-            
+
             (*optional, default: "REMOVE_OLDEST"*)
-        
+
         :keep_only_sv:
             Because only the support vectors determine the decision function
             remove all other samples after the SVM is trained.
-            
+
             (*optional, default: False*)
-        
+
         :basket_size:
             Specify the number of training samples for retraining.
-            
+
             (*optional, default: infinity*)
-        
+
         :relabel:
             Relabel the training set after the SVM is trained.
             If the parameter is set to *True*, the relabeling is done once.
@@ -508,81 +527,81 @@ class RegularizedClassifierBase(BaseNode):
             relabeling is repeated till convergence (with a maximum of
             10 iterations over the complete training data to ensure stopping).
             The maximum number of iterations is reset after each relabeling.
-            
+
             (*optional, default: False*)
 
         :border_handling:
-            Specify how to determine border points in case the discard_type: 
+            Specify how to determine border points in case the discard_type:
             'REMOVE_ONLY_BORDER_POINTS' is selected.
             One of the following strings 'USE_ONLY_BORDER_POINTS',
             'USE_DIFFERENCE'.
-            
+
             - USE_ONLY_BORDER_POINTS
 
                 Keep only those points which distance to the center lie within
                 a specified range.
-                
+
             - USE_DIFFERENCE
 
                 Use the difference from the center of the class as criterion
                 to determine the border points of the class.
-            
+
             (*optional, default: USE_ONLY_BORDER_POINTS*)
-        
+
         :scale_factor_small:
             Factor to specify the distance of the inner border to the center
             of a class.
-            
+
             This should be smaller than *scale_factor_tall*. ::
-            
+
                 inner border = scale_factor_small * distance between centers
-            
+
             (*optional, default: 0.3*)
-        
+
         :scale_factor_tall:
             Factor to specify the distance of the outer border to the center
             of a class.
-            
+
             This should be greater than *scale_factor_small*. ::
-                
+
                 outer border = scale_factor_tall * distance between centers
-            
+
             (*optional, default: 0.5*)
-        
+
         :p_threshold:
             Probability threshold for unsupervised learning. Only data that is
             most likely right (p>p_threshold) classified will be added to
             training set.
-            
+
             (*optional, default: 0.8*)
-        
+
         :cdt_threshold:
             Specify a multiple of the amount of support vectors before the SVM
             should be retrained anyway, does not matter if something changed or
             not.
-            
-            (*optional, default: 10*) 
-        
+
+            (*optional, default: 10*)
+
         :training_set_ratio:
             Handle the ratio of the classes. One of the following strings:
             "DONT_HANDLE_RATIO", "KEEP_RATIO_AS_IT_IS", "BALANCED_RATIO"
-            
+
             - DONT_HANDLE_RATIO
-            
+
                 Dont handle the ratio between the classes and dont consider
                 the class labels of the samples.
-                
+
             - KEEP_RATIO_AS_IT_IS
-            
+
                 Dont change the ratio between the classes. If a sample from one
                 class is added an other sample from the same class will be
                 removed from the training set.
-            
+
             - BALANCED_RATIO
-            
+
                 Try to keep a balanced training set with just as many positive
                 samples as negatives.
-            
+
             (*optional, default: DONT_HANDLE_RATIO"*)
 
         :u_retrain:
@@ -601,21 +620,21 @@ class RegularizedClassifierBase(BaseNode):
 
         :show_plot:
             Plot the samples and the decision function.
-            
+
             (*optional, default: False*)
-        
+
         :save_plot:
             Save the plot of the samples and the decision function.
-            
+
             (*optional, default: False*)
-        
+
         :plot_storage:
             Specify a directory to store the images of the plots.
             If directory does not exists, it will be created.
-            
+
             (*optional, default: "./plot_storage"*)
-            
-    
+
+
     .. note:: Not all parameter effects are implemented for all inheriting
               nodes. Kernels are available for LibSVMClassifierNode and
               partially for other nodes.
@@ -628,9 +647,9 @@ class RegularizedClassifierBase(BaseNode):
     :Created:  2012/03/28
     """
     def __init__(self, regression=False,
-                 complexity=1, weight=[1, 1], kernel_type='LINEAR',
+                 complexity=1, weight=None, kernel_type='LINEAR',
                  exponent=2, gamma=None, offset=0, nu=0.5, epsilon=0.1,
-                 class_labels=[], debug=False, max_time=3600,
+                 class_labels=None, debug=False, max_time=3600,
                  tolerance=0.001,
                  complexities_path=None,
                  keep_vectors=False, use_list=False,
@@ -650,6 +669,7 @@ class RegularizedClassifierBase(BaseNode):
                  u_retrain=False,
                  training_set_ratio="DONT_HANDLE_RATIO",
                  plot_storage="./plot_storage",
+                 ratio=0.5,
                  **kwargs):
 
         super(RegularizedClassifierBase, self).__init__(**kwargs)
@@ -662,7 +682,21 @@ class RegularizedClassifierBase(BaseNode):
 
         if self.is_retrainable() or basket_size != numpy.inf:
             keep_vectors=True
-        
+
+        if class_labels is None:
+            class_labels = []
+
+        if ratio < 0.01:
+            self._log("Ratio (%.2f) is to small. Setting to 0.01" % ratio)
+            ratio = 0.01
+        elif ratio > 0.99:
+            self._log("Ratio (%.2f) is to large. Setting to 0.99" % ratio)
+            ratio = 0.99
+
+        if weight is None:
+            weight = [ratio, 1 - ratio]
+
+
         ################ Only for printing ###########################
         is_plot_active = False
         scat = None
@@ -695,7 +729,7 @@ class RegularizedClassifierBase(BaseNode):
                 else:
                     raise  # Error on creation
         ################################################################
-        
+
         self.set_permanent_attributes(samples=None, labels=None,
                                       future_samples=[], future_labels=[],
                                       classes=class_labels,
@@ -717,7 +751,7 @@ class RegularizedClassifierBase(BaseNode):
                                       use_list=use_list,
                                       multinomial=multinomial,
                                       classifier_information={},
-                                      
+
                                       add_type=add_type,
                                       discard_type=discard_type,
                                       keep_only_sv=keep_only_sv,
@@ -750,13 +784,13 @@ class RegularizedClassifierBase(BaseNode):
                                       circleTarget1=circleTarget1,
                                       circleStandard0=circleStandard0,
                                       circleStandard1=circleStandard1,
-                                      
+
                                       m_counter_i=m_counter_i,
 
                                       # collection of classification scores
                                       # for probability fits
                                       decisions=[],
-                                      
+
                                       is_plot_active=is_plot_active,
                                       )
 
@@ -870,7 +904,7 @@ class RegularizedClassifierBase(BaseNode):
 
     def _train(self, data, class_label):
         """ Add a new sample with associated label to the training set.
-        
+
             In case of neither incremental learning nor the
             restriction of training samples is used,
             add the samples to the training set.
@@ -878,7 +912,7 @@ class RegularizedClassifierBase(BaseNode):
             select an appropriate training set and retrain the classifier.
             If the classifier is not trained, train it when there are enough
             samples available.
-            
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -903,13 +937,13 @@ class RegularizedClassifierBase(BaseNode):
                         if self.discard_type == "CDT":
                             self.learn_CDT()
                         self.is_trained = True
-                    
+
     def _train_sample(self, data, class_label):
         """ Train the classifier on the given data sample
         
             It is assumed that the class_label parameter
             contains information about the true class the data belongs to.
-        
+
             :param data:  A new sample for the training set.
             :type  data:  FeatureVector
             :param class_label:    The label of the new sample.
@@ -1155,21 +1189,21 @@ class RegularizedClassifierBase(BaseNode):
     def adapt_training_set(self, data, class_label=None):
         """ Select the samples that should belong to the training set and
             retrain the classifier.
-            
+
             For incremental training run through four steps.
-            
+
             1) Add samples to the training set according to some criteria.
             2) Discard samples from the training set according to some criteria.
             3) Retrain the classifier with the current training set.
             4) If used relabel the training set according to the current
                decision function.
-            
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
             :type  class_label:    str
         """
-        
+
         if (self.show_plot or self.save_plot) and self.is_plot_active == False:
             if self.show_plot:
                 plt.ion()
@@ -1217,15 +1251,15 @@ class RegularizedClassifierBase(BaseNode):
         ########################################################################
 
         self.relabel_training_set()
-    
+
         if self.show_plot or self.save_plot:
             self.num_samples = len(self.samples)
             self.visualize()
-        
+
     def select_new_data(self, data, class_label):
         """ Add the new sample to the training set if it satisfies some
             criteria.
-            
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -1235,7 +1269,7 @@ class RegularizedClassifierBase(BaseNode):
                     one was a sv)]
         """
         ret_label = None
-        
+
         retraining_required = False
         new_data_in_training_set = False
 
@@ -1287,14 +1321,14 @@ class RegularizedClassifierBase(BaseNode):
             prior0 = self.num_samples - prior1
             # get labels as list of trues and falses
             labels = map(lambda x: x == 1, self.labels)
-             
+
             # calculate the label and the probability for the label of the
             # given data
             [p, label] = self.get_platt_prob(self.decisions,
                                              labels,
                                              prior1, prior0,
                                              data)
-             
+
             if p > self.p_threshold:
                 self.decisions.append(p)
                 if self.discard_type != "INC":
@@ -1304,14 +1338,14 @@ class RegularizedClassifierBase(BaseNode):
                         self.is_potential_support_vector(data, label)
                 else:
                     new_data_in_training_set = True
-                    
+
         return [new_data_in_training_set, retraining_required, ret_label]
-    
+
     def discard_data(self, data, class_label,\
                      new_data_in_training_set, retraining_required,
                      label=None):
         """ Discard data from training set according to some criteria.
-        
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -1372,7 +1406,7 @@ class RegularizedClassifierBase(BaseNode):
                     num_standard = sum(l == 0 for l in self.labels)
                     if num_target != num_standard:
                         label = (num_target > num_standard)
-                    
+
                     samples = []
                     idxs_label = []
                     for i in numpy.arange(len(self.samples)):
@@ -1384,14 +1418,14 @@ class RegularizedClassifierBase(BaseNode):
                         lambda x: abs((self._execute(\
                             numpy.atleast_2d(x))).prediction),\
                         samples))
-                
+
                 if self.training_set_ratio == "KEEP_RATIO_AS_IT_IS" or\
                         self.training_set_ratio == "BALANCED_RATIO":
                     idx = idxs_label[idx]
-                
+
                 retraining_required = self.remove_samples([idx])\
                     or retraining_required
-                 
+
         # TODO: add parameter to specify possible overlap
         #       like x times basket size?
         if self.discard_type == "INC_BATCH"\
@@ -1403,7 +1437,7 @@ class RegularizedClassifierBase(BaseNode):
                 self.add_new_sample(d, c_l, True)
             # The whole training set changes so retraining is required
             retraining_required = True
- 
+
         if self.discard_type == "REMOVE_NO_BORDER_POINTS":
             if len(self.samples) < self.basket_size:
                 # Don't retrain if basket size is not reached
@@ -1433,11 +1467,11 @@ class RegularizedClassifierBase(BaseNode):
                 retraining_required = False
 
         return [new_data_in_training_set, retraining_required]
-    
+
     def retrain(self, data, class_label,
                 new_data_in_training_set, retraining_required):
         """ Start retraining procedure if the training set changed.
-        
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -1451,11 +1485,11 @@ class RegularizedClassifierBase(BaseNode):
         if self.classifier_information.has_key("Inc_iterations") and\
             self.classifier_information["Inc_iterations"] == 1:
             self.classifier_information["Retrain_counter"] = 0
-            
+
         if self.discard_type == "INC" and new_data_in_training_set is True:
             # Incremental training
             self.incremental_training(data, class_label)
-            
+
             if not self.classifier_information.has_key("Retrain_counter"):
                 self.classifier_information["Retrain_counter"] = 1
             else:
@@ -1476,7 +1510,7 @@ class RegularizedClassifierBase(BaseNode):
                         self.discard_type == "INC_BATCH"):
                     # only keep the sv to save memory
                     self.remove_non_support_vectors()
-    
+
     def relabel_training_set(self):
         """ Relabel the training set according to the current decision function.
         """
@@ -1512,20 +1546,20 @@ class RegularizedClassifierBase(BaseNode):
             if not self.relabel == "conv" or iterations >= 10:
                 break
             iterations += 1
-    
+
     def is_potential_support_vector(self, data, class_label=None):
         """ Check whether the given data could become a support vector
-           
+
             This is when the data is within, on or on the other side of the
             margin.
-            
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
             :type  class_label:    str
         """
         predictionVec = self._execute(data)
-        
+
         if class_label is not None:
             if self.classes.index(class_label) == 1:
                 return predictionVec.prediction <= 1.0
@@ -1533,14 +1567,14 @@ class RegularizedClassifierBase(BaseNode):
                 return predictionVec.prediction >= -1.0
         else:
             return True
-    
+
     def remove_no_border_points(self, retraining_required):
         """ Discard method to remove all samples from the training set that are
             not in the border of their class.
-            
+
             The border is determined by a minimum distance from the center of
             the class and a maximum distance.
-        
+
             :param retraining_required: flag if retraining is
                     required (the new point is a potential sv or a removed
                     one was a sv)
@@ -1548,10 +1582,10 @@ class RegularizedClassifierBase(BaseNode):
         raise NotImplementedError(
             "The node %s does not implement a border point handling." \
             % self.__class__.__name__)
-    
+
     def add_new_sample(self, data, class_label=None, default=False):
         """ Add a new sample to the training set
-        
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -1563,10 +1597,10 @@ class RegularizedClassifierBase(BaseNode):
         raise NotImplementedError(
             "The node %s does not implement a add sample routine." \
             % self.__class__.__name__)
-        
+
     def remove_samples(self, idxs):
         """ Remove the samples at the given indices from the training set
-        
+
             :param: idxs: Indices of the samples to remove.
             :type:  idxs: list of int
             :rtype: bool - True if a support vector was removed.
@@ -1574,13 +1608,13 @@ class RegularizedClassifierBase(BaseNode):
         raise NotImplementedError(
             "The node %s does not implement a remove sample routine." \
             % self.__class__.__name__)
-    
+
     def remove_non_support_vectors(self):
         """ Remove all samples that are no support vectors """
         raise NotImplementedError(
             "The node %s does not implement a remove SVs routine." \
             % self.__class__.__name__)
-    
+
     def retrain_SVM(self):
         """ Retrain the svm with the current training set """
         # start retraining process
@@ -1588,13 +1622,13 @@ class RegularizedClassifierBase(BaseNode):
 
         self.future_samples = []
         self.future_labels = []
-        
+
         if self.discard_type == "CDT":
             self.learn_CDT()
 
     def incremental_training(self, data, class_label):
         """ Warm Start Implementation by Mario Michael Krell
- 
+
         The saved status of the algorithm, including the Matrix M, is used
         as a starting point for the iteration.
         Only the problem has to be lifted up one dimension.
@@ -1609,10 +1643,10 @@ class RegularizedClassifierBase(BaseNode):
         """
         raise NotImplementedError(
             "The node %s does not implement a CDT." % self.__class__.__name__)
-        
+
     def change_detection_test(self, data, class_label=None):
         """ Detect a change of the distribution
-        
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -1625,7 +1659,7 @@ class RegularizedClassifierBase(BaseNode):
 
     def get_platt_prob(self, deci, label, prior1, prior0, data):
         """ Get a probability for the decision of the svm
-        
+
             :param deci: List of decision made for each sample.
             :type  deci: list of float
             :param label: List of labels from the previous samples.
@@ -1639,24 +1673,24 @@ class RegularizedClassifierBase(BaseNode):
             :rtype: [float, int] - probability and the corresponding label
         """
         [A, B] = self.approximate_AB_for_plat_prob(deci, label, prior1, prior0)
-        
+
         predictionVec = self._execute(data)
         f = predictionVec.prediction
-        
+
         fApB = f * A + B
         if fApB >= 0:
             p = numpy.exp(-fApB) / (1.0 + numpy.exp(-fApB))
         else:
             p = 1.0 / (1.0 + numpy.exp(fApB))
-        
+
         if self.classes.index(predictionVec.label) == 1:
             return [p, predictionVec.label]
         else:
             return [1-p, predictionVec.label]
-        
+
     def approximate_AB_for_plat_prob(self, deci, label, prior1, prior0):
         """ Approximate the distribution of both classes
-        
+
             :param deci: List of decision made for each sample.
             :type  deci: list of float
             :param label: List of labels from the previous samples.
@@ -1664,7 +1698,7 @@ class RegularizedClassifierBase(BaseNode):
             :param prior1: Number of samples of class 1
             :type  prior1: int
             :param prior0: Number of samples of class 0
-            :type  prior0: int    
+            :type  prior0: int
             :rtype: [float, float] - ([A, B] - parameters of sigmoid)
         """
         # Parameter setting
@@ -1685,7 +1719,7 @@ class RegularizedClassifierBase(BaseNode):
                 t[i] = hiTarget
             else:
                 t[i] = loTarget
-        
+
         A = 0.0
         B = numpy.log((prior0 + 1.0) / (prior1 + 1.0))
         fval = 0.0
@@ -1748,7 +1782,7 @@ class RegularizedClassifierBase(BaseNode):
                 break
         if it >= maxiter:
             self._log("Reaching maximal iterations", level=logging.WARNING)
-        
+
         return [A, B]
 
 # ------------------------------------------------------------------------------
@@ -1756,7 +1790,7 @@ class RegularizedClassifierBase(BaseNode):
 # ------------------------------------------------------------------------------
     def __intersect(self, rect, line):
         """ Calculate the points of a line in a given rectangle
-            
+
             :param rect: Parameters of a rectangle (min x, min y, max x, max y).
             :type  rect: list of float
             :param line: line given as y=a*x+b or a*x+b*y+c=0
@@ -1768,7 +1802,7 @@ class RegularizedClassifierBase(BaseNode):
         a, b, c = line
 
         assert a != 0 or b != 0
-    
+
         if a == 0:
             y = -c/b
             if y <= ymax and y >= ymin:
@@ -1781,14 +1815,14 @@ class RegularizedClassifierBase(BaseNode):
                 l.append((x, ymin))
                 l.append((x, ymax))
             return l
-    
+
         k = -a / b
         m = -c / b
         for x in (xmin, xmax):
             y = k * x + m
             if y <= ymax and y >= ymin:
                 l.append((x,y))
-    
+
         k = -b / a
         m = -c / a
         for y in (ymin, ymax):
@@ -1799,7 +1833,7 @@ class RegularizedClassifierBase(BaseNode):
 
     def plot_line(self, coef, *args, **kwargs):
         """ Plot a line (y=a*x+b or a*x+b*y+c=0) with the given coefficients
-        
+
             :param coef: Coefficients determining the line
             :type  coef: list of floats
             :rtype: list of lines
@@ -1811,7 +1845,7 @@ class RegularizedClassifierBase(BaseNode):
         elif len(coef) == 3:
             a, b, c = coef
         ax = plt.gca()
-    
+
         limits = ax.axis()
         points = self.__intersect(limits, (a,b,c))
         if len(points) == 2:
@@ -1820,10 +1854,10 @@ class RegularizedClassifierBase(BaseNode):
             ax.axis(limits)
             return l
         return None
-    
+
     def circle_out(self, x, y, s=20, *args, **kwargs):
         """ Circle out points with size 's'.
-        
+
             :param x: x coordinates.
             :type  x: list of float
             :param y: y coordinates.
@@ -1837,10 +1871,10 @@ class RegularizedClassifierBase(BaseNode):
         if 'edgecolors' not in kwargs:
             kwargs['edgecolors'] = 'g'
         self.scat = ax.scatter(x, y, s, facecolors='none', *args, **kwargs)
-    
+
     def plot_data(self, x, y, target, s=20, *args, **kwargs):
         """ Plot points with size 's'
-        
+
             :param x: x coordinates.
             :type  x: list of float
             :param y: y coordinates.
@@ -1864,21 +1898,21 @@ class RegularizedClassifierBase(BaseNode):
                 self.scatStandard = ax.scatter(x, y, s, marker='o',\
                                                facecolors='none',\
                                                *args, **kwargs)
-    
+
     def plot_hyperplane(self):
         """ Plot the hyperplane (in 2D a line).
         """
         ax = plt.gca()
         ax.set_title("$wx + b = 0$\n$[%.4f; %.4f]x + %.4f = 0$"\
                      % (self.w[0], self.w[1], self.b))
-        
+
         coef = [self.w[0], self.w[1], self.b]
-        
+
         coef1 = coef[:]
         coef2 = coef[:]
-        coef1[2] += 1 
+        coef1[2] += 1
         coef2[2] -= 1
-        
+
         i = 0
         for _, line in enumerate(ax.lines):
             ax.lines.remove(line)
@@ -1890,14 +1924,14 @@ class RegularizedClassifierBase(BaseNode):
             for _, line in enumerate(ax.lines):
                 ax.lines.remove(line)
                 i += 1
-        
+
         self.plot_line(coef, 'b', lw=2)
         self.plot_line(coef1, 'g', lw=1, ls='dashed')
         self.plot_line(coef2, 'r', lw=1, ls='dashed')
-        
+
     def plot_samples(self):
         """ Plot all training samples.
-        
+
             Plot all training samples and mark the class association.
         """
         class_neg = []
@@ -1907,17 +1941,17 @@ class RegularizedClassifierBase(BaseNode):
                 class_neg.append(self.samples[idx])
             else:
                 class_pos.append(self.samples[idx])
-        
+
         class_neg = numpy.matrix(class_neg)
         class_pos = numpy.matrix(class_pos)
-        
+
         if self.scatStandard is not None:
             self.scatStandard.remove()
             self.scatStandard = None
         if self.scatTarget is not None:
             self.scatTarget.remove()
             self.scatTarget = None
-        
+
         # TODO: determine size of plot
         xmin = -2.5 #min(numpy.min(class_neg[:,0]), numpy.min(class_pos[:,0]))
         xmax = 2.5  #max(numpy.max(class_neg[:,0]), numpy.max(class_pos[:,0]))
@@ -1925,12 +1959,12 @@ class RegularizedClassifierBase(BaseNode):
         ymax = 2.5  #max(numpy.max(class_neg[:,1]), numpy.max(class_pos[:,1]))
         ax = plt.gca()
         ax.axis([xmin-1.0, xmax+1.0, ymin-1.0, ymax+1.0])
-        
+
         if numpy.shape(class_neg)[1] > 0:
             self.plot_data(class_neg[:, 0], class_neg[:, 1], False)
         if numpy.shape(class_pos)[1] > 0:
             self.plot_data(class_pos[:, 0], class_pos[:, 1], True)
-        
+
     def plot_support_vectors(self):
         """ Mark the support vectors by a circle.
         """
@@ -1938,12 +1972,12 @@ class RegularizedClassifierBase(BaseNode):
         for idx in numpy.arange(self.num_samples):
             if self.dual_solution[idx] != 0:
                 support_vectors.append(self.samples[idx])
-        
+
         support_vectors = numpy.matrix(support_vectors)
-    
+
         if self.scat is not None:
             self.scat.remove()
-    
+
         if support_vectors is not None and\
             numpy.shape(support_vectors)[0] > 1 and\
             numpy.shape(support_vectors)[1] > 0:
@@ -1954,7 +1988,7 @@ class RegularizedClassifierBase(BaseNode):
     def plot_class_borders(self, mStandard, mTarget, R,
                            scaleFactorSmall, scaleFactorTall):
         """ Plot the borders of each class.
-            
+
             :param mStandard: Center of standard class.
             :type  mStandard: [float, float] - (x,y)
             :param mTarget: Center of target class.
@@ -1985,15 +2019,15 @@ class RegularizedClassifierBase(BaseNode):
             mTarget, radius=scaleFactorSmall * R, color='r', fill=False)
         self.circleTarget1 = plt.Circle(
             mTarget, radius=scaleFactorTall * R, color='r', fill=False)
-        
+
         ax.add_patch(self.circleStandard0)
         ax.add_patch(self.circleStandard1)
         ax.add_patch(self.circleTarget0)
         ax.add_patch(self.circleTarget1)
-    
+
     def plot_data_3D(self, x, y, z, target, s=20, *args, **kwargs):
         """ Plot points with size 's'
-        
+
             :param x: x coordinates.
             :type  x: list of float
             :param y: y coordinates.
@@ -2017,7 +2051,7 @@ class RegularizedClassifierBase(BaseNode):
 
     def plot_samples_3D(self):
         """ Plot all training samples.
-        
+
             Plot all training samples and mark the class association.
         """
         ax = plt.gca(projection='3d')#generate 3d plot
@@ -2029,11 +2063,11 @@ class RegularizedClassifierBase(BaseNode):
         ymax = 2.5   # max(numpy.max(class_neg[:,1]), numpy.max(class_pos[:,1]))
         zmin = -2.5
         zmax = 2.5
-        
+
         ax.set_xlim3d(xmin, xmax)
         ax.set_ylim3d(ymin, ymax)
         ax.set_zlim3d(zmin, zmax)
-        
+
         class_neg = []
         class_pos = []
         for idx in numpy.arange(self.num_samples):
@@ -2041,7 +2075,7 @@ class RegularizedClassifierBase(BaseNode):
                 class_neg.append(self.samples[idx])
             else:
                 class_pos.append(self.samples[idx])
-        
+
         class_neg = numpy.matrix(class_neg)
         class_pos = numpy.matrix(class_pos)
 
@@ -2051,33 +2085,33 @@ class RegularizedClassifierBase(BaseNode):
         if self.scatTarget is not None:
             self.scatTarget.remove()
             self.scatTarget = None
-        
+
         if numpy.shape(class_neg)[1] > 0:
             self.plot_data_3D(
                 class_neg[:, 0], class_neg[:, 1], class_neg[:, 2], False)
         if numpy.shape(class_pos)[1] > 0:
             self.plot_data_3D(
                 class_pos[:, 0], class_pos[:, 1], class_pos[:, 2], True)
-        
+
     def plot_hyperplane_3D(self):
         """ Plot the hyperplane (in 3D a surface).
         """
         ax = plt.gca(projection='3d')
         ax.set_title("$wx + b = 0$\n$[%.4f; %.4f; %.4f]x + %.4f = 0$"\
                      % (self.w[0], self.w[1], self.w[2], self.b))
-        
+
         if self.surf is not None:
             self.surf.remove()
             self.surf = None
-            
+
         # create x,y
         xx, yy = numpy.meshgrid(numpy.arange(-2.0, 2.0, 0.05),\
                                 numpy.arange(-2.0, 2.0, 0.05))
-    
+
         # calculate corresponding z
         z = (-self.w[0] * xx - self.w[1] * yy - self.b) * 1. / self.w[2]
         self.surf = ax.plot_surface(xx, yy, z, alpha=0.2)
-    
+
     def visualize(self):
         """ Show the training samples, the support vectors if possible and the
             current decision function

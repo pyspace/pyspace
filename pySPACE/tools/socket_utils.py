@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-Provide often needed functions when dealing with the python socket module
+Provide often needed functions when dealing with the Python socket module
 
 ** Functions **
 

@@ -26,7 +26,7 @@ class SleepNode(BaseNode):
     """
 
     input_types = ["TimeSeries", "FeatureVector",
-                   "PredictionVector", "MultiModal"]
+                   "PredictionVector"]
 
     def __init__(self, time=500, execution_phase="test", **kwargs):
         super(SleepNode, self).__init__(**kwargs)

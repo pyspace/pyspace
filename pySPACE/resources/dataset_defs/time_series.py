@@ -404,18 +404,18 @@ class TimeSeriesDataset(BaseDataset):
               format. If s_format is a list, the second element further 
               specifies additional options for storing.
               
-              - pickle  :
-                  Standard python format.
+              - pickle:
+                  Standard Python format
                   
-              - text    :
+              - text:
                   In the text format, all time series objects are concatenated 
                   to a single large table containing only integer values.
                   
-              - csv     :
+              - csv:
                   For the csv format comma separated values are taken as default
                   or a specified Python format string.
                   
-              - mat  :
+              - mat:
                   Scipy's savemat function is used for storing. Thereby the data
                   is stored as 3 dimensional array. Also meta data information,
                   like sampling frequency and channel names are saved.

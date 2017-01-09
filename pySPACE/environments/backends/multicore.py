@@ -14,10 +14,12 @@ import socket
 import select
 import cPickle
 import warnings
+from functools import partial
 
 import pySPACE
 from pySPACE.environments.backends.base import Backend
 from pySPACE.tools.progressbar import ProgressBar, Percentage, ETA, Bar
+
 
 class MulticoreBackend(Backend):
     """ Execute as many processes in parallel as there are (logical) CPUs on the local machine
@@ -38,22 +40,18 @@ class MulticoreBackend(Backend):
         # per default to the number of CPUs
         if pool_size is None:
             pool_size = MulticoreBackend.detect_CPUs()
-            
         self.pool_size = pool_size
-        
         self.state = "idling"
-        
+
         # queue for execution
-        self.result_handlers = multiprocessing.Queue(pool_size+2)   
-        
+        self.result_handlers = []
         self.pool = None
         self.current_process = 0
-        
         self._log("Created MulticoreBackend with pool size %s" % pool_size)
     
     def reset_queue(self):
         """ Resets the execution queue"""
-        self.result_handlers = multiprocessing.Queue(self.pool_size+2)
+        self.result_handlers = []
         
     def stage_in(self, operation):
         """ Stage the current operation """
@@ -69,44 +67,35 @@ class MulticoreBackend(Backend):
         self._log("Operation - staged")
         self.state = "staged"
         
-    def execute(self):
+    def execute(self, timeout=1e6):
         """ Execute all processes specified in the currently staged operation """
         assert(self.state == "staged")
-        
+
         self._log("Operation - executing")
-        self.state = "executing" 
-        
+        self.state = "executing"
+
         # The handler that is used remotely for logging
         handler_class = logging.handlers.SocketHandler
         handler_args = {"host" : self.host, "port" : self.port}
         backend_com = (self.SERVER_IP, self.SERVER_PORT)
-        
+
         # A socket communication thread to handle e.g. subflows
         self.listener = LocalComHandler(self.sock)
         self.listener.start()
-        
-        try:
-            process = self.current_operation.processes.get()
-        except KeyboardInterrupt:
-            process = False
+
         # Until not all Processes have been created prepare all processes
         # from the queue for remote execution and execute them
-        while not process is False:
+        get_process = partial(self.current_operation.processes.get, timeout=timeout)
+        for process in iter(get_process, False):
             process.prepare(pySPACE.configuration, handler_class, handler_args,
                             backend_com)
-            # since preparing the process might be quite faster than executing
-            # it we need another queue where processes get out when they have
-            # finished execution
-            self.result_handlers.put(1)
             # Execute all functions in the process pool but return immediately
-            self.pool.apply_async(process, callback=self.dequeue_process)
-            process = self.current_operation.processes.get()
-            time.sleep(0.1)
+            self.result_handlers.append(
+                self.pool.apply_async(process, callback=self.dequeue_process))
 
     def dequeue_process(self, result):
         """ Callback function for finished processes """
         self.current_process += 1
-        self.result_handlers.get()
         self.progress_bar.update(self.current_process)
     
     def check_status(self):
@@ -118,7 +107,7 @@ class MulticoreBackend(Backend):
         # is already finished
         return float(self.current_process) / self.current_operation.number_processes
     
-    def retrieve(self):
+    def retrieve(self, timeout=1e10):
         """ Wait for all results of the operation
         
         This call blocks until all processes are finished.
@@ -135,46 +124,51 @@ class MulticoreBackend(Backend):
         # if process creation has another thread
         if hasattr(self.current_operation, "create_process") \
             and self.current_operation.create_process != None:
-            self.current_operation.create_process.join()
-        self.pool.join() # Wait for worker processes to exit
+            self.current_operation.create_process.join(timeout=timeout)
+        # Close the result handler and wait for every process
+        # to terminate
+        try:
+            for result in self.result_handlers:
+                result.wait(timeout=timeout)
+        except multiprocessing.TimeoutError:
+            # A timeout occurred, terminate the pool
+            self._log("Timeout occurred, terminating worker processes")
+            self.pool.terminate()
+            return False
+        finally:
+            self.pool.join() # Wait for worker processes to exit
+            # inform listener that its time to die
+            self.listener.operation_finished = True
+            time.sleep(1)
+            self.listener.join(timeout=timeout)
+            # Change the state to finished
+            self.state = "retrieved"
         self._log("Worker processes have exited gracefully")
-        self.result_handlers.close()
-        # inform listener that its time to die
-        self.listener.operation_finished = True   
-        time.sleep(1)
-        self.listener.join()     
-        # Change the state to finished
-        self.state = "retrieved"
+        return True
     
     def consolidate(self):
         """ Consolidate the single processes' results into a consistent result of the whole operation """
         assert(self.state == "retrieved")
-        
         try:
             self.current_operation.consolidate()
         except Exception:
             import traceback
             self._log(traceback.format_exc(), level = logging.ERROR)
-            
         self._log("Operation - consolidated")
-        
         self.state = "consolidated"
     
     def cleanup(self):
         """ Remove the current operation and all potential results that have been stored in this object """        
         self.state = "idling"
-        
         self._log("Operation - cleaned up")
         self._log("Idling...")
-        
         # Remove the file logger for this operation
         logging.getLogger('').removeHandler(self.file_handler)
         # close listener socket
         self.sock.close()
-        
         self.current_operation = None
         self.current_process = 0
-        
+
     @classmethod
     def detect_CPUs(cls):
         """ Detects the number of CPUs on a system. Cribbed from pp.
@@ -275,7 +269,7 @@ class LocalComHandler(threading.Thread):
                         self.writers.remove(writer)
         if not self.subflow_pool is None:
             self.subflow_pool.close()
-            self.subflow_pool.join()
+            self.subflow_pool.join(timeout=1e10)
     
     def close_sock(self, conn):
         """ Close connection and remove it from lists of potentially readers/writers """

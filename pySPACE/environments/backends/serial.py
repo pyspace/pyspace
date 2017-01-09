@@ -9,6 +9,7 @@ simplifies debugging and gives a simple implementation.
 import logging
 import logging.handlers
 import traceback
+from functools import partial
 
 import pySPACE
 from pySPACE.environments.backends.base import Backend
@@ -41,27 +42,22 @@ class SerialBackend(Backend):
         self._log("Operation - staged")
         self.state = "staged"
         
-    def execute(self):
+    def execute(self, timeout=1e6):
         """
         Executes all processes specified in the currently staged
         operation.
         """
         assert(self.state == "staged")
-        
+
         self.state = "executing" 
         self._log("Operation - executing")
         
         # The handler that is used remotely for logging
         handler_class = logging.handlers.SocketHandler
         handler_args = {"host" : self.host, "port" : self.port}
-        
-        try:
-            process = self.current_operation.processes.get()
-        except KeyboardInterrupt:
-            self._log(traceback.format_exc(), level=logging.CRITICAL)
-            process = False
-        # while there are Processes in the queue ...
-        while not process is False:
+
+        get_process = partial(self.current_operation.processes.get, timeout=timeout)
+        for process in iter(get_process, False):
             process.prepare(pySPACE.configuration, handler_class, handler_args)
             # Execute process, update progress bar and get next queue-element
             try:
@@ -80,7 +76,6 @@ class SerialBackend(Backend):
             else:    
                 self.current_process += 1
                 self.progress_bar.update(self.current_process)
-                process = self.current_operation.processes.get()
 
     def check_status(self):
         """
@@ -93,7 +88,7 @@ class SerialBackend(Backend):
         # is already finished
         return float(self.current_process)/self.current_operation.number_processes
     
-    def retrieve(self):
+    def retrieve(self, timeout=1e10):
         """
         Returns the result of the operation.
         
@@ -107,7 +102,7 @@ class SerialBackend(Backend):
         # if process creation has another thread
         if hasattr(self.current_operation, "create_process") \
                         and self.current_operation.create_process != None:
-            self.current_operation.create_process.join()
+            self.current_operation.create_process.join(timeout=1e10)
             
         # Change the state to retrieved
         self.state = "retrieved"

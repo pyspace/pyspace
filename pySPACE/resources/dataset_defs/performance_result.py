@@ -609,8 +609,8 @@ class PerformanceResultSummary(BaseDataset):
                     hash_name = input_file_name.split("train_")[-1][:-4]
 #                hash_name = input_file_name.split("_")[-1][:-4]
                 result_folder_name = os.path.dirname(input_file_name)
-                metadata = yaml.load(open(os.path.join(
-                    result_folder_name, hash_name, "metadata.yaml")))
+                with open(os.path.join(result_folder_name, hash_name, "metadata.yaml")) as metadata_file:
+                    metadata = yaml.load(metadata_file)
                 parameter_settings = metadata.get("parameter_setting", {})
                 hide_parameters = metadata.get("hide_parameters", [])
                 if not "__Dataset__" in data_dict:

@@ -1,7 +1,7 @@
 """ Code based on `network-logging <http://www.python.org/doc/2.5.2/lib/network-logging.html>`_
 
 This code is mainly a code copy.
-For license issues of python code, we refer to:
+For license issues of Python code, we refer to:
 http://docs.python.org/3/license.html
 """
 

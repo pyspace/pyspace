@@ -1,6 +1,8 @@
-This module gives you an example on how to wrap C code whitin python using the python C-API
+This module gives you an example on how to wrap C code within Python using the Python C-API
+
 It contains the sources example_wrapper.cpp and it's header example_wrapper.h
-The setup.py needed to build the extension and the test.py in order test the compiled module.
+The setup.py needed to build the extension and the test.py in order test
+the compiled module.
 
 
 Compiling the module:

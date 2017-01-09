@@ -58,7 +58,7 @@ static PyObject* exampleCPPfunction(PyObject *self, PyObject *args){
     double *cArray1, *cArray2;
 
     // Extract variables and arrays from ARGS
-    // O! belongs to one array O -> type; ! -> local python variable
+    // O! belongs to one array O -> type; ! -> local Python variable
     // i belongs to an integer variable
     // d belongs to ab double variable
     if (!PyArg_ParseTuple(args, "O!O!id", &PyArray_Type, &array1, &PyArray_Type, &array2,
@@ -89,7 +89,7 @@ static PyObject* exampleCPPfunction(PyObject *self, PyObject *args){
 
 
 // method definitions for this module
-// "example" => Function name in python
+// "example" => Function name in Python
 // exampleCPPfunction => Function name within this moule
 static PyMethodDef example_wrapper_methods[] = {
     {"example", exampleCPPfunction, METH_VARARGS,"Example function"},
@@ -97,7 +97,7 @@ static PyMethodDef example_wrapper_methods[] = {
 };
 
 // the required init function (gets called 
-// once during the import statement in python)
+// once during the import statement in Python)
 PyMODINIT_FUNC initexample_wrapper(void)
 {   
     static PyObject* example_error;
