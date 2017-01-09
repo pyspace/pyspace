@@ -476,7 +476,7 @@ static PyMethodDef variance_toolsMethods[] = {
 };
 
 // the required init function (gets called 
-// once during the import statement in python)
+// once during the import statement in Python)
 PyMODINIT_FUNC initvariance_tools(void)
 {   
     static PyObject* var_error;

@@ -59,7 +59,7 @@ class PySpaceGui(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(PySpaceGui, self).__init__(parent)
         
-        self.setWindowTitle('python parallel YAML Signal Processing And Classification Environment (pySPACE)')
+        self.setWindowTitle('YAML based Signal Processing And Classification Environment written in Python (pySPACE)')
         self.resize(1024, 768)
         
     def set_up(self):

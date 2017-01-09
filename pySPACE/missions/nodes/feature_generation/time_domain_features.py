@@ -4,8 +4,11 @@ import numpy
 import warnings
 import logging
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import BooleanParameter, NoOptimizationParameter, NormalParameter, \
+    QNormalParameter, ChoiceParameter, QUniformParameter
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
+@BooleanParameter("absolute")
 class TimeDomainFeaturesNode(BaseNode):
     """ Use the samples of the time series as features
     
@@ -82,6 +85,8 @@ class TimeDomainFeaturesNode(BaseNode):
                           self.feature_names)
         return feature_vector
 
+
+@NoOptimizationParameter("absolute")
 class CustomChannelWiseFeatureNode(TimeDomainFeaturesNode):
     """ Use the result of a transformation of the time series as features.
     
@@ -192,8 +197,8 @@ class CustomChannelWiseFeatureNode(TimeDomainFeaturesNode):
             FeatureVector(numpy.atleast_2d(features).astype(numpy.float64),
                           self.feature_names)
         return feature_vector
-        
-    
+
+
 # TODO: These two nodes need memory optimization ...
 class TimeDomainDifferenceFeatureNode(BaseNode):
     """ Use differences between channels and/or times as features.
@@ -305,6 +310,7 @@ class TimeDomainDifferenceFeatureNode(BaseNode):
        
         return feature_vector
 
+
 class SimpleDifferentiationFeatureNode(BaseNode):
     """ Use differences between successive times on the same channel.
     
@@ -365,9 +371,10 @@ class SimpleDifferentiationFeatureNode(BaseNode):
         # From each selected channel we extract the specified data points
         indices = []
         for datapoint in self.datapoints:
-            indices.append(range(max(0, datapoint - \
-                self.moving_window_length / 2), min(x.shape[0], datapoint + \
-                (self.moving_window_length + 1) / 2)))
+            indices.append(range(max(0,
+                                     int(datapoint - self.moving_window_length / 2)),
+                                     int(min(x.shape[0], datapoint + (self.moving_window_length + 1) / 2))
+            ))
        
         channel_features = dict()
         for channel_name in x.channel_names:
@@ -416,6 +423,10 @@ class SimpleDifferentiationFeatureNode(BaseNode):
         channel_features = dict()
         return feature_vector
 
+
+@ChoiceParameter("coefficients_used", choices=[[0], [1], [0, 1]])
+@QUniformParameter("stepsize", min_value=0, max_value=1000, q=20)
+@QUniformParameter("segment_width", min_value=0, max_value=500, q=100)
 class LocalStraightLineFeatureNode(BaseNode):
     """ Fit straight lines to channel segments and uses coefficients as features.
     

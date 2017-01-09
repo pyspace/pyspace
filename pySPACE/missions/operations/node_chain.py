@@ -146,8 +146,8 @@ store_node_chain
 
 If True, the total state of the node chain after the processing is stored to disk.
 This is done separately for each split and run.
-If *store_node_chain* is a tuple of length 2---lets say (i1,i2)---only the 
-subflow starting at the i1-th node and ending at the (i2-1)-th node is stored. 
+If *store_node_chain* is a tuple of length 2---lets say (i1,i2)---only the
+subflow starting at the i1-th node and ending at the (i2-1)-th node is stored.
 This may be useful when the stored flow should be used in an ensemble.
 If *store_node_chain* is a list with indices, all nodes in the chain with the
 corresponding indices are stored. This might be useful to exclude specific nodes
@@ -250,18 +250,19 @@ Here `example_node_chain.yaml` is defined in the node chain specification folder
 
 """
 
+import copy
+import gc
+import glob
+import hashlib
+import logging
 import os
+import random
+import shutil
 import sys
 import time
-import yaml
-import shutil
-import glob
-import logging
 import warnings
-import copy
-import random
-import gc
-import hashlib
+
+import yaml
 
 # processing was renamed in Python 2.6 to multiprocessing
 if sys.version_info[0] == 2 and sys.version_info[1] < 6:
@@ -274,7 +275,7 @@ import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.tools.filesystem import create_directory
-from pySPACE.tools.conversion import extract_key_str, replace_parameters_and_convert
+from pySPACE.tools.conversion import replace_parameters2
 from pySPACE.environments.chains.node_chain \
     import BenchmarkNodeChain, NodeChainFactory
 
@@ -345,10 +346,10 @@ class NodeChainOperation(Operation):
         ## Use node_chain parameter if no templates are given ##
         if not operation_spec.has_key("templates"):
             if operation_spec.has_key("node_chain"):
-                operation_spec["templates"] = [
-                    extract_key_str(operation_spec["base_file"],
-                                    keyword="node_chain")]
-                operation_spec.pop("node_chain")
+                operation_spec["templates"] = [operation_spec.pop("node_chain")]
+#                    extract_key_str(operation_spec["base_file"],
+#                                    keyword="node_chain")]
+#                operation_spec.pop("node_chain")
             else:
                 warnings.warn("Specify parameter 'templates' or 'node_chain' in your operation spec!")
         elif operation_spec.has_key("node_chain"):
@@ -433,131 +434,131 @@ class NodeChainOperation(Operation):
     @classmethod
     def _createProcesses(cls, processes, result_directory, operation_spec,
                          parameter_settings, input_collections):
+        try:
+            storage_format = operation_spec["storage_format"] if "storage_format" \
+                in operation_spec else None
 
-        storage_format = operation_spec["storage_format"] if "storage_format" \
-            in operation_spec else None
+            # Determine whether the node_chain should be stored after data processing
+            store_node_chain = operation_spec["store_node_chain"] \
+                             if "store_node_chain" in operation_spec else False
 
-        # Determine whether the node_chain should be stored after data processing
-        store_node_chain = operation_spec["store_node_chain"] \
-                         if "store_node_chain" in operation_spec else False
+            # Determine whether certain parameters should not be remembered
+            hide_parameters = [] if "hide_parameters" not in operation_spec \
+                                    else list(operation_spec["hide_parameters"])
+            hide_parameters.append("__INPUT_COLLECTION__")
+            hide_parameters.append("__INPUT_DATASET__")
+            hide_parameters.append("__RESULT_DIRECTORY__")
+            hide_parameters.append("__OUTPUT_BUNDLE__")
+            operation_spec["hide_parameters"] = hide_parameters
 
-        # Determine whether certain parameters should not be remembered
-        hide_parameters = [] if "hide_parameters" not in operation_spec \
-                                else list(operation_spec["hide_parameters"])
-        hide_parameters.append("__INPUT_COLLECTION__")
-        hide_parameters.append("__INPUT_DATASET__")
-        hide_parameters.append("__RESULT_DIRECTORY__")
-        hide_parameters.append("__OUTPUT_BUNDLE__")
-        operation_spec["hide_parameters"] = hide_parameters
+            # Create all combinations of collections, runs and splits
+            collection_run_split_combinations = []
+            for input_dataset_dir in input_collections:
+                # Determine number of runs to be conducted for this collection
+                abs_collection_path = \
+                    pySPACE.configuration.storage + os.sep \
+                        + input_dataset_dir
+                collection_runs = \
+                    BaseDataset.load_meta_data(abs_collection_path).get('runs', 1)
+                    # D.get(k[,d]) -> D[k] if k in D, else d.
 
-        # Create all combinations of collections, runs and splits
-        collection_run_split_combinations = []
-        for input_dataset_dir in input_collections:
-            # Determine number of runs to be conducted for this collection
-            abs_collection_path = \
-                pySPACE.configuration.storage + os.sep \
-                    + input_dataset_dir
-            collection_runs = \
-                BaseDataset.load_meta_data(abs_collection_path).get('runs', 1)
-                # D.get(k[,d]) -> D[k] if k in D, else d.
+                if "runs" not in operation_spec:
+                    requested_runs = collection_runs
+                else:
+                    requested_runs = operation_spec["runs"]
 
-            if "runs" not in operation_spec:
-                requested_runs = collection_runs
-            else:
-                requested_runs = operation_spec["runs"]
+                assert collection_runs == requested_runs \
+                    or collection_runs == 1, \
+                    "Requested %s runs but input collection %s provides "\
+                    "data for %s runs." % (requested_runs, input_dataset_dir,
+                                           collection_runs)
 
-            assert collection_runs == requested_runs \
-                or collection_runs == 1, \
-                "Requested %s runs but input collection %s provides "\
-                "data for %s runs." % (requested_runs, input_dataset_dir,
-                                       collection_runs)
+                for run in range(max(requested_runs, collection_runs)):
+                    collection_splits = BaseDataset.load_meta_data(
+                        abs_collection_path).get('splits', 1)
+                    for split in range(collection_splits):
+                        collection_run_split_combinations.append((input_dataset_dir,
+                                                                  run, split))
 
-            for run in range(max(requested_runs, collection_runs)):
-                collection_splits = BaseDataset.load_meta_data(
-                    abs_collection_path).get('splits', 1)
-                for split in range(collection_splits):
-                    collection_run_split_combinations.append((input_dataset_dir,
-                                                              run, split))
+            # Shuffle order of dataset-run-split combinations. This should help to
+            # avoid that all processes work on the same data which can cause
+            # problems due to locking etc.
+            random.shuffle(collection_run_split_combinations)
 
-        # Shuffle order of dataset-run-split combinations. This should help to
-        # avoid that all processes work on the same data which can cause
-        # problems due to locking etc.
-        random.shuffle(collection_run_split_combinations)
+            # For all templates
+            for node_chain_spec in operation_spec["templates"]:
+                # For all possible parameter instantiations of this template
+                for parameter_setting in parameter_settings:
+                    # For all input collections-run combinations
+                    for input_dataset_dir, run, split in \
+                            collection_run_split_combinations:
+                        # We are going to change the parameter_setting and don't
+                        # want to interfere with later runs so we work on a copy
+                        parameter_setting_cp = copy.deepcopy(parameter_setting)
 
-        # For all templates
-        for node_chain_spec in operation_spec["templates"]:
-            # For all possible parameter instantiations of this template
-            for parameter_setting in parameter_settings:
-                # For all input collections-run combinations
-                for input_dataset_dir, run, split in \
-                        collection_run_split_combinations:
-                    # We are going to change the parameter_setting and don't
-                    # want to interfere with later runs so we work on a copy
-                    parameter_setting_cp = copy.deepcopy(parameter_setting)
+                        # Add input and output path to parameter
+                        # setting
+                        parameter_setting_cp["__INPUT_DATASET__"] = \
+                                input_dataset_dir.split(os.sep)[-2]
+                        parameter_setting_cp["__RESULT_DIRECTORY__"] = \
+                                result_directory
+                        if len(operation_spec["templates"])>1:
+                            index = operation_spec["templates"].index(node_chain_spec)
+                            parameter_setting_cp["__Template__"]=\
+                                operation_spec["template_files"][index]
 
-                    # Add input and output path to parameter
-                    # setting
-                    parameter_setting_cp["__INPUT_DATASET__"] = \
-                            input_dataset_dir.split(os.sep)[-2]
-                    parameter_setting_cp["__RESULT_DIRECTORY__"] = \
-                            result_directory
-                    if len(operation_spec["templates"])>1:
-                        index = operation_spec["templates"].index(node_chain_spec)
-                        parameter_setting_cp["__Template__"]=\
-                            operation_spec["template_files"][index]
+                        # Load the input meta data
+                        dataset_dir = os.sep.join([pySPACE.configuration.storage,
+                                                   input_dataset_dir])
+                        dataset_md = BaseDataset.load_meta_data(dataset_dir)
+                        # Add the input parameter's meta data
+                        # to the given parameter setting
+                        if "parameter_setting" in dataset_md:
+                            dataset_md["parameter_setting"].update(
+                                parameter_setting_cp)
+                            all_parameters = dataset_md["parameter_setting"]
+                        else:
+                            all_parameters = parameter_setting_cp
 
-                    # Load the input meta data
-                    dataset_dir = os.sep.join([pySPACE.configuration.storage,
-                                               input_dataset_dir])
-                    dataset_md = BaseDataset.load_meta_data(dataset_dir)
-                    # Add the input parameter's meta data
-                    # to the given parameter setting
-                    if "parameter_setting" in dataset_md:
-                        dataset_md["parameter_setting"].update(
-                            parameter_setting_cp)
-                        all_parameters = dataset_md["parameter_setting"]
-                    else:
-                        all_parameters = parameter_setting_cp
+                        def check_constraint(constraint, parameters):
+                            for key, value in parameters.iteritems():
+                                constraint = constraint.replace(key, str(value))
+                            return eval(constraint)
 
-                    def check_constraint(constraint, parameters):
-                        for key, value in parameters.iteritems():
-                            constraint = constraint.replace(key, str(value))
-                        return eval(constraint)
+                        if not all(check_constraint(
+                                constraint_def, all_parameters) for constraint_def
+                                in operation_spec.get('old_parameter_constraints',
+                                                      [])):
+                            continue
 
-                    if not all(check_constraint(
-                            constraint_def, all_parameters) for constraint_def
-                            in operation_spec.get('old_parameter_constraints',
-                                                  [])):
-                        continue
+                        # Determine directory in which the result of this
+                        # process should be written
+                        result_dataset_directory = \
+                            NodeChainOperation._get_result_dataset_dir(
+                                result_directory,
+                                input_dataset_dir,
+                                parameter_setting_cp,
+                                hide_parameters)
 
-                    # Determine directory in which the result of this
-                    # process should be written
-                    result_dataset_directory = \
-                        NodeChainOperation._get_result_dataset_dir(
-                            result_directory,
-                            input_dataset_dir,
-                            parameter_setting_cp,
-                            hide_parameters)
-                    
-                        
-                    # Create the respective process and put it to the
-                    # executing-queue of processes
-                    process = NodeChainProcess(
-                        node_chain_spec=node_chain_spec,
-                        parameter_setting=parameter_setting_cp,
-                        rel_dataset_dir=input_dataset_dir,
-                        run=run, split=split,
-                        storage_format=storage_format,
-                        result_dataset_directory=result_dataset_directory,
-                        store_node_chain=store_node_chain,
-                        hide_parameters=hide_parameters)
 
-                    processes.put(process)
+                        # Create the respective process and put it to the
+                        # executing-queue of processes
+                        process = NodeChainProcess(
+                            node_chain_spec=node_chain_spec,
+                            parameter_setting=parameter_setting_cp,
+                            rel_dataset_dir=input_dataset_dir,
+                            run=run, split=split,
+                            storage_format=storage_format,
+                            result_dataset_directory=result_dataset_directory,
+                            store_node_chain=store_node_chain,
+                            hide_parameters=hide_parameters)
 
-        # give executing process the sign that creation is now finished
-        processes.put(False)
+                        processes.put(process)
+        finally:
+            # give executing process the sign that creation is now finished
+            processes.put(False)
 
-    def consolidate(self):
+    def consolidate(self, _=None):
         """ Consolidates the results obtained by the single processes into a consistent structure
         of collections that are stored on the file system.
         """
@@ -567,45 +568,47 @@ class NodeChainOperation(Operation):
 
         # For all collections found
         for dataset_path in dataset_pathes:
-            # Load their meta_data
-            meta_data = BaseDataset.load_meta_data(dataset_path)
+            try:
+                # Load their meta_data
+                meta_data = BaseDataset.load_meta_data(dataset_path)
 
-            # Determine author and date
-            author = get_author()
-            date = time.strftime("%Y%m%d_%H_%M_%S")
+                # Determine author and date
+                author = get_author()
+                date = time.strftime("%Y%m%d_%H_%M_%S")
 
-            # Update meta data and store it
-            meta_data.update({"author": author, "date": date})
-            BaseDataset.store_meta_data(dataset_path, meta_data)
+                # Update meta data and store it
+                meta_data.update({"author": author, "date": date})
 
-            # Copy the input dataset specification file to the result
-            # directory in order to make later analysis of
-            # the results more easy
-            input_meta_path = os.sep.join([pySPACE.configuration.storage,
-                                          meta_data["input_collection_name"]])
-            input_meta = BaseDataset.load_meta_data(input_meta_path)
-            BaseDataset.store_meta_data(dataset_path, input_meta,
-                                        file_name="input_metadata.yaml")
-        # Check if some results consist of several runs
-        # and update the meta data in this case
-        # TODO: This is not a clean solution
-        for dataset_dir in glob.glob(os.sep.join([self.result_directory,
-                                                  "*"])):
-            if not os.path.isdir(dataset_dir):
-                continue
-            # There can be either run dirs, persistency dirs, or both of them.
-            # Check of whichever there are more. If both exist, their numbers
-            # are supposed to be equal.
-            nr_run_dirs = len(glob.glob(os.sep.join([dataset_dir,
-                                                     "data_run*"])))
-            nr_per_dirs = len(glob.glob(os.sep.join([dataset_dir,
-                                                     "persistency_run*"])))
-            nr_runs = max(nr_run_dirs, nr_per_dirs)
+                # There can be either run dirs, persistency dirs, or both of them.
+                # Check of whichever there are more. If both exist, their numbers
+                # are supposed to be equal.
+                nr_run_dirs = len(glob.glob(os.path.join(dataset_path, "data_run*")))
+                nr_per_dirs = len(glob.glob(os.path.join(dataset_path, "persistency_run*")))
+                nr_runs = max(nr_run_dirs, nr_per_dirs)
+                if nr_runs > 1:
+                    meta_data["runs"] = nr_runs
 
-            if nr_runs > 1:
-                collection_meta = BaseDataset.load_meta_data(dataset_dir)
-                collection_meta["runs"] = nr_runs
-                BaseDataset.store_meta_data(dataset_dir,collection_meta)
+                # Store the metadata
+                BaseDataset.store_meta_data(dataset_path, meta_data)
+
+                # Copy the input dataset specification file to the result
+                # directory in order to make later analysis of
+                # the results more easy
+                # THA: Split the first "/" from the input collection name, because otherwise it will be treated
+                # as an absolute path
+                input_collection_name = meta_data["input_collection_name"][1:] if \
+                    meta_data["input_collection_name"][0] == os.sep else meta_data["input_collection_name"]
+                input_meta_path = os.path.join(pySPACE.configuration.storage, input_collection_name)
+                try:
+                    input_meta = BaseDataset.load_meta_data(input_meta_path)
+                    BaseDataset.store_meta_data(dataset_path, input_meta, file_name="input_metadata.yaml")
+                except (IOError, OSError) as e:
+                    self._log("Error copying the input_metadata.yaml: {error}".format(error=e.message),
+                              level=logging.CRITICAL)
+            except Exception as e:
+                logging.getLogger("%s" % self).exception("Error updating the metadata: {error!s}".format(error=e))
+                raise e
+
         # If we don't create a feature vector or time series collection,
         # we evaluated our classification using a classification performance sink.
         # The resulting files should be merged to one csv tabular.
@@ -616,12 +619,16 @@ class NodeChainOperation(Operation):
             # We load and store the results once into a PerformanceResultSummary
             # This does the necessary consolidation...
             self._log("Reading intermediate results...")
-            result_collection = PerformanceResultSummary(dataset_dir=self.result_directory)
-            self._log("done")
-            self._log("Storing result collection")
-            result_collection.store(self.result_directory)
-            self._log("done")
-            PerformanceResultSummary.merge_traces(self.result_directory)
+            try:
+                result_collection = PerformanceResultSummary(dataset_dir=self.result_directory)
+                self._log("done")
+                self._log("Storing result collection")
+                result_collection.store(self.result_directory)
+                self._log("done")
+                PerformanceResultSummary.merge_traces(self.result_directory)
+            except Exception as e:
+                logging.getLogger("%s" % self).exception("Error merging the result collection: {error!s}".format(
+                    error=e))
 
             if self.compression:
                 # Since we get one result summary,
@@ -723,7 +730,7 @@ class NodeChainOperation(Operation):
             result_dir = base_dir
             result_dir += os.sep + result_name
             # filename is to long
-            # (longer than allowed including optional offsets for pyspace 
+            # (longer than allowed including optional offsets for pyspace
             #  result csv naming conventions)
             # create a md5 hash of the result name and use that one
             import platform
@@ -855,8 +862,9 @@ class NodeChainProcess(Process):
         self.min_log_level = min(console_log_level,file_log_level)
         pySPACE.configuration.min_log_level = self.min_log_level
         # Replace parameters in spec file
-        self.node_chain_spec = replace_parameters_and_convert(
-            self.node_chain_spec, self.parameter_setting)
+#        self.node_chain_spec = replace_parameters_and_convert(
+#            self.node_chain_spec, self.parameter_setting)
+        self.node_chain_spec = replace_parameters2(self.node_chain_spec, self.parameter_setting)
         # Create node chain
         self.node_chain = NodeChainFactory.flow_from_yaml(
             Flow_Class=BenchmarkNodeChain, flow_spec=self.node_chain_spec)

@@ -250,7 +250,7 @@ class BinaryClassificationDataset(BaseDataset):
             # if dataset_pattern given, add keys/vals
             if self.dataset_pattern is not None:
                 try:
-                    current_dataset = (performance["Key_Dataset"].strip("'}{")).split("}{")[0]
+                    current_dataset = self.meta_data["parameter_setting"]["__INPUT_DATASET__"]
                     new_keys = self.dataset_pattern.split('_')
                     # make '__MyNiceKey__' from 'myNiceKey':
                     new_keys=map(lambda x: '__'+x[0].upper()+x[1:]+'__', new_keys)
@@ -464,7 +464,7 @@ class BinaryClassificationDataset(BaseDataset):
 
         if calc_soft_metrics:
             prefixes = ["","soft_","pol_","k_"]
-            metrics["k_True_negatives"]  = (N- metrics["k_False_positives"])
+            metrics["k_True_negatives"] = (N- metrics["k_False_positives"])
             metrics["k_False_negatives"] = (P-metrics["k_True_positives"])
         else:
             prefixes = [""]

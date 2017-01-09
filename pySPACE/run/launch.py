@@ -62,7 +62,7 @@ import pySPACE
 import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
                                os.path.pardir))
 if not import_path == pyspace_path:
-    warnings.warn("Check your python path! "+
+    warnings.warn("Check your Python path! "+
                   "'%s' is the expected pySPACE path," % pyspace_path +
                   " but '%s' is used." % import_path)
 
@@ -71,6 +71,7 @@ from pySPACE.missions.operations.base import Operation, create_operation_from_fi
 from pySPACE.tools.filesystem import get_relative_path, create_source_archive
 from pySPACE import create_backend
 from pySPACE.environments.chains.operation_chain import create_operation_chain
+from pySPACE.environments.big_bang import LOGGER
 
 #import matplotlib
 #matplotlib.use("MacOSX") #MacOSX")
@@ -116,39 +117,36 @@ e.g.::
 
 """
 
-def run_operation(default_backend, operation):
+def run_operation(default_backend, operation, ex_timeout=1e6, re_timeout=1e10):
     """ Runs the given operation on the backend
 
     Runs the given operation *operation* either on the backend specified in the
     operation' spec file or (if none is specified) on the backend
     passed as *default_backend*.
+
+    Different timeouts are required, because for the execute function get is
+    called which does not accept to high timeouts without proper error handling
+    on a Mac OS X whereas Linux systems are fine with larger timeouts.
     """
     # Check if default backend can be used or if we have to run on a separate
     # backend
     if "backend" in operation.operation_spec:
         backend = create_backend(operation.operation_spec["backend"])
-        print(" --> For current operation using backend: \n\t\t %s."%str(backend))
+        LOGGER.info(" --> For current operation using backend: \n\t\t %s."%str(backend))
     else:
         backend = default_backend
-
     # In case a operation_chain is executed the queue needs to be reset, since
     # the the first terminated operation cleans and closes the queue.
     if backend.__str__() == "MulticoreBackend":
         backend.reset_queue()
-    
     backend.stage_in(operation)
-
-    backend.execute()
-
-    backend.retrieve()
-
-    backend.consolidate()
-
-    output_directory = operation.get_output_directory()
-
-    backend.cleanup()
-
-    return output_directory
+    try:
+        backend.execute(timeout=ex_timeout)
+        backend.retrieve(timeout=re_timeout)
+        backend.consolidate()
+        return operation.get_output_directory()
+    finally:
+        backend.cleanup()
 
 
 def run_operation_chain(default_backend, operation_chain):
@@ -171,7 +169,7 @@ def run_operation_chain(default_backend, operation_chain):
 
     # Run prepare operation if requested
     if prepare_operation is not None:
-        print "Running prepare operation of the operation chain "
+        LOGGER.info("Running prepare operation of the operation chain")
         # Create operation object for specified prepare operation
         operation = create_operation_from_file(prepare_operation,
                                                base_result_dir)
@@ -199,8 +197,8 @@ def run_operation_chain(default_backend, operation_chain):
                 pass
 
         if op_spec_relative_filename is not None:
-            print "Running operation %s of the operation chain (%s/%s)" % \
-                    (op_spec_relative_filename, index + 1, len(operations))
+            LOGGER.info("Running operation %s of the operation chain (%s/%s)" % \
+                    (op_spec_relative_filename, index + 1, len(operations)))
             spec_file_name = os.path.join(pySPACE.configuration.spec_dir,
                                           "operations",
                                            op_spec_relative_filename)
@@ -212,8 +210,8 @@ def run_operation_chain(default_backend, operation_chain):
                 operation_name = overridden_params_dict['operation_name']
             except KeyError:
                 operation_name = "<unnamed>"
-            print "Running operation %s of the operation chain (%s/%s)" % \
-                    (operation_name, index + 1, len(operations))
+            LOGGER.info("Running operation %s of the operation chain (%s/%s)" % \
+                    (operation_name, index + 1, len(operations)))
 
         operation_spec["input_path"] = input_path
         operation_spec["runs"] = runs
@@ -341,7 +339,7 @@ def main():
     else: # Falling back to serial backend
         default_backend = create_backend("serial")
 
-    print(" --> Using backend: \n\t\t %s."%str(default_backend))
+    LOGGER.info(" --> Using backend: \n\t\t %s."%str(default_backend))
 
     if not options.operation is None:
         # Create operation for the given name

@@ -24,8 +24,8 @@ Finish the run.launch.py process after crash
 --------------------------------------------
 
 We are currently searching for the reason
-but possibly due to multiprocessing or multi-threading usage
-python is sometimes not forwarding crashes to the main process
+but possibly due to multiprocessing or multi-threading usage,
+Python is sometimes not forwarding crashes to the main process
 but only the error message.
 So ``ctrl+c`` want work. You have to kill the process by finding out its id.
 Another possibility is to us ``ctrl+z`` to stop it and afterwards the command
@@ -56,7 +56,7 @@ Operation using LibSVM stops processing after a while
 -----------------------------------------------------
 
 For some system configurations the LibSVM package
-is not working together with the multiprocessing package of python
+is not working together with the multiprocessing package of Python
 and subprocesses are not finished in the right way.
 So you should use a different classifier or avoid using the multiprocessing
 package.

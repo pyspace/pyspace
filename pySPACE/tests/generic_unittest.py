@@ -26,7 +26,7 @@ import_path = os.path.realpath(os.path.join(os.path.dirname(pySPACE.__file__),
                                             os.path.pardir))
 import warnings
 if not import_path == pyspace_path:
-    warnings.warn("Check your python path! " +
+    warnings.warn("Check your Python path! " +
                   "'%s' is the expected pySPACE path," % pyspace_path +
                   " but '%s' is used." % import_path)
 
@@ -72,7 +72,7 @@ class ParametrizedTestCase(TestCase):
     to a class that extends :class:`GenericTestCase` is close to impossible.
     If the user does not want to implement an external unittesting package such
     as `nose-parametrized <https://github.com/wolever/nose-parameterized>`_,
-    one must 'fool' python and use a wrapper class such that the unit testing
+    one must 'fool' Python and use a wrapper class such that the unit testing
     is done in a different class. The end result is that the unittest
     implementation is done within a class that has an initialization method
     which obviously accepts external parameters (such as different nodes) and
@@ -419,7 +419,7 @@ def multiple_node_testing(verbose=False, report=False):
     # we define a list of nodes that we do not want to test
     skipped_dirs = ['pySPACE.missions.nodes.sink',
                     'pySPACE.missions.nodes.source',
-                    'pySPACE.missions.nodes.scikits_nodes',
+                    'pySPACE.missions.nodes.scikit_nodes',
                     'pySPACE.missions.nodes.splitter',
                     'pySPACE.missions.nodes.meta',
                     'pySPACE.missions.nodes.debug.subflow_timing_node',
@@ -430,20 +430,21 @@ def multiple_node_testing(verbose=False, report=False):
                     'pySPACE.missions.nodes.classification.svm_variants.RMM'
                     ]
 
-    skipped_nodes = ['FeatureNormalizationNode',
-                     # this exemplary call has a hardcoded path in it
-                     'ElectrodeCoordinationPlotNode',
-                     'AverageFeatureVisNode',
+    skipped_nodes = [# exemplary call requires a hardcoded path
+                     'FeatureNormalizationNode',
+                     'ElectrodeCoordinationPlotNode', # needs eeg data
+                     'AverageFeatureVisNode', # needs eeg data
                      'AlamgirMultiTaskClassifierNode',
-                     'ICAWrapperNode',
                      # The iteration does not converge on the test data
                      # TODO:Build converging iteration
+                     'ICAWrapperNode',
                      'JunctionNode',  # requires private modules
-                     'LaplacianReferenceNode',
-                     # node has hardcoded values
+                     'LaplacianReferenceNode', # needs eeg data
                      'PissfNode',  # TODO:needs specialized training data
                      # does not apply to default data
-                     'MonoTimeSeries2FeatureNode'
+                     'MonoTimeSeries2FeatureNode',
+                     # needs mnist data
+                     'MnistVizNode'
                      ]
     # initialize some counters and log the results to a txt file
     total_tests, docu, exemplary, initialize, execution = 0, 0, 0, 0, 0
@@ -498,8 +499,8 @@ def multiple_node_testing(verbose=False, report=False):
             the_report_suite.append((suite, key))
 
         # check which tests failed
-        for item in result.failures:
-            failed_test = str(item[0])
+        for failure in result.failures:
+            failed_test = str(failure[0])
             if failed_test.startswith('test_has_documentation'):
                 docu += 1
             elif failed_test.startswith('test_has_exemplary_call'):
@@ -509,8 +510,8 @@ def multiple_node_testing(verbose=False, report=False):
             elif failed_test.startswith('test_execution'):
                 execution += 1
 
-        for item in result.errors:
-            failed_test = str(item[0])
+        for error in result.errors:
+            failed_test = str(error[0])
             if failed_test.startswith('test_has_documentation'):
                 docu += 1
             elif failed_test.startswith('test_has_exemplary_call'):
@@ -527,7 +528,7 @@ def multiple_node_testing(verbose=False, report=False):
             import HTMLTestRunner
             import datetime
         except ImportError:
-            print "Please download the HTMLTestRunner python script"
+            print "Please download the HTMLTestRunner Python script"
 
         the_html = open("generic_unittests.html", 'w')
         desc = ('This is the result of running the generic unit test on' +

@@ -11,6 +11,7 @@ import logging
 import os
 
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import NoOptimizationParameter, NormalParameter
 from pySPACE.missions.support.windower import Windower, WindowFactory
 from pySPACE.tools.memoize_generator import MemoizeGenerator
 
@@ -138,6 +139,8 @@ class TimeSeriesSourceNode(BaseNode):
         self.dataset = None
 
 
+@NoOptimizationParameter("local_window_conf")
+@NoOptimizationParameter("data_consistency_check")
 class Stream2TimeSeriesSourceNode(TimeSeriesSourceNode):
     """ Transformation of streaming data to windowed time series
 

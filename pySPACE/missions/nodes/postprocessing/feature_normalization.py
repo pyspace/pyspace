@@ -12,6 +12,8 @@ from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
 from pySPACE.tools.filesystem import  create_directory
+from pySPACE.missions.nodes.decorators import UniformParameter, BooleanParameter 
+
 
 class InconsistentFeatureVectorsException(Exception):
     pass
@@ -148,6 +150,7 @@ class FeatureNormalizationNode(BaseNode):
         self.samples.append(numpy.array(data[0,:]))
 
 
+@UniformParameter("outlier_percentage", min_value=0, max_value=100)
 class OutlierFeatureNormalizationNode(FeatureNormalizationNode):
     """ Map the feature vectors of the training set to the range [0,1]^n
     
@@ -216,6 +219,7 @@ class OutlierFeatureNormalizationNode(FeatureNormalizationNode):
         self.mult[numpy.isinf(self.mult)] = 0.0
         self.mult[numpy.isnan(self.mult)] = 0.0
 
+
 class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
     """ Transform the features, such that they have zero mean and variance one
     
@@ -278,6 +282,7 @@ class GaussianFeatureNormalizationNode(FeatureNormalizationNode):
     def _inc_train(self, data, class_label=None):
         self._train(data)
 
+
 class HistogramFeatureNormalizationNode(FeatureNormalizationNode):
     """ Transform the features, such that they have zero mean in
     the main bit in the histogram and variance one on that bit.
@@ -330,6 +335,7 @@ class HistogramFeatureNormalizationNode(FeatureNormalizationNode):
         std = []
 
 
+@BooleanParameter("dimension_scale")
 class EuclideanFeatureNormalizationNode(BaseNode):
     """ Normalize feature vectors to Euclidean norm with respect to dimensions
 
@@ -385,6 +391,7 @@ class EuclideanFeatureNormalizationNode(BaseNode):
         if self.store:
             pass
 
+
 class InfinityNormFeatureNormalizationNode(BaseNode):
     """ Normalize feature vectors with infinity norm to [-1,1]
 
@@ -408,14 +415,12 @@ class InfinityNormFeatureNormalizationNode(BaseNode):
         """ Normalizes the samples vector to inf norm one"""
         x = data.view(numpy.ndarray)
         # always convert the array you do not start with an integer
-        a = x[0,:].astype(numpy.longdouble)
+        a = x[0,:].astype(numpy.double)
         inf_norm = numpy.max(numpy.abs(a))
         if inf_norm == 0:
             inf_norm = 1
         a /= inf_norm
         return FeatureVector([a], data.feature_names)
-
-
 
 
 _NODE_MAPPING = {"Feature_Normalization": OutlierFeatureNormalizationNode,

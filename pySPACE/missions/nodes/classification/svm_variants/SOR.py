@@ -13,11 +13,15 @@ import scipy.spatial.distance
 import logging
 import warnings
 
-import matplotlib as mpl
-mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.unicode'] = True
+#import matplotlib as mpl
+#mpl.rcParams['text.usetex'] = True
+#mpl.rcParams['text.latex.unicode'] = True
 
 # the output is a prediction vector
+import sys
+
+from pySPACE.missions.nodes.decorators import BooleanParameter, NoOptimizationParameter,\
+    ChoiceParameter, QLogUniformParameter
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.missions.nodes.classification.base import RegularizedClassifierBase
 
@@ -30,6 +34,8 @@ import copy
 from pySPACE.resources.dataset_defs.metric import BinaryClassificationDataset
 
 
+@ChoiceParameter("version", ["samples", "matrix"])
+@BooleanParameter("squared_loss")
 class SorSvmNode(RegularizedClassifierBase):
     """ Classify with 2-norm SVM relaxation using the SOR algorithm
 
@@ -70,7 +76,7 @@ class SorSvmNode(RegularizedClassifierBase):
         minor     source: sample version
         ========= ==========================================================================================
         author    Hsieh, Cho-Jui and Chang, Kai-Wei and Lin, Chih-Jen and Keerthi, S. Sathiya and Sundararajan, S.
-        title     A dual coordinate descent method for large-scale linear SVM
+        title     A dual coordinate descent method for large-scale linear SVM <http://doi.acm.org/10.1145/1390156.1390208>`_
         booktitle Proceedings of the 25th international conference on Machine learning
         series    ICML '08
         year      2008
@@ -78,7 +84,6 @@ class SorSvmNode(RegularizedClassifierBase):
         location  Helsinki, Finland
         pages     408--415
         numpages  8
-        url       http://doi.acm.org/10.1145/1390156.1390208
         doi       10.1145/1390156.1390208
         acmid     1390208
         publisher ACM
@@ -173,7 +178,10 @@ class SorSvmNode(RegularizedClassifierBase):
                  **kwargs):
         self.old_difference=numpy.inf
         # instead of lists, arrays are concatenated in training
-        super(SorSvmNode, self).__init__(use_list=False, **kwargs)
+        if "use_list" in kwargs:
+            self._log("Got use_list argument. Overwriting with False")
+        kwargs["use_list"] = False
+        super(SorSvmNode, self).__init__(**kwargs)
 
         if not(version in ["samples", "matrix"]):
             self._log("Version %s is not available. Default to 'samples'!"%version, level=logging.WARNING)
@@ -262,7 +270,7 @@ class SorSvmNode(RegularizedClassifierBase):
         if not self.is_trained:
             self._complete_training(debug)
             self.relabel_training_set()
-        
+
     def _complete_training(self, debug=False):
         """ Train the SVM with the SOR algorithm on the collected training data
         """
@@ -276,7 +284,7 @@ class SorSvmNode(RegularizedClassifierBase):
         self.calculate_weigts_and_class_factors()
         self.num_samples = len(self.samples)
         self.max_iterations = self.max_iterations_factor*self.num_samples
-        
+
         self.dual_solution = numpy.zeros(self.num_samples)
 
         if self.version == "matrix" and self.kernel_type == "LINEAR":
@@ -536,7 +544,7 @@ class SorSvmNode(RegularizedClassifierBase):
                 self.difference = current_difference
             self.sub_iterations += 1
             self.iterations += 1
-            
+
             if not (self.sub_iterations < self.max_sub_iterations
                     and self.iterations < self.max_iterations):
                 break
@@ -590,10 +598,10 @@ class SorSvmNode(RegularizedClassifierBase):
     def remove_no_border_points(self, retraining_required):
         """ Discard method to remove all samples from the training set that are
             not in the border of their class.
-            
+
             The border is determined by a minimum distance from the center of
             the class and a maximum distance.
-        
+
             :param retraining_required: flag if retraining is
                     required (the new point is a potential sv or a removed
                     one was a sv)
@@ -603,30 +611,30 @@ class SorSvmNode(RegularizedClassifierBase):
                          if l == 1]  # self.classes.index("Target")]
         standardSamples = [s for (s, l) in zip(self.samples, self.labels)\
                            if l == 0]  # self.classes.index("Standard")]
-        
+
         if self.training_set_ratio == "KEEP_RATIO_AS_IT_IS":
             # subtract one from the class for which a new sample was added
             num_target = len(targetSamples) - (self.labels[-1] == 1)
             num_standard = len(standardSamples) - (self.labels[-1] == 0)
-            
+
             num_target = 1.0 * num_target / (num_target + num_standard) * \
                 self.basket_size
             num_standard = self.basket_size - num_target
-         
+
         # mean vector of each class (its center)
         mTarget = numpy.mean(targetSamples, axis=0)
         mStandard = numpy.mean(standardSamples, axis=0)
-         
+
         # euclidean distance between the class centers
         R = scipy.spatial.distance.euclidean(mTarget, mStandard)
-         
+
         if self.show_plot:
             dim = numpy.shape(self.samples)[1]
             if dim == 2:
                 self.plot_class_borders(
                     mStandard, mTarget, R,
                     self.scale_factor_small, self.scale_factor_tall)
-         
+
         # get distance of each point to its class center
         distances = []
         for i, (s, l) in enumerate(zip(self.samples, self.labels)):
@@ -670,7 +678,7 @@ class SorSvmNode(RegularizedClassifierBase):
             # use only support vectors and new data point
             distances = filter(lambda x: x[4] != 0 \
                                or x[0] == len(self.samples), distances)
-         
+
         if self.border_handling == "USE_ONLY_BORDER_POINTS":
             # pay attention to the basket size
             distances = distances[:self.basket_size]
@@ -699,7 +707,7 @@ class SorSvmNode(RegularizedClassifierBase):
         else:
             # pay attention to the basket size
             distances = distances[:self.basket_size]
-         
+
         [idxs, _, _, _, _, _] = zip(*distances)
         retraining_required = self.remove_samples(list(
             set(numpy.arange(self.num_samples)) - set(idxs))) \
@@ -708,7 +716,7 @@ class SorSvmNode(RegularizedClassifierBase):
 
     def add_new_sample(self, data, class_label=None, default=False):
         """ Add a new sample to the training set.
-        
+
             :param data:  A new sample for the training set.
             :type  data:  list of float
             :param class_label:    The label of the new sample.
@@ -722,7 +730,7 @@ class SorSvmNode(RegularizedClassifierBase):
                 and default is False:
             self.future_samples.append(data)
             self.future_labels.append(class_label)
-            
+
             # the sample size for the new knowledge base is limited
             # to basket size, so pop oldest
             while len(self.future_samples) > self.basket_size:
@@ -767,7 +775,7 @@ class SorSvmNode(RegularizedClassifierBase):
 
     def remove_samples(self, idxs):
         """ Remove the samples at the given indices from the training set.
-        
+
             :param: idxs: Indices of the samples to remove.
             :type:  idxs: list of int
             :rtype: bool - True if a support vector was removed.
@@ -804,13 +812,13 @@ class SorSvmNode(RegularizedClassifierBase):
                 # very efficient :)
                 self.M.pop(idx)
         return ret
-    
+
     def remove_non_support_vectors(self):
         """ Remove all samples that are no support vectors.
         """
         idxs = numpy.where(self.dual_solution == 0.0)
         self.remove_samples(list(idxs[0]))
-    
+
     def incremental_training(self, data, class_label):
         """ Warm Start Implementation by Mario Michael Krell
 
@@ -893,7 +901,7 @@ class SorSvmNode(RegularizedClassifierBase):
             ax = plt.gca()
             ax.set_xlabel(r'$x_0$')
             ax.set_ylabel(r'$x_1$')
-            
+
             super(SorSvmNode, self).plot_samples()
             super(SorSvmNode, self).plot_hyperplane()
             super(SorSvmNode, self).plot_support_vectors()
@@ -902,10 +910,10 @@ class SorSvmNode(RegularizedClassifierBase):
             ax.set_xlabel(r'$x_0$')
             ax.set_ylabel(r'$x_1$')
             ax.set_zlabel(r'$x_2$')
-            
+
             super(SorSvmNode, self).plot_samples_3D()
             super(SorSvmNode, self).plot_hyperplane_3D()
-        
+
         if dim == 2 or dim == 3:
             plt.draw()
             if self.save_plot is True:

@@ -37,7 +37,7 @@ class LiveEegStreamManager(object):
         self.ip = None
         self.port = None
 
-        # tools for python based recorder
+        # tools for Python based recorder
         self.recorder = None
 
         # create a new eeg server process

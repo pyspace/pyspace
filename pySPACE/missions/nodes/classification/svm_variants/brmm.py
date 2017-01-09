@@ -2,6 +2,9 @@
 
 # the output is a prediction vector
 import timeit
+
+from pySPACE.missions.nodes.decorators import NoOptimizationParameter, BooleanParameter, QNormalParameter, \
+    ChoiceParameter, QLogUniformParameter, LogUniformParameter
 from pySPACE.resources.data_types.prediction_vector import PredictionVector
 from pySPACE.missions.nodes.classification.base import RegularizedClassifierBase
 # classification vector may be saved as a feature vector
@@ -28,6 +31,13 @@ from pySPACE.missions.nodes.classification.svm_variants.external import LibSVMCl
 from pySPACE.missions.nodes.base_node import BaseNode
 
 
+@NoOptimizationParameter("use_list")
+@NoOptimizationParameter("omega")
+@QLogUniformParameter("max_iterations", min_value=1, max_value=1000, q=1)
+@LogUniformParameter("range_", min_value=1.01, max_value=1000)
+@ChoiceParameter("offset_factor", choices=[0, 1, 10, 100])
+@BooleanParameter("squared_loss")
+@NoOptimizationParameter("linear_weighting")
 class RMM2Node(RegularizedClassifierBase):
     """ Classify with 2-norm SVM relaxation (b in target function) for BRMM
 
@@ -43,14 +53,19 @@ class RMM2Node(RegularizedClassifierBase):
     which is an elemental processing step and the *_inc_train*  method,
     which uses the status of the algorithm as a warm start.
 
+
     **References**
 
-        :author:    Krell, M. M. and Feess, D. and Straube, S.
-        :title:     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
-        :journal:   Pattern Recognition Letters
-        :publisher: Elsevier
-        :doi:       10.1016/j.patrec.2013.09.018
-        :year:      2014
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Krell, M. M. and Feess, D. and Straube, S.
+        title     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
+        journal   Pattern Recognition Letters
+        publisher Elsevier
+        doi       10.1016/j.patrec.2013.09.018
+        year      2014
+        ========= ==================================================
 
     **Parameters**
 
@@ -95,7 +110,7 @@ class RMM2Node(RegularizedClassifierBase):
 
             (*optional, default: False*)
 
-        :range:
+        :range_:
             Upper bound for the prediction value before its 'outer loss' is
             punished with `outer_complexity`.
 
@@ -161,7 +176,7 @@ class RMM2Node(RegularizedClassifierBase):
                  max_iterations=numpy.inf,
                  version="samples", reduce_non_zeros=True,
                  linear_weighting=False, calc_looCV=False,
-                 range=numpy.inf, outer_complexity=None,
+                 range_=numpy.inf, outer_complexity=None,
                  offset_factor=1, squared_loss=False,
                  co_adaptive=False, co_adaptive_index=numpy.inf, history_index=1,
                  **kwargs):
@@ -177,7 +192,7 @@ class RMM2Node(RegularizedClassifierBase):
                 "Version %s is not available for nonlinear kernel. " % version +
                 "Default to 'matrix'!", level=logging.WARNING)
             version = "matrix"
-        range = numpy.float64(range)
+        range_ = numpy.float64(range_)
         if outer_complexity is None:
             outer_complexity = self.complexity
         # factor to only use relation between complexities
@@ -216,7 +231,7 @@ class RMM2Node(RegularizedClassifierBase):
                                       complexity_correction=
                                       complexity_correction,
                                       linear_weighting=linear_weighting,
-                                      range=range,  # RBF for zero training
+                                      range=range_,  # RBF for zero training
                                       b=0,
                                       w=None,
                                       bi=[],
@@ -853,8 +868,8 @@ class RMM2Node(RegularizedClassifierBase):
 
 
 # ===========================================================================
-
-
+@BooleanParameter("normalize_C")
+@QNormalParameter("range", mu=2, sigma=1, q=1)
 class RMM1ClassifierNode(RegularizedClassifierBase):
     """ Classify with 1-Norm SVM and relative margin
 
@@ -868,13 +883,17 @@ class RMM1ClassifierNode(RegularizedClassifierBase):
 
     **References**
 
-        :author:    Krell, M. M.  and Feess, D. and Straube, S.
-        :title:     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
-        :journal:   Pattern Recognition Letters
-        :publisher: Elsevier
-        :doi:       10.1016/j.patrec.2013.09.018
-        :year:      2013
-
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Krell, M. M. and Feess, D. and Straube, S.
+        title     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification <http://dx.doi.org/10.1016/j.patrec.2013.09.018>`_
+        journal   Pattern Recognition Letters
+        publisher Elsevier
+        doi       10.1016/j.patrec.2013.09.018
+        year      2013
+        ========= ==================================================
+    
     **Parameters**
         :complexity:
             Complexity sets the weighting of punishment for misclassification
@@ -1292,6 +1311,7 @@ class RMM1ClassifierNode(RegularizedClassifierBase):
             self.num_retained_features
         self.print_w = w
 
+
 # ===========================================================================
 
 
@@ -1304,6 +1324,9 @@ class SVR2BRMMNode(LibSVMClassifierNode):
             complexity=2.0*complexity/(range+1.0),
             svm_type ='epsilon-SVR',
             **kwargs)
+
+
+@QNormalParameter("range_", mu=2, sigma=1, q=1)
 class RMMClassifierMatlabNode(RegularizedClassifierBase):
     """ Classify with Relative Margin Machine using original matlab code
     
@@ -1323,13 +1346,16 @@ class RMMClassifierMatlabNode(RegularizedClassifierBase):
 
     **References**
 
-        :author:    Shivaswamy, P. K. and Jebara, T.
-        :journal:   Journal of Machine Learning Research
-        :pages:     747-788
-        :title:     `Maximum relative margin and data-dependent regularization <http://portal.acm.org/citation.cfm?id=1756031>`_
-        :url:       http://portal.acm.org/citation.cfm?id=1756031
-        :volume:    11
-        :year:      2010
+        ========= ==================================================
+        main     
+        ========= ==================================================
+        author    Shivaswamy, P. K. and Jebara, T.
+        title     `Maximum relative margin and data-dependent regularization <http://portal.acm.org/citation.cfm?id=1756031>`_
+        journal   Journal of Machine Learning Research
+        pages     747-788
+        volume    11
+        year      2010
+        ========= ==================================================
 
     **Parameters**
         :complexity:
@@ -1443,6 +1469,9 @@ class RMMClassifierMatlabNode(RegularizedClassifierBase):
         self.delete_training_data()
 
 
+# ===========================================================================
+@NoOptimizationParameter("version")
+@NoOptimizationParameter("kernel_type")
 class RmmPerceptronNode(RMM2Node, BaseNode):
     """ Online Learning variants of the 2-norm RMM
 

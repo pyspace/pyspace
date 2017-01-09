@@ -90,7 +90,7 @@ This is done in :mod:`~pySPACE.missions.nodes.base_node` (signal_node.py)
 and
 :mod:`~pySPACE.environments.chains.node_chain` (mdp flow)
 and
-:mod:`~pySPACE.missions.nodes.scikits_nodes` (scikits_nodes.py)
+:mod:`~pySPACE.missions.nodes.scikit_nodes` (scikit_nodes.py)
 
 MDP is distributed under the following BSD license::
 
@@ -261,7 +261,7 @@ is under the following BSD license::
 
 The module :mod:`~pySPACE.tools.progressbar` is under LGPL license::
 
-    progressbar  - Text progressbar library for python.
+    progressbar  - Text progressbar library for Python.
     Copyright (c) 2005 Nilton Volpato
 
     This library is free software; you can redistribute it and/or

@@ -29,7 +29,7 @@ configurations, though the current one should be sufficient.
 
 Working on the documentation consists of three parts:
 The first one is the writing of ``*.rst`` files in the ``doc`` folder.
-The second is writing documentation in the python docstrings.
+The second is writing documentation in the Python docstrings.
 The third is connecting everything with links.
 *rst* stands for `ReStructured text format <http://docutils.sourceforge.net/rst.html>`_.
 The connection between these files is done by
@@ -49,7 +49,7 @@ When adding new software modules, the module has to be at least integrated
 into the API documentation. This means that the module will show up in the
 documentation and that the doc-strings from the source code will be parsed.
 
-Luckily, this integration is done automatically via special python scripts
+Luckily, this integration is done automatically via special Python scripts
 especially for :mod:`pySPACE.missions`.
 Nevertheless the doc-string has to be written, such that it is clear, what the
 component does, how it is accessed and what is its relation to the whole program.
@@ -132,7 +132,7 @@ if it looks as expected.::
     1. Just use \"1." and so on.
     2. You can use "\\" as escape character.
     3. Use a blank line before the enumeration.
-    #. For bulletpoints use \"*" or \"-" instead of \"1.".
+    #. For bullet points use \"*" or \"-" instead of \"1.".
 
     Before and after each enumeration, use a blank line.    
     All the other fancy stuff is described in
@@ -294,7 +294,8 @@ Useful commands
     * For using math formulas use the command ``.. math::`` 
       followed by the indented formula block.
       The syntax is the same as in latex but instead of one backslash 
-      you have to use two as in the following example::
+      you have to use two backslashes in docstrings (in contrast to normal
+      rst files) as in the following example::
 
             The main formula comes from *M&M*:
             

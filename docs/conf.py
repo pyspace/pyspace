@@ -616,7 +616,7 @@ if len(node_list) > 0:
     f.write("Scikit Nodes \n")
     f.write("------------ \n")
     f.write("\n")
-    f.write("Nodes from :mod:`scikits wrapper <pySPACE.missions.nodes.scikits_nodes>`\n\n")
+    f.write("Nodes from :mod:`scikits wrapper <pySPACE.missions.nodes.scikit_nodes>`\n\n")
     cl = ""
     for node in node_list:
         cl += "\n:class:`" + node + "`\n"

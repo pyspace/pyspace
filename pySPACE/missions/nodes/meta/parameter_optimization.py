@@ -488,7 +488,7 @@ class ParameterOptimizationBase(BaseNode):
         best_parametrizations = [dict(par) for par,p in \
                            sorted(performance_dict.items()) if p == performance]
         return best_parametrizations[0], performance
-
+    
     @staticmethod
     def search_grid(parameter_ranges):
         """ Combine each parameter in *parameter ranges* to a grid via cross product """

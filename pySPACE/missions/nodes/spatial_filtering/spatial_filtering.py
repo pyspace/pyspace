@@ -9,8 +9,11 @@ and compress the relevant information.
 
 import numpy
 from pySPACE.missions.nodes.base_node import BaseNode
+from pySPACE.missions.nodes.decorators import QLogUniformParameter
 from pySPACE.resources.data_types.time_series import TimeSeries
 
+
+@QLogUniformParameter("retained_channels", min_value=2, max_value=128, q=2)
 class SpatialFilteringNode(BaseNode):
     """ Base class for spatial filters and simple channel reduction
     
@@ -55,7 +58,7 @@ class SpatialFilteringNode(BaseNode):
         super(SpatialFilteringNode, self).__init__(**kwargs)
 
         self.set_permanent_attributes(
-            retained_channels = retained_channels,
+            retained_channels = int(retained_channels) if retained_channels is not None else None,
             filters = None,
             channel_names = None,
             filter_channel_names = None)

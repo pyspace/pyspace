@@ -30,13 +30,13 @@ For the normal usage this is not required.
 
 2. Extra packages
 ^^^^^^^^^^^^^^^^^^
-Besides the standard python library, some extra packages/modules are needed
+Besides the standard Python library, some extra packages/modules are needed
 that you have to download/install yourself. It is recommended to use a package 
 manager to install these packages (e.g. apt or `macports <http://www.macports.org/>`_).
 
 Mandatory packages are:
 
-    :Python2.6: http://www.python.org/ (the main programming language)
+    :Python2.7: http://www.python.org/ (the main programming language)
 
                 The software also works with Python2.7.
                 It is important to install the relevant Python packages
@@ -55,16 +55,15 @@ Mandatory packages are:
     .. code-block:: bash
     
         # -- for Macport users --
-        $ sudo port install python26
-        # select correct python version
-        $ sudo port select --set python python26
-        $ sudo port install py26-yaml
+        $ sudo port install python27
+        # select correct Python version
+        $ sudo port select --set python python27
+        $ sudo port install py27-yaml
         # use macports own atlas package
-        $ sudo port install py26-numpy +atlas
-        $ sudo port install py26-scipy +atlas
+        $ sudo port install py27-numpy +atlas
+        $ sudo port install py27-scipy +atlas
 
 Optional packages are:
-
 
     :matplotlib:  http://matplotlib.org/
 
@@ -73,13 +72,16 @@ Optional packages are:
                   http://scikit-learn.org/
 
                   Many scikit algorithms are available wrapped via the
-                  :mod:`~pySPACE.missions.nodes.scikits_nodes`
+                  :mod:`~pySPACE.missions.nodes.scikit_nodes`
                   module and can be used like normal nodes.
+
+    :Sphinx1.4: Generate documentation
+
     :PyQt4:       basis of the :mod:`guis <pySPACE.run.gui>`
     :LIBSVM:      http://www.csie.ntu.edu.tw/~cjlin/libsvm/
 
                   Famous library for fast SVM classifiers.
-                  Be careful that the python bindings are installed correctly.
+                  Be careful that the Python bindings are installed correctly.
                   If you have access use modified version in external repository.
     :CVXOPT:      http://abel.ee.ucla.edu/cvxopt/
 
