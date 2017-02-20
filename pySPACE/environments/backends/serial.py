@@ -88,7 +88,7 @@ class SerialBackend(Backend):
         # is already finished
         return float(self.current_process)/self.current_operation.number_processes
     
-    def retrieve(self, timeout=1e10):
+    def retrieve(self, timeout=1e6):
         """
         Returns the result of the operation.
         
@@ -102,7 +102,7 @@ class SerialBackend(Backend):
         # if process creation has another thread
         if hasattr(self.current_operation, "create_process") \
                         and self.current_operation.create_process != None:
-            self.current_operation.create_process.join(timeout=1e10)
+            self.current_operation.create_process.join(timeout=1e6)
             
         # Change the state to retrieved
         self.state = "retrieved"

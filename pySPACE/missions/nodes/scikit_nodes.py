@@ -405,12 +405,6 @@ def wrap_scikit_classifier(scikit_class):
             else:
                 return PredictionVector
 
-        def get_output_type(self, input_type, as_string=True):
-            if as_string:
-                return "PredictionVector"
-            else:
-                return PredictionVector
-
         # ---- administrative details
 
         @staticmethod

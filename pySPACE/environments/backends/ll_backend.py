@@ -220,7 +220,7 @@ class LoadLevelerBackend(Backend):
         # Returns the current state of the operation
         return self.state
 
-    def retrieve(self, timeout=1e10):
+    def retrieve(self, timeout=1e6):
         """
         Wait for all results of the operation
 
@@ -494,7 +494,7 @@ class LoadLevelerComHandler(threading.Thread):
         # give thread some time to realize end of tasks
         time.sleep(1)
         self.subflow_msg.close()
-        subflow_starter.join(timeout=1e100)
+        subflow_starter.join(timeout=1e6)
         # raise event so that backend knows we have finished
         self.finished.set()
 

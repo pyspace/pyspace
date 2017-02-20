@@ -115,7 +115,7 @@ class Backend(object):
                     % self.__class__.__name__)
 
     @abc.abstractmethod
-    def retrieve(self, timeout=1e10):
+    def retrieve(self, timeout=1e6):
         """
         Fetches the results of the operation's processes.
 
@@ -209,7 +209,7 @@ class Backend(object):
         self._log("Stopping the TCP logging server...")
         if hasattr(self, "tcpserver"):
             self.tcpserver.abort = True
-            self.tcpserver.join()
+            self.tcpserver.join(timeout=1e6)
             self.tcpserver.shutdown()
             del(self.tcpserver)
 

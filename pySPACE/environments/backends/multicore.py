@@ -107,7 +107,7 @@ class MulticoreBackend(Backend):
         # is already finished
         return float(self.current_process) / self.current_operation.number_processes
     
-    def retrieve(self, timeout=1e10):
+    def retrieve(self, timeout=1e6):
         """ Wait for all results of the operation
         
         This call blocks until all processes are finished.
@@ -269,7 +269,7 @@ class LocalComHandler(threading.Thread):
                         self.writers.remove(writer)
         if not self.subflow_pool is None:
             self.subflow_pool.close()
-            self.subflow_pool.join(timeout=1e10)
+            self.subflow_pool.join(timeout=1e6)
     
     def close_sock(self, conn):
         """ Close connection and remove it from lists of potentially readers/writers """
