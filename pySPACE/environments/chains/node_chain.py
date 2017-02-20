@@ -1390,7 +1390,7 @@ class SubflowHandler(object):
                        for subflow in subflows]
             pool.close()
             self._log("Waiting for parallel processes to finish.")
-            pool.join()
+            pool.join(timeout=1e6)
             result_collections = [result.get()[1] for result in results]
             del pool
             return result_collections

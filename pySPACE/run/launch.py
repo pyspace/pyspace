@@ -117,7 +117,7 @@ e.g.::
 
 """
 
-def run_operation(default_backend, operation, ex_timeout=1e6, re_timeout=1e10):
+def run_operation(default_backend, operation, ex_timeout=1e6, re_timeout=1e6):
     """ Runs the given operation on the backend
 
     Runs the given operation *operation* either on the backend specified in the
@@ -263,10 +263,10 @@ def main():
 
     # Workaround for eegserver crashing after 255 open ports
     # - Now it crashes after 4096 open ports ;-)
-    import resource
-    (fd1, fd2) = resource.getrlimit(resource.RLIMIT_NOFILE)
-    fd1 = 4096 if fd2 == resource.RLIM_INFINITY else fd2-1
-    resource.setrlimit(resource.RLIMIT_NOFILE, (fd1,fd2))
+    #import resource
+    #(fd1, fd2) = resource.getrlimit(resource.RLIMIT_NOFILE)
+    #fd1 = 4096 if fd2 == resource.RLIM_INFINITY else fd2-1
+    #resource.setrlimit(resource.RLIMIT_NOFILE, (fd1,fd2))
     # ------------------------------------------------------
 
     #########################################

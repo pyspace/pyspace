@@ -143,7 +143,7 @@ class MpiBackend(Backend):
     def not_xor(self, a, b):
         return not((a or b) and not (a and b))
     
-    def retrieve(self, timeout=1e10):
+    def retrieve(self, timeout=1e6):
         """
         Returns the result of the operation.
         """

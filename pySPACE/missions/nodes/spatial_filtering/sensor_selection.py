@@ -771,7 +771,7 @@ class PerformanceRanker(object):
             pool.close()
             # self._log("Waiting for parallel processes to finish")
             # this is not a node! there's no self._log here!
-            pool.join()
+            pool.join(timeout=1e6)
             for result in results:
                 sensor,performance =result.get()
                 ranking.append((sensor,-performance))
