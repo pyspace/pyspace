@@ -20,6 +20,8 @@ from pySPACE.missions.nodes import scikit_nodes
 @NoOptimizationParameter("verbose")
 @QLogUniformParameter("max_iter", min_value=1, max_value=1e6, q=1)
 class OptSVRRegressorSklearnNode(SVRRegressorSklearnNode):
+    __doc__ = "Decorator wrapper around %s \n\n %s" % \
+        (SVRRegressorSklearnNode.__name__, SVRRegressorSklearnNode.__doc__) 
     def __init__(self, C=1, epsilon=0.1, kernel="rbf", degree=3, gamma="auto", coef0=0.0, shrinking=True, tol=1e-3, 
                  verbose=False, max_iter=-1, **kwargs):
         super(OptSVRRegressorSklearnNode, self).__init__(C=C, epsilon=epsilon, kernel=kernel, degree=int(degree),

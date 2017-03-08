@@ -5,7 +5,9 @@ Installation
 ------------
 
 .. warning::
-    Currently the software is maintained only under Ubuntu and MacOSX.
+    Currently the software is developed under Ubuntu and MacOSX. It is highly 
+    recommended to use a UNIX OS for pySPACE. However it is possible to run
+    `pySPACE on Windows`_.
 
 pySPACE is currently developed at the `RIC Bremen <http://robotik.dfki-bremen.de/>`_
 (part of the DFKI GmbH) and at the `AG Robotik <http://robotik.dfki-bremen.de/>`_
@@ -45,6 +47,9 @@ Mandatory packages are:
     :YAML:      http://www.yaml.org/
 
                 for reading and writing configuration files
+    :enum:      http://cheeseshop.python.org/pypi/enum/
+
+                for robust enumerations in Python
     :NumPy:     http://www.numpy.org/
 
                 basic array handling library to handle data
@@ -58,10 +63,8 @@ Mandatory packages are:
         $ sudo port install python27
         # select correct Python version
         $ sudo port select --set python python27
-        $ sudo port install py27-yaml
-        # use macports own atlas package
-        $ sudo port install py27-numpy +atlas
-        $ sudo port install py27-scipy +atlas
+	# install other mandatory packages
+        $ sudo port install py27-yaml py27-enum py27-numpy py27-scipy
 
 Optional packages are:
 
@@ -166,7 +169,7 @@ Here is a documented example of the default configuration file:
 .. literalinclude:: ../examples/conf/example.yaml
     :language: yaml
 
-Windows and pySPACE
+pySPACE on Windows
 ^^^^^^^^^^^^^^^^^^^
 
 pySPACE can also be used under a Windows operating system. The first and most
