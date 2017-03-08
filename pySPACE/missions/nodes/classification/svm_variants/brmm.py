@@ -110,7 +110,7 @@ class RMM2Node(RegularizedClassifierBase):
 
             (*optional, default: False*)
 
-        :range_:
+        :range\_:
             Upper bound for the prediction value before its 'outer loss' is
             punished with `outer_complexity`.
 
@@ -119,7 +119,7 @@ class RMM2Node(RegularizedClassifierBase):
             (*optional, default: numpy.inf*)
 
         :outer_complexity:
-            Cost factor for to high values in classification. (see `range`)
+            Cost factor for to high values in classification. (see `range\_`)
 
             (*optional, default: `complexity`*)
 
@@ -787,7 +787,7 @@ class RMM2Node(RegularizedClassifierBase):
                 p = p[4:]
             else:
                 value = parameters[parameter]
-            if p in ["range", "R", "Range"]:
+            if p in ["range", "R", "Range", "range_"]:
                 self.range = value
             elif p in ["complexity","C", "Complexity"] \
                     and not value == self.complexity:
