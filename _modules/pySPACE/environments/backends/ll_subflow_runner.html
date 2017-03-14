@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.environments.backends.ll_subflow_runner &mdash; pySPACE documentation</title>
+    <title>pySPACE.environments.backends.ll_subflow_runner &#8212; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -17,15 +17,16 @@
         VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../index.html" /> 
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +38,8 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -67,15 +68,15 @@
   <h1>Source code for pySPACE.environments.backends.ll_subflow_runner</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot; Executable script for Loadleveler to start subflows</span>
 
-<span class="sd">A simple helper script that unpickles, executes and deletes given </span>
+<span class="sd">A simple helper script that unpickles, executes and deletes given</span>
 <span class="sd">:class:`flows&lt;pySPACE.environments.chains.node_chain.BenchmarkNodeChain&gt;`. After</span>
-<span class="sd">each execution the  </span>
+<span class="sd">each execution the</span>
 <span class="sd">:class:`~pySPACE.environments.backends.ll_backend.LoadLevelerComHandler` is informed.</span>
 
-<span class="sd">Call should be &#39;python ll_subflow_runner.py dir/to/pickled/flows </span>
+<span class="sd">Call should be &#39;python ll_subflow_runner.py dir/to/pickled/flows</span>
 <span class="sd">Com_Handler_IP Com_Handler_Port list_of_run_numbers list_of_flow_ids&#39;.</span>
 
-<span class="sd">It is further assumed that training data used by the flows is stored as </span>
+<span class="sd">It is further assumed that training data used by the flows is stored as</span>
 <span class="sd">&#39;subflow_data.pickle&#39; in the same directory as the flows.</span>
 
 <span class="sd">:Author: Anett Seeland (anett.seeland@dfki.de)</span>
@@ -85,55 +86,66 @@
 <span class="kn">import</span> <span class="nn">socket</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">cPickle</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># noinspection PyPep8Naming</span>
+    <span class="kn">import</span> <span class="nn">cPickle</span> <span class="k">as</span> <span class="nn">pickle</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">pickle</span>
+
 
 <span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
     <span class="c1"># add root of the code to system path</span>
     <span class="n">file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
-    <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;pySPACE&#39;</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">pyspace_path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+    <span class="n">pyspace_path</span> <span class="o">=</span> <span class="n">file_path</span><span class="p">[:</span><span class="n">file_path</span><span class="o">.</span><span class="n">rfind</span><span class="p">(</span><span class="s1">&#39;pySPACE&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pyspace_path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pyspace_path</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">pySPACE.tools.socket_utils</span> <span class="kn">import</span> <span class="n">talk</span>
+
+
+<span class="kn">from</span> <span class="nn">pySPACE.environments.backends.ll_backend</span> <span class="k">import</span> <span class="n">LoadLevelerComHandler</span>
+
 
 <div class="viewcode-block" id="main"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.ll_subflow_runner.html#pySPACE.environments.backends.ll_subflow_runner.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-        <span class="c1"># Parse input </span>
-        <span class="n">dir_path</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">train_instances_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span>
-                                                        <span class="s1">&#39;subflow_data.pickle&#39;</span><span class="p">)</span>
-        <span class="n">runs</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span> 
-        <span class="c1"># construct socket to communicate with backend</span>
-        <span class="n">send_sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
-        <span class="n">send_sock</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">])))</span>
+    <span class="c1"># Parse input</span>
+    <span class="n">dir_path</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">train_instances_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span>
+                                             <span class="s1">&#39;subflow_data.pickle&#39;</span><span class="p">)</span>
+    <span class="n">runs</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+    <span class="c1"># construct socket to communicate with backend</span>
+    <span class="n">send_sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+    <span class="n">send_sock</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">])))</span>
+    <span class="k">try</span><span class="p">:</span>
         <span class="n">flow_ids</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
         <span class="k">for</span> <span class="n">flow_id</span> <span class="ow">in</span> <span class="n">flow_ids</span><span class="p">:</span>
-            <span class="n">flow_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span><span class="n">flow_id</span><span class="o">+</span><span class="s1">&#39;.pickle&#39;</span><span class="p">)</span>
+            <span class="n">flow_file_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="n">flow_id</span> <span class="o">+</span> <span class="s1">&#39;.pickle&#39;</span><span class="p">)</span>
             <span class="c1"># Unpickle the flow and train_instances</span>
-            <span class="n">flow</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">flow_file_name</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">))</span>
-            <span class="n">train_instances</span> <span class="o">=</span> <span class="n">cPickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">train_instances_file_name</span><span class="p">,</span> 
-                                                                        <span class="s1">&#39;rb&#39;</span><span class="p">))</span>
-            <span class="c1"># Execute the flow</span>
-            <span class="c1"># .. note:: the here executed flows can not store anything</span>
-            <span class="c1">#           meta data of result collection is NOT updated!</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">result_collection</span> <span class="o">=</span> <span class="n">flow</span><span class="p">(</span><span class="n">train_instances</span><span class="o">=</span><span class="n">train_instances</span><span class="p">,</span> 
-                                        <span class="n">runs</span><span class="o">=</span><span class="n">runs</span><span class="p">)</span>
-            <span class="c1"># Store results</span>
-            <span class="n">result_file_name</span> <span class="o">=</span> <span class="n">flow_file_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.pickle&#39;</span><span class="p">,</span> 
-                                                             <span class="s1">&#39;_result.pickle&#39;</span><span class="p">)</span>
-            <span class="n">cPickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result_collection</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="n">result_file_name</span><span class="p">,</span><span class="s1">&#39;wb&#39;</span><span class="p">),</span>
-                         <span class="n">protocol</span><span class="o">=</span><span class="n">cPickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
-            <span class="c1"># Delete the flow_file since we don&#39;t need it any more</span>
-            <span class="c1"># training_file is may be used by other flows so don&#39;t delete it</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">flow_file_name</span><span class="p">)</span>
-            <span class="c1"># Inform Backend that this flow has finished</span>
-            <span class="n">send_sock</span><span class="p">,</span><span class="n">msg</span> <span class="o">=</span> <span class="n">talk</span><span class="p">(</span><span class="s2">&quot;finished </span><span class="si">%s</span><span class="s2">!END!&quot;</span> <span class="o">%</span> <span class="n">flow_id</span><span class="p">,</span> <span class="n">send_sock</span><span class="p">,</span>
-                                              <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">])))</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">flow_file_name</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">flow_file</span><span class="p">:</span>
+                <span class="n">flow</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">flow_file</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">train_instances_file_name</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">train_instances_file</span><span class="p">:</span>
+                <span class="n">train_instances</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">train_instances_file</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Execute the flow</span>
+                <span class="c1"># .. note:: the here executed flows can not store anything</span>
+                <span class="c1">#           meta data of result collection is NOT updated!</span>
+                <span class="n">_</span><span class="p">,</span> <span class="n">result_collection</span> <span class="o">=</span> <span class="n">flow</span><span class="p">(</span><span class="n">train_instances</span><span class="o">=</span><span class="n">train_instances</span><span class="p">,</span> <span class="n">runs</span><span class="o">=</span><span class="n">runs</span><span class="p">)</span>
+                <span class="c1"># Store results</span>
+                <span class="n">result_file_name</span> <span class="o">=</span> <span class="n">flow_file_name</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.pickle&#39;</span><span class="p">,</span> <span class="s1">&#39;_result.pickle&#39;</span><span class="p">)</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">result_file_name</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">result_file</span><span class="p">:</span>
+                    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">result_collection</span><span class="p">,</span> <span class="n">result_file</span><span class="p">,</span> <span class="n">protocol</span><span class="o">=</span><span class="n">pickle</span><span class="o">.</span><span class="n">HIGHEST_PROTOCOL</span><span class="p">)</span>
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># Delete the flow_file since we don&#39;t need it any more</span>
+                <span class="c1"># training_file is may be used by other flows so don&#39;t delete it</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">flow_file_name</span><span class="p">)</span>
+                <span class="c1"># Inform Backend that this flow has finished</span>
+                <span class="n">send_sock</span> <span class="o">=</span> <span class="n">LoadLevelerComHandler</span><span class="p">(</span><span class="n">send_sock</span><span class="p">,</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+                                                  <span class="n">LoadLevelerComHandler</span><span class="o">.</span><span class="n">MESSAGES</span><span class="o">.</span><span class="n">FINISHED</span><span class="p">,</span> <span class="n">flow_id</span><span class="p">)</span>
         <span class="c1"># give backend some time to get information</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
         <span class="n">send_sock</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SHUT_RDWR</span><span class="p">)</span>
         <span class="n">send_sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
 
-<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
     <span class="n">main</span><span class="p">()</span>
 </pre></div>
 
@@ -151,14 +163,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016, pySPACE Developer Team.
-      Last updated on Sep 04, 2016.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

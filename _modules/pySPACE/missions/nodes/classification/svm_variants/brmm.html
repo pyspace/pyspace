@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.nodes.classification.svm_variants.brmm &mdash; pySPACE documentation</title>
+    <title>pySPACE.missions.nodes.classification.svm_variants.brmm &#8212; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
@@ -17,15 +17,16 @@
         VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE documentation" href="../../../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../../../index.html" /> 
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +38,8 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -69,18 +70,21 @@
 
 <span class="c1"># the output is a prediction vector</span>
 <span class="kn">import</span> <span class="nn">timeit</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="kn">import</span> <span class="n">RegularizedClassifierBase</span>
+
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.decorators</span> <span class="k">import</span> <span class="n">NoOptimizationParameter</span><span class="p">,</span> <span class="n">BooleanParameter</span><span class="p">,</span> <span class="n">QNormalParameter</span><span class="p">,</span> \
+    <span class="n">ChoiceParameter</span><span class="p">,</span> <span class="n">QLogUniformParameter</span><span class="p">,</span> <span class="n">LogUniformParameter</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="k">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="k">import</span> <span class="n">RegularizedClassifierBase</span>
 <span class="c1"># classification vector may be saved as a feature vector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="kn">import</span> <span class="n">TimeSeries</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="k">import</span> <span class="n">FeatureVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.time_series</span> <span class="k">import</span> <span class="n">TimeSeries</span>
 <span class="c1"># timeout package</span>
 <span class="kn">import</span> <span class="nn">signal</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span>
-<span class="kn">from</span> <span class="nn">numpy</span> <span class="kn">import</span> <span class="n">dot</span>
+<span class="kn">from</span> <span class="nn">numpy</span> <span class="k">import</span> <span class="n">dot</span>
 
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="kn">import</span> <span class="n">TimeoutException</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="k">import</span> <span class="n">TimeoutException</span>
 
 <span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">logging</span>
@@ -88,13 +92,20 @@
 <span class="kn">import</span> <span class="nn">random</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 
-<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="kn">import</span> <span class="n">BinaryClassificationDataset</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="k">import</span> <span class="n">BinaryClassificationDataset</span>
 
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.svm_variants.external</span> <span class="kn">import</span> <span class="n">LibSVMClassifierNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.svm_variants.external</span> <span class="k">import</span> <span class="n">LibSVMClassifierNode</span>
 
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="k">import</span> <span class="n">BaseNode</span>
 
 
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;use_list&quot;</span><span class="p">)</span>
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;omega&quot;</span><span class="p">)</span>
+<span class="nd">@QLogUniformParameter</span><span class="p">(</span><span class="s2">&quot;max_iterations&quot;</span><span class="p">,</span> <span class="n">min_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="nd">@LogUniformParameter</span><span class="p">(</span><span class="s2">&quot;range_&quot;</span><span class="p">,</span> <span class="n">min_value</span><span class="o">=</span><span class="mf">1.01</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="nd">@ChoiceParameter</span><span class="p">(</span><span class="s2">&quot;offset_factor&quot;</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">])</span>
+<span class="nd">@BooleanParameter</span><span class="p">(</span><span class="s2">&quot;squared_loss&quot;</span><span class="p">)</span>
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;linear_weighting&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="RMM2Node"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node">[docs]</a><span class="k">class</span> <span class="nc">RMM2Node</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Classify with 2-norm SVM relaxation (b in target function) for BRMM</span>
 
@@ -110,14 +121,19 @@
 <span class="sd">    which is an elemental processing step and the *_inc_train*  method,</span>
 <span class="sd">    which uses the status of the algorithm as a warm start.</span>
 
+
 <span class="sd">    **References**</span>
 
-<span class="sd">        :author:    Krell, M. M. and Feess, D. and Straube, S.</span>
-<span class="sd">        :title:     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification &lt;http://dx.doi.org/10.1016/j.patrec.2013.09.018&gt;`_</span>
-<span class="sd">        :journal:   Pattern Recognition Letters</span>
-<span class="sd">        :publisher: Elsevier</span>
-<span class="sd">        :doi:       10.1016/j.patrec.2013.09.018</span>
-<span class="sd">        :year:      2014</span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        main     </span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        author    Krell, M. M. and Feess, D. and Straube, S.</span>
+<span class="sd">        title     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification &lt;http://dx.doi.org/10.1016/j.patrec.2013.09.018&gt;`_</span>
+<span class="sd">        journal   Pattern Recognition Letters</span>
+<span class="sd">        publisher Elsevier</span>
+<span class="sd">        doi       10.1016/j.patrec.2013.09.018</span>
+<span class="sd">        year      2014</span>
+<span class="sd">        ========= ==================================================</span>
 
 <span class="sd">    **Parameters**</span>
 
@@ -162,7 +178,7 @@
 
 <span class="sd">            (*optional, default: False*)</span>
 
-<span class="sd">        :range:</span>
+<span class="sd">        :range\_:</span>
 <span class="sd">            Upper bound for the prediction value before its &#39;outer loss&#39; is</span>
 <span class="sd">            punished with `outer_complexity`.</span>
 
@@ -171,7 +187,7 @@
 <span class="sd">            (*optional, default: numpy.inf*)</span>
 
 <span class="sd">        :outer_complexity:</span>
-<span class="sd">            Cost factor for to high values in classification. (see `range`)</span>
+<span class="sd">            Cost factor for to high values in classification. (see `range\_`)</span>
 
 <span class="sd">            (*optional, default: `complexity`*)</span>
 
@@ -224,17 +240,17 @@
 <span class="sd">    :Author:   Mario Michael Krell (mario.krell@dfki.de)</span>
 <span class="sd">    :Created:  2012/06/27</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-<div class="viewcode-block" id="RMM2Node.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">omega</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+<div class="viewcode-block" id="RMM2Node.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">random</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">omega</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
                  <span class="n">max_iterations</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
-                 <span class="n">version</span><span class="o">=</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="n">reduce_non_zeros</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                 <span class="n">linear_weighting</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">calc_looCV</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-                 <span class="nb">range</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">outer_complexity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                 <span class="n">offset_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">squared_loss</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-                 <span class="n">co_adaptive</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">history_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="n">version</span><span class="o">=</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="n">reduce_non_zeros</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                 <span class="n">linear_weighting</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">calc_looCV</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">range_</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">outer_complexity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">offset_factor</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">squared_loss</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                 <span class="n">co_adaptive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">history_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">old_difference</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span>
         <span class="c1"># instead of lists, arrays are concatenated in training</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">RMM2Node</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">use_list</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RMM2Node</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">use_list</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="ow">not</span><span class="p">(</span><span class="n">version</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="s2">&quot;matrix&quot;</span><span class="p">]):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Version </span><span class="si">%s</span><span class="s2"> is not available. Default to &#39;samples&#39;!&quot;</span><span class="o">%</span><span class="n">version</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
@@ -244,8 +260,8 @@
                 <span class="s2">&quot;Version </span><span class="si">%s</span><span class="s2"> is not available for nonlinear kernel. &quot;</span> <span class="o">%</span> <span class="n">version</span> <span class="o">+</span>
                 <span class="s2">&quot;Default to &#39;matrix&#39;!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
             <span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;matrix&quot;</span>
-        <span class="nb">range</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="nb">range</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">outer_complexity</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">range_</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">float64</span><span class="p">(</span><span class="n">range_</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">outer_complexity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">outer_complexity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span>
         <span class="c1"># factor to only use relation between complexities</span>
         <span class="c1"># instead of outer_complexity</span>
@@ -262,7 +278,7 @@
             <span class="n">squ_factor</span> <span class="o">=</span> <span class="mf">1.0</span>
 
         <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
-            <span class="n">M</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">M</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">M</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -283,13 +299,13 @@
                                       <span class="n">complexity_correction</span><span class="o">=</span>
                                       <span class="n">complexity_correction</span><span class="p">,</span>
                                       <span class="n">linear_weighting</span><span class="o">=</span><span class="n">linear_weighting</span><span class="p">,</span>
-                                      <span class="nb">range</span><span class="o">=</span><span class="nb">range</span><span class="p">,</span>  <span class="c1"># RBF for zero training</span>
+                                      <span class="nb">range</span><span class="o">=</span><span class="n">range_</span><span class="p">,</span>  <span class="c1"># RBF for zero training</span>
                                       <span class="n">b</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                                      <span class="n">w</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">w</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                                       <span class="n">bi</span><span class="o">=</span><span class="p">[],</span>
                                       <span class="n">ci</span><span class="o">=</span><span class="p">[],</span>
-                                      <span class="n">dual_solution</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                      <span class="n">one_class</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                      <span class="n">dual_solution</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                      <span class="n">one_class</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                                       <span class="n">co_adaptive</span><span class="o">=</span><span class="n">co_adaptive</span><span class="p">,</span>
                                       <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">co_adaptive_index</span><span class="p">,</span>
                                       <span class="n">history_index</span><span class="o">=</span><span class="n">history_index</span>
@@ -301,7 +317,7 @@
 <span class="sd">        prediction value = &lt;w,data&gt;+b</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">kernel_type</span> <span class="o">==</span> <span class="s1">&#39;LINEAR&#39;</span><span class="p">:</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
             <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RMM2Node</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
@@ -328,7 +344,7 @@
         <span class="k">return</span> <span class="n">PredictionVector</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="n">prediction</span><span class="o">=</span><span class="n">prediction</span><span class="p">,</span>
                                 <span class="n">predictor</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="RMM2Node._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RMM2Node._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Train the SVM with the SOR algorithm on the collected training data</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Preprocessing of SOR SVM&quot;</span><span class="p">)</span>
@@ -407,7 +423,7 @@
         <span class="n">sorted_indices</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
 
         <span class="n">prediction_vectors</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="n">using_initial_solution</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">using_initial_solution</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">sorted_indices</span><span class="p">:</span>
             <span class="n">d_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">[</span><span class="n">index</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
             <span class="c1"># delete each index from the current observation</span>
@@ -421,7 +437,7 @@
                 <span class="n">temp_iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">iteration_loop</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">,</span> <span class="n">reduced_indices</span><span class="o">=</span><span class="p">[</span><span class="n">index</span><span class="p">])</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">+=</span> <span class="n">temp_iter</span>
-                <span class="n">using_initial_solution</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">using_initial_solution</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">prediction_vectors</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_execute</span><span class="p">(</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">atleast_2d</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">[</span><span class="n">index</span><span class="p">])),</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">[</span><span class="n">index</span><span class="p">]]))</span>
@@ -601,7 +617,7 @@
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_sub_iterations</span>
                     <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterations</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_iterations</span><span class="p">):</span>
                 <span class="k">break</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="n">old_dual</span> <span class="o">=</span> <span class="n">current_dual</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
             <span class="c1">### Main Function ###</span>
             <span class="c1">### elemental update step of SOR algorithm ###</span>
@@ -643,7 +659,7 @@
                 <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;samples&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span><span class="p">:</span>
                     <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> \
                         <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">-</span> <span class="n">fi</span><span class="p">)</span>
-                <span class="n">beta</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">beta</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># both values are zero and we need to check,</span>
                 <span class="c1">#if one gets active alpha or beta dual coefficient</span>
@@ -659,7 +675,7 @@
                     <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">fi</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
                 <span class="c1"># no update of alpha but update of beta (eventually zero update)</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">beta</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="n">beta</span> <span class="o">=</span> <span class="kc">True</span>
                     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span>
                         <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> \
                             <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">/</span> <span class="p">(</span><span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span> <span class="o">/</span>
@@ -778,7 +794,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span>
 
         <span class="c1"># The new example is at first assumed to be irrelevant (zero weight).</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dual_solution</span><span class="p">,</span> <span class="p">[[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]],</span>
@@ -788,7 +804,7 @@
             <span class="c1"># very inefficient!!!</span>
             <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">M</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">M</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">M</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">M</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">M</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">M</span>
             <span class="k">del</span> <span class="n">M</span>
             <span class="n">bj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
@@ -831,7 +847,7 @@
 
 <div class="viewcode-block" id="RMM2Node.reiterate"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM2Node.reiterate">[docs]</a>    <span class="k">def</span> <span class="nf">reiterate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Change the parameters in the model and reiterate &quot;&quot;&quot;</span>
-        <span class="n">changed_c</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">changed_c</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
             <span class="n">p</span> <span class="o">=</span> <span class="n">parameter</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">):</span>
@@ -839,11 +855,11 @@
                 <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="mi">4</span><span class="p">:]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">parameters</span><span class="p">[</span><span class="n">parameter</span><span class="p">]</span>
-            <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;range&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;Range&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;range&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;Range&quot;</span><span class="p">,</span> <span class="s2">&quot;range_&quot;</span><span class="p">]:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">=</span> <span class="n">value</span>
             <span class="k">elif</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;complexity&quot;</span><span class="p">,</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;Complexity&quot;</span><span class="p">]</span> \
                     <span class="ow">and</span> <span class="ow">not</span> <span class="n">value</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="p">:</span>
-                <span class="n">changed_c</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">changed_c</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">difference</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complexity</span><span class="o">-</span><span class="n">value</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span> <span class="o">=</span> <span class="n">value</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">&gt;</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">difference</span><span class="p">:</span>
@@ -853,14 +869,14 @@
                 <span class="c1"># self.ci = [value * scaling for value in self.ci]</span>
             <span class="k">elif</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;w1&quot;</span><span class="p">,</span> <span class="s2">&quot;W1&quot;</span><span class="p">,</span> <span class="s2">&quot;weight1&quot;</span><span class="p">,</span> <span class="s2">&quot;Weight1&quot;</span><span class="p">]</span> \
                     <span class="ow">and</span> <span class="ow">not</span> <span class="n">value</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
-                <span class="n">changed_c</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">changed_c</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">difference</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="n">value</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">&gt;</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">difference</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.1</span><span class="o">*</span><span class="n">difference</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
             <span class="k">elif</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;w2&quot;</span><span class="p">,</span> <span class="s2">&quot;W2&quot;</span><span class="p">,</span> <span class="s2">&quot;weight2&quot;</span><span class="p">,</span> <span class="s2">&quot;Weight2&quot;</span><span class="p">]</span> \
                     <span class="ow">and</span> <span class="ow">not</span> <span class="n">value</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
-                <span class="n">changed_c</span> <span class="o">=</span> <span class="bp">True</span>
+                <span class="n">changed_c</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">difference</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="n">value</span><span class="p">)</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">tolerance</span> <span class="o">&gt;</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">difference</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.1</span><span class="o">*</span><span class="n">difference</span><span class="p">)</span>
@@ -888,7 +904,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;No history data available for classifier! &quot;</span> <span class="o">+</span>
                           <span class="s2">&quot;Co-adaptivity is turned off.&quot;</span><span class="p">,</span>
                           <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="s2">&quot;hist_samples&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">hist_samples</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">hist_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hist_data</span><span class="p">)</span></div>
@@ -920,8 +936,8 @@
 
 
 <span class="c1"># ===========================================================================</span>
-
-
+<span class="nd">@BooleanParameter</span><span class="p">(</span><span class="s2">&quot;normalize_C&quot;</span><span class="p">)</span>
+<span class="nd">@QNormalParameter</span><span class="p">(</span><span class="s2">&quot;range&quot;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <div class="viewcode-block" id="RMM1ClassifierNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM1ClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">RMM1ClassifierNode</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Classify with 1-Norm SVM and relative margin</span>
 
@@ -935,13 +951,17 @@
 
 <span class="sd">    **References**</span>
 
-<span class="sd">        :author:    Krell, M. M.  and Feess, D. and Straube, S.</span>
-<span class="sd">        :title:     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification &lt;http://dx.doi.org/10.1016/j.patrec.2013.09.018&gt;`_</span>
-<span class="sd">        :journal:   Pattern Recognition Letters</span>
-<span class="sd">        :publisher: Elsevier</span>
-<span class="sd">        :doi:       10.1016/j.patrec.2013.09.018</span>
-<span class="sd">        :year:      2013</span>
-
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        main     </span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        author    Krell, M. M. and Feess, D. and Straube, S.</span>
+<span class="sd">        title     `Balanced Relative Margin Machine - The Missing Piece Between FDA and SVM Classification &lt;http://dx.doi.org/10.1016/j.patrec.2013.09.018&gt;`_</span>
+<span class="sd">        journal   Pattern Recognition Letters</span>
+<span class="sd">        publisher Elsevier</span>
+<span class="sd">        doi       10.1016/j.patrec.2013.09.018</span>
+<span class="sd">        year      2013</span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">    </span>
 <span class="sd">    **Parameters**</span>
 <span class="sd">        :complexity:</span>
 <span class="sd">            Complexity sets the weighting of punishment for misclassification</span>
@@ -1022,7 +1042,7 @@
 <span class="sd">    :Revised: 2010/04/09</span>
 <span class="sd">    </span>
 <span class="sd">    &quot;&quot;&quot;</span>
-<div class="viewcode-block" id="RMM1ClassifierNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM1ClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalize_C</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">outer_complexity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+<div class="viewcode-block" id="RMM1ClassifierNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM1ClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">normalize_C</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">outer_complexity</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="nb">range</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">RMM1ClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
@@ -1032,13 +1052,13 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Please use parameter &#39;range&#39; instead of &#39;sensitivity&#39;&quot;</span> <span class="o">+</span>
                       <span class="s2">&quot; in 1RMM Node!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
             
-        <span class="k">if</span> <span class="n">outer_complexity</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">outer_complexity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;No outer complexity given, set to complexity parameter!&quot;</span><span class="p">,</span>
                       <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">)</span>
             <span class="n">outer_complexity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span>
         <span class="k">elif</span> <span class="n">outer_complexity</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">outer_complexity</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">inf</span> <span class="ow">or</span> \
                 <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">outer_complexity</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span> <span class="ow">and</span> <span class="s2">&quot;inf&quot;</span> <span class="ow">in</span> <span class="n">outer_complexity</span><span class="p">):</span>
-            <span class="n">outer_complexity</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">outer_complexity</span> <span class="o">=</span> <span class="kc">None</span>
             
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">outer_complexity</span><span class="o">=</span><span class="n">outer_complexity</span><span class="p">,</span>
                                       <span class="n">normalize_C</span><span class="o">=</span><span class="n">normalize_C</span><span class="p">,</span>
@@ -1132,7 +1152,7 @@
         <span class="k">return</span> <span class="n">output_matrix</span></div>
 
 
-<div class="viewcode-block" id="RMM1ClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM1ClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RMM1ClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMM1ClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Finish the training, i.e. train the SVM.</span>
 
 <span class="sd">        This makes the same as the 1-Norm RMM,</span>
@@ -1149,11 +1169,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span>
         <span class="n">e</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="o">*</span><span class="p">[</span><span class="mf">1.0</span><span class="p">]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outer_complexity</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">outer_soft_margin</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outer_complexity</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outer_soft_margin</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">outer_complexity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexity</span>  <span class="c1"># arbitrary value</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">outer_soft_margin</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">outer_soft_margin</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="c1"># Mapping from class to value of classifier</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">bi</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">:</span>
@@ -1198,7 +1218,7 @@
         <span class="c1"># (-w+,-w-,-t) \leq 0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Classifier under construction&quot;</span><span class="p">)</span>
         
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_time</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_time</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">cvxopt</span><span class="o">.</span><span class="n">solvers</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s1">&#39;LPX_K_TMLIM&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_time</span><span class="p">)</span>
         
         <span class="bp">self</span><span class="o">.</span><span class="n">sol</span> <span class="o">=</span> <span class="n">cvxopt</span><span class="o">.</span><span class="n">solvers</span><span class="o">.</span><span class="n">lp</span><span class="p">(</span>
@@ -1219,8 +1239,8 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">dual_inner_weights</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dual_inner_weights</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
-                <span class="k">print</span> <span class="s2">&quot;Maximal used inner weights, depending on class:&quot;</span>
-                <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span>
+                <span class="nb">print</span> <span class="s2">&quot;Maximal used inner weights, depending on class:&quot;</span>
+                <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span>
             <span class="n">outer_dual_sol</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sol</span><span class="p">[</span><span class="s1">&#39;z&#39;</span><span class="p">][</span><span class="n">n</span><span class="p">:</span><span class="mi">2</span><span class="o">*</span><span class="n">n</span><span class="p">]</span>
             <span class="n">dual_outer_weights</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">outer_dual_sol</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="p">,</span>
                 <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bi</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
@@ -1228,26 +1248,26 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">dual_outer_weights</span><span class="o">.</span><span class="n">min</span><span class="p">())</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dual_outer_weights</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
-                <span class="k">print</span> <span class="s2">&quot;Maximal used inner weights, depending on class:&quot;</span>
-                <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span>
+                <span class="nb">print</span> <span class="s2">&quot;Maximal used inner weights, depending on class:&quot;</span>
+                <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_weight</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">max_weight</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_outer_weight</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="bp">self</span><span class="o">.</span><span class="n">max_inner_weight</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
-                <span class="k">print</span> <span class="s2">&quot;Maximal used weights, depending on class:&quot;</span>
-                <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_weight</span>
-            <span class="k">print</span> <span class="s2">&quot;RMM 1 parameter results:&quot;</span>
+                <span class="nb">print</span> <span class="s2">&quot;Maximal used weights, depending on class:&quot;</span>
+                <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_weight</span>
+            <span class="nb">print</span> <span class="s2">&quot;RMM 1 parameter results:&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">print_variables</span><span class="p">()</span>
-            <span class="k">print</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_margin</span><span class="p">),</span> <span class="s2">&quot; vectors of &quot;</span><span class="p">,</span> \
+            <span class="nb">print</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">outer_margin</span><span class="p">),</span> <span class="s2">&quot; vectors of &quot;</span><span class="p">,</span> \
                 <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">),</span> \
                 <span class="s2">&quot; have been used for the outer margin and &quot;</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">edgeitems</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
-                                   <span class="n">suppress</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
-            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">,</span> <span class="s2">&quot; are the outer Slack variables.&quot;</span>
+                                   <span class="n">suppress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+            <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="p">,</span> <span class="s2">&quot; are the outer Slack variables.&quot;</span>
             <span class="n">numpy</span><span class="o">.</span><span class="n">set_printoptions</span><span class="p">(</span><span class="n">edgeitems</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">infstr</span><span class="o">=</span><span class="s1">&#39;Inf&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">75</span><span class="p">,</span>
-                                   <span class="n">nanstr</span><span class="o">=</span><span class="s1">&#39;NaN&#39;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">suppress</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                   <span class="n">nanstr</span><span class="o">=</span><span class="s1">&#39;NaN&#39;</span><span class="p">,</span> <span class="n">precision</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">suppress</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                                    <span class="n">threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
-            <span class="k">print</span> <span class="s2">&quot;The number of support vectors(&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_sv</span><span class="p">,</span> \
+            <span class="nb">print</span> <span class="s2">&quot;The number of support vectors(&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_sv</span><span class="p">,</span> \
                 <span class="s2">&quot;) can be split into&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_osv</span><span class="p">,</span> <span class="s2">&quot; and &quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_isv</span><span class="p">,</span> \
                 <span class="s2">&quot;for the outer and inner margin support vectors.&quot;</span>
         
@@ -1276,7 +1296,7 @@
                                  <span class="n">h</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;glpk&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="n">TimeoutException</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Classifier construction interrupted!&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">sol</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sol</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="k">return</span>
         <span class="k">finally</span><span class="p">:</span>
             <span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGALRM</span><span class="p">,</span> <span class="n">old_handler</span><span class="p">)</span> 
@@ -1305,7 +1325,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">ti</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_sv</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_osv</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="mf">1e-5</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">range</span><span class="p">)</span>
@@ -1317,7 +1337,7 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">to</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_sv</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_isv</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">9</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">ti</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">ti</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="p">)</span>
@@ -1349,15 +1369,16 @@
                 <span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">wf</span><span class="p">,</span><span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;|S200&#39;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_retained_features</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">wf</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span> <span class="p">:</span>
-            <span class="k">print</span> <span class="s1">&#39;w could not be converted.&#39;</span>
+            <span class="nb">print</span> <span class="s1">&#39;w could not be converted.&#39;</span>
         <span class="k">except</span> <span class="ne">IndexError</span> <span class="p">:</span>
-            <span class="k">print</span> <span class="s1">&#39;There are more feature names than features. Please check your feature generation and input data.&#39;</span>
+            <span class="nb">print</span> <span class="s1">&#39;There are more feature names than features. Please check your feature generation and input data.&#39;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">w</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~Num_Retained_Features~~&quot;</span><span class="p">]</span> <span class="o">=</span> \
             <span class="bp">self</span><span class="o">.</span><span class="n">num_retained_features</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">print_w</span> <span class="o">=</span> <span class="n">w</span></div></div>
+
 
 <span class="c1"># ===========================================================================</span>
 
@@ -1371,6 +1392,9 @@
             <span class="n">complexity</span><span class="o">=</span><span class="mf">2.0</span><span class="o">*</span><span class="n">complexity</span><span class="o">/</span><span class="p">(</span><span class="nb">range</span><span class="o">+</span><span class="mf">1.0</span><span class="p">),</span>
             <span class="n">svm_type</span> <span class="o">=</span><span class="s1">&#39;epsilon-SVR&#39;</span><span class="p">,</span>
             <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+
+
+<span class="nd">@QNormalParameter</span><span class="p">(</span><span class="s2">&quot;range_&quot;</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 <div class="viewcode-block" id="RMMClassifierMatlabNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMMClassifierMatlabNode">[docs]</a><span class="k">class</span> <span class="nc">RMMClassifierMatlabNode</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Classify with Relative Margin Machine using original matlab code</span>
 <span class="sd">    </span>
@@ -1390,13 +1414,16 @@
 
 <span class="sd">    **References**</span>
 
-<span class="sd">        :author:    Shivaswamy, P. K. and Jebara, T.</span>
-<span class="sd">        :journal:   Journal of Machine Learning Research</span>
-<span class="sd">        :pages:     747-788</span>
-<span class="sd">        :title:     `Maximum relative margin and data-dependent regularization &lt;http://portal.acm.org/citation.cfm?id=1756031&gt;`_</span>
-<span class="sd">        :url:       http://portal.acm.org/citation.cfm?id=1756031</span>
-<span class="sd">        :volume:    11</span>
-<span class="sd">        :year:      2010</span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        main     </span>
+<span class="sd">        ========= ==================================================</span>
+<span class="sd">        author    Shivaswamy, P. K. and Jebara, T.</span>
+<span class="sd">        title     `Maximum relative margin and data-dependent regularization &lt;http://portal.acm.org/citation.cfm?id=1756031&gt;`_</span>
+<span class="sd">        journal   Journal of Machine Learning Research</span>
+<span class="sd">        pages     747-788</span>
+<span class="sd">        volume    11</span>
+<span class="sd">        year      2010</span>
+<span class="sd">        ========= ==================================================</span>
 
 <span class="sd">    **Parameters**</span>
 <span class="sd">        :complexity:</span>
@@ -1446,7 +1473,7 @@
         
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="nb">range</span><span class="o">=</span><span class="nb">range</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="RMMClassifierMatlabNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMMClassifierMatlabNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span> <span class="o">=</span> <span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RMMClassifierMatlabNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RMMClassifierMatlabNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span> <span class="o">=</span> <span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Finish the training, i.e. train the RMM.</span>
 <span class="sd">        Essentially, the data is passed to matlab, and the classification</span>
 <span class="sd">        vector w and the offset b are returned.&quot;&quot;&quot;</span>
@@ -1471,7 +1498,7 @@
         
         <span class="c1"># Import the necessary matlab interface</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="kn">from</span> <span class="nn">pymatlab.matlab</span> <span class="kn">import</span> <span class="n">MatlabSession</span>
+            <span class="kn">from</span> <span class="nn">pymatlab.matlab</span> <span class="k">import</span> <span class="n">MatlabSession</span>
         <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Using the RMMClassifierMatlabNode requires the pymatlab module.&quot;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
@@ -1510,6 +1537,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">delete_training_data</span><span class="p">()</span></div></div>
 
 
+<span class="c1"># ===========================================================================</span>
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">)</span>
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;kernel_type&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="RmmPerceptronNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RmmPerceptronNode">[docs]</a><span class="k">class</span> <span class="nc">RmmPerceptronNode</span><span class="p">(</span><span class="n">RMM2Node</span><span class="p">,</span> <span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Online Learning variants of the 2-norm RMM</span>
 
@@ -1548,16 +1578,16 @@
 <span class="sd">    :Created:   2014/01/02</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="RmmPerceptronNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RmmPerceptronNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="s2">&quot;samples&quot;</span><span class="p">,</span> <span class="n">kernel_type</span><span class="o">=</span><span class="s1">&#39;LINEAR&#39;</span><span class="p">,</span>
-                 <span class="n">co_adaptive</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
+                 <span class="n">co_adaptive</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span>
                  <span class="n">history_index</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="n">RMM2Node</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span> <span class="n">kernel_type</span><span class="o">=</span><span class="n">kernel_type</span><span class="p">,</span>
                           <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">co_adaptive</span><span class="o">=</span><span class="n">co_adaptive</span><span class="p">,</span>
                                       <span class="n">co_adaptive_index</span><span class="o">=</span><span class="n">co_adaptive_index</span><span class="p">,</span>
                                       <span class="n">history_index</span><span class="o">=</span><span class="n">history_index</span><span class="p">,</span>
-                                      <span class="n">hist_w</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">hist_w</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                                       <span class="n">hist_b</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                                      <span class="n">zero_s</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span></div>
+                                      <span class="n">zero_s</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="RmmPerceptronNode._train"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RmmPerceptronNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Main method for incremental and normal training</span>
@@ -1571,17 +1601,17 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;No history data available for classifier! &quot;</span> <span class="o">+</span>
                           <span class="s2">&quot;Co-adaptivity is turned off.&quot;</span><span class="p">,</span>
                           <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">data_array</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span>
         <span class="c1"># shortened initialization part from RegularizedClassifierBase</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
             <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Use a feature generator node before a &quot;</span> <span class="o">+</span>
                               <span class="s2">&quot;classification node.&quot;</span><span class="p">)</span>
                 <span class="k">raise</span> <span class="n">e</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span> <span class="ow">and</span> <span class="ow">not</span> <span class="s2">&quot;REST&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Please give the expected classes to the classifier! &quot;</span>
@@ -1593,9 +1623,9 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">classes</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span>
         <span class="c1"># individual initialization of classification vector</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hist_w</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">zero_s</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hist_w</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">zero_s</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
             <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">hist_data</span><span class="p">)</span> <span class="o">==</span> <span class="n">FeatureVector</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">hist_w</span> <span class="o">=</span> <span class="n">FeatureVector</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
                     <span class="n">hist_data</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">hist_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">))</span>
@@ -1606,7 +1636,7 @@
                     <span class="n">hist_data</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">hist_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">))</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">zero_s</span> <span class="o">=</span> <span class="n">TimeSeries</span><span class="o">.</span><span class="n">replace_data</span><span class="p">(</span>
                     <span class="n">hist_data</span><span class="p">,</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">hist_data</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">float</span><span class="p">))</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;empty&quot;</span><span class="p">]</span> <span class="c1"># to suppress logging warning</span>
         <span class="c1"># update part init for compatibility with batch mode formulas</span>
         <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
@@ -1625,7 +1655,7 @@
         <span class="n">fi</span> <span class="o">=</span> <span class="n">bi</span> <span class="o">*</span> <span class="p">(</span><span class="n">dot</span><span class="p">(</span><span class="n">xi</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span>
         <span class="n">s1</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="n">s2</span> <span class="o">=</span> <span class="mf">0.0</span>
-        <span class="n">beta</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="n">old_dual</span> <span class="o">=</span> <span class="mi">0</span>  <span class="c1"># just used to have the same formulas as in batch version</span>
         <span class="n">current_dual</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
         <span class="c1"># update part</span>
@@ -1635,7 +1665,7 @@
             <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">fi</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
         <span class="c1"># no update of alpha but update of beta (eventually zero update)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">beta</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">beta</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">squ_factor</span><span class="p">:</span>
                 <span class="n">x</span> <span class="o">=</span> <span class="n">old_dual</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">omega</span> <span class="o">*</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">range</span> <span class="o">-</span> <span class="n">fi</span> <span class="o">+</span> <span class="n">s2</span><span class="p">)</span>
@@ -1714,7 +1744,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">co_adaptive</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">update_from_history</span><span class="p">()</span></div>
 
-<div class="viewcode-block" id="RmmPerceptronNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RmmPerceptronNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="RmmPerceptronNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.brmm.html#pySPACE.missions.nodes.classification.svm_variants.brmm.RmmPerceptronNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Do nothing than suppressing mother method &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~Solver_Iterations~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">try</span><span class="p">:</span>
@@ -1744,14 +1774,14 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016, pySPACE Developer Team.
-      Last updated on Sep 04, 2016.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

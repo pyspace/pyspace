@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.nodes.classification.svm_variants.external &mdash; pySPACE documentation</title>
+    <title>pySPACE.missions.nodes.classification.svm_variants.external &#8212; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
@@ -17,15 +17,16 @@
         VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE documentation" href="../../../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../../../index.html" /> 
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +38,8 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -67,22 +68,22 @@
   <h1>Source code for pySPACE.missions.nodes.classification.svm_variants.external</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot; Wrapper around external SVM variant implementations like LibSVM or LIBLINEAR &quot;&quot;&quot;</span>
 
-
-<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">matplotlib</span> <span class="kn">as</span> <span class="nn">mpl</span>
-    <span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;text.usetex&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-    <span class="n">mpl</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;text.latex.unicode&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="c1">#    import matplotlib as mpl</span>
+<span class="c1">#    mpl.rcParams[&#39;text.usetex&#39;] = True</span>
+<span class="c1">#    mpl.rcParams[&#39;text.latex.unicode&#39;] = True</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="k">pass</span>
 
 <span class="kn">import</span> <span class="nn">scipy.spatial.distance</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.decorators</span> <span class="k">import</span> <span class="n">NoOptimizationParameter</span><span class="p">,</span> <span class="n">ChoiceParameter</span>
 
-<span class="c1"># import the external libraries </span>
-<span class="k">try</span><span class="p">:</span>  <span class="c1"># Liblinear</span>
+<span class="c1"># import the external libraries</span>
+<span class="k">try</span><span class="p">:</span> <span class="c1"># Liblinear</span>
     <span class="kn">import</span> <span class="nn">liblinearutil</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="k">pass</span>
@@ -92,18 +93,19 @@
     <span class="k">pass</span>
 
 <span class="c1"># representation of the linear classification vector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="kn">import</span> <span class="n">FeatureVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.feature_vector</span> <span class="k">import</span> <span class="n">FeatureVector</span>
 
 <span class="c1"># the output is a prediction vector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="k">import</span> <span class="n">PredictionVector</span>
 
 <span class="c1"># array handling</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 
 <span class="c1"># base class</span>
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="kn">import</span> <span class="n">RegularizedClassifierBase</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.classification.base</span> <span class="k">import</span> <span class="n">RegularizedClassifierBase</span>
 
 
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;regression&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="LibSVMClassifierNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">LibSVMClassifierNode</span><span class="p">(</span><span class="n">RegularizedClassifierBase</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Classify like a Standard SVM with the LibSVM settings.</span>
 <span class="sd">    </span>
@@ -225,7 +227,7 @@
 <span class="sd">    </span>
 <span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="LibSVMClassifierNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">svm_type</span><span class="o">=</span><span class="s1">&#39;C-SVC&#39;</span><span class="p">,</span> <span class="n">max_iterations</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
-                 <span class="n">str_label_function</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">complexities_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+                 <span class="n">str_label_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">complexities_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
         <span class="c1"># set default svm_type &#39;C-SVC&#39; if unsupported svm_type is selected</span>
         <span class="n">supported_types</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;C-SVC&quot;</span><span class="p">,</span> <span class="s2">&quot;one-class SVM&quot;</span><span class="p">,</span> <span class="s2">&quot;epsilon-SVR&quot;</span><span class="p">,</span> <span class="s2">&quot;nu-SVR&quot;</span><span class="p">]</span>
@@ -234,9 +236,9 @@
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;SVM-type unknown. C-SVC will be used!&quot;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">svm_type</span> <span class="o">==</span> <span class="s1">&#39;C-SVC&#39;</span><span class="p">:</span>
-            <span class="n">regression</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">regression</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">regression</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">regression</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="nb">super</span><span class="p">(</span><span class="n">LibSVMClassifierNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span>
             <span class="n">regression</span><span class="o">=</span><span class="n">regression</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># Check if the svm module has been correctly imported</span>
@@ -260,18 +262,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">str_label_function</span><span class="o">=</span><span class="n">str_label_function</span><span class="p">,</span>
                                       <span class="n">svm_type</span><span class="o">=</span><span class="n">svm_type</span><span class="p">,</span>
                                       <span class="n">max_iterations</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">max_iterations</span><span class="p">),</span>
-                                      <span class="n">store_all_samples</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                      <span class="n">store_all_samples</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                                       <span class="n">predictor_iterations</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">Inf</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="LibSVMClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="LibSVMClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Finish the training, i.e. train the SVM &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_complete_training</span><span class="p">(</span><span class="n">debug</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relabel_training_set</span><span class="p">()</span></div>
-        
-<div class="viewcode-block" id="LibSVMClassifierNode._complete_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode._complete_training">[docs]</a>    <span class="k">def</span> <span class="nf">_complete_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+<div class="viewcode-block" id="LibSVMClassifierNode._complete_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode._complete_training">[docs]</a>    <span class="k">def</span> <span class="nf">_complete_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Iterate over the complete data to get the initial model &quot;&quot;&quot;</span>
         <span class="c1">########## read complexities file if given ##########</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexities_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">complexities_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="kn">import</span> <span class="nn">yaml</span>
             <span class="n">complexities_file</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complexities_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span>
             <span class="n">complexities</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">complexities_file</span><span class="p">)</span>
@@ -361,7 +363,7 @@
                 <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
 
         <span class="c1"># transform labels with *label_function*</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">label_function</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_function</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
         
@@ -377,7 +379,7 @@
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
                     <span class="c1"># This calculation is needed for further analysis</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">calculate_slack_variables</span><span class="p">(</span><span class="n">model</span><span class="p">)</span> 
-                    <span class="k">print</span> <span class="s2">&quot;LIBSVM Parameter:&quot;</span>
+                    <span class="nb">print</span> <span class="s2">&quot;LIBSVM Parameter:&quot;</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">print_variables</span><span class="p">()</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="c1"># Slack variables are the same no matter which kernel is used</span>
@@ -400,9 +402,9 @@
                     <span class="n">predictor_iterations</span>
                 <span class="k">if</span> <span class="n">predictor_iterations</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> \
                         <span class="n">predictor_iterations</span> <span class="o">==</span> <span class="n">numpy</span><span class="o">.</span><span class="n">Inf</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~SVM_Converged~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~SVM_Converged~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">else</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~SVM_Converged~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~SVM_Converged~~&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
             <span class="k">except</span><span class="p">:</span>
                 <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;Could not read state of the LibSVM Solver &quot;</span> <span class="o">+</span>
                               <span class="s2">&quot;from the C-Library!&quot;</span><span class="p">)</span>
@@ -507,7 +509,7 @@
         <span class="n">svmutil</span><span class="o">.</span><span class="n">svm_save_model</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="LibSVMClassifierNode.load_model"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.load_model">[docs]</a>    <span class="k">def</span> <span class="nf">load_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
-        <span class="k">print</span> <span class="s1">&#39;load model&#39;</span>
+        <span class="nb">print</span> <span class="s1">&#39;load model&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">svmutil</span><span class="o">.</span><span class="n">svm_load_model</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span></div>
            
 <div class="viewcode-block" id="LibSVMClassifierNode.calculate_slack_variables"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.calculate_slack_variables">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_slack_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
@@ -547,7 +549,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">t</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">num_sv</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="k">if</span> <span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="o">&lt;</span><span class="mf">1e-5</span><span class="p">:</span>
+                <span class="k">if</span> <span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="o">&lt;</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">5</span><span class="p">:</span>
                     <span class="n">p</span> <span class="o">=</span> <span class="mi">1</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">ti</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
@@ -618,14 +620,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">[</span><span class="s2">&quot;~~Num_Retained_Features~~&quot;</span><span class="p">]</span> <span class="o">=</span> \
             <span class="bp">self</span><span class="o">.</span><span class="n">num_retained_features</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">print_w</span> <span class="o">=</span> <span class="n">w</span></div>
-    
+
 <div class="viewcode-block" id="LibSVMClassifierNode.remove_no_border_points"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.remove_no_border_points">[docs]</a>    <span class="k">def</span> <span class="nf">remove_no_border_points</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">retraining_required</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Discard method to remove all samples from the training set that are</span>
 <span class="sd">            not in the border of their class.</span>
-<span class="sd">            </span>
+
 <span class="sd">            The border is determined by a minimum distance from the center of</span>
 <span class="sd">            the class and a maximum distance.</span>
-<span class="sd">        </span>
+
 <span class="sd">            :param retraining_required: flag if retraining is</span>
 <span class="sd">                    requiered (the new point is a potential SV or a removed</span>
 <span class="sd">                    one was a sv)</span>
@@ -635,29 +637,29 @@
                          <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>  <span class="c1"># self.classes.index(&quot;Target&quot;)]</span>
         <span class="n">standardSamples</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>\
                            <span class="k">if</span> <span class="n">l</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>  <span class="c1"># self.classes.index(&quot;Standard&quot;)]</span>
-        
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">training_set_ratio</span> <span class="o">==</span> <span class="s2">&quot;KEEP_RATIO_AS_IT_IS&quot;</span><span class="p">:</span>
             <span class="n">num_target</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">targetSamples</span><span class="p">)</span>
             <span class="n">num_standard</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">standardSamples</span><span class="p">)</span>
-            
+
             <span class="n">num_target</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">num_target</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_target</span> <span class="o">+</span> <span class="n">num_standard</span><span class="p">)</span> <span class="o">*</span> \
                 <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span>
             <span class="n">num_standard</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span> <span class="o">-</span> <span class="n">num_target</span>
-             
+
         <span class="c1"># mean vector of each class (its center)</span>
         <span class="n">mTarget</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">targetSamples</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
         <span class="n">mStandard</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">standardSamples</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-         
+
         <span class="c1"># euclidean distance between the class centers</span>
         <span class="n">R</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">mTarget</span><span class="p">,</span> <span class="n">mStandard</span><span class="p">)</span>
-         
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">show_plot</span><span class="p">:</span>
             <span class="n">dim</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">shape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">plot_class_borders</span><span class="p">(</span>
                     <span class="n">mStandard</span><span class="p">,</span> <span class="n">mTarget</span><span class="p">,</span> <span class="n">R</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_small</span><span class="p">,</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_tall</span><span class="p">)</span>
-         
+
         <span class="c1"># get distance of each point to its class center</span>
         <span class="n">distances</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)):</span>
@@ -669,7 +671,7 @@
                 <span class="n">r_1</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">mStandard</span><span class="p">)</span>
                 <span class="n">r_2</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">spatial</span><span class="o">.</span><span class="n">distance</span><span class="o">.</span><span class="n">euclidean</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="n">mTarget</span><span class="p">)</span>
                 <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">i</span><span class="p">,</span> <span class="n">s</span><span class="p">,</span> <span class="n">l</span><span class="p">,</span> <span class="n">r_1</span><span class="p">,</span> <span class="n">r_2</span><span class="o">/</span><span class="p">(</span><span class="n">r_1</span> <span class="o">+</span> <span class="n">r_2</span><span class="p">)])</span>
-         
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_handling</span> <span class="o">==</span> <span class="s2">&quot;USE_ONLY_BORDER_POINTS&quot;</span><span class="p">:</span>
             <span class="c1"># remove all points that are not in the border (in a specific</span>
             <span class="c1"># radius) around the center</span>
@@ -689,7 +691,7 @@
                                           <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_tall</span> <span class="o">-</span>
                                             <span class="bp">self</span><span class="o">.</span><span class="n">scale_factor_small</span><span class="p">)</span><span class="o">/</span><span class="mf">2.0</span><span class="p">)</span><span class="o">*</span><span class="n">R</span><span class="p">)</span> <span class="o">*</span>
                                           <span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="p">)),</span> <span class="n">x</span><span class="p">[</span><span class="mi">4</span><span class="p">]))</span>
-         
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_handling</span> <span class="o">==</span> <span class="s2">&quot;USE_ONLY_BORDER_POINTS&quot;</span><span class="p">:</span>
             <span class="c1"># pay attention to the basket size</span>
             <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">]</span>
@@ -718,17 +720,17 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="c1"># pay attention to the basket size</span>
             <span class="n">distances</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">]</span>
-         
+
         <span class="p">[</span><span class="n">idxs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">]</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="n">distances</span><span class="p">)</span>
         <span class="n">retraining_required</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_samples</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span>
             <span class="nb">set</span><span class="p">(</span><span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span><span class="p">))</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">idxs</span><span class="p">)))</span> \
             <span class="ow">or</span> <span class="n">retraining_required</span>
-        
+
         <span class="k">return</span> <span class="n">retraining_required</span></div>
-                                
-<div class="viewcode-block" id="LibSVMClassifierNode.add_new_sample"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.add_new_sample">[docs]</a>    <span class="k">def</span> <span class="nf">add_new_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+<div class="viewcode-block" id="LibSVMClassifierNode.add_new_sample"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.add_new_sample">[docs]</a>    <span class="k">def</span> <span class="nf">add_new_sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Add a new sample to the training set.</span>
-<span class="sd">        </span>
+
 <span class="sd">            :param data:  A new sample for the training set.</span>
 <span class="sd">            :type  data:  list of float</span>
 <span class="sd">            :param class_label:    The label of the new sample.</span>
@@ -739,10 +741,10 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># use a separate knowledge base when old samples will be totally removed</span>
         <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">discard_type</span> <span class="o">==</span> <span class="s2">&quot;CDT&quot;</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">discard_type</span> <span class="o">==</span> <span class="s2">&quot;INC_BATCH&quot;</span><span class="p">)</span>\
-                <span class="ow">and</span> <span class="n">default</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+                <span class="ow">and</span> <span class="n">default</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">future_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">class_label</span><span class="p">)</span>
-            
+
             <span class="c1"># the sample size for the new knowledge base</span>
             <span class="c1"># is limited to basket size, so pop oldest</span>
             <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">future_samples</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">basket_size</span><span class="p">:</span>
@@ -752,23 +754,23 @@
             <span class="c1"># add new data</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_train_sample</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">+=</span> <span class="mi">1</span></div>
-    
+
 <div class="viewcode-block" id="LibSVMClassifierNode.remove_samples"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.remove_samples">[docs]</a>    <span class="k">def</span> <span class="nf">remove_samples</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idxs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Remove the samples at the given indices from the training set.</span>
-<span class="sd">        </span>
+
 <span class="sd">            :param: idxs: Indices of the samples to remove.</span>
 <span class="sd">            :type:  idxs: list of int</span>
 <span class="sd">            :rtype: bool - True if a support vector was removed.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">idxs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">idxs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="n">idxs</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_type</span> <span class="o">==</span> <span class="s2">&quot;UNSUPERVISED_PROB&quot;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">decisions</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">num_samples</span> <span class="o">-=</span> <span class="mi">1</span>
-        <span class="k">return</span> <span class="bp">True</span></div>
-        
+        <span class="k">return</span> <span class="kc">True</span></div>
+
 <div class="viewcode-block" id="LibSVMClassifierNode.visualize"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LibSVMClassifierNode.visualize">[docs]</a>    <span class="k">def</span> <span class="nf">visualize</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Show the training samples, SVS and the current decision function</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -777,7 +779,7 @@
             <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">gca</span><span class="p">()</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">r&#39;$x_0$&#39;</span><span class="p">)</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;$x_1$&#39;</span><span class="p">)</span>
-            
+
             <span class="bp">self</span><span class="o">.</span><span class="n">plot_samples</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">plot_hyperplane</span><span class="p">()</span>
         <span class="k">elif</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
@@ -785,19 +787,21 @@
             <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">r&#39;$x_0$&#39;</span><span class="p">)</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">r&#39;$x_1$&#39;</span><span class="p">)</span>
             <span class="n">ax</span><span class="o">.</span><span class="n">set_zlabel</span><span class="p">(</span><span class="s1">r&#39;$x_2$&#39;</span><span class="p">)</span>
-            
+
             <span class="bp">self</span><span class="o">.</span><span class="n">plot_samples_3D</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">plot_hyperplane_3D</span><span class="p">()</span>
-        
+
         <span class="k">if</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">or</span> <span class="n">dim</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
             <span class="n">plt</span><span class="o">.</span><span class="n">draw</span><span class="p">()</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_plot</span> <span class="ow">is</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">save_plot</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">imagename</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">/tmp</span><span class="si">%010d</span><span class="s2">.png&quot;</span>\
                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">plot_storage</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">m_counter_i</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">m_counter_i</span> <span class="o">+=</span> <span class="mi">1</span>
                 <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">imagename</span><span class="p">)</span></div></div>
 
 
+<span class="nd">@NoOptimizationParameter</span><span class="p">(</span><span class="s2">&quot;use_list&quot;</span><span class="p">)</span>
+<span class="nd">@ChoiceParameter</span><span class="p">(</span><span class="s2">&quot;svm_type&quot;</span><span class="p">,</span> <span class="n">choices</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">])</span>
 <div class="viewcode-block" id="LiblinearClassifierNode"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode">[docs]</a><span class="k">class</span> <span class="nc">LiblinearClassifierNode</span><span class="p">(</span><span class="n">LibSVMClassifierNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Code Integration of external linear SVM classifier program</span>
 
@@ -865,14 +869,14 @@
 <span class="sd">    :Created: 2012/01/19</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="LiblinearClassifierNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">svm_type</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="LiblinearClassifierNode.__init__"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">tolerance</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">svm_type</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">offset</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         
         <span class="k">if</span> <span class="n">offset</span><span class="p">:</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">offset</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
             
-        <span class="nb">super</span><span class="p">(</span><span class="n">LiblinearClassifierNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">use_list</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LiblinearClassifierNode</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">use_list</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
 
         <span class="c1"># svm type is renamed such that C-SVC is still used in the super class</span>
         <span class="c1"># this is currently especially advantageous in the execute method</span>
@@ -888,8 +892,8 @@
 <span class="sd">        .. todo::   check in new version of liblinear, if ndarrays are accepted</span>
 <span class="sd">                    and the method from libsvm can be used.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_train_phase_started</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_train_phase_started</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">feature_names</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">feature_names</span>
             <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -897,11 +901,11 @@
                     <span class="s2">&quot;Use a feature generator node before a classification node.&quot;</span>
                     <span class="p">)</span>
                 <span class="k">raise</span> <span class="n">e</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">dim</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">samples</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="n">class_label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
@@ -918,15 +922,15 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">float</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">data_array</span><span class="p">[</span><span class="mi">0</span><span class="p">,:])))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">))</span></div>
 
-<div class="viewcode-block" id="LiblinearClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="LiblinearClassifierNode._stop_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Finish the training, i.e. train the SVM &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_complete_training</span><span class="p">(</span><span class="n">debug</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">relabel_training_set</span><span class="p">()</span></div>
-        
-<div class="viewcode-block" id="LiblinearClassifierNode._complete_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode._complete_training">[docs]</a>    <span class="k">def</span> <span class="nf">_complete_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+
+<div class="viewcode-block" id="LiblinearClassifierNode._complete_training"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode._complete_training">[docs]</a>    <span class="k">def</span> <span class="nf">_complete_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Forward data to external training and extract classifier information</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">label_function</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">str_label_function</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">label_function</span><span class="p">()</span>
 
@@ -946,8 +950,8 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">calculate_classification_vector</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">debug</span><span class="p">:</span>
-            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">print_w</span>
-            <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span></div>
+            <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">print_w</span>
+            <span class="nb">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span></div>
 
 <div class="viewcode-block" id="LiblinearClassifierNode.calculate_classification_vector"><a class="viewcode-back" href="../../../../../../api/generated/pySPACE.missions.nodes.classification.svm_variants.external.html#pySPACE.missions.nodes.classification.svm_variants.external.LiblinearClassifierNode.calculate_classification_vector">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_classification_vector</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;This method calculates from the given SVM model</span>
@@ -973,9 +977,9 @@
             <span class="n">wf</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
             <span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">wf</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;|S20&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">ValueError</span> <span class="p">:</span>
-            <span class="k">print</span> <span class="s1">&#39;w could not be converted.&#39;</span>
+            <span class="nb">print</span> <span class="s1">&#39;w could not be converted.&#39;</span>
         <span class="k">except</span> <span class="ne">IndexError</span> <span class="p">:</span>
-            <span class="k">print</span> <span class="s1">&#39;There are more feature names than features. </span><span class="se">\</span>
+            <span class="nb">print</span> <span class="s1">&#39;There are more feature names than features. </span><span class="se">\</span>
 <span class="s1">                    Please check your feature generation and input data.&#39;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="mi">0</span>
             <span class="n">w</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dim</span><span class="p">)</span>
@@ -1007,14 +1011,14 @@
         <li class="right" >
           <a href="../../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016, pySPACE Developer Team.
-      Last updated on Sep 04, 2016.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.missions.nodes.postprocessing.threshold_optimization &mdash; pySPACE documentation</title>
+    <title>pySPACE.missions.nodes.postprocessing.threshold_optimization &#8212; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
@@ -17,15 +17,16 @@
         VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE documentation" href="../../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../../index.html" /> 
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +38,8 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -68,19 +69,21 @@
 <span></span><span class="sd">&quot;&quot;&quot; Optimize classification thresholds &quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">logging</span>
-<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">itemgetter</span>
-<span class="kn">from</span> <span class="nn">bisect</span> <span class="kn">import</span> <span class="n">insort</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="k">import</span> <span class="n">itemgetter</span>
+<span class="kn">from</span> <span class="nn">bisect</span> <span class="k">import</span> <span class="n">insort</span>
 
 <span class="kn">import</span> <span class="nn">scipy</span>
 <span class="kn">import</span> <span class="nn">numpy</span>
 
 <span class="kn">import</span> <span class="nn">copy</span>
 
-<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="kn">import</span> <span class="n">BaseNode</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="kn">import</span> <span class="n">PredictionVector</span>
-<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="kn">import</span> <span class="n">BinaryClassificationDataset</span> <span class="k">as</span> <span class="n">BinaryClassificationDataset</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.base_node</span> <span class="k">import</span> <span class="n">BaseNode</span>
+<span class="kn">from</span> <span class="nn">pySPACE.missions.nodes.decorators</span> <span class="k">import</span> <span class="n">BooleanParameter</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.data_types.prediction_vector</span> <span class="k">import</span> <span class="n">PredictionVector</span>
+<span class="kn">from</span> <span class="nn">pySPACE.resources.dataset_defs.metric</span> <span class="k">import</span> <span class="n">BinaryClassificationDataset</span> <span class="k">as</span> <span class="n">BinaryClassificationDataset</span>
 
-
+<span class="nd">@BooleanParameter</span><span class="p">(</span><span class="s2">&quot;preserve_score&quot;</span><span class="p">)</span>
+<span class="nd">@BooleanParameter</span><span class="p">(</span><span class="s2">&quot;recalibrate&quot;</span><span class="p">)</span>
 <div class="viewcode-block" id="ThresholdOptimizationNode"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode">[docs]</a><span class="k">class</span> <span class="nc">ThresholdOptimizationNode</span><span class="p">(</span><span class="n">BaseNode</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; Optimize the classification threshold for a specified metric</span>
 <span class="sd">    </span>
@@ -185,11 +188,11 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">input_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;PredictionVector&quot;</span><span class="p">]</span>
 <div class="viewcode-block" id="ThresholdOptimizationNode.__init__"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;Balanced_accuracy&quot;</span><span class="p">,</span> 
-                 <span class="n">class_labels</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">preserve_score</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">class_labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">preserve_score</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">classifier_threshold</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
-                 <span class="n">recalibrate</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+                 <span class="n">recalibrate</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
                  <span class="n">weight</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
-                 <span class="n">inverse_metric</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                 <span class="n">inverse_metric</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                  <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
 
         <span class="nb">super</span><span class="p">(</span><span class="n">ThresholdOptimizationNode</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
@@ -207,29 +210,29 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">message</span><span class="o">=</span><span class="s2">&quot;AUC is no relevant metric for this node! Balanced_accuracy taken.&quot;</span><span class="p">,</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
         <span class="c1"># Some hard coded standard metrics</span>
         <span class="k">if</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;F_measure&quot;</span><span class="p">:</span>
-            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;0 if {TP} == 0 else 2*{TP}**2/(2*{TP}**2 + {TP}*{FP} + {TP}*{FN})&quot;</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;0 if </span><span class="si">{TP}</span><span class="s2"> == 0 else 2*</span><span class="si">{TP}</span><span class="s2">**2/(2*</span><span class="si">{TP}</span><span class="s2">**2 + </span><span class="si">{TP}</span><span class="s2">*</span><span class="si">{FP}</span><span class="s2"> + </span><span class="si">{TP}</span><span class="s2">*</span><span class="si">{FN}</span><span class="s2">)&quot;</span>
         <span class="k">elif</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;F_measure_standard&quot;</span><span class="p">:</span>
-            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;0 if {TN} == 0 else 2*{TN}**2/(2*{TN}**2 + {TN}*{FN} + {TN}*{FP})&quot;</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;0 if </span><span class="si">{TN}</span><span class="s2"> == 0 else 2*</span><span class="si">{TN}</span><span class="s2">**2/(2*</span><span class="si">{TN}</span><span class="s2">**2 + </span><span class="si">{TN}</span><span class="s2">*</span><span class="si">{FN}</span><span class="s2"> + </span><span class="si">{TN}</span><span class="s2">*</span><span class="si">{FP}</span><span class="s2">)&quot;</span>
         <span class="k">elif</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;Accuracy&quot;</span><span class="p">:</span>
-            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;({TP}+{TN})/({TP}+{TN}+{FP}+{FN})&quot;</span>
+            <span class="n">metric</span> <span class="o">=</span> <span class="s2">&quot;(</span><span class="si">{TP}</span><span class="s2">+</span><span class="si">{TN}</span><span class="s2">)/(</span><span class="si">{TP}</span><span class="s2">+</span><span class="si">{TN}</span><span class="s2">+</span><span class="si">{FP}</span><span class="s2">+</span><span class="si">{FN}</span><span class="s2">)&quot;</span>
         <span class="k">elif</span> <span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;Balanced_accuracy&quot;</span><span class="p">:</span>
             <span class="c1">#metric = &quot;(0.5*{TP}/({TP}+{FN}) + 0.5*{TN}/({TN}+{FP}))&quot;</span>
             <span class="k">pass</span>
             
         <span class="k">if</span> <span class="n">recalibrate</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">retrainable</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">retrainable</span> <span class="o">=</span> <span class="kc">True</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">metric</span><span class="o">=</span><span class="n">metric</span><span class="p">,</span>
-                                      <span class="n">metric_fct</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                      <span class="n">metric_fct</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                                       <span class="n">classes</span><span class="o">=</span><span class="n">class_labels</span><span class="p">,</span>
                                       <span class="n">preserve_score</span><span class="o">=</span><span class="n">preserve_score</span><span class="p">,</span>
                                       <span class="n">classifier_threshold</span><span class="o">=</span><span class="n">classifier_threshold</span><span class="p">,</span>
                                       <span class="n">weight</span><span class="o">=</span><span class="n">weight</span><span class="p">,</span>
                                       <span class="n">recalibrate</span><span class="o">=</span><span class="n">recalibrate</span><span class="p">,</span>
-                                      <span class="n">orientation_up</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                      <span class="n">orientation_up</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                                       <span class="n">threshold</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                                       <span class="n">instances</span><span class="o">=</span><span class="p">[],</span> <span class="c1"># list sorted by prediction score</span>
-                                      <span class="n">example</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="c1"># classification vector input example</span>
+                                      <span class="n">example</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="c1"># classification vector input example</span>
                                       <span class="n">classifier_information</span><span class="o">=</span><span class="p">{},</span>  <span class="c1"># information from the example+own classification information</span>
                                       <span class="n">inverse_metric</span><span class="o">=</span><span class="n">inverse_metric</span><span class="p">)</span></div>
         
@@ -240,16 +243,16 @@
 
 <div class="viewcode-block" id="ThresholdOptimizationNode.is_trainable"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode.is_trainable">[docs]</a>    <span class="k">def</span> <span class="nf">is_trainable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node is trainable &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">True</span></div>
+        <span class="k">return</span> <span class="kc">True</span></div>
     
 <div class="viewcode-block" id="ThresholdOptimizationNode.is_supervised"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode.is_supervised">[docs]</a>    <span class="k">def</span> <span class="nf">is_supervised</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Returns whether this node requires supervised training &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">True</span></div>
+        <span class="k">return</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="ThresholdOptimizationNode._train"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode._train">[docs]</a>    <span class="k">def</span> <span class="nf">_train</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">class_label</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Collect training data and class labels &quot;&quot;&quot;</span>
                 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">classes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">set_permanent_attributes</span><span class="p">(</span><span class="n">classes</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="o">.</span><span class="n">classes</span><span class="p">)</span>
             <span class="k">except</span><span class="p">:</span>
@@ -273,14 +276,14 @@
                                 <span class="bp">self</span><span class="o">.</span><span class="n">classes</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">class_label</span><span class="p">)))</span>
 
         <span class="c1"># copying of important classifier parameters to give it to the sink node</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">example</span> <span class="o">=</span> <span class="n">data</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">classifier_information</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">predictor</span><span class="o">.</span><span class="n">classifier_information</span><span class="p">)</span>
             <span class="k">except</span><span class="p">:</span>
                 <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="ThresholdOptimizationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="ThresholdOptimizationNode._stop_training"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode._stop_training">[docs]</a>    <span class="k">def</span> <span class="nf">_stop_training</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Call the optimization algorithm &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">calculate_threshold</span><span class="p">()</span></div>
         
@@ -293,7 +296,7 @@
 <span class="sd">            implementation that is better suited for fast incremental learning.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># Create metric function lazily since it cannot be pickled</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s2">&quot;metric_fct&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_fct</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="s2">&quot;metric_fct&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric_fct</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">metric_fct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_metric_fct</span><span class="p">()</span>
         <span class="c1"># Split 3-tuples in instance heap into the three components</span>
         <span class="c1"># predictions, predicted labels, and actual label</span>
@@ -302,9 +305,9 @@
         <span class="n">labels</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">instances</span><span class="p">)</span>
         
         <span class="k">if</span> <span class="n">prediction_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_up</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_up</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_up</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">orientation_up</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># Determine orientation of hyperplane</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">orientation_up</span><span class="p">:</span>
             <span class="n">TP</span> <span class="o">=</span> <span class="n">labels</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
@@ -400,7 +403,7 @@
             <span class="n">metric_fct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">TP</span><span class="p">,</span> <span class="n">FP</span><span class="p">,</span> <span class="n">TN</span><span class="p">,</span> <span class="n">FN</span><span class="p">:</span> <span class="n">BinaryClassificationDataset</span><span class="o">.</span><span class="n">normalized_mutual_information</span><span class="p">(</span><span class="n">TN</span><span class="p">,</span> <span class="n">FN</span><span class="p">,</span> <span class="n">TP</span><span class="p">,</span> <span class="n">FP</span><span class="p">)</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="o">==</span> <span class="s2">&quot;Balanced_accuracy&quot;</span><span class="p">:</span>
             <span class="n">metric_fct</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">balanced_accuracy</span>
-        <span class="k">elif</span> <span class="s1">&#39;{TP}&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;{FP}&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;{TN}&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;{FN}&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">:</span>
+        <span class="k">elif</span> <span class="s1">&#39;</span><span class="si">{TP}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{FP}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{TN}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span> <span class="ow">or</span> <span class="s1">&#39;</span><span class="si">{FN}</span><span class="s1">&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">:</span>
             <span class="n">metric_fct</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">TP</span><span class="p">,</span> <span class="n">FP</span><span class="p">,</span> <span class="n">TN</span><span class="p">,</span> <span class="n">FN</span><span class="p">:</span> <span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">TP</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">TP</span><span class="p">),</span>
                                                                         <span class="n">FP</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">FP</span><span class="p">),</span> 
                                                                         <span class="n">TN</span><span class="o">=</span><span class="nb">float</span><span class="p">(</span><span class="n">TN</span><span class="p">),</span>
@@ -423,7 +426,7 @@
                     <span class="n">weight</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">,)[</span><span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">metric_fct</span> </div>
 
-<div class="viewcode-block" id="ThresholdOptimizationNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span> 
+<div class="viewcode-block" id="ThresholdOptimizationNode.store_state"><a class="viewcode-back" href="../../../../../api/generated/pySPACE.missions.nodes.postprocessing.threshold_optimization.html#pySPACE.missions.nodes.postprocessing.threshold_optimization.ThresholdOptimizationNode.store_state">[docs]</a>    <span class="k">def</span> <span class="nf">store_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">result_dir</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span> 
         <span class="sd">&quot;&quot;&quot; Stores this node in the given directory *result_dir* </span>
 <span class="sd">        </span>
 <span class="sd">        .. todo:: Documentation! What is stored? And how?</span>
@@ -518,7 +521,7 @@
                 <span class="n">pylab</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Metric: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">metric</span><span class="p">)</span>
                 
                 <span class="c1"># Store plot</span>
-                <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="kn">import</span>  <span class="n">create_directory</span>
+                <span class="kn">from</span> <span class="nn">pySPACE.tools.filesystem</span> <span class="k">import</span>  <span class="n">create_directory</span>
                 <span class="kn">import</span> <span class="nn">os</span>
                 <span class="n">node_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">result_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
                 <span class="n">create_directory</span><span class="p">(</span><span class="n">node_dir</span><span class="p">)</span>
@@ -548,14 +551,14 @@
         <li class="right" >
           <a href="../../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016, pySPACE Developer Team.
-      Last updated on Sep 04, 2016.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>

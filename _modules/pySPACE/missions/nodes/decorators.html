@@ -1,0 +1,949 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pySPACE.missions.nodes.decorators &#8212; pySPACE documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.3 release',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../../../../index.html">
+              <img class="logo" src="../../../../_static/pyspace-logo_small.png" alt="Logo"/>
+            </a></p>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pySPACE.missions.nodes.decorators</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Define parameter distributions for pySPACE nodes.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+
+<span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">stats</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># noinspection PyPackageRequirements</span>
+    <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+    <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">ticker</span> <span class="k">as</span> <span class="n">mtick</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">plt</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">mtick</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="n">PARAMETER_ATTRIBUTE</span> <span class="o">=</span> <span class="s2">&quot;__hyperparameters&quot;</span>
+
+
+<div class="viewcode-block" id="ParameterDecorator"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator">[docs]</a><span class="k">class</span> <span class="nc">ParameterDecorator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class for creating parameter decorators</span>
+<span class="sd">    to declare the as optimization parameters.</span>
+
+<span class="sd">    BE CAREFUL WHEN IMPLEMENTING NEW DECORATORS. THEY MUST BE</span>
+<span class="sd">    WRAPPED AND SUPPORTED BY __ALL__ OPTIMIZATION ALGORITHMS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span>
+
+<div class="viewcode-block" id="ParameterDecorator.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new optimization parameter with `parameter_name` as name</span>
+
+<span class="sd">        The names of parameters have to be unique, as they get identified</span>
+<span class="sd">        by the name.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span> <span class="o">=</span> <span class="n">parameter_name</span></div>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+<div class="viewcode-block" id="ParameterDecorator.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Execute the decorator</span>
+
+<span class="sd">        This method will be called during creation of the class object</span>
+<span class="sd">        and will update the given set of hyperparameters according</span>
+<span class="sd">        to the implementation of the subclass.</span>
+
+<span class="sd">        :param class_: The class object this parameter decorates</span>
+<span class="sd">        :type class_: type</span>
+<span class="sd">        :param parameters: The set of parameters to append to or delete from</span>
+<span class="sd">        :type parameters: set(ParameterDecorator)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Execute Method has to be overwritten by subclasses&quot;</span><span class="p">)</span></div>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+<div class="viewcode-block" id="ParameterDecorator.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Plot the given parameter distribution</span>
+
+<span class="sd">        This method is used to plot the specified distribution of this decorator.</span>
+<span class="sd">        For plotting either (if installed) the `matplotlib.pyplot` can be used and return a figure,</span>
+<span class="sd">        or (if not installed) a string specifying the distribution can be returned.</span>
+
+<span class="sd">        :returns: The figure where this distribution is plotted or a string specifying the distribution</span>
+<span class="sd">        :rtype: matplotlib.figure.Figure | str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__call__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__call__">[docs]</a>    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">PARAMETER_ATTRIBUTE</span><span class="p">):</span>
+            <span class="c1"># No hyper parameter attribute, create a new one</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">PARAMETER_ATTRIBUTE</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="c1"># Deep copy the parameter attribute to avoid side-effects to super-classes</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">PARAMETER_ATTRIBUTE</span><span class="p">))</span>
+        <span class="c1"># Execute the Decorator on the copy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+        <span class="c1"># And replace the attribute with the copy</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="n">class_</span><span class="p">,</span> <span class="n">PARAMETER_ATTRIBUTE</span><span class="p">,</span> <span class="n">parameters</span><span class="p">)</span>
+        <span class="c1"># Return the class object</span>
+        <span class="k">return</span> <span class="n">class_</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__eq__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__eq__">[docs]</a>    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="s2">&quot;parameter_name&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">parameter_name</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">basestring</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span> <span class="o">==</span> <span class="n">other</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__ne__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__ne__">[docs]</a>    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__hash__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__hash__">[docs]</a>    <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__str__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__str__">[docs]</a>    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span></div>
+
+<div class="viewcode-block" id="ParameterDecorator.__repr__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ParameterDecorator.__repr__">[docs]</a>    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{cls}</span><span class="s2">&lt;</span><span class="si">{name}</span><span class="s2">&gt;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cls</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="AddedParameterDecorator"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.AddedParameterDecorator">[docs]</a><span class="k">class</span> <span class="nc">AddedParameterDecorator</span><span class="p">(</span><span class="n">ParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This mixin adds an execute method to classes that inherit from it.</span>
+
+
+<span class="sd">    This mixin will check if the given parameter is already defined</span>
+<span class="sd">    and if so removes the old definition and adds the new one.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span>
+
+<div class="viewcode-block" id="AddedParameterDecorator.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.AddedParameterDecorator.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">class_</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">parameters</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QMixin"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QMixin">[docs]</a><span class="k">class</span> <span class="nc">QMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This mixin adds a regulation parameter `q`</span>
+<span class="sd">    to bind a distribution to discrete values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QMixin.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QMixin.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add the new regulation parameter.</span>
+
+<span class="sd">        :param q: The regulation value</span>
+<span class="sd">        :type q: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__q</span> <span class="o">=</span> <span class="n">q</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">q</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__q</span>
+
+<div class="viewcode-block" id="QMixin.round_to_q"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QMixin.round_to_q">[docs]</a>    <span class="k">def</span> <span class="nf">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Round a value to the next multiple of `q`.</span>
+
+<span class="sd">        This is required for the plotting only.</span>
+
+<span class="sd">        :param value: The value to round</span>
+<span class="sd">        :type value: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">value</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span></div>
+
+<div class="viewcode-block" id="QMixin.calc_probability"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QMixin.calc_probability">[docs]</a>    <span class="k">def</span> <span class="nf">calc_probability</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">pdf_func</span><span class="p">):</span>
+        <span class="c1"># Integral borders</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">value</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span>
+        <span class="c1"># Create a linear space between these two borders</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">dx</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">a</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">b</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">retstep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Then calculate the PDF value for each of them</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="n">pdf_func</span><span class="p">(</span><span class="n">v</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+        <span class="c1"># And then integrate</span>
+        <span class="k">return</span> <span class="n">numpy</span><span class="o">.</span><span class="n">trapz</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">dx</span><span class="o">=</span><span class="n">dx</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ChoiceParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ChoiceParameter">[docs]</a><span class="k">class</span> <span class="nc">ChoiceParameter</span><span class="p">(</span><span class="n">AddedParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as to be chosen from</span>
+<span class="sd">    the given set of options.</span>
+
+<span class="sd">    This parameter will be then chosen from this</span>
+<span class="sd">    set during the optimization.</span>
+
+<span class="sd">    ..code-block:: python</span>
+
+<span class="sd">       &gt;&gt;&gt; @ChoiceParameter(&quot;test&quot;, choices=[&quot;A&quot;, &quot;B&quot;, &quot;C&quot;]</span>
+<span class="sd">       ... class A(object):</span>
+<span class="sd">       ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ChoiceParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ChoiceParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">choices</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new choice parameter with `parameter_name` as name</span>
+<span class="sd">        and `choices` as the possible values.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        :param choices: The possible values for this parameter.</span>
+<span class="sd">        :type choices: str | List[str]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ChoiceParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="o">=</span><span class="n">parameter_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">choices</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">choices</span> <span class="o">=</span> <span class="p">[</span><span class="n">choices</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__choices</span> <span class="o">=</span> <span class="n">choices</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">choices</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__choices</span>
+
+<div class="viewcode-block" id="ChoiceParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.ChoiceParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(choices=</span><span class="si">{self.choices!s}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="BooleanParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.BooleanParameter">[docs]</a><span class="k">class</span> <span class="nc">BooleanParameter</span><span class="p">(</span><span class="n">ChoiceParameter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as a being a boolean parameter.</span>
+
+<span class="sd">    This parameter will either be &quot;true&quot; or &quot;false&quot;</span>
+<span class="sd">    during the optimization.</span>
+
+
+<span class="sd">    ..code-block:: python</span>
+
+<span class="sd">       &gt;&gt;&gt; @BooleanParameter(&quot;test&quot;)</span>
+<span class="sd">       ... class A(object):</span>
+<span class="sd">       ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="BooleanParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.BooleanParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new boolean parameter with `parameter_name` as name.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">BooleanParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="p">,</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="PChoiceParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.PChoiceParameter">[docs]</a><span class="k">class</span> <span class="nc">PChoiceParameter</span><span class="p">(</span><span class="n">ChoiceParameter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as a probability choice.</span>
+
+<span class="sd">    This parameter will sample each of the given</span>
+<span class="sd">    choices with the according probability.</span>
+
+
+<span class="sd">    ..code-block:: python</span>
+
+<span class="sd">       &gt;&gt;&gt; @PChoiceParameter(&quot;test&quot;, choices={&quot;A&quot;: 0.5, &quot;B&quot;: 0.25, &quot;C&quot;: 0.25})</span>
+<span class="sd">       ... class A(object):</span>
+<span class="sd">       ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="PChoiceParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.PChoiceParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">choices</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new probability choice parameter</span>
+<span class="sd">        with `parameter_name` as name and `choices`</span>
+<span class="sd">        as the possible values.</span>
+
+<span class="sd">        Each choice must be a tuple containing first</span>
+<span class="sd">        the probability in range from 0 to 1 for that</span>
+<span class="sd">        choice and the value to choose as a second argument.</span>
+<span class="sd">        The probabilities of all choices need to sum up to 1.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        :param choices: A dictionary of tuples containing the value</span>
+<span class="sd">                        of each choice as keys and the corresponding</span>
+<span class="sd">                        probabilities as values.</span>
+<span class="sd">        :type choices: dict[object, float]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">choices</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The probabilities for parameter &#39;</span><span class="si">%s</span><span class="s2">&#39;&quot;</span>
+                               <span class="s2">&quot;do not sum up to 1&quot;</span> <span class="o">%</span> <span class="n">parameter_name</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PChoiceParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="p">,</span> <span class="n">choices</span><span class="o">.</span><span class="n">items</span><span class="p">())</span></div></div>
+
+
+<div class="viewcode-block" id="NormalParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter">[docs]</a><span class="k">class</span> <span class="nc">NormalParameter</span><span class="p">(</span><span class="n">AddedParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being normal distributed.</span>
+
+<span class="sd">    A normal distributed parameter will be sampled from</span>
+<span class="sd">    the defined distribution by the mean and standard deviation.</span>
+
+<span class="sd">    This parameter will be sampled from a function like:</span>
+
+<span class="sd">        normal(mu, sigma)</span>
+
+<span class="sd">    This parameter is unbound.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @NormalParameter(&quot;test&quot;, mu=0, sigma=1)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="NormalParameter.Normal"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.Normal">[docs]</a>    <span class="k">class</span> <span class="nc">Normal</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="NormalParameter.Normal.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.Normal.__init__">[docs]</a>        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">=</span> <span class="n">sigma</span></div>
+           
+<div class="viewcode-block" id="NormalParameter.Normal.pdf"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.Normal.pdf">[docs]</a>        <span class="k">def</span> <span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="n">sqrt</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+            <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">sqrt</span> <span class="o">*</span> <span class="n">numpy</span><span class="o">.</span><span class="n">e</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="NormalParameter.Normal.mean"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.Normal.mean">[docs]</a>        <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span></div></div>
+
+<div class="viewcode-block" id="NormalParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new normal distributed parameter with `parameter_name` as name.</span>
+
+<span class="sd">        The mean `mu` and standard deviation `sigma` are defining the distribution</span>
+<span class="sd">        this parameter will be sampled from.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        :param mu: The mean value of the distribution for this parameter</span>
+<span class="sd">        :type mu: float</span>
+<span class="sd">        :param sigma: The standard deviation of the distribution for this parameter</span>
+<span class="sd">        :type sigma: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NormalParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="o">=</span><span class="n">parameter_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__mu</span> <span class="o">=</span> <span class="n">mu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span> <span class="o">=</span> <span class="n">sigma</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mu</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__mu</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">sigma</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span>
+
+<div class="viewcode-block" id="NormalParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NormalParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span>
+            <span class="c1"># mu +/- 3sigma =&gt; 99,7% confidence interval</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span>
+            <span class="c1"># Min 1.000 samples, max 10.000</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="mi">10000</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;PDF(x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Normal distribution for Parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x_</span><span class="p">:</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x_</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mu=</span><span class="si">{self.mu:g}</span><span class="s2">, sigma=</span><span class="si">{self.sigma:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(mu=</span><span class="si">{self.mu:g}</span><span class="s2">, sigma=</span><span class="si">{self.sigma:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="UniformParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter">[docs]</a><span class="k">class</span> <span class="nc">UniformParameter</span><span class="p">(</span><span class="n">AddedParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being uniform distributed.</span>
+
+<span class="sd">    A uniform distributed parameter will be sampled equally distributed</span>
+<span class="sd">    between a given minimum and maximum value.</span>
+
+<span class="sd">    The value of this parameter will be sampled from a function like:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        uniform(min, max)</span>
+
+<span class="sd">    This parameter is bound to [min, max].</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @UniformParameter(&quot;test&quot;, min_value=1, max_value=10)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="UniformParameter.Uniform"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.Uniform">[docs]</a>    <span class="k">class</span> <span class="nc">Uniform</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<div class="viewcode-block" id="UniformParameter.Uniform.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.Uniform.__init__">[docs]</a>        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__diff</span> <span class="o">=</span> <span class="n">b</span> <span class="o">-</span> <span class="n">a</span></div>
+
+<div class="viewcode-block" id="UniformParameter.Uniform.pdf"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.Uniform.pdf">[docs]</a>        <span class="k">def</span> <span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">&gt;</span> <span class="n">x</span> <span class="ow">or</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="k">return</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__diff</span></div>
+
+<div class="viewcode-block" id="UniformParameter.Uniform.cdf"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.Uniform.cdf">[docs]</a>        <span class="k">def</span> <span class="nf">cdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="k">elif</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">1.0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__diff</span> </div>
+
+<div class="viewcode-block" id="UniformParameter.Uniform.mean"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.Uniform.mean">[docs]</a>        <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="UniformParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a new uniform distributed parameter with `parameter_name` as name.</span>
+
+<span class="sd">        The `min_value` and `max_value` define the borders for this distribution</span>
+<span class="sd">        in between which the value will be sampled.</span>
+
+<span class="sd">        :param min_value: The minimum value of the parameter</span>
+<span class="sd">        :type min_value: float</span>
+<span class="sd">        :param max_value: The maximum value of the parameter</span>
+<span class="sd">        :type max_value: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">UniformParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="o">=</span><span class="n">parameter_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__min</span> <span class="o">=</span> <span class="n">min_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__max</span> <span class="o">=</span> <span class="n">max_value</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">min</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__min</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">max</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__max</span>
+
+<div class="viewcode-block" id="UniformParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.UniformParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+            <span class="c1"># Min 1.000 samples, max 10.000</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="mi">10000</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;PDF(x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Uniform distribution of parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">value</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QNormalParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QNormalParameter">[docs]</a><span class="k">class</span> <span class="nc">QNormalParameter</span><span class="p">(</span><span class="n">NormalParameter</span><span class="p">,</span> <span class="n">QMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being normal distributed but to only</span>
+<span class="sd">    take discrete values.</span>
+
+<span class="sd">    A q-normal distributed parameter will be sampled from the</span>
+<span class="sd">    distribution defined by a mean and a standard deviation</span>
+<span class="sd">    but it will be bound to discrete values regularized by a</span>
+<span class="sd">    regulation parameter.</span>
+<span class="sd">    Therefore the value will be sampled from a function like this:</span>
+
+<span class="sd">        round(normal(mu, sigma) / q) * q</span>
+
+<span class="sd">    This parameter is unbound.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @QNormalParameter(&quot;test&quot;, mu=0, sigma=1, q=0.5)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="QNormalParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QNormalParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new q-normal distributed parameter with `parameter_name` as name.</span>
+
+<span class="sd">        The mean `mu` and standard deviation `sigma` are defining the distribution</span>
+<span class="sd">        this parameter will be sampled from. But it will be bound to discrete values</span>
+<span class="sd">        by the regulation parameter `q`.</span>
+
+<span class="sd">        :param parameter_name: The name of the parameter to create.</span>
+<span class="sd">        :type parameter_name: str</span>
+<span class="sd">        :param mu: The mean value of the distribution for the parameter</span>
+<span class="sd">        :type mu: float</span>
+<span class="sd">        :param sigma: The standard deviation of the distribution for the parameter</span>
+<span class="sd">        :type sigma: float</span>
+<span class="sd">        :param q: The regulation parameter to bind the values with.</span>
+<span class="sd">        :type q: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">QNormalParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="o">=</span><span class="n">parameter_name</span><span class="p">,</span> <span class="n">mu</span><span class="o">=</span><span class="n">mu</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">sigma</span><span class="p">)</span>
+        <span class="n">QMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QNormalParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QNormalParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># mu +/- 3sigma =&gt; 99,7% confidence interval</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Normal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span>
+            <span class="c1"># mu +/- 3sigma =&gt; 99,7% confidence interval</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">-</span> <span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">+</span> <span class="mi">3</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;P(X=x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Q-Normal distribution for Parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x_</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;mu=</span><span class="si">{self.mu:g}</span><span class="s2">, sigma=</span><span class="si">{self.sigma:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="o">.</span><span class="n">get_facecolor</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(mu=</span><span class="si">{self.mu:g}</span><span class="s2">, sigma=</span><span class="si">{self.sigma:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QUniformParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QUniformParameter">[docs]</a><span class="k">class</span> <span class="nc">QUniformParameter</span><span class="p">(</span><span class="n">UniformParameter</span><span class="p">,</span> <span class="n">QMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being uniform distributed but to take</span>
+<span class="sd">    only discrete values.</span>
+
+<span class="sd">    A uniform distributed parameter will be sampled equally distributed</span>
+<span class="sd">    between a given minimum and maximum value and will be bound by a</span>
+<span class="sd">    regulation parameter.</span>
+
+<span class="sd">    The value will be sampled from a function like this:</span>
+
+<span class="sd">        round(uniform(min, max) / q) * q</span>
+
+<span class="sd">    This parameter is bound to [floor(min), tail(max)].</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @QUniformParameter(&quot;test&quot;, min_value=0, max_value=10, q=0.5)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="QUniformParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QUniformParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Creates a new q-uniform distributed parameter with `parameter_name` as name.</span>
+
+<span class="sd">        The `min_value` and `max_value` define the borders for this distribution</span>
+<span class="sd">        in between which the value will be sampled. But this distribution</span>
+<span class="sd">        will be bound to discrete values by the regulation parameter `q`.</span>
+
+<span class="sd">        :param min_value: The minimum value of the parameter</span>
+<span class="sd">        :type min_value: float</span>
+<span class="sd">        :param max_value: The maximum value of the parameter</span>
+<span class="sd">        :type max_value: float</span>
+
+<span class="sd">        :param q: The regulation parameter to bind the values with.</span>
+<span class="sd">        :type q: float</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">QUniformParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="o">=</span><span class="n">parameter_name</span><span class="p">,</span> <span class="n">min_value</span><span class="o">=</span><span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="o">=</span><span class="n">max_value</span><span class="p">)</span>
+        <span class="n">QMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="n">q</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QUniformParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QUniformParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;P(X=x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Q-Uniform distribution of parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="o">.</span><span class="n">get_facecolor</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="LogNormalParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogNormalParameter">[docs]</a><span class="k">class</span> <span class="nc">LogNormalParameter</span><span class="p">(</span><span class="n">AddedParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being drawn from the exponential</span>
+<span class="sd">    of a normal distribution.</span>
+
+<span class="sd">    A log-normal distributed parameter will be sampled from</span>
+<span class="sd">    exponential of the defined distribution by a mean</span>
+<span class="sd">    and a standard deviation.</span>
+
+<span class="sd">    The values for this parameter will be sampled from a function like:</span>
+
+<span class="sd">        exp(normal(mu, sigma))</span>
+
+<span class="sd">    This distribution causes that the logarithm of the samples values</span>
+<span class="sd">    are being normal distributed.</span>
+<span class="sd">    This parameter is bound to positive numbers only.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @LogNormalParameter(&quot;test&quot;, shape=1, scale=1)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="LogNormalParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogNormalParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LogNormalParameter</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">parameter_name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__shape</span> <span class="o">=</span> <span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__scale</span> <span class="o">=</span> <span class="n">scale</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">shape</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__shape</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__scale</span>
+
+<div class="viewcode-block" id="LogNormalParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogNormalParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">lognorm</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">interval</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+            <span class="c1"># Min 1.000 samples, max 10.000</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">stop</span> <span class="o">-</span> <span class="n">start</span> <span class="o">*</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="mi">10000</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;PDF(x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Log-Normal distribution for Parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="n">stop</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">stop</span><span class="p">),</span> <span class="n">base</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">e</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;shape=</span><span class="si">{self.shape:g}</span><span class="s2">, scale=</span><span class="si">{self.scale:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(shape=</span><span class="si">{self.shape:g}</span><span class="s2">, scale=</span><span class="si">{self.scale:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="LogUniformParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter">[docs]</a><span class="k">class</span> <span class="nc">LogUniformParameter</span><span class="p">(</span><span class="n">UniformParameter</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being drawn from the exponential</span>
+<span class="sd">    of a uniform distribution.</span>
+
+<span class="sd">    A log-uniform distributed parameter will be sampled from</span>
+<span class="sd">    the exponential of equally distributed values</span>
+<span class="sd">    between a given minimum and maximum value.</span>
+
+<span class="sd">    The values for this parameter will be sampled from a function like:</span>
+
+<span class="sd">        exp(uniform(min, max))</span>
+
+<span class="sd">    This distribution causes that the logarithm of the samples values</span>
+<span class="sd">    are being uniform distributed.</span>
+<span class="sd">    This parameter is bound to [exp(min), exp(max)].</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @LogUniformParameter(&quot;test&quot;, min_value=0, max_value=1000)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="LogUniformParameter.LogUniform"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.LogUniform">[docs]</a>    <span class="k">class</span> <span class="nc">LogUniform</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="n">log</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">log</span>
+
+<div class="viewcode-block" id="LogUniformParameter.LogUniform.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.LogUniform.__init__">[docs]</a>        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__a</span> <span class="o">=</span> <span class="n">a</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__al</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">if</span> <span class="n">a</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">320</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__b</span> <span class="o">=</span> <span class="n">b</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__bl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">if</span> <span class="n">b</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">320</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LogUniformParameter.LogUniform.pdf"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.LogUniform.pdf">[docs]</a>        <span class="k">def</span> <span class="nf">pdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__bl</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__bl</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span><span class="p">))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">0.0</span></div>
+
+<div class="viewcode-block" id="LogUniformParameter.LogUniform.cdf"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.LogUniform.cdf">[docs]</a>        <span class="k">def</span> <span class="nf">cdf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+            <span class="n">xl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">xl</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mf">0.0</span>
+            <span class="k">elif</span> <span class="n">xl</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">__bl</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="n">xl</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__bl</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LogUniformParameter.LogUniform.mean"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.LogUniform.mean">[docs]</a>        <span class="k">def</span> <span class="nf">mean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__b</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__a</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__bl</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__al</span><span class="p">)</span></div></div>
+
+<div class="viewcode-block" id="LogUniformParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.LogUniformParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">LogUniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span><span class="p">)</span>
+            <span class="c1"># Min 1.000 samples, max 100.000</span>
+            <span class="n">num</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">,</span> <span class="mi">1000</span><span class="p">),</span> <span class="mi">100000</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;PDF(x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Log-Uniform distribution of parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">10</span><span class="p">)),</span> <span class="n">stop</span><span class="o">=</span><span class="n">numpy</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                               <span class="n">base</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">num</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">value</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">(</span><span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">line</span><span class="p">,</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">line</span><span class="o">.</span><span class="n">get_color</span><span class="p">(),</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="n">basex</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="n">basey</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QLogNormalParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogNormalParameter">[docs]</a><span class="k">class</span> <span class="nc">QLogNormalParameter</span><span class="p">(</span><span class="n">LogNormalParameter</span><span class="p">,</span> <span class="n">QMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being drawn from the exponential</span>
+<span class="sd">    of a normal distribution.</span>
+
+<span class="sd">    A log-normal distributed parameter will be sampled from</span>
+<span class="sd">    exponential of the defined distribution by a mean</span>
+<span class="sd">    and a standard deviation but it will be bound to discrete</span>
+<span class="sd">    values regularized by a regulation parameter.</span>
+
+<span class="sd">    The values for this parameter will be sampled from a function like:</span>
+
+<span class="sd">        round(exp(normal(mu, sigma)) / q) * q</span>
+
+<span class="sd">    This distribution causes that the logarithm of the samples values</span>
+<span class="sd">    are being normal distributed.</span>
+<span class="sd">    This parameter is bound to positive number only.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @QLogNormalParameter(&quot;test&quot;, shape=1, scale=1, q=0.5)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="QLogNormalParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogNormalParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="n">LogNormalParameter</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="n">QMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QLogNormalParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogNormalParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">rv</span> <span class="o">=</span> <span class="n">stats</span><span class="o">.</span><span class="n">lognorm</span><span class="p">(</span><span class="n">s</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">)</span>
+            <span class="n">start</span><span class="p">,</span> <span class="n">stop</span> <span class="o">=</span> <span class="n">rv</span><span class="o">.</span><span class="n">interval</span><span class="p">(</span><span class="mf">0.99</span><span class="p">)</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;P(X=x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">figure</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Q-Log-Normal distribution for Parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">start</span><span class="p">),</span> <span class="n">stop</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">stop</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x_</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+                               <span class="n">label</span><span class="o">=</span><span class="s2">&quot;shape=</span><span class="si">{self.shape:g}</span><span class="s2">, scale=</span><span class="si">{self.scale:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">)</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="o">.</span><span class="n">get_facecolor</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(shape=</span><span class="si">{self.shape:g}</span><span class="s2">, scale=</span><span class="si">{self.scale:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="QLogUniformParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogUniformParameter">[docs]</a><span class="k">class</span> <span class="nc">QLogUniformParameter</span><span class="p">(</span><span class="n">LogUniformParameter</span><span class="p">,</span> <span class="n">QMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a parameter as being drawn from the exponential</span>
+<span class="sd">    of a uniform distribution and being bound to discrete values</span>
+<span class="sd">    only.</span>
+
+<span class="sd">    A q-log-uniform distributed parameter will be sampled from</span>
+<span class="sd">    the exponential of equally distributed values</span>
+<span class="sd">    between a given minimum and maximum value and will be bound by a</span>
+<span class="sd">    regulation parameter.</span>
+
+<span class="sd">    The values for this parameter will be sampled from a function like:</span>
+
+<span class="sd">        round(exp(uniform(min, max)) / q) * q</span>
+
+<span class="sd">    This distribution causes that the logarithm of the samples values</span>
+<span class="sd">    are being uniform distributed.</span>
+<span class="sd">    This parameter is bound to [exp(min), exp(max)].</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @QLogUniformParameter(&quot;test&quot;, min_value=0, max_value=1000, q=0.5)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="QLogUniformParameter.__init__"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogUniformParameter.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">,</span> <span class="n">q</span><span class="p">):</span>
+        <span class="n">LogUniformParameter</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameter_name</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">)</span>
+        <span class="n">QMixin</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">q</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="QLogUniformParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.QLogUniformParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">rv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">LogUniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">plt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">start</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+            <span class="n">stop</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max</span><span class="p">)</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span>
+            <span class="n">figure</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;P(X=x)&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;X&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="s2">&quot;Q-Log-Uniform distribution of parameter </span><span class="si">{param!s}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">param</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">parameter_name</span><span class="p">))</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="n">stop</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">numpy</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">))(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">mean_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_to_q</span><span class="p">(</span><span class="n">rv</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
+            <span class="n">mean_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_probability</span><span class="p">(</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">rv</span><span class="o">.</span><span class="n">pdf</span><span class="p">)</span>
+            <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span>
+                               <span class="n">label</span><span class="o">=</span><span class="s2">&quot;min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">))</span>
+            <span class="n">y_max</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">mean_y</span> <span class="o">-</span> <span class="n">plt</span><span class="o">.</span><span class="n">ylim</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">mean_x</span><span class="p">,</span> <span class="n">ymax</span><span class="o">=</span><span class="n">y_max</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">axes</span><span class="o">.</span><span class="n">get_facecolor</span><span class="p">()[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Mean: </span><span class="si">%g</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">mean_x</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;best&quot;</span><span class="p">,</span> <span class="n">fancybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">framealpha</span><span class="o">=</span><span class="mf">0.2</span><span class="p">)</span><span class="o">.</span><span class="n">draggable</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="n">basex</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="n">basey</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">figure</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{self!r}</span><span class="s2">(min=</span><span class="si">{self.min:g}</span><span class="s2">, max=</span><span class="si">{self.max:g}</span><span class="s2">, q=</span><span class="si">{self.q:g}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="NoOptimizationParameter"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NoOptimizationParameter">[docs]</a><span class="k">class</span> <span class="nc">NoOptimizationParameter</span><span class="p">(</span><span class="n">AddedParameterDecorator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a previously defined parameter as not being</span>
+<span class="sd">    an optimization parameter at all.</span>
+
+<span class="sd">    This decorator can be used in derived classes where</span>
+<span class="sd">    optimization parameters of base classes are given concrete values</span>
+<span class="sd">    or don&#39;t matter at all.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        &gt;&gt;&gt; @NoOptimizationParameter(&quot;test&quot;)</span>
+<span class="sd">        ... class A(object):</span>
+<span class="sd">        ...     pass</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="NoOptimizationParameter.plot"><a class="viewcode-back" href="../../../../api/generated/pySPACE.missions.nodes.decorators.html#pySPACE.missions.nodes.decorators.NoOptimizationParameter.plot">[docs]</a>    <span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">repr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div></div>
+
+
+<span class="n">PARAMETER_TYPES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;Choice&quot;</span><span class="p">:</span> <span class="n">ChoiceParameter</span><span class="p">,</span>
+    <span class="s2">&quot;Boolean&quot;</span><span class="p">:</span> <span class="n">BooleanParameter</span><span class="p">,</span>
+    <span class="s2">&quot;PChoice&quot;</span><span class="p">:</span> <span class="n">PChoiceParameter</span><span class="p">,</span>
+    <span class="s2">&quot;Normal&quot;</span><span class="p">:</span> <span class="n">NormalParameter</span><span class="p">,</span>
+    <span class="s2">&quot;Uniform&quot;</span><span class="p">:</span> <span class="n">UniformParameter</span><span class="p">,</span>
+    <span class="s2">&quot;QNormal&quot;</span><span class="p">:</span> <span class="n">QNormalParameter</span><span class="p">,</span>
+    <span class="s2">&quot;QUniform&quot;</span><span class="p">:</span> <span class="n">QUniformParameter</span><span class="p">,</span>
+    <span class="s2">&quot;LogNormal&quot;</span><span class="p">:</span> <span class="n">LogNormalParameter</span><span class="p">,</span>
+    <span class="s2">&quot;LogUniform&quot;</span><span class="p">:</span> <span class="n">LogUniformParameter</span><span class="p">,</span>
+    <span class="s2">&quot;QLogNormal&quot;</span><span class="p">:</span> <span class="n">QLogNormalParameter</span><span class="p">,</span>
+    <span class="s2">&quot;QLogUniform&quot;</span><span class="p">:</span> <span class="n">QLogUniformParameter</span><span class="p">,</span>
+    <span class="s2">&quot;NoOptimization&quot;</span><span class="p">:</span> <span class="n">NoOptimizationParameter</span>
+<span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pySPACE.environments.backends.serial &mdash; pySPACE documentation</title>
+    <title>pySPACE.environments.backends.serial &#8212; pySPACE documentation</title>
     
     <link rel="stylesheet" href="../../../../_static/pySPACE.css" type="text/css" />
     <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
@@ -17,15 +17,16 @@
         VERSION:     '1.3 release',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../../_static/jquery.js"></script>
     <script type="text/javascript" src="../../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../../_static/doctools.js"></script>
     <link rel="shortcut icon" href="../../../../_static/pyspace-logo.ico"/>
-    <link rel="top" title="pySPACE documentation" href="../../../../index.html" />
-    <link rel="up" title="Module code" href="../../../index.html" /> 
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,8 +38,8 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" accesskey="U">Module code</a> &#187;</li> 
       </ul>
     </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
@@ -76,10 +77,11 @@
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">logging.handlers</span>
 <span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
 
 <span class="kn">import</span> <span class="nn">pySPACE</span>
-<span class="kn">from</span> <span class="nn">pySPACE.environments.backends.base</span> <span class="kn">import</span> <span class="n">Backend</span>
-<span class="kn">from</span> <span class="nn">pySPACE.tools.progressbar</span> <span class="kn">import</span> <span class="n">ProgressBar</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">,</span> <span class="n">ETA</span><span class="p">,</span> <span class="n">Bar</span>
+<span class="kn">from</span> <span class="nn">pySPACE.environments.backends.base</span> <span class="k">import</span> <span class="n">Backend</span>
+<span class="kn">from</span> <span class="nn">pySPACE.tools.progressbar</span> <span class="k">import</span> <span class="n">ProgressBar</span><span class="p">,</span> <span class="n">Percentage</span><span class="p">,</span> <span class="n">ETA</span><span class="p">,</span> <span class="n">Bar</span>
 
 <div class="viewcode-block" id="SerialBackend"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend">[docs]</a><span class="k">class</span> <span class="nc">SerialBackend</span><span class="p">(</span><span class="n">Backend</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot; A backend that allows for easy debugging since the program flow</span>
@@ -108,27 +110,22 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - staged&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;staged&quot;</span></div>
         
-<div class="viewcode-block" id="SerialBackend.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SerialBackend.execute"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend.execute">[docs]</a>    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="n">e6</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Executes all processes specified in the currently staged</span>
 <span class="sd">        operation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;staged&quot;</span><span class="p">)</span>
-        
+
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;executing&quot;</span> 
         <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="s2">&quot;Operation - executing&quot;</span><span class="p">)</span>
         
         <span class="c1"># The handler that is used remotely for logging</span>
         <span class="n">handler_class</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">handlers</span><span class="o">.</span><span class="n">SocketHandler</span>
         <span class="n">handler_args</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;host&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="s2">&quot;port&quot;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">}</span>
-        
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-        <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
-            <span class="n">process</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="c1"># while there are Processes in the queue ...</span>
-        <span class="k">while</span> <span class="ow">not</span> <span class="n">process</span> <span class="ow">is</span> <span class="bp">False</span><span class="p">:</span>
+
+        <span class="n">get_process</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">process</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">get_process</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
             <span class="n">process</span><span class="o">.</span><span class="n">prepare</span><span class="p">(</span><span class="n">pySPACE</span><span class="o">.</span><span class="n">configuration</span><span class="p">,</span> <span class="n">handler_class</span><span class="p">,</span> <span class="n">handler_args</span><span class="p">)</span>
             <span class="c1"># Execute process, update progress bar and get next queue-element</span>
             <span class="k">try</span><span class="p">:</span>
@@ -138,16 +135,15 @@
             <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
                 <span class="n">process</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span>
-                <span class="n">process</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">process</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="c1"># if ctrl+c is pressed we want to immediately stop everything</span>
             <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exc</span><span class="p">(),</span> <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">)</span>
                 <span class="n">process</span><span class="o">.</span><span class="n">post_benchmarking</span><span class="p">()</span>
-                <span class="n">process</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="n">process</span> <span class="o">=</span> <span class="kc">False</span>
             <span class="k">else</span><span class="p">:</span>    
                 <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">+=</span> <span class="mi">1</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span>
-                <span class="n">process</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></div>
+                <span class="bp">self</span><span class="o">.</span><span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="SerialBackend.check_status"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend.check_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -160,7 +156,7 @@
         <span class="c1"># is already finished</span>
         <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_process</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">number_processes</span></div>
     
-<div class="viewcode-block" id="SerialBackend.retrieve"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend.retrieve">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<div class="viewcode-block" id="SerialBackend.retrieve"><a class="viewcode-back" href="../../../../api/generated/pySPACE.environments.backends.serial.html#pySPACE.environments.backends.serial.SerialBackend.retrieve">[docs]</a>    <span class="k">def</span> <span class="nf">retrieve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="n">e6</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns the result of the operation.</span>
 <span class="sd">        </span>
@@ -173,8 +169,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">processes</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         <span class="c1"># if process creation has another thread</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="p">,</span> <span class="s2">&quot;create_process&quot;</span><span class="p">)</span> \
-                        <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+                        <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span><span class="o">.</span><span class="n">create_process</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="mi">1</span><span class="n">e6</span><span class="p">)</span>
             
         <span class="c1"># Change the state to retrieved</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state</span> <span class="o">=</span> <span class="s2">&quot;retrieved&quot;</span></div>
@@ -209,7 +205,7 @@
         <span class="c1"># close listener socket</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
         
-        <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_operation</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">current_process</span> <span class="o">=</span> <span class="mi">0</span>      </div></div>
     
 </pre></div>
@@ -228,14 +224,14 @@
         <li class="right" >
           <a href="../../../../py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &raquo;</li>
-          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../../../../index.html">pySPACE documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../../../index.html" >Module code</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
-        &copy; Copyright 2016, pySPACE Developer Team.
-      Last updated on Sep 04, 2016.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.2.
+        &#169; Copyright 2016, pySPACE Developer Team.
+      Last updated on Mar 14, 2017.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
     </div>
   </body>
 </html>
