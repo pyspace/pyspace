@@ -10,7 +10,7 @@ from pySPACE.missions.nodes.classification.base import RegularizedClassifierBase
 # classification vector may be saved as a feature vector
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 from pySPACE.resources.data_types.time_series import TimeSeries
-# timeout package
+# timeout package .
 import signal
 
 import numpy
