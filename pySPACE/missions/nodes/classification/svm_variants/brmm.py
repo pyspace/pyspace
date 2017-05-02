@@ -201,7 +201,7 @@ class RMM2Node(RegularizedClassifierBase):
         if self.tolerance > 0.1 * min(self.complexity, outer_complexity):
             self.set_permanent_attributes(tolerance=0.1*min(self.complexity,
                                                             outer_complexity))
-            warnings.warn("Using to high tolerance. Reduced to 0.1 times " +
+            warnings.warn("Using too high tolerance. Reduced to 0.1 times " +
                           "complexity (tolerance=%f)." % self.tolerance)
         # mapping of the binary variables to {0,1}
         if not squared_loss:

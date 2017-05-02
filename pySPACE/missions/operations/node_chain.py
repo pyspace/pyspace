@@ -275,7 +275,7 @@ import pySPACE
 from pySPACE.missions.operations.base import Operation, Process
 from pySPACE.resources.dataset_defs.base import BaseDataset
 from pySPACE.tools.filesystem import create_directory
-from pySPACE.tools.conversion import replace_parameters2
+from pySPACE.tools.yaml_helpers import replace_parameters2
 from pySPACE.environments.chains.node_chain \
     import BenchmarkNodeChain, NodeChainFactory
 
@@ -596,8 +596,8 @@ class NodeChainOperation(Operation):
                 # the results more easy
                 # THA: Split the first "/" from the input collection name, because otherwise it will be treated
                 # as an absolute path
-                input_collection_name = meta_data["input_collection_name"][1:] if \
-                    meta_data["input_collection_name"][0] == os.sep else meta_data["input_collection_name"]
+                input_collection_name = meta_data["input_dataset_name"][1:] if \
+                    meta_data["input_dataset_name"][0] == os.sep else meta_data["input_dataset_name"]
                 input_meta_path = os.path.join(pySPACE.configuration.storage, input_collection_name)
                 try:
                     input_meta = BaseDataset.load_meta_data(input_meta_path)
@@ -942,8 +942,9 @@ class NodeChainProcess(Process):
         # to the meta data
         meta_data = {"node_chain_spec": self.node_chain_spec,
                      "parameter_setting": self.parameter_setting,
-                     "input_collection_name": self.rel_dataset_dir,
+                     "input_dataset_name": self.rel_dataset_dir,
                      "hide_parameters": self.hide_parameters}
+
         result_collection.update_meta_data(meta_data)
 
         # Store the result collection to the hard disk

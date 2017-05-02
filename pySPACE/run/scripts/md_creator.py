@@ -1,4 +1,4 @@
-""" Create meta data file 'metadata.yaml' for :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorCollection`
+""" Create meta data file 'metadata.yaml' for :class:`~pySPACE.resources.dataset_defs.feature_vector.FeatureVectorDataset`
  
 Used for external files, which can not be read directly in pySPACE.
 Eg. csv files without names.

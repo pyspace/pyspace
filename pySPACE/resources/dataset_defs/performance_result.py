@@ -45,7 +45,7 @@ import logging
 
 # tools
 import pySPACE.tools.csv_analysis as csv_analysis
-from pySPACE.tools.conversion import python2yaml
+from pySPACE.tools.yaml_helpers import python2yaml
 
 # base class
 from pySPACE.resources.dataset_defs.base import BaseDataset
@@ -611,6 +611,10 @@ class PerformanceResultSummary(BaseDataset):
                 result_folder_name = os.path.dirname(input_file_name)
                 with open(os.path.join(result_folder_name, hash_name, "metadata.yaml")) as metadata_file:
                     metadata = yaml.load(metadata_file)
+                if "input_collection_name" in metadata:
+                    warnings.warn(
+                    "'input_collection_name' needs to be renamed to 'input_dataset_name'!")
+                    metadata["input_dataset_name"]=metadata.pop("input_collection_name")
                 parameter_settings = metadata.get("parameter_setting", {})
                 hide_parameters = metadata.get("hide_parameters", [])
                 if not "__Dataset__" in data_dict:
@@ -620,7 +624,7 @@ class PerformanceResultSummary(BaseDataset):
                         if key not in hide_parameters:
                             data_dict[key] = []
                 data_dict["__Dataset__"].append(
-                    metadata["input_collection_name"].strip(os.sep).split(
+                    metadata["input_dataset_name"].strip(os.sep).split(
                         os.sep)[-1].strip("'}{").split("}{")[0])
                 for key in parameter_settings:
                     if key not in hide_parameters:

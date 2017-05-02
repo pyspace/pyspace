@@ -403,7 +403,7 @@ class MergeProcess(Process):
                 "dataset_directory" : target_collection_path,
                 "train_test" : True,
                 "parameter_setting" : target_collection_params,
-                "input_collection_name" : source_collection_pathes[0][len(
+                "input_dataset_name" : source_collection_pathes[0][len(
                                         pySPACE.configuration.storage):]
         })
       

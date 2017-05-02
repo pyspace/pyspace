@@ -1,9 +1,10 @@
 """ Type conversion helper functions """
-import copy
 import string
 import warnings
 import yaml
 
+__all__ = ['python2yaml', 'replace_parameters_and_convert', 
+           'replace_parameters', 'replace_parameters2', 'load_yaml_file']
 
 def python2yaml(value):
     """ Conversion function to handle yaml specialties"""
@@ -41,7 +42,7 @@ def extract_key_str(full_file, keyword="node_chain"):
             elif ":" in line:  # next keyword occurred
                 break
             else:
-                warnings.warn("Unexpected line occurred: %s!"%line)
+                warnings.warn("Unexpected line occurred: %s!" % line)
                 keyword_lines.append(line)
         elif line.startswith(keyword):
             keyword_found = True
@@ -57,7 +58,7 @@ def replace_parameters_and_convert(node_chain_spec, parameter_setting):
     # node chain instead, for replacing parameters, it has to be reconverted
     # to a string
     if type(node_chain_spec) == list:
-        node_chain_spec = repr(node_chain_spec)  #yaml.dump(node_chain_spec)
+        node_chain_spec = repr(node_chain_spec)  # yaml.dump(node_chain_spec)
         warnings.warn("Issues with parameter replacement might occur!")
     elif isinstance(node_chain_spec, basestring):
         pass
@@ -74,9 +75,9 @@ def replace_parameters(node_chain_spec, parameter_setting):
     # Instantiate the template
     for key, value in parameter_setting.iteritems():
         # Parameters framed by "#" are considered to be escaped
-        if "#"+key+"#" in node_chain_spec:
-            node_chain_spec = node_chain_spec.replace("#"+key+"#", "##")
-        #chek for optimization and normal parameter rule
+        if "#" + key + "#" in node_chain_spec:
+            node_chain_spec = node_chain_spec.replace("#" + key + "#", "##")
+        # chek for optimization and normal parameter rule
         elif key.startswith("_") or key.startswith("~"):
             try:
                 if type(value) == str:
@@ -91,8 +92,8 @@ def replace_parameters(node_chain_spec, parameter_setting):
         else:
             node_chain_spec = node_chain_spec.replace(
                 "%s" % str(key), python2yaml(value))
-            warnings.warn("The parameter %s is no regular parameter." +
-                          "Better use one starting with '_' or '~'. " +
+            warnings.warn("The parameter %s is no regular parameter." + 
+                          "Better use one starting with '_' or '~'. " + 
                           "Replacing despite." % key)
         if "##" in node_chain_spec:
             node_chain_spec = node_chain_spec.replace("##", key)
@@ -100,6 +101,7 @@ def replace_parameters(node_chain_spec, parameter_setting):
 
 
 def eval_string(s):
+    """evaluate python statement (String)"""
     if s.startswith("eval("):
         try:
             return eval(s[5:-1])
@@ -109,39 +111,67 @@ def eval_string(s):
         return s
 
 
-def replace_in_list(list_, replacements):
+def eval_in_list(list_):
+    """evaluate recursively python statements in list"""
     new_list = []
     for item in list_:
         # Base case: item is not a structure
         if isinstance(item, str):
-            item = string.Template(item).safe_substitute(**replacements)
             item = eval_string(item)
         # The item is itself a list, replace recursively
         if isinstance(item, list):
             # Check recursively
-            item = replace_in_list(item, replacements)
+            item = eval_in_list(item)
         # The item is a dict, look for keys and values
         elif isinstance(item, dict):
-            item = replace_in_dict(item, replacements)
+            item = eval_in_dict(item)
         new_list.append(item)
     return new_list
 
 
-def replace_in_dict(dict_, replacements):
+def eval_in_dict(dict_):
+    """evaluate recursively python statements in dict"""
     new_dict = {}
     for key, value in dict_.iteritems():
         if isinstance(value, list):
-            value = replace_in_list(value, replacements)
+            value = eval_in_list(value)
         elif isinstance(value, dict):
-            value = replace_in_dict(value, replacements)
+            value = eval_in_dict(value)
         elif isinstance(value, str):
-            value = string.Template(value).safe_substitute(**replacements)
             value = eval_string(value)
-        key = string.Template(key).safe_substitute(**replacements)
         key = eval_string(key)
         new_dict[key] = value
     return new_dict
 
 
 def replace_parameters2(node_chain_spec, parameter_setting):
-    return replace_in_list(node_chain_spec, parameter_setting)
+    """Replace parameters and evaulate python statements"""
+    node_chain_spec = yaml.load(string.Template(
+        node_chain_spec).safe_substitute(**parameter_setting))
+    return eval_in_list(node_chain_spec)
+
+def load_yaml_file(op_file):
+    """Load yaml file with node_chain as String"""
+    raw = op_file.read()
+    node_chain = extract_key_str(raw)
+    operation_spec = yaml.load(raw.replace(node_chain, ''))
+    if len(node_chain) > 0:
+        operation_spec['node_chain'] = node_chain
+    return operation_spec
+
+def dump_yaml_file(spec_file, file_handle):
+    """Dump the spec file with templates as String"""
+    t = spec_file.pop("templates", None)
+    data = yaml.dump(spec_file)
+    if t is not None:
+        if type(t) == list:
+            data += "templates:"
+            for template in t:
+                data += "\n%s\n" % template
+        elif type(t) == dict:
+            data += "templates:"
+            for k in t:
+                data += "\n%s\n" % t[k]
+        else:
+            data += "templates:\n%s" % t
+    file_handle.write(data)

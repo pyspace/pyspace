@@ -11,12 +11,14 @@ from collections import defaultdict
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.resources.data_types.feature_vector import FeatureVector
 
-from pySPACE.tools.filesystem import  create_directory
-from pySPACE.missions.nodes.decorators import UniformParameter, BooleanParameter 
+from pySPACE.tools.filesystem import create_directory
+from pySPACE.missions.nodes.decorators import UniformParameter, \
+    BooleanParameter, ChoiceParameter
 
 
 class InconsistentFeatureVectorsException(Exception):
     pass
+
 
 class FeatureNormalizationNode(BaseNode):
     """ General node for Feature Normalization 
@@ -96,9 +98,11 @@ class FeatureNormalizationNode(BaseNode):
             self.dim=len(self.feature_names)
         elif type(self.feature_names != data.feature_names) is bool:
             if self.feature_names != data.feature_names:
-                raise InconsistentFeatureVectorsException("Two feature vectors used during training do not contain the same features!")
+                raise InconsistentFeatureVectorsException(
+                    "Two feature vectors do not contain the same features!")
         elif (self.feature_names != data.feature_names).all():
-            raise InconsistentFeatureVectorsException("Two feature vectors used during training do not contain the same features!")
+            raise InconsistentFeatureVectorsException(
+                "Two feature vectors do not contain the same features!")
 
     def _execute(self, data):
         """ Normalizes the feature vector data.
@@ -371,7 +375,8 @@ class EuclideanFeatureNormalizationNode(BaseNode):
         if self.feature_names == []:
             self.feature_names = data.feature_names
         elif self.feature_names != data.feature_names:
-            raise InconsistentFeatureVectorsException("Two feature vectors used during training do not contain the same features!")
+            raise InconsistentFeatureVectorsException(
+                "Two feature vectors do not contain the same features!")
         x = data.view(numpy.ndarray)
         a = x[0,:]
         if self.dim == None:
@@ -423,6 +428,72 @@ class InfinityNormFeatureNormalizationNode(BaseNode):
         return FeatureVector([a], data.feature_names)
 
 
+# Infinity and Euclidean norm are covered by other nodes.
+# Other possible norms then the ones suggested here
+# are not that common or relevant.
+@ChoiceParameter("order", choices=["-inf", 0, 1, 3, 4])
+class NumpyFeatureNormalizationNode(BaseNode):
+    """ Normalize feature vectors to any numpy vector norm
+
+    **Parameters**
+
+        :order:
+            Order of the norm, used by numpy (ord-parameter by numpy).
+            The default is the 1-Norm normalization.
+
+            :inf:   max(abs(x))
+            :-inf:  min(abs(x))
+            :0:     sum(x != 0)
+            :other: sum(abs(x)**ord)**(1./ord)
+
+            (*optional, default: 1*)
+
+
+    **Exemplary Call**
+
+    .. code-block:: yaml
+
+        -
+            node : N_FN
+            parameters :
+                order : 42
+
+    :Author: Mario Michael Krell (Mario.Krell@dfki.de)
+    :Created: 2017/03/19
+    """
+    def __init__(self, order=1, **kwargs):
+        super(NumpyFeatureNormalizationNode, self).__init__(**kwargs)
+        # text mapping
+        if order == "inf":
+            order = numpy.inf
+        elif order == "-inf":
+            order = - numpy.inf
+        else:
+            order = float(order)
+        self.set_permanent_attributes(ord=order,
+                                      feature_names=None)
+
+    def _execute(self, data):
+        """ Normalizes the samples vector to norm one """
+        if self.feature_names is None:
+            self.feature_names = data.feature_names
+        elif self.feature_names != data.feature_names:
+            raise InconsistentFeatureVectorsException(
+                "Two feature vectors do not contain the same features!")
+        x = data.view(numpy.ndarray)
+        a = x[0, :]
+        norm = numpy.linalg.norm(a, self.ord)
+        if norm == 0:
+            norm = 1
+        return FeatureVector([a * numpy.longdouble(1) / norm],
+                             self.feature_names)
+
+    def store_state(self, result_dir, index=None):
+        """ Stores this node in the given directory *result_dir* """
+        if self.store:
+            pass
+
+
 _NODE_MAPPING = {"Feature_Normalization": OutlierFeatureNormalizationNode,
                 "Outlier_Feature_Normalization": OutlierFeatureNormalizationNode,
                 "FN": OutlierFeatureNormalizationNode,
@@ -433,4 +504,6 @@ _NODE_MAPPING = {"Feature_Normalization": OutlierFeatureNormalizationNode,
                 "G_FN": GaussianFeatureNormalizationNode,
                 "Histogram_Feature_Normalization": HistogramFeatureNormalizationNode,
                 "H_FN": HistogramFeatureNormalizationNode,
-                "I_FN": InfinityNormFeatureNormalizationNode}
+                "I_FN": InfinityNormFeatureNormalizationNode,
+                "N_FN": NumpyFeatureNormalizationNode,
+                }

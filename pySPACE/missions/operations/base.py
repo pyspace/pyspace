@@ -85,8 +85,8 @@ import logging
 import socket
 import sys
 import warnings
-import yaml
 import copy
+from pySPACE.tools.yaml_helpers import load_yaml_file, dump_yaml_file
 
 file_path = os.path.dirname(os.path.abspath(__file__))
 pyspace_path = file_path[:file_path.rfind('pySPACE')-1]
@@ -115,7 +115,7 @@ class Operation(object):
         base_file = self.operation_spec.pop("base_file", None)
         source_operation_file = open(os.sep.join([self.result_directory,
                                                   "source_operation.yaml"]), 'w')
-        yaml.dump(self.operation_spec, source_operation_file)
+        dump_yaml_file(self.operation_spec, source_operation_file)
         source_operation_file.close()
         if not base_file is None:
             self.operation_spec["base_file"] = base_file
@@ -339,7 +339,7 @@ def create_operation_from_file(operation_filename, base_result_dir = None):
     print("--> Loading operation: \n\t\t %s."%spec_file_name)
     try:
         with open(spec_file_name, "r") as op_file:
-            operation_spec = yaml.load(op_file)
+            operation_spec = load_yaml_file(op_file)
         with open(spec_file_name, "r") as op_file:
             operation_spec["base_file"] = op_file.read()
     except IOError,e:
@@ -348,7 +348,7 @@ def create_operation_from_file(operation_filename, base_result_dir = None):
                 "Operation specification not found. Trying with yaml ending.")
             spec_file_name += ".yaml"
             with open(spec_file_name, "r") as op_file:
-                operation_spec = yaml.load(op_file)
+                operation_spec = load_yaml_file(op_file)
             with open(spec_file_name, "r") as op_file:
                 operation_spec["base_file"] = op_file.read()
         else:
@@ -358,7 +358,6 @@ def create_operation_from_file(operation_filename, base_result_dir = None):
         input_path = os.sep.join([storage, operation_spec["input_path"], ""])
         print("--> Input data is taken from: \n\t\t %s"%input_path)
     return create_operation(operation_spec, base_result_dir)
-
 
 def create_operation(operation_spec, base_result_dir = None):
     """ Creates the operation for the given operation spec
