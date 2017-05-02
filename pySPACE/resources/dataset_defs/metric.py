@@ -1337,7 +1337,7 @@ class RegressionDataset(BinaryClassificationDataset):
             metrics["Relative_squared_error"] = \
                 metrics["Mean-squared_error"]/numpy.var(a)
             metrics["Root_relative_squared_error"] = \
-                numpy.sqrt(metrics["relative_squared_error"])
+                numpy.sqrt(metrics["Relative_squared_error"])
             metrics["Relative absolute error"] = \
                 metrics["Mean_absolute_error"]/numpy.mean(numpy.abs(a-a.mean()))
             metrics["Correlation_coefficient"] = numpy.corrcoef(a,p)[0,1]

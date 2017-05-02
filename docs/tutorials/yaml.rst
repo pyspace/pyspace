@@ -299,7 +299,7 @@ Example of a FeatureVectorDataset metadata.yaml
   author: Max Mustermann
   date: '2009_4_5'
   node_chain_file_name: example_flow.yaml
-  input_collection_name: input_collection_example
+  input_dataset_name: input_dataset_example
   classes_names: [Standard, Target]
   feature_names: [feature1, feature2, feature3]
   num_features: 3

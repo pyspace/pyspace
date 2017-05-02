@@ -192,7 +192,7 @@ class SorSvmNode(RegularizedClassifierBase):
             version = "matrix"
         if self.tolerance > 0.1 * self.complexity:
             self.set_permanent_attributes(tolerance=0.1*self.complexity)
-            warnings.warn("Using to high tolerance." +
+            warnings.warn("Using too high tolerance." +
                           " Reduced to 0.1 times complexity (tolerance=%f)."
                           % self.tolerance)
 

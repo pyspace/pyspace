@@ -7,6 +7,7 @@ import logging
 import warnings
 import itertools
 import numpy
+import os
 
 import pySPACE.missions.nodes
 from pySPACE.missions.nodes.base_node import BaseNode
@@ -544,6 +545,7 @@ class BatchAdaptSubflowNode(FlowNode):
         # the nodes are retrained with this labels on the previously buffered samples.
         self._get_flow()[-1].present_label(self.batch_labels)
         self.batch_labels = None
+
 
 class BacktransformationNode(FlowNode):
     """ Determine underlying linear transformation of classifier or regression algorithm
@@ -1091,19 +1093,26 @@ class BacktransformationNode(FlowNode):
         or `mat`. If the `store_format` variable is `None`, the output will
         not be stored.
         """
-        import os
-
-        if self.store_format == "txt" :
+        super(BacktransformationNode, self).store_state(result_dir,index)
+        if self.store_format is None:
+            return
+        stored = False
+        if "txt" in self.store_format:
             numpy.set_printoptions(threshold='nan')
-            file_name = os.path.join(result_dir, "backtransformation.txt")
+            name = "%s_sp%s.txt" % ("backtransformation", self.current_split)
+            file_name = os.path.join(result_dir, name)
             numpy.savetxt(file_name, self.get_own_transformation(), delimiter=" ", fmt="%s")
-        elif self.store_format == "pickle":
+            stored = True
+        if "pickle" in self.store_format:
             import pickle
-            file_name = os.path.join(result_dir, "backtransformation.pickle")
+            name = "%s_sp%s.pickle" % ("backtransformation", self.current_split)
+            file_name = os.path.join(result_dir, name)
             pickle.dump(self.get_own_transformation(), open(file_name, "w"))
-        elif self.store_format == "mat":
+            stored = True
+        if "mat" in self.store_format:
             import scipy.io
-            file_name = os.path.join(result_dir, "backtransformation.mat")
+            name = "%s_sp%s.mat" % ("backtransformation", self.current_split)
+            file_name = os.path.join(result_dir, name)
             result = self.get_own_transformation()
             result_dict = {
                 "Transformation matrix":result[0],
@@ -1113,7 +1122,8 @@ class BacktransformationNode(FlowNode):
                 "Transformation name": result[3]
             }
             scipy.io.savemat(open(file_name, "w"), result_dict)
-        elif self.store_format is not None:
+            stored = True
+        if self.store_format is not None and not stored:
             message = ("Storage format \"%s\" unrecognized. " +
                        "Please choose between \"mat\",\"txt\""+
                        " and \"pickle\"") % self.store_format

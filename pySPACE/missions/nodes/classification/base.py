@@ -860,7 +860,7 @@ class RegularizedClassifierBase(BaseNode):
                 # This node stores the learned features
                 name = "%s_sp%s.pickle" % ("features", self.current_split)
                 result_file = open(os.path.join(node_dir, name), "wb")
-                result_file.write(cPickle.dumps(self.features, protocol=2))
+                result_file.write(cPickle.dumps((self.features,self.b), protocol=2))
                 result_file.close()
                 name = "%s_sp%s.yaml" % ("features", self.current_split)
                 result_file = open(os.path.join(node_dir, name), "wb")

@@ -199,6 +199,8 @@ class ParameterOptimizationBase(BaseNode):
                  nominal_ranges=None, debug=False,
                  validation_parameter_settings={},
                  final_training_parameter_settings={},
+                 # usually there is extra handling by each optimization node
+                 parallelization={},
                  **kwargs):
         super(ParameterOptimizationBase, self).__init__(**kwargs)
 
@@ -402,7 +404,7 @@ class ParameterOptimizationBase(BaseNode):
 
     def is_retrainable(self):
         """ Retraining if one node in subflow is retrainable """
-        if self.is_retrainable:
+        if self.retrainable:
             return True
         else:
             for node in self._get_flow():
@@ -425,9 +427,9 @@ class ParameterOptimizationBase(BaseNode):
     def store_state(self, result_dir, index=None):
         """ Store this node in the given directory *result_dir* """
         # ..todo ::  mapping of flow_id and parameterization?!
+        for node in self._get_flow():
+            node.store_state(result_dir, index)
         if self.store:
-            for node in self.flow:
-                node.store_state(result_dir, index)
             class_dir = os.path.join(result_dir, self.__class__.__name__)
             create_directory(class_dir)
             # Store the search history

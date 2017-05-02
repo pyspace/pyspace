@@ -85,7 +85,7 @@ import yaml
 import pySPACE
 from pySPACE.tools.filesystem import create_directory
 from pySPACE.tools.socket_utils import talk, inform
-from pySPACE.tools.conversion import python2yaml, replace_parameters_and_convert, replace_parameters
+from pySPACE.tools.yaml_helpers import python2yaml, replace_parameters_and_convert, replace_parameters
 import copy
 
 import warnings
@@ -1070,7 +1070,8 @@ class NodeChainFactory(object):
         # Create the flow based on the node sequence and the given flow class
         # and return it
         return Flow_Class(node_sequence)
-
+    
+    #TODO maybe move this function to tools
     @staticmethod
     def instantiate(template, parametrization):
         """ Instantiate a template recursively for the given parameterization
@@ -1127,6 +1128,7 @@ class NodeChainFactory(object):
                 instance[key] = value
         return instance
 
+    #TODO maybe move this function to tools
     @staticmethod
     def replace_parameters_in_node_chain(node_chain_template, parametrization):
         node_chain_template = copy.copy(node_chain_template)

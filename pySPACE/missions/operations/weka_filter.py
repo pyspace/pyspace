@@ -217,7 +217,7 @@ class WekaFilterOperation(Operation):
                     input_collection_meta["num_features"] = len(feature_names)
                     input_collection_meta["author"] = get_author()
                     input_collection_meta["date"] = time.strftime("%Y%m%d")
-                    input_collection_meta["input_collection_name"] = input_collection_name
+                    input_collection_meta["input_dataset_name"] = input_collection_name
                     # Write the collection meta information into the folder
                     BaseDataset.store_meta_data(fullpath,input_collection_meta)
                     # Store the command_template

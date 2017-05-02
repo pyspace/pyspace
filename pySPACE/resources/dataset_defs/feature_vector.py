@@ -224,6 +224,9 @@ class FeatureVectorDataset(BaseDataset):
                 self.meta_data["classes_names"].append(label)
         except KeyError:
             self.update_meta_data({"classes_names": [label]})
+        if self.meta_data["feature_names"] is None:
+            self.update_meta_data(
+                {"feature_names": sample.feature_names})
         # Delegate to super class
         super(FeatureVectorDataset, self).add_sample(sample, label,
                                                      train, split, run)
@@ -485,9 +488,9 @@ class FeatureVectorDataset(BaseDataset):
         
         The method expects the following parameters:
           * *result_dir* The directory in which the collection will be stored
-          * *name* The prefix of the file names in which the individual \
-                   data sets are stored. The actual file names are determined \
-                   by appending suffixes that encode run, split, train/test \
+          * *name* The prefix of the file names in which the individual
+                   data sets are stored. The actual file names are determined
+                   by appending suffixes that encode run, split, train/test
                    information. Defaults to "features".
           * *format* A list with information about the format in which the 
                     actual data sets should be stored. The first entry specifies
@@ -514,7 +517,6 @@ class FeatureVectorDataset(BaseDataset):
                                "author": author,
                                "data_pattern": "data_run" + os.sep 
                                                  + name + "_sp_tt." + s_format[0]})
-        
         if type(s_format) == list:
             s_type = s_format[1]
             s_format = s_format[0]
@@ -592,6 +594,8 @@ class FeatureVectorDataset(BaseDataset):
                         result_file.write(feature_format % feature)
                     result_file.write("%s\n" % str(class_name))
             result_file.close()
-
-        #Store meta data
+        if self.meta_data["feature_names"] is None:
+            self.update_meta_data(
+                {"feature_names": feature_vectors[0][0].feature_names})
+        # Store meta data
         BaseDataset.store_meta_data(result_dir,self.meta_data)

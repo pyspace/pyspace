@@ -45,6 +45,9 @@ MDP (version 3.3) is distributed under the following BSD license::
     OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
+import cPickle
+from pySPACE.tools.filesystem import create_directory
+
 __docformat__ = "restructuredtext en"
 
 try:
@@ -63,9 +66,9 @@ import re
 import numpy
 import logging
 import warnings
-import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 import sys
+import os
 
 from pySPACE.missions.nodes.base_node import BaseNode
 from pySPACE.missions.nodes import NODE_MAPPING, DEFAULT_NODE_MAPPING
@@ -425,6 +428,17 @@ def wrap_scikit_classifier(scikit_class):
             The types can be specified in any format allowed by numpy.dtype."""
             return ['float32', 'float64']
 
+        def store_state(self, result_dir, index=None):
+            """ Stores *scikit_alg* """
+            if self.store:
+                node_dir = os.path.join(result_dir, self.__class__.__name__)
+                create_directory(node_dir)
+                name = "%s_sp%s.pickle" % ("Model", self.current_split)
+                result_file = open(os.path.join(node_dir, name), "wb")
+                result_file.write(cPickle.dumps(self.scikit_alg, protocol=2))
+                result_file.close()
+            super(ScikitClassifier,self).store_state(result_dir, index)
+
     # modify class name and docstring
     if "Classifier" not in scikit_class.__name__:
         ScikitClassifier.__name__ = scikit_class.__name__ + \
@@ -544,6 +558,17 @@ def wrap_scikit_transformer(scikit_class):
                 return "FeatureVector"
             else:
                 return FeatureVector
+
+        def store_state(self, result_dir, index=None):
+            """ Stores *scikit_alg* """
+            if self.store:
+                node_dir = os.path.join(result_dir, self.__class__.__name__)
+                create_directory(node_dir)
+                name = "%s_sp%s.pickle" % ("Model", self.current_split)
+                result_file = open(os.path.join(node_dir, name), "wb")
+                result_file.write(cPickle.dumps(self.scikit_alg, protocol=2))
+                result_file.close()
+            super(ScikitTransformer,self).store_state(result_dir, index)
 
     # modify class name and docstring
     if "Transformer" not in scikit_class.__name__:
@@ -683,6 +708,17 @@ def wrap_scikit_predictor(scikit_class):
                 return "PredictionVector"
             else:
                 return PredictionVector
+
+        def store_state(self, result_dir, index=None):
+            """ Stores *scikit_alg* """
+            if self.store:
+                node_dir = os.path.join(result_dir, self.__class__.__name__)
+                create_directory(node_dir)
+                name = "%s_sp%s.pickle" % ("Model", self.current_split)
+                result_file = open(os.path.join(node_dir, name), "wb")
+                result_file.write(cPickle.dumps(self.scikit_alg, protocol=2))
+                result_file.close()
+            super(ScikitPredictor,self).store_state(result_dir, index)
 
     # modify class name and docstring
     if "Regression" not in scikit_class.__name__ and \

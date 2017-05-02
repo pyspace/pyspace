@@ -8,7 +8,7 @@ import warnings
 import socket
 import cPickle
 from pySPACE.run.scripts import md_creator
-#import bz2
+# import bz2
 from collections import defaultdict
 
 
@@ -105,8 +105,8 @@ class BaseDataset(object):
     def load_meta_data(dataset_dir, file_name="metadata.yaml"):
         """ Load the meta data of the dataset """
         try:
-            file_path = os.sep.join([dataset_dir,file_name])
-            meta_file = open(file_path,'r')
+            file_path = os.sep.join([dataset_dir, file_name])
+            meta_file = open(file_path, 'r')
         except IOError:
             pass
         else:
@@ -118,11 +118,15 @@ class BaseDataset(object):
                 meta_data["ignored_rows"] = \
                     md_creator.parse_list(meta_data["ignored_rows"])
             meta_file.close()
+            if "input_collection_name" in meta_data:
+                warnings.warn(
+                "'input_collection_name' needs to be renamed to 'input_dataset_name'!")
+                meta_data["input_dataset_name"] = meta_data.pop("input_collection_name")
             return meta_data
         # Error handling and backward compatibility
         try:
             file_path = os.sep.join([dataset_dir, "collection.yaml"])
-            meta_file = open(file_path,'r')
+            meta_file = open(file_path, 'r')
             meta_data = yaml.load(meta_file)
             if meta_data.has_key("ignored_columns"):
                 meta_data["ignored_columns"] = \
@@ -133,12 +137,16 @@ class BaseDataset(object):
             meta_file.close()
             warnings.warn(
                 "'collection.yaml' needs to be renamed to 'metadata.yaml'!")
+            if "input_collection_name" in meta_data:
+                warnings.warn(
+                "'input_collection_name' needs to be renamed to 'input_dataset_name'!")
+                meta_data["input_dataset_name"] = meta_data.pop("input_collection_name")
             return meta_data
         except IOError, e:
             warnings.warn("IOError occurred: %s." % e)
             # check if we have a feature vector dataset with missing metadata.yaml
             csv_file = None
-            for dirpath, dirnames,files in os.walk(dataset_dir):
+            for dirpath, dirnames, files in os.walk(dataset_dir):
                 for file in files:
                     if file.endswith(".csv") or file.endswith(".arff"):
                         csv_file = file
@@ -147,23 +155,23 @@ class BaseDataset(object):
                     break
             if csv_file:
                 warnings.warn(
-                    "If you want to use csv-files, you have to " +
-                    "generate a %s! The pySPACE documentation " % file_name +
-                    "tells you what you have to specify. You can also use " +
-                    ":script:`pySPACE.run.scripts.md_creator.py`. " +
+                    "If you want to use csv-files, you have to " + 
+                    "generate a %s! The pySPACE documentation " % file_name + 
+                    "tells you what you have to specify. You can also use " + 
+                    ":script:`pySPACE.run.scripts.md_creator.py`. " + 
                     "We will try this in the following...")
                 print("Found '%s' at '%s'!" % (csv_file, dirpath))
-                if not dirpath==dataset_dir:
+                if not dirpath == dataset_dir:
                     print("Maybe you specified the wrong input_path?")
-                md_file = dirpath+os.sep+file_name
+                md_file = dirpath + os.sep + file_name
                 if not os.path.isfile(md_file):
                     md_creator.main(md_file)
-                    collection_meta_file=open(md_file)
+                    collection_meta_file = open(md_file)
                     meta_data = yaml.load(collection_meta_file)
                     collection_meta_file.close()
                     return meta_data
-            raise Exception("No pySPACE dataset '%s' found. " % dataset_dir +
-                            "You have to specify a %s in each " % file_name +
+            raise Exception("No pySPACE dataset '%s' found. " % dataset_dir + 
+                            "You have to specify a %s in each " % file_name + 
                             "dataset directory. Have a look at the pySPACE "
                             "documentation. Continuing...")
     
@@ -235,9 +243,9 @@ class BaseDataset(object):
                          file will be written.
          * *name* The name of the pickle file
         """  
-        result_file = open(os.path.join(result_path, 
+        result_file = open(os.path.join(result_path,
                                         name + ".pickle"), "wb")
-        #result_file.write(bz2.compress(cPickle.dumps(self, protocol=2)))
+        # result_file.write(bz2.compress(cPickle.dumps(self, protocol=2)))
         result_file.write(cPickle.dumps(self, protocol=2))
         result_file.close()
     
