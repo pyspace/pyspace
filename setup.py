@@ -30,6 +30,9 @@ import os
 import sys
 import shutil
 import warnings
+
+import filecmp
+
 from os.path import expanduser
 home = expanduser("~")
 
@@ -142,10 +145,7 @@ def save_copy(src, dest):
     if not os.path.exists(dest):
         shutil.copy2(src, dest)
     elif dest.endswith(".yaml"):
-        import yaml
-        d = yaml.load(open(dest))
-        s = yaml.load(open(src))
-        if not d == s:
+        if not filecmp.cmp(src, dest, shallow=False):
             dest = dest[:-5] + "_new.yaml"
             save_copy(src, dest)
     elif dest.endswith(".csv") or dest.endswith(".rst"):
