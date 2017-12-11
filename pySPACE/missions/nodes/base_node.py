@@ -1245,11 +1245,11 @@ class BaseNode(object):
                 # the item is a primitive type
                 return item
 
-        if self.store:
+        if isinstance(self.store, basestring) and "mat" in self.store:
             import scipy.io
             node_index = 0
             result_file = None
-            # export to text file 
+            # export to text file
             while not result_file:
                 filename = os.path.join(result_dir, self.node_name + "_"
                                         + str(node_index))
@@ -1260,7 +1260,7 @@ class BaseNode(object):
             attr_dict = self.__getstate__()
             # matlab doesn't like Nones.. replace Nones with 0's
             attr_dict = format_dict(attr_dict)
-            
+
             scipy.io.savemat(result_file, mdict=attr_dict)
             
 
